@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Create account · Aspire 101</title>
+
+  <!-- Icons -->
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+
+  <!-- Font + Site styles (same as index/signin) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- CSP (allow Supabase and jsDelivr; HTTPS + WSS) -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 img-src 'self' data:;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                 font-src https://fonts.gstatic.com;
+                 script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                 connect-src 'self'
+                   https://ikxjemnugoodfuxjaqoe.supabase.co
+                   https://*.supabase.co https://*.supabase.in https://*.supabase.net
+                   wss://*.supabase.co wss://*.supabase.in wss://*.supabase.net;">
+
+  <!-- Supabase (UMD) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Page-specific styles (layer on top of style.css to match Sign In layout) -->
+  <style>
+    /* hero strip like signin */
+    .auth-hero{
+      position:relative; overflow:hidden;
+      padding:64px 0 24px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .auth-hero .display{
+      margin:0 0 10px;
+      font-size: clamp(34px, 6vw, 64px);
+      line-height:1.04; letter-spacing:-.02em; font-weight:900;
+    }
+    .auth-hero .lead{max-width:880px;color:#c9d3df}
+    .auth-glow{
+      position:absolute; inset:auto -10% -55% auto; width:1100px; height:860px;
+      background:
+        radial-gradient(600px 420px at 70% 35%, rgba(255,204,0,.22), transparent 70%),
+        radial-gradient(900px 600px at 100% 80%, rgba(255,204,0,.14), transparent 60%);
+      filter:blur(4px); pointer-events:none;
+    }
+
+    .auth-wrap{padding:36px 0 72px}
+    .auth-grid{display:grid; gap:18px; grid-template-columns:1fr; max-width:900px; margin:0 auto}
+    .tabs{display:flex;gap:8px;margin-bottom:14px}
+    .tab{height:40px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:#0c1117;color:#cfd7e3;font-weight:800;cursor:pointer}
+    .tab[aria-selected="true"]{background:#121821;border-color:#223043;color:#fff}
+
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media (max-width:900px){.grid{grid-template-columns:1fr}}
+
+    .label{display:block;font-weight:700;margin:4px 0}
+    .field{
+      padding:12px 12px; width:100%;
+      background:#0c1117; color:#e8eef7;
+      border:1px solid rgba(255,255,255,.12); border-radius:12px;
+      outline:none;
+    }
+    .field:focus{border-color:rgba(255,255,255,.24)}
+    .help{color:#9aa4b2;font-size:13px;margin-top:4px}
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .checkbox{width:18px;height:18px}
+
+    .notice{padding:12px 14px;border-radius:12px;font-size:14px;margin:8px 0;display:none}
+    .notice.ok{background:#0b2; color:#eaffef; border:1px solid rgba(255,255,255,.12); opacity:.92}
+    .notice.bad{background:#3b0d14;color:#ffd6dc;border:1px solid rgba(255,255,255,.12)}
+
+    .btn.small{height:40px; padding:0 14px}
+    .muted{color:#9aa4b2}
+  </style>
+</head>
+
+<body class="theme-dark">
+  <!-- Header (EXACT same structure as Sign In) -->
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Aspire 101 home">
+        <img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt="">
+        <span class="brand-name">Aspire 101</span>
+      </a>
+      <nav class="nav-right">
+        <a class="nav-link" href="about.html">About</a>
+        <a class="nav-link" href="support.html">Support</a>
+        <a class="nav-link" href="signin.html">Sign In</a>
+        <a class="btn cta" href="signup.html" aria-current="page" style="opacity:1">Sign Up</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="auth-hero">
+    <div class="container">
+      <h1 class="display">Create account</h1>
+      <p class="lead">Use email or phone. <b>.edu</b> addresses are treated as school email automatically.</p>
+    </div>
+    <div class="auth-glow" aria-hidden="true"></div>
+  </section>
+
+  <!-- Body -->
+  <main class="container auth-wrap">
+    <div id="msg" class="notice"></div>
+
+    <div class="auth-grid">
+      <div class="card">
+        <div class="tabs" role="tablist">
+          <button id="tab-email" class="tab" role="tab" aria-selected="true">Email</button>
+          <button id="tab-phone" class="tab" role="tab" aria-selected="false">Phone (SMS)</button>
+        </div>
+
+        <!-- Email signup -->
+        <form id="form-email" class="grid" autocomplete="on" spellcheck="false" novalidate>
+          <div>
+            <label class="label" for="name">Name / Nickname</label>
+            <input id="name" class="field" placeholder="e.g., Liko"/>
+          </div>
+          <div>
+            <label class="label" for="username">Username</label>
+            <input id="username" class="field" placeholder="letters, numbers, _ or . (3–20)"/>
+          </div>
+          <div>
+            <label class="label" for="email">Email</label>
+            <input id="email" class="field" type="email" placeholder="you@school.edu" required/>
+            <div class="help">We’ll send a confirmation if your project requires it.</div>
+          </div>
+          <div>
+            <label class="label" for="password">Password</label>
+            <input id="password" class="field" type="password" minlength="6" placeholder="At least 6 characters" required/>
+          </div>
+          <div>
+            <label class="label" for="school">School (optional)</label>
+            <input id="school" class="field" placeholder="Purdue University"/>
+          </div>
+          <div>
+            <label class="label" for="city">City (optional)</label>
+            <input id="city" class="field" placeholder="West Lafayette"/>
+          </div>
+
+          <div class="row" style="grid-column:1/-1">
+            <input id="agree" class="checkbox" type="checkbox" required/>
+            <label for="agree" class="help" style="margin:0">I agree to the <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy</a>.</label>
+          </div>
+
+          <div class="row" style="grid-column:1/-1">
+            <button id="btn-create" class="btn cta" type="submit">Create account</button>
+            <a class="btn ghost" href="signin.html" role="button">Already have an account</a>
+          </div>
+
+          <!-- Confirmation UI (shown if email confirmation is required) -->
+          <div id="confirm-block" class="row" style="grid-column:1/-1; display:none">
+            <div class="help" id="confirm-text">We emailed a confirmation link to your inbox. Open it to activate your account.</div>
+            <button id="btn-resend" class="btn small ghost" type="button">Resend email</button>
+          </div>
+        </form>
+
+        <!-- Phone (placeholder) -->
+        <form id="form-phone" class="grid" style="display:none">
+          <div style="grid-column:1/-1">
+            <div class="help">SMS signup coming soon. Use email for now.</div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- Supabase config -->
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
+
+  <!-- Page logic (keeps all the improved behaviors) -->
+  <script>
+    // ------------- helpers -------------
+    const $ = (s, el=document)=> el.querySelector(s);
+    const msg = $('#msg');
+    function flash(text, bad=false){
+      msg.textContent = text;
+      msg.className = 'notice ' + (bad ? 'bad' : 'ok');
+      msg.style.display = 'block';
+      clearTimeout(flash.t); flash.t = setTimeout(()=> msg.style.display='none', 4200);
+    }
+    function blockerHint(err){
+      const m = String(err?.message||err);
+      return (m.includes('Failed to fetch')||m.includes('NetworkError')||m.includes('timed out'))
+        ? "NetworkError: request didn’t complete. Check ad/cookie/VPN blockers and allow *.supabase.co."
+        : null;
+    }
+    const withTimeout = (p, ms=15000)=> Promise.race([p, new Promise((_,rej)=>setTimeout(()=>rej(new Error('Request timed out')), ms))]);
+
+    // ------------- main -------------
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!window.supabase){ flash('Supabase SDK failed to load. Check CSP.', true); return; }
+      const url  = document.querySelector('meta[name="supabase-url"]').content;
+      const anon = document.querySelector('meta[name="supabase-anon"]').content;
+      const sb   = window.supabase.createClient(url, anon, { auth:{ persistSession:true, detectSessionInUrl:true, autoRefreshToken:true } });
+
+      // Tabs
+      const tabEmail = $('#tab-email'), tabPhone = $('#tab-phone');
+      const formEmail = $('#form-email'), formPhone = $('#form-phone');
+      function selectTab(which){
+        const email = which==='email';
+        tabEmail.setAttribute('aria-selected', email?'true':'false');
+        tabPhone.setAttribute('aria-selected', email?'false':'true');
+        formEmail.style.display = email?'grid':'none';
+        formPhone.style.display = email?'none':'grid';
+      }
+      tabEmail.onclick=()=>selectTab('email');
+      tabPhone.onclick=()=>selectTab('phone');
+
+      // Form refs
+      const nameEl=$('#name'), userEl=$('#username'), mailEl=$('#email'),
+            passEl=$('#password'), schoolEl=$('#school'), cityEl=$('#city'),
+            agreeEl=$('#agree'), btnCreate=$('#btn-create'),
+            confirmBlock=$('#confirm-block'), confirmText=$('#confirm-text'), btnResend=$('#btn-resend');
+
+      const validUsername = s => /^[a-zA-Z0-9._]{3,20}$/.test((s||'').trim());
+      let lastSignupEmail = null;
+
+      formEmail.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        if (!agreeEl.checked) return flash('Please accept Terms & Privacy', true);
+
+        const email = (mailEl.value||'').trim();
+        const password = passEl.value||'';
+        const full_name = (nameEl.value||'').trim();
+        const username = (userEl.value||'').trim();
+        const school = (schoolEl.value||'').trim() || null;
+        const city = (cityEl.value||'').trim() || null;
+
+        if (!email) return flash('Email is required', true);
+        if (password.length < 6) return flash('Password must be at least 6 characters', true);
+        if (username && !validUsername(username)) return flash('Username must be 3–20 chars: letters, numbers, _ or .', true);
+
+        const old = btnCreate.textContent;
+        btnCreate.disabled = true; btnCreate.textContent = 'Creating…';
+        confirmBlock.style.display = 'none';
+
+        // watchdog so the button never stays stuck
+        let watchdog = setTimeout(()=>{
+          if (btnCreate.disabled){
+            btnCreate.disabled=false; btnCreate.textContent=old;
+            flash("Request seems blocked. Try disabling blockers or different profile/network.", true);
+          }
+        }, 15000);
+
+        try{
+          const { data, error } = await withTimeout(sb.auth.signUp({
+            email, password,
+            options:{ data:{ full_name, username, school, city, is_school_email:/\.edu$/i.test(email) } }
+          }), 15000);
+          if (error) throw error;
+
+          const user = data.user || null;
+
+          // upsert profile (best-effort; won't block UX)
+          if (user?.id){
+            try{
+              await withTimeout(
+                sb.from('profiles').upsert(
+                  { id:user.id, username: username||null, full_name: full_name||null, school, city },
+                  { onConflict:'id' }
+                ),
+                8000
+              );
+            }catch(_){}
+          }
+
+          clearTimeout(watchdog);
+          btnCreate.disabled=false; btnCreate.textContent=old;
+
+          lastSignupEmail = email;
+
+          if (data.session){
+            flash('Welcome! Redirecting…');
+            setTimeout(()=> location.href='dashboard.html', 700);
+          }else{
+            confirmText.textContent = 'We emailed a confirmation link to ' + email + '. Open it to activate your account.';
+            confirmBlock.style.display = 'flex';
+            flash('Check your inbox to confirm your email.');
+          }
+        }catch(err){
+          clearTimeout(watchdog);
+          btnCreate.disabled=false; btnCreate.textContent=old;
+          console.error(err);
+          flash(blockerHint(err) || (err?.message || 'Signup failed'), true);
+        }
+      });
+
+      // Resend confirmation
+      btnResend?.addEventListener('click', async ()=>{
+        try{
+          const email = (mailEl.value||lastSignupEmail||'').trim();
+          if (!email) return flash('Enter your email first.', true);
+          btnResend.disabled = true; btnResend.textContent = 'Sending…';
+          const { error } = await sb.auth.resend({ type:'signup', email });
+          if (error) throw error;
+          flash('Confirmation email resent.');
+        }catch(err){
+          flash(err?.message || 'Could not resend confirmation', true);
+        }finally{
+          btnResend.disabled = false; btnResend.textContent = 'Resend email';
+        }
+      });
+
+      // Autofocus
+      setTimeout(()=> (nameEl && (nameEl.value ? userEl : nameEl)).focus(), 0);
+    });
+  </script>
+</body>
+</html>

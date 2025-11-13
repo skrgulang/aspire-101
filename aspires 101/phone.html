@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Sign up by Phone · ASPIRE 101</title>
+
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Supabase -->
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co">
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .header{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);
+      background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(255,255,255,.72));
+      border-bottom:1px solid rgba(226,232,240,.7)}
+    .nav{display:flex;justify-content:space-between;align-items:center;min-height:64px}
+    .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;font-weight:800}
+    .brand-logo{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);object-fit:cover}
+    .right{display:flex;gap:10px;align-items:center}
+    .btn{display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--ink);font-weight:800;text-decoration:none}
+    .btn.primary{border:0;background:var(--brand);color:var(--ink)}
+    .muted{color:var(--muted)}
+    .page-hero{padding:28px 0 8px}
+    .page-hero .h1{font-size:56px;line-height:1.04;letter-spacing:-.02em;margin:0}
+    @media (max-width:760px){.page-hero .h1{font-size:40px}}
+    .notice{padding:10px 12px;border-radius:10px;font-size:14px;margin:8px 0;display:none}
+    .ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#065f46}
+    .bad{background:#fff1f2;border:1px solid #fecaca;color:#9f1239}
+  </style>
+</head>
+<body class="bg-grid">
+  <!-- Header -->
+  <header class="header">
+    <div class="container nav">
+      <a class="brand" href="index.html">
+        <img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt="Aspire 101"/>
+        <span>ASPIRE 101</span>
+      </a>
+      <div class="right">
+        <a class="btn" href="signin.html">Email sign in</a>
+        <a class="btn primary" href="signup.html">Create by Email</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page -->
+  <main class="container section" style="max-width:880px">
+    <section class="page-hero">
+      <h1 class="h1">Create / Sign in by Phone</h1>
+      <p class="muted">Enter your phone in E.164 format (e.g., <code>+14155551212</code>). We’ll text a 6-digit code.</p>
+    </section>
+
+    <div id="msg" class="notice"></div>
+
+    <div class="card">
+      <form id="phone-form" class="form" autocomplete="off" spellcheck="false" novalidate>
+        <div>
+          <label class="label" for="name">Name / Nickname</label>
+          <input id="name" class="field" name="name" placeholder="e.g., Rina" required/>
+        </div>
+        <div>
+          <label class="label" for="phone">Phone (E.164)</label>
+          <input id="phone" class="field" name="phone" inputmode="tel" placeholder="+14155551212" required/>
+        </div>
+        <div>
+          <label class="label" for="school">School (optional)</label>
+          <input id="school" class="field" name="school" placeholder="New York University"/>
+        </div>
+        <div>
+          <label class="label" for="city">City (optional)</label>
+          <input id="city" class="field" name="city" placeholder="New York"/>
+        </div>
+
+        <div class="col-2" style="display:flex;gap:12px;align-items:center">
+          <button id="send" class="btn primary" type="button">Send code</button>
+          <span id="sent" class="muted" style="display:none">Code sent. Check your SMS.</span>
+        </div>
+
+        <div id="code-wrap" class="col-2" style="display:none">
+          <label class="label" for="code">Verification code</label>
+          <input id="code" class="field" inputmode="numeric" placeholder="6-digit code"/>
+          <div style="display:flex;gap:12px;margin-top:8px">
+            <button id="verify" class="btn primary" type="button">Verify & finish</button>
+            <button id="resend" class="btn" type="button">Resend</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footline">
+      <div style="display:flex;align-items:center;gap:10px;color:#64748b"><img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt="Aspire 101"/><span>© 2025 Aspire 101</span></div>
+      <small class="muted">SMS sign-up uses Supabase OTP</small>
+    </div>
+  </footer>
+
+  <script>
+  (async function(){
+    const $ = (s,el=document)=> el.querySelector(s);
+    const url  = document.querySelector('meta[name="supabase-url"]').content;
+    const anon = document.querySelector('meta[name="supabase-anon"]').content;
+    const sb   = window.supabase.createClient(url, anon);
+
+    const msg = $('#msg');
+    function flash(text, bad=false){ msg.textContent=text; msg.className='notice '+(bad?'bad':'ok'); msg.style.display='block'; }
+
+    const phoneRe = /^\+[1-9]\d{6,14}$/;
+
+    async function send(){
+      const name = $('#name').value.trim();
+      const phone= $('#phone').value.trim();
+      if (!name)  return flash('Please enter your name.', true);
+      if (!phoneRe.test(phone)) return flash('Phone must be E.164 format, e.g. +14155551212', true);
+
+      try{
+        const { error } = await sb.auth.signInWithOtp({ phone, options:{ channel:'sms' }});
+        if (error) throw error;
+        $('#sent').style.display='inline';
+        $('#code-wrap').style.display='block';
+        flash('SMS code sent. Enter the 6-digit code to finish.');
+      }catch(e){ flash(e.message || 'Failed to send code.', true); }
+    }
+
+    async function verify(){
+      const phone= $('#phone').value.trim();
+      const code = $('#code').value.trim();
+      if (!phoneRe.test(phone)) return flash('Invalid phone.', true);
+      if (!/^\d{6}$/.test(code)) return flash('Enter the 6-digit code.', true);
+      try{
+        const { error } = await sb.auth.verifyOtp({ phone, token: code, type: 'sms' });
+        if (error) throw error;
+
+        // Attach profile metadata to auth user
+        await sb.auth.updateUser({
+          data:{
+            name: $('#name').value.trim(),
+            school: $('#school').value.trim(),
+            city: $('#city').value.trim(),
+            email_type: 'phone'
+          }
+        });
+
+        // Ensure a row exists in public.profiles (SEE SQL BELOW)
+        // Optional safety: call an RPC to upsert profile if you added it.
+        flash('Phone verified! Redirecting…');
+        setTimeout(()=> location.href='dashboard.html', 700);
+      }catch(e){ flash(e.message || 'Verification failed.', true); }
+    }
+
+    $('#send')?.addEventListener('click', send);
+    $('#resend')?.addEventListener('click', send);
+    $('#verify')?.addEventListener('click', verify);
+  })();
+  </script>
+</body>
+</html>

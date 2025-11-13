@@ -1,0 +1,20 @@
+// Make sure you created the client:
+// const supabase = createClient(SUPA_URL, SUPA_ANON)
+
+async function upsertMyProfile({ display_name, school, city, lat, lng }) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+
+  // geography WKT with SRID=4326 is the most reliable for PostgREST
+  const point = (lat && lng) ? `SRID=4326;POINT(${lng} ${lat})` : null;
+
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      user_id: user.id,
+      display_name, school, city,
+      location: point
+    }, { onConflict: 'user_id' });
+
+  if (error) throw error;
+}

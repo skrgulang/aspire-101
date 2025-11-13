@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Aspire 101 — Where needs meet action.</title>
+
+  <!-- Favicons / App icons -->
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+/* ========== Base ========== */
+:root{
+  --bg:#0c1014; --bg-2:#0f141a; --ink:#e7edf5; --muted:#9aa4b2; --border:#1f2937;
+  --brand:#ffcc00; --brand-ink:#0b0d12; --radius:16px; --radius-pill:999px;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(180deg,#0b0f13,#0b0f13 30%,#0e1217);
+}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+.section{padding:64px 0}
+a{color:inherit;text-decoration:none}
+.muted{color:var(--muted)}
+/* ========== Header ========== */
+.site-header{
+  position:sticky; top:0; z-index:40; backdrop-filter:blur(12px);
+  background:linear-gradient(180deg,rgba(16,18,22,.86),rgba(16,18,22,.72));
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.nav{display:grid; grid-template-columns:auto 1fr; align-items:center; min-height:72px; gap:16px}
+.brand{display:flex; align-items:center; gap:12px}
+.brand-logo{
+  width:36px; height:36px; object-fit:cover; border-radius:10px;
+  border:1px solid rgba(255,255,255,.08); box-shadow:0 0 0 4px rgba(255,255,255,.04) inset;
+}
+.brand-name{font-weight:800; font-size:22px; letter-spacing:.2px}
+.nav-right{display:flex; justify-content:flex-end; align-items:center; gap:22px}
+.nav-link{color:var(--ink); font-weight:700; opacity:.92}
+.nav-link:hover{opacity:1}
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; height:44px; padding:0 18px;
+  border-radius:var(--radius-pill); border:1px solid rgba(255,255,255,.12);
+  background:#12171d; color:var(--ink); font-weight:800;
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 8px 22px rgba(0,0,0,.25);
+}
+.btn:hover{border-color:rgba(255,255,255,.2)}
+.btn.cta{background:var(--brand); color:var(--brand-ink); border-color:transparent; box-shadow:0 10px 30px rgba(255,204,0,.22)}
+.btn.cta:hover{filter:saturate(1.05) brightness(1.02)}
+.btn.ghost{background:transparent; border-color:rgba(255,255,255,.16); color:#dbe3ee}
+.btn.ghost:hover{border-color:rgba(255,255,255,.28)}
+/* ========== Hero ========== */
+.hero{position:relative; overflow:hidden}
+.hero-inner{display:grid; grid-template-columns:1fr auto; gap:28px; align-items:center; padding:82px 0 40px}
+.hero-copy .display{margin:0 0 14px; font-size:clamp(38px,7vw,78px); line-height:1.04; letter-spacing:-.02em; font-weight:900}
+.hero-copy .display span{display:block}
+.hero-copy .display .accent{color:var(--brand)}
+.lead{max-width:900px; color:#c9d3df; font-size:20px}
+.hero-cta{display:flex; flex-direction:column; gap:14px}
+@media (max-width:960px){ .hero-inner{grid-template-columns:1fr; gap:22px} .hero-cta{flex-direction:row} }
+.hero-glow{
+  position:absolute; inset:auto -25% -40% auto; width:1200px; height:900px; pointer-events:none; filter:blur(4px);
+  background: radial-gradient(650px 420px at 70% 35%, rgba(255,204,0,.22), transparent 70%),
+              radial-gradient(900px 600px at 100% 80%, rgba(255,204,0,.14), transparent 60%);
+}
+/* ========== Activity Cards ========== */
+.h2{margin:0 0 16px; font-size:32px; letter-spacing:-.01em}
+.cards{display:grid; gap:22px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{
+  background:#0f141a; border:1px solid rgba(255,255,255,.06); border-radius:22px; padding:22px 22px 20px;
+  min-height:160px; box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 10px 26px rgba(0,0,0,.25);
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.card:hover{transform:translateY(-3px); border-color:rgba(255,255,255,.12); box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 14px 36px rgba(0,0,0,.32),0 0 24px rgba(255,204,0,.08)}
+.card-head{display:flex;align-items:center;gap:14px;margin:0 0 10px}
+.card .emoji{
+  width:56px;height:56px;border-radius:14px;background:#fff;border:1px solid rgba(10,14,20,.08);
+  box-shadow:0 2px 10px rgba(0,0,0,.25),0 0 0 5px rgba(255,255,255,.03) inset; display:grid;place-items:center;overflow:hidden;font-size:0
+}
+.emoji-img{width:72%;height:72%;object-fit:contain;display:block;image-rendering:auto;pointer-events:none}
+.card h3{margin:0; font-size:22px; line-height:1.1; letter-spacing:-.01em}
+.card p{margin:6px 0 0; color:#c9d3df; font-size:18px}
+@media (max-width:600px){ .card{padding:18px;border-radius:18px} .card .emoji{width:48px;height:48px;border-radius:12px} .card h3{font-size:20px} .card p{font-size:16px} }
+/* ========== How it works (3 transparent PNGs) ========== */
+#how-it-works.section{ padding-top:28px; padding-bottom:56px; scroll-margin-top:90px; }
+#how-it-works .muted{ margin-bottom:12px; }
+#how-it-works .steps-row{
+  max-width:1200px; margin-inline:auto;
+  display:grid; grid-template-columns:1fr 56px 1fr 56px 1fr;
+  gap:16px; align-items:center; justify-items:center;
+}
+#how-it-works .step{ width:100%; text-align:center; }
+#how-it-works .step .card-frame{ padding:0; background:transparent; border:0; box-shadow:none; }
+#how-it-works .step .card-frame img{
+  height:clamp(300px,35vw,420px); width:auto; object-fit:contain; display:block; margin:0 auto;
+  filter:drop-shadow(0 10px 28px rgba(0,0,0,.35));
+}
+#how-it-works .step .cap{
+  margin-top:10px; background:#0f141a; border:1px solid rgba(255,255,255,.08);
+  border-radius:12px; padding:10px 12px; font-weight:800;
+}
+#how-it-works .step .cap small{ display:block; margin-top:4px; color:#b9c3d3; font-weight:600; }
+#how-it-works .arrow{
+  width:48px; height:48px; border-radius:999px; display:grid; place-items:center;
+  background:radial-gradient(circle at 50% 50%, rgba(255,204,0,.35), rgba(255,204,0,.08));
+  border:1px solid rgba(255,255,255,.12); box-shadow:0 0 0 4px rgba(255,204,0,.12), 0 8px 18px rgba(0,0,0,.30);
+  position:relative;
+}
+#how-it-works .arrow:before{ content:"➜"; font-weight:900; color:#ffcc00; filter:drop-shadow(0 0 4px rgba(255,204,0,.6)); }
+#how-it-works .arrow:after{
+  content:""; position:absolute; left:50%; transform:translateX(-50%); top:-12px; bottom:-12px; width:2px;
+  background:linear-gradient(180deg, rgba(255,204,0,0), rgba(255,204,0,.45), rgba(255,204,0,0));
+  pointer-events:none;
+}
+@media (max-width:980px){
+  #how-it-works .steps-row{ grid-template-columns:1fr; gap:14px; }
+  #how-it-works .arrow{ display:none; }
+  #how-it-works.section{ padding-top:22px; }
+}
+/* ========== Footer ========== */
+.footer{border-top:1px solid rgba(255,255,255,.06); margin-top:56px}
+.footer .container{max-width:1320px}
+.footer-grid{display:grid; grid-template-columns:1.2fr .8fr; gap:48px; padding:48px 0 18px; align-items:start}
+.brand-block{display:flex; align-items:center; gap:14px}
+.brand-logo-xl{width:48px; height:48px; border-radius:12px}
+.foot-title{margin:0; font-size:28px; letter-spacing:-.01em}
+.foot-tagline{margin:6px 0 14px; color:#c9d3df; font-size:18px}
+.footer .copyright{display:block; margin-top:14px; color:var(--muted); font-size:14px}
+.socials{display:inline-flex; gap:10px; align-items:center}
+.socials--lg .social-link{
+  width:36px; height:36px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
+  color:#b9c3d3; background:#0f141a; border:1px solid rgba(255,255,255,.12);
+  transition:transform .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.footer .icon{width:20px !important; height:20px !important; fill:currentColor; display:block}
+.socials--lg .social-link:hover,.socials--lg .social-link:focus-visible{ color:var(--brand); transform:translateY(-1px); box-shadow:0 4px 14px rgba(255,204,0,.22); outline:none; }
+.foot-col-right{ display:grid; grid-template-columns:repeat(2, minmax(160px, 1fr)); gap:16px 32px; align-items:start; }
+.foot-group h3{margin:0 0 8px; font-size:16px; color:var(--muted)}
+.foot-links{list-style:none; padding:0; margin:0; display:grid; gap:10px}
+.foot-links a{color:var(--ink); opacity:.9}
+.foot-links a:hover{opacity:1; text-decoration:underline}
+.foot-cta{grid-column:1 / -1; width:max-content; margin-top:8px}
+@media (max-width:960px){
+  .footer-grid{grid-template-columns:1fr; gap:28px}
+  .foot-col-right{grid-template-columns:1fr 1fr}
+  .foot-cta{width:100%}
+}
+/* Dashboard header tweaks (if page has tabbar) */
+body:has(.tabbar-wrap) .brand-logo{ width:44px; height:44px; border-radius:12px; }
+body:has(.tabbar-wrap) .nav-right{ gap:28px; }
+body:has(.tabbar-wrap) .nav-right .nav-link{ margin:0; }
+body:has(.tabbar-wrap) .nav{ min-height:72px; }
+  </style>
+</head>
+<body class="theme-dark">
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Aspire 101 home">
+        <img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt="">
+        <span class="brand-name">Aspire 101</span>
+      </a>
+      <nav class="nav-right">
+        <a class="nav-link" href="about.html">About</a>
+        <a class="nav-link" href="support.html">Support</a>
+        <a class="nav-link" href="signin.html">Sign In</a>
+        <a class="btn cta" href="signup.html">Sign Up</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <h1 class="display">
+          <span>Start searching. Start</span>
+          <span>matching.</span>
+          <span class="accent">Where needs meet action.</span>
+        </h1>
+        <p class="lead">Simple, instant, and open to everyone — campuses, neighborhoods, cities and beyond.</p>
+      </div>
+      <div class="hero-cta">
+        <a class="btn cta" href="quick-post.html">Quick Post</a>
+        <a class="btn ghost" href="find-match.html">Find a Match</a>
+      </div>
+    </div>
+    <div class="hero-glow" aria-hidden="true"></div>
+  </section>
+
+  <!-- What you can do (activity cards) -->
+  <section class="container section">
+    <h2 class="h2">What You Can Do on Aspire 101</h2>
+    <div class="cards">
+      <article class="card">
+        <div class="card-head"><div class="emoji"><img class="emoji-img" src="pictures/study.svg" alt="" loading="lazy"></div><h3>Study Group</h3></div>
+        <p>Looking for classmates to review for the final exam together.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><div class="emoji"><img class="emoji-img" src="pictures/sport.svg" alt="" loading="lazy"></div><h3>Sports Buddy</h3></div>
+        <p>Anyone up for a weekend basketball game or a morning run?</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><div class="emoji"><img class="emoji-img" src="pictures/game.svg" alt="" loading="lazy"></div><h3>Gaming Partner</h3></div>
+        <p>Searching for teammates to play tonight.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><div class="emoji"><img class="emoji-img" src="pictures/language.svg" alt="" loading="lazy"></div><h3>Language Exchange</h3></div>
+        <p>Practice English with a partner; meet weekly on campus or online.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><div class="emoji"><img class="emoji-img" src="pictures/hobby.svg" alt="" loading="lazy"></div><h3>Hobby Group</h3></div>
+        <p>Calling sketch artists — let’s create an online art-sharing circle.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><div class="emoji"><img class="emoji-img" src="pictures/walk.svg" alt="" loading="lazy"></div><h3>Walk & Talk</h3></div>
+        <p>Feeling down? Find someone to take a walk and chat with.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><div class="emoji"><img class="emoji-img" src="pictures/ride.svg" alt="" loading="lazy"></div><h3>Ride to the Airport</h3></div>
+        <p>Need someone heading the same way to drop you off at LAX.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><div class="emoji"><img class="emoji-img" src="pictures/moving.svg" alt="" loading="lazy"></div><h3>Moving Help</h3></div>
+        <p>Looking for an extra pair of hands to lift boxes and furniture.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- How it works — three transparent PNGs -->
+  <section class="container section" id="how-it-works">
+    <h2 class="h2" style="margin-bottom:4px;">How it works</h2>
+    <p class="muted">Discover activities → Match &amp; connect → Create your own event</p>
+
+    <div class="steps-row">
+      <!-- Step 1 -->
+      <figure class="step">
+        <div class="card-frame">
+          <img
+            src="pictures/How%20it%20works%E6%97%A0%E8%83%8C%E6%99%AFStep1.png"
+            alt="Step 1 — Discover activities" loading="lazy" decoding="async">
+        </div>
+        <figcaption class="cap">
+          Discover activities
+          <small>Find events on campus or in the city</small>
+        </figcaption>
+      </figure>
+
+      <div class="arrow" aria-hidden="true"></div>
+
+      <!-- Step 2 -->
+      <figure class="step">
+        <div class="card-frame">
+          <img
+            src="pictures/How%20it%20works%E6%97%A0%E8%83%8C%E6%99%AFStep2.png"
+            alt="Step 2 — Match and connect" loading="lazy" decoding="async">
+        </div>
+        <figcaption class="cap">
+          Match &amp; connect
+          <small>Show interest and coordinate details</small>
+        </figcaption>
+      </figure>
+
+      <div class="arrow" aria-hidden="true"></div>
+
+      <!-- Step 3 -->
+      <figure class="step">
+        <div class="card-frame">
+          <img
+            src="pictures/How%20it%20works%E6%97%A0%E8%83%8C%E6%99%AFStep3.png"
+            alt="Step 3 — Create your own event" loading="lazy" decoding="async">
+        </div>
+        <figcaption class="cap">
+          Create your own event
+          <small>Post with title, time, and location</small>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div class="foot-col-left">
+        <div class="brand-block">
+          <img class="brand-logo brand-logo-xl" src="pictures/19171758147211_.pic_hd.jpg" alt="Aspire 101">
+          <div class="brand-text">
+            <h2 class="foot-title">Aspire 101</h2>
+            <p class="foot-tagline">Search-first matching for help, study, and collabs.</p>
+          </div>
+        </div>
+        <nav class="socials socials--lg" aria-label="Social media">
+          <a class="social-link" href="https://www.instagram.com/aspire.101/" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2.2c3.2 0 3.6 0 4.9.1 1.2.1 1.9.3 2.3.5.6.2 1 .5 1.5 1 .5.5.8.9 1 1.5.2.4.4 1.1.5 2.3.1 1.3.1 1.6.1 4.9s0 3.6-.1 4.9c-.1 1.2-.3 1.9-.5 2.3-.2.6-.5 1-1 1.5-.5.5-.9.8-1.5 1-.4.2-1.1.4-2.3.5-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-1.2-.1-1.9-.3-2.3-.5-.6-.2-1-.5-1.5-1-.5-.5-.8-.9-1-1.5-.2-.4-.4-1.1-.5-2.3C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.9c.1-1.2.3-1.9.5-2.3.2-.6.5-1 1-1.5.5-.5.9-.8 1.5-1 .4-.2 1.1-.4 2.3-.5C8.4 2.2 8.8 2.2 12 2.2Zm0 5.3a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Zm7-.9a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z"/>
+            </svg>
+          </a>
+          <a class="social-link" href="https://www.linkedin.com/company/aspire-101/" target="_blank" rel="noopener" aria-label="LinkedIn">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5.001 2.5 2.5 0 0 1 0-5Zm.02 6.2H2V21h3V9.7ZM9 9.7H6v11.3h3v-6.1c0-1.63.85-2.64 2.23-2.64 1.02 0 1.77.72 1.77 2.26V21h3v-6.84c0-3.33-1.78-4.86-4.16-4.86-1.92 0-2.77 1.07-3.24 1.84h-.06V9.7Z"/>
+            </svg>
+          </a>
+          <a class="social-link" href="https://discord.gg/sfKv7k9Sbt" target="_blank" rel="noopener" aria-label="Discord">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20.3 5.4A17 17 0 0 0 15.8 4l-.3.6a15 15 0 0 1 2.9.9c-2.8-1.3-5.9-1.3-8.7 0a15 15 0 0 1 2.9-.9L12.3 4a17 17 0 0 0-4.5 1.4C4.2 8 3 12 3.2 16.1c1.7 1.3 3.6 2 5.5 2.5l.7-1.6c-.9-.3-1.8-.7-2.7-1.3l.6.3a12 12 0 0 0 9.4 0l.6-.3c-.9 .6-1.8 1-2.7 1.3l.7 1.6c1.9-.5 3.8-1.2 5.5-2.5.2-4.1-1-8.1-3.8-10.7Z"/>
+            </svg>
+          </a>
+        </nav>
+        <small class="copyright">© 2025 Aspire 101</small>
+      </div>
+
+      <div class="foot-col-right">
+        <div class="foot-group">
+          <h3>Resources</h3>
+          <ul class="foot-links">
+            <li><a href="about.html">About</a></li>
+            <li><a href="support.html">Support</a></li>
+            <li><a href="privacy.html">Privacy</a></li>
+            <li><a href="terms.html">Terms</a></li>
+          </ul>
+        </div>
+
+        <div class="foot-group">
+          <h3>Community</h3>
+          <ul class="foot-links">
+            <li><a href="https://discord.gg/sfKv7k9Sbt" target="_blank" rel="noopener">Discord</a></li>
+            <li><a href="https://www.instagram.com/aspire.101/" target="_blank" rel="noopener">Instagram</a></li>
+            <li><a href="https://www.linkedin.com/company/aspire-101/" target="_blank" rel="noopener">LinkedIn</a></li>
+          </ul>
+        </div>
+
+        <a class="btn cta foot-cta" href="signup.html">Get started</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Sign in · Aspire 101</title>
+
+  <!-- Icons -->
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+
+  <!-- Font + Site styles (same as index) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- CSP (allow Supabase and jsDelivr; HTTPS + WSS) -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 img-src 'self' data:;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                 font-src https://fonts.gstatic.com;
+                 script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                 connect-src 'self'
+                   https://ikxjemnugoodfuxjaqoe.supabase.co
+                   https://*.supabase.co https://*.supabase.in https://*.supabase.net
+                   wss://*.supabase.co wss://*.supabase.in wss://*.supabase.net;">
+
+  <!-- Supabase (UMD) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Page-specific styles (build on top of style.css) -->
+  <style>
+    /* hero strip like index */
+    .auth-hero{
+      position:relative; overflow:hidden;
+      padding:64px 0 24px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .auth-hero .display{
+      margin:0 0 10px;
+      font-size: clamp(34px, 6vw, 64px);
+      line-height:1.04; letter-spacing:-.02em; font-weight:900;
+    }
+    .auth-hero .lead{max-width:880px;color:#c9d3df}
+
+    .auth-glow{
+      position:absolute; inset:auto -10% -55% auto; width:1100px; height:860px;
+      background:
+        radial-gradient(600px 420px at 70% 35%, rgba(255,204,0,.22), transparent 70%),
+        radial-gradient(900px 600px at 100% 80%, rgba(255,204,0,.14), transparent 60%);
+      filter:blur(4px); pointer-events:none;
+    }
+
+    /* form system (harmonize with cards) */
+    .auth-wrap{padding:36px 0 72px}
+    .auth-grid{display:grid; gap:18px; grid-template-columns:1fr; max-width:820px; margin:0 auto}
+    @media (min-width:980px){ .auth-grid{grid-template-columns:1fr} }
+
+    .form{display:grid; gap:12px}
+    .label{display:block;font-weight:700;margin:4px 0}
+    .field{
+      padding:12px 12px; width:100%;
+      background:#0c1117; color:#e8eef7;
+      border:1px solid rgba(255,255,255,.12); border-radius:12px;
+      outline:none;
+    }
+    .field:focus{border-color:rgba(255,255,255,.24)}
+
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    .notice{padding:12px 14px;border-radius:12px;font-size:14px;margin:8px 0;display:none}
+    .notice.ok{background:#0b2; color:#eaffef; border:1px solid rgba(255,255,255,.12); opacity:.92}
+    .notice.bad{background:#3b0d14;color:#ffd6dc;border:1px solid rgba(255,255,255,.12)}
+
+    /* buttons: reuse .btn + modifiers from style.css */
+    .btn.full{width:100%}
+    .btn.small{height:40px; padding:0 14px}
+    .muted{color:#9aa4b2}
+  </style>
+</head>
+
+<body class="theme-dark">
+  <!-- Header (same layout as index) -->
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Aspire 101 home">
+        <img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt="">
+        <span class="brand-name">Aspire 101</span>
+      </a>
+      <nav class="nav-right">
+        <a class="nav-link" href="about.html">About</a>
+        <a class="nav-link" href="support.html">Support</a>
+        <a class="nav-link" href="signin.html" aria-current="page" style="opacity:1">Sign In</a>
+        <a class="btn cta" href="signup.html">Sign Up</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="auth-hero">
+    <div class="container">
+      <h1 class="display">Sign in</h1>
+      <p class="lead">Use email + password or phone (SMS). Your account keeps your posts and matches in one place.</p>
+    </div>
+    <div class="auth-glow" aria-hidden="true"></div>
+  </section>
+
+  <!-- Body -->
+  <main class="container auth-wrap">
+    <div id="msg" class="notice"></div>
+
+    <div class="auth-grid">
+      <!-- Already signed-in panel -->
+      <div id="signed-in" class="card" style="display:none">
+        <div class="form">
+          <p>You’re already signed in as <strong id="si-email"></strong>.</p>
+          <div class="row">
+            <a class="btn cta" href="dashboard.html">Go to Dashboard</a>
+            <button id="signout-here" class="btn ghost" type="button">Sign out</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Email / Password -->
+      <div id="panel-email" class="card">
+        <form id="form-email" class="form" autocomplete="off" spellcheck="false" novalidate>
+          <div>
+            <label class="label" for="email">Email</label>
+            <input id="email" class="field" name="email" type="email" inputmode="email" autocomplete="email" required/>
+          </div>
+          <div>
+            <label class="label" for="password">Password</label>
+            <input id="password" class="field" name="password" type="password" autocomplete="current-password" required/>
+          </div>
+          <div class="row">
+            <button class="btn cta" type="submit">Sign in</button>
+            <a class="btn ghost" href="signup.html">Create account</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Phone (SMS) -->
+      <div class="card">
+        <form id="form-phone" class="form" autocomplete="off" spellcheck="false" novalidate>
+          <div class="row">
+            <div style="min-width:140px">
+              <label class="label" for="dial">Dial code</label>
+              <input id="dial" class="field" value="+1" style="text-align:center"/>
+            </div>
+            <div style="flex:1">
+              <label class="label" for="phone">Local phone</label>
+              <input id="phone" class="field" inputmode="tel" placeholder="415 555 0134" required/>
+              <small class="muted">Enter local number — we’ll add the country code.</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <button id="send-code" class="btn cta" type="button">Send code</button>
+            <span id="sent" class="muted" style="display:none">Code sent. Check SMS.</span>
+          </div>
+
+          <div id="code-row" style="display:none">
+            <label class="label" for="code">Verification code</label>
+            <input id="code" class="field" inputmode="numeric" placeholder="6-digit code"/>
+            <div class="row" style="margin-top:8px">
+              <button id="verify" class="btn cta" type="button">Verify & sign in</button>
+              <button id="resend" class="btn ghost" type="button">Resend</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <!-- Supabase config -->
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
+
+  <!-- Page logic (keeps all your features) -->
+  <script>
+    // ---------- helpers ----------
+    const $ = (s, el=document)=> el.querySelector(s);
+    function flash(text, bad=false){
+      const m = $('#msg'); m.textContent = text;
+      m.className = 'notice ' + (bad?'bad':'ok'); m.style.display='block';
+    }
+    function buildE164(){
+      const dial = ($('#dial').value||'').trim().replace(/[^\d+]/g,'').replace(/^([^+])/,'+$1');
+      const local = ($('#phone').value||'').replace(/[^\d]/g,'').replace(/^0+/,'');
+      return (dial+local).replace(/\s+/g,'');
+    }
+    const phoneRe = /^\+[1-9]\d{7,14}$/;
+
+    function shouldAutoOnLoad(){
+      const url = new URL(location.href);
+      return url.searchParams.get('auto') === '1';
+    }
+    function redirectToDashboard(){
+      location.replace('dashboard.html');
+    }
+
+    async function hydrateSession(sb, { retries=6, delay=150 } = {}){
+      for (let i=0;i<retries;i++){
+        const { data:{ session } } = await sb.auth.getSession();
+        if (session?.user) return session;
+        await new Promise(r=>setTimeout(r, delay));
+      }
+      const { data:{ user } } = await sb.auth.getUser();
+      return user ? { user } : null;
+    }
+
+    // ---------- main ----------
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!window.supabase) { flash('Supabase SDK failed to load. Check CSP.', true); return; }
+      const url  = document.querySelector('meta[name="supabase-url"]').content;
+      const anon = document.querySelector('meta[name="supabase-anon"]').content;
+      const sb   = window.supabase.createClient(url, anon);
+
+      // If already signed in:
+      const session = await hydrateSession(sb);
+      if (session?.user){
+        $('#panel-email').style.display = 'none';
+        $('#signed-in').style.display = 'block';
+        $('#si-email').textContent = session.user.email || session.user.phone || '(no id)';
+      }
+
+      // Watch for auth changes
+      sb.auth.onAuthStateChange((_evt, s)=>{
+        if (s?.user){
+          $('#panel-email').style.display = 'none';
+          $('#signed-in').style.display = 'block';
+          $('#si-email').textContent = s.user.email || s.user.phone || '(no id)';
+          if (shouldAutoOnLoad()) redirectToDashboard();
+        }else{
+          $('#signed-in').style.display = 'none';
+          $('#panel-email').style.display = '';
+        }
+      });
+
+      // In-panel sign out
+      $('#signout-here')?.addEventListener('click', async ()=>{
+        try{ await sb.auth.signOut(); }catch{}
+        $('#signed-in').style.display = 'none';
+        $('#panel-email').style.display = '';
+        flash('Signed out. You can sign in again.');
+      });
+
+      // Email + password sign in
+      $('#form-email')?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const email = ($('#email').value||'').trim();
+        const password = $('#password').value||'';
+        if (!email || !password) return flash('Enter your email and password.', true);
+        try{
+          const { error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          flash('Signed in! Redirecting…');
+          redirectToDashboard();
+        }catch(err){ flash(err.message||'Could not sign in.', true); }
+      });
+
+      // SMS sign in
+      async function sendCode(){
+        const phone = buildE164();
+        if (!phoneRe.test(phone)) return flash('Enter a valid phone + country code.', true);
+        try{
+          const { error } = await sb.auth.signInWithOtp({ phone, options:{ channel:'sms' }});
+          if (error) throw error;
+          $('#sent').style.display='inline';
+          $('#code-row').style.display='block';
+          flash('Code sent. Enter the 6-digit code to finish.');
+        }catch(err){ flash(err.message||'Could not send code.', true); }
+      }
+      async function verifyCode(){
+        const phone = buildE164();
+        const code  = ($('#code').value||'').trim();
+        if (!phoneRe.test(phone)) return flash('Enter a valid phone + country code.', true);
+        if (!/^\d{6}$/.test(code)) return flash('Enter the 6-digit code.', true);
+        try{
+          const { error } = await sb.auth.verifyOtp({ phone, token: code, type: 'sms' });
+          if (error) throw error;
+          flash('Signed in! Redirecting…');
+          redirectToDashboard();
+        }catch(err){ flash(err.message||'Verification failed.', true); }
+      }
+      $('#send-code')?.addEventListener('click', sendCode);
+      $('#resend')?.addEventListener('click', sendCode);
+      $('#verify')?.addEventListener('click', verifyCode);
+    });
+  </script>
+</body>
+</html>

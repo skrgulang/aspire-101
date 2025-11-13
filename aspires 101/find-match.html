@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Aspire 101 · Find a Match</title>
+
+  <!-- ===== Favicons ===== -->
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+
+  <!-- ===== Fonts ===== -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- ===== Supabase CSP ===== -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 img-src 'self' data:;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                 font-src https://fonts.gstatic.com;
+                 script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net;
+                 connect-src 'self'
+                   https://ikxjemnugoodfuxjaqoe.supabase.co
+                   https://*.supabase.co https://*.supabase.in https://*.supabase.net
+                   wss://*.supabase.co wss://*.supabase.in wss://*.supabase.net;">
+
+  <!-- ===== Supabase ===== -->
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+  <!-- ===== STYLE ===== -->
+  <style>
+    :root{
+      --brand:#ffcc00; --ink:#e9eef7; --muted:#a6b3c5;
+      --bg:#0b0f14; --card:#0f141b; --line:rgba(255,255,255,.12);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--ink)}
+    .container{max-width:1160px;margin:0 auto;padding:0 22px}
+
+    /* ===== Header — matches homepage ===== */
+    .site-header{
+      position:sticky; top:0; z-index:40;
+      backdrop-filter:blur(12px);
+      background:linear-gradient(180deg,rgba(16,18,22,.86),rgba(16,18,22,.72));
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .nav{display:grid; grid-template-columns:auto 1fr; align-items:center; min-height:72px; gap:16px}
+    .brand{display:flex; align-items:center; gap:12px; color:var(--ink) !important; text-decoration:none !important}
+    .brand:hover{opacity:.95; color:var(--ink) !important; text-decoration:none !important}
+    .brand:link,.brand:visited,.brand:active,.brand:focus{color:var(--ink) !important; text-decoration:none !important}
+    .brand-logo{
+      width:36px; height:36px; object-fit:cover; border-radius:10px;
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:0 0 0 4px rgba(255,255,255,.04) inset;
+    }
+    .brand-name{font-weight:800; font-size:22px; letter-spacing:.2px}
+    .nav-right{display:flex; justify-content:flex-end; align-items:center; gap:22px}
+    .nav-link{color:var(--ink); font-weight:700; opacity:.92; text-decoration:none}
+    .nav-link:hover{opacity:1}
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      height:44px; padding:0 18px;
+      border-radius:999px; border:1px solid rgba(255,255,255,.12);
+      background:#12171d; color:var(--ink); font-weight:800;
+      box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 8px 22px rgba(0,0,0,.25);
+      text-decoration:none; cursor:pointer;
+    }
+    .btn.ghost{background:transparent; border-color:rgba(255,255,255,.16); color:#dbe3ee}
+    .btn.cta{background:var(--brand); color:#0b0d12; border:0; box-shadow:0 10px 30px rgba(255,204,0,.22)}
+
+    /* ===== Hero ===== */
+    .hero-sm{position:relative; overflow:hidden; padding:82px 0 22px}
+    .display{margin:0 0 10px; font-size:clamp(32px,5.6vw,64px); line-height:1.03; letter-spacing:-.02em; font-weight:900}
+    .lead{color:#c9d3df; margin:0}
+
+    /* ===== Main Card ===== */
+    .card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; box-shadow:0 12px 50px rgba(0,0,0,.35)}
+    .grid{display:grid; gap:12px; grid-template-columns:1.1fr .9fr 1fr 1fr .9fr auto; align-items:end}
+    @media (max-width:1100px){ .grid{ grid-template-columns:1fr 1fr } }
+
+    .label{ display:block; font-size:13px; color:var(--muted); margin:0 0 6px 2px }
+    .field,.select{ height:44px; border-radius:12px; background:#0c1117; color:var(--ink); border:1px solid var(--line); padding:0 12px; width:100% }
+    .btn.small{ height:34px; padding:0 12px }
+
+    .table{ width:100%; border-collapse:collapse; margin-top:12px }
+    .table th,.table td{ padding:12px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle }
+    .muted{ color:var(--muted) }
+    .muted-center{ color:var(--muted); text-align:center }
+
+    .pager{ display:flex; align-items:center; gap:10px; justify-content:flex-end; padding:12px 0 }
+    .badge{ display:inline-block; border:1px solid var(--line); padding:3px 10px; border-radius:999px; font-size:12px }
+    .err{ color:#ff9e9e }
+  </style>
+</head>
+
+<body>
+  <!-- ===== Header ===== -->
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Aspire 101 home">
+        <img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt="">
+        <span class="brand-name">Aspire 101</span>
+      </a>
+      <nav class="nav-right">
+        <a class="nav-link" href="about.html">About</a>
+        <a class="nav-link" href="support.html">Support</a>
+        <a class="nav-link" id="nav-signin" href="signin.html">Sign In</a>
+        <a class="btn cta" id="nav-signup" href="signup.html">Sign Up</a>
+        <a class="nav-link" id="nav-account" href="account.html" style="display:none">Account</a>
+        <button class="btn ghost" id="nav-signout" style="display:none" type="button">Sign Out</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ===== Hero ===== -->
+  <section class="hero-sm">
+    <div class="container">
+      <h1 class="display">Find a Match</h1>
+      <p class="lead">Search tasks by keyword, city, category, and budget. Anyone can browse. To post or interact, please sign in.</p>
+    </div>
+  </section>
+
+  <!-- ===== Main ===== -->
+  <main class="container" style="padding:18px 0 60px">
+    <div class="card">
+      <div class="grid" role="search">
+        <div>
+          <label class="label">Location</label>
+          <select id="loc-mode" class="select">
+            <option value="any" selected>Anywhere</option>
+            <option value="gps">Near me (GPS)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="label">Distance (miles)</label>
+          <select id="q-distance" class="select">
+            <option value="any" selected>No distance limit</option>
+            <option value="10">0–10</option>
+            <option value="20">10–20</option>
+            <option value="30">20–30</option>
+            <option value="50">30–50</option>
+            <option value="75">50–75</option>
+            <option value="100">75–100</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="label">Keyword</label>
+          <input id="q-key" class="field" placeholder="airport, study group, Chicago">
+        </div>
+
+        <div>
+          <label class="label">City filter</label>
+          <input id="q-city" class="field" placeholder="e.g., Los Angeles">
+        </div>
+
+        <div>
+          <label class="label">Budget</label>
+          <select id="q-budget" class="select">
+            <option value="any" selected>No limit</option>
+            <option value="1000+">$1,000+</option>
+            <option value="500-1000">$500–$1,000</option>
+            <option value="200-500">$200–$500</option>
+            <option value="100-200">$100–$200</option>
+            <option value="50-100">$50–$100</option>
+            <option value="0-50">$0–$50</option>
+          </select>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end">
+          <button id="searchBtn" class="btn cta" type="button">Search</button>
+        </div>
+      </div>
+
+      <table class="table" aria-live="polite">
+        <thead>
+          <tr>
+            <th>Title</th><th>Budget</th><th>City</th><th>By</th><th>When</th><th style="width:160px">Action</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="6" class="muted-center">Loading…</td></tr>
+        </tbody>
+      </table>
+
+      <div class="pager">
+        <div class="muted">Per page</div>
+        <select id="perPage" class="select" style="width:86px;height:40px">
+          <option value="10" selected>10</option>
+          <option value="12">12</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+        </select>
+        <button id="prevBtn" class="btn ghost" type="button">Prev</button>
+        <button id="nextBtn" class="btn cta" type="button">Next</button>
+      </div>
+
+      <div class="muted" style="padding:6px 2px 0">
+        Public list shows <b>approved</b> tasks only.
+      </div>
+    </div>
+  </main>
+
+  <div id="toast" style="position:fixed;left:50%;transform:translateX(-50%);bottom:16px;background:#141a22;color:var(--ink);border:1px solid var(--line);padding:10px 14px;border-radius:10px;display:none;z-index:60"></div>
+
+  <script>
+  (function(){
+    const $ = (s,el=document)=>el.querySelector(s);
+    const esc = s => (s??'').toString().replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+    const SB_URL  = document.querySelector('meta[name="supabase-url"]').content;
+    const SB_ANON = document.querySelector('meta[name="supabase-anon"]').content;
+    const sb = window.supabase.createClient(SB_URL, SB_ANON, { auth:{ persistSession:true } });
+
+    // Header auth toggle
+    const navIn  = $('#nav-signin'), navUp = $('#nav-signup'), navAcct = $('#nav-account'), navOut = $('#nav-signout');
+    async function refreshHeader(){
+      const { data:{ session } } = await sb.auth.getSession();
+      const on = !!session;
+      navIn.style.display   = on ? 'none' : '';
+      navUp.style.display   = on ? 'none' : '';
+      navAcct.style.display = on ? '' : 'none';
+      navOut.style.display  = on ? '' : 'none';
+    }
+    navOut?.addEventListener('click', async ()=>{ await sb.auth.signOut(); await refreshHeader(); await fetchRows(true); });
+
+    // UI + state
+    const tbody = $('#tbody'), perSel = $('#perPage'), prevBtn = $('#prevBtn'), nextBtn = $('#nextBtn');
+    let CURRENT_USER = null, ALL_ROWS = [], PAGE = 0;
+
+    function toast(msg){
+      const t=$('#toast'); t.textContent=msg; t.style.display='block';
+      clearTimeout(toast.t); toast.t=setTimeout(()=> t.style.display='none', 2200);
+    }
+    function parseBudgetRange(v){
+      if (!v || v==='any') return [null,null];
+      if (v.endsWith('+')) return [Number(v.replace('+','')), null];
+      const [a,b]=v.split('-').map(Number);
+      return [isNaN(a)?null:a, isNaN(b)?null:b];
+    }
+    function displayName(r){ return r.anonymous ? 'Anonymous' : (r.poster_name||'Member'); }
+    function timeStr(d){ try{ return new Date(d||Date.now()).toLocaleString(); }catch{ return ''; } }
+    function actionCell(row){
+      if (!CURRENT_USER) return `<a class="btn small cta" href="signin.html?next=${encodeURIComponent(location.pathname)}">Sign in</a>`;
+      if (row.user_id === CURRENT_USER.id) return `<span class="badge">my post</span>`;
+      if (!row.accepted_by) return `<button class="btn small cta" data-act="claim" data-id="${row.id}">Claim</button>`;
+      if (row.accepted_by === CURRENT_USER.id) return `<button class="btn small" data-act="unclaim" data-id="${row.id}">Unclaim</button>`;
+      return `<span class="badge">claimed</span>`;
+    }
+
+    async function ensureUser(){
+      try{ const { data:{ session } } = await sb.auth.getSession(); CURRENT_USER = session?.user || null; }
+      catch{ CURRENT_USER = null; }
+      return CURRENT_USER;
+    }
+
+    async function paint(){
+      const size = Number(perSel.value), start = PAGE*size, pageRows = ALL_ROWS.slice(start, start+size);
+      tbody.innerHTML = '';
+      if (!pageRows.length){
+        tbody.innerHTML = `<tr><td colspan="6" class="muted-center">No results. Try a search.</td></tr>`;
+      }else{
+        pageRows.forEach(r=>{
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${esc(r.title||'')}</td>
+            <td>${r.budget!=null?('$'+Number(r.budget).toFixed(0)):'—'}</td>
+            <td>${esc(r.city||'')}</td>
+            <td>${esc(displayName(r))}</td>
+            <td>${esc(timeStr(r.created_at))}</td>
+            <td>${actionCell(r)}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+      prevBtn.disabled = PAGE<=0;
+      nextBtn.disabled = (start+size) >= ALL_ROWS.length;
+    }
+
+    async function fetchRows(resetPage=true){
+      await ensureUser(); await refreshHeader();
+
+      const key = $('#q-key').value.trim().toLowerCase();
+      const city= $('#q-city').value.trim().toLowerCase();
+      const [bmin,bmax] = parseBudgetRange($('#q-budget').value);
+
+      try{
+        let q = sb.from('tasks').select('*').eq('status','approved').order('created_at',{ascending:false}).limit(500);
+        if (key)  q = q.or(`title.ilike.%${key}%,details.ilike.%${key}%,city.ilike.%${key}%`);
+        if (city) q = q.ilike('city', `%${city}%`);
+        if (bmin!=null) q = q.gte('budget', bmin);
+        if (bmax!=null) q = q.lte('budget', bmax);
+
+        const { data, error } = await q;
+        ALL_ROWS = error ? [] : (data || []);
+        if (resetPage) PAGE = 0;
+        paint();
+      }catch(e){
+        tbody.innerHTML = `<tr><td colspan="6" class="muted-center err">Load failed.</td></tr>`;
+        console.error(e);
+      }
+    }
+
+    // Claim / Unclaim
+    tbody.addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button[data-act]'); if(!btn) return;
+      const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
+
+      await ensureUser();
+      if (!CURRENT_USER){
+        location.href = 'signin.html?next=' + encodeURIComponent(location.pathname);
+        return;
+      }
+
+      btn.disabled = true;
+      try{
+        if (act==='claim'){
+          const { error } = await sb.from('tasks')
+            .update({ accepted_by: CURRENT_USER.id, accepted_name: (CURRENT_USER.user_metadata?.full_name || CURRENT_USER.email || 'Member') })
+            .eq('id', id).is('accepted_by', null).eq('status','approved');
+          if (error) throw error;
+          toast('Claimed!');
+        }else{
+          const { error } = await sb.from('tasks')
+            .update({ accepted_by: null, accepted_name: null })
+            .eq('id', id).eq('accepted_by', CURRENT_USER.id);
+          if (error) throw error;
+          toast('Unclaimed.');
+        }
+      }catch(err){
+        toast(err.message || 'Action failed');
+      }finally{
+        btn.disabled = false;
+        fetchRows(false);
+      }
+    });
+
+    // Events
+    $('#searchBtn').addEventListener('click', ()=> fetchRows(true));
+    ['q-key','q-city'].forEach(id=> $('#'+id).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); fetchRows(true);} }));
+    ['loc-mode','q-distance','q-budget'].forEach(id=> $('#'+id).addEventListener('change', ()=> fetchRows(true)));
+    perSel.addEventListener('change', ()=> paint());
+    prevBtn.addEventListener('click', ()=>{ if(PAGE>0){ PAGE--; paint(); } });
+    nextBtn.addEventListener('click', ()=>{ const max=Math.floor((ALL_ROWS.length-1)/Number(perSel.value)); if(PAGE<max){ PAGE++; paint(); } });
+
+    // Realtime refresh
+    try{
+      sb.channel('tasks_live')
+        .on('postgres_changes',{event:'*',schema:'public',table:'tasks'}, ()=> fetchRows(false))
+        .subscribe();
+    }catch{}
+
+    // Boot
+    document.addEventListener('DOMContentLoaded', ()=> fetchRows(true));
+  })();
+  </script>
+</body>
+</html>

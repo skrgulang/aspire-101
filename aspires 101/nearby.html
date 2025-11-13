@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Nearby demo</title>
+
+  <!-- Allow geolocation for this origin -->
+  <meta http-equiv="Permissions-Policy" content="geolocation=(self)">
+
+  <!-- Supabase SDK + your real project keys -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co">
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
+
+  <style>
+    body{font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial; max-width:880px; margin:40px auto; padding:0 16px}
+    .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .card{border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin:14px 0; background:#fff}
+    .muted{color:#6b7280}
+    button{padding:8px 12px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; cursor:pointer}
+    button.primary{background:#ffcc00; border:0; font-weight:700}
+    input[type="email"]{padding:8px 10px; border:1px solid #e5e7eb; border-radius:10px; min-width:260px}
+    ul{padding-left:16px}
+  </style>
+</head>
+<body>
+  <h1>Nearby</h1>
+  <p class="muted">Allow location when prompted. You must be signed in to save your location or create a post.</p>
+
+  <!-- Auth status -->
+  <div id="auth" class="card">
+    <div id="signed-out" class="row">
+      <form id="otp-form" class="row" onsubmit="return false;">
+        <input id="otp-email" type="email" placeholder="you@example.com" required>
+        <button id="send-otp" class="primary">Send sign-in link</button>
+      </form>
+      <small class="muted">We’ll email you a magic link. Make sure your Supabase “Site URL” points to this domain.</small>
+    </div>
+
+    <div id="signed-in" style="display:none">
+      <div class="row">
+        <span>Signed in as <strong id="who"></strong></span>
+        <button id="signout">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick actions -->
+  <div class="row">
+    <button id="save" class="primary">Save my location</button>
+    <button id="post">Create sample post</button>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px">People</h2>
+    <ul id="nearby-profiles"></ul>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 8px">Posts</h2>
+    <ul id="nearby-posts"></ul>
+  </div>
+
+  <!-- geo helpers (auto-fills lists if IDs exist) -->
+  <script type="module" src="./geo.js"></script>
+
+  <!-- Minimal auth + button wiring -->
+  <script type="module">
+    import { getBrowserLocation, upsertMyProfile, createPost } from './geo.js';
+
+    // Create Supabase client from meta tags
+    const url  = document.querySelector('meta[name="supabase-url"]').content.trim();
+    const anon = document.querySelector('meta[name="supabase-anon"]').content.trim();
+    const supabase = window.supabase.createClient(url, anon);
+
+    const $ = s => document.querySelector(s);
+    const signedOut = $('#signed-out');
+    const signedIn  = $('#signed-in');
+    const who       = $('#who');
+
+    async function refreshAuthUI(){
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user || null;
+      if (user){
+        signedOut.style.display = 'none';
+        signedIn.style.display = 'block';
+        who.textContent = user.email || user.id;
+        // Enable buttons when signed in
+        $('#save').disabled = false;
+        $('#post').disabled = false;
+      }else{
+        signedOut.style.display = 'block';
+        signedIn.style.display = 'none';
+        $('#save').disabled = true;
+        $('#post').disabled = true;
+      }
+    }
+
+    // Handle magic-link sign-in
+    $('#send-otp').addEventListener('click', async () => {
+      const email = $('#otp-email').value.trim();
+      if (!email) return alert('Enter an email');
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.href }
+      });
+      if (error) return alert(error.message);
+      alert('Check your email for a sign-in link.');
+    });
+
+    // Sign out
+    $('#signout').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      await refreshAuthUI();
+    });
+
+    // RLS-protected actions
+    $('#save').addEventListener('click', async () => {
+      const loc = await getBrowserLocation();
+      if (!loc) return alert('Location denied or unavailable.');
+      try{
+        await upsertMyProfile({ display_name:'Tester', school:'NYU', city:'New York', ...loc });
+        alert('Location saved to your profile!');
+      }catch(e){ alert(e.message || 'Save failed'); }
+    });
+
+    $('#post').addEventListener('click', async () => {
+      const loc = await getBrowserLocation();
+      if (!loc) return alert('Location denied or unavailable.');
+      try{
+        await createPost({ title:'Need airport ride', body:'JFK 7pm', city:'NYC', ...loc });
+        alert('Posted!');
+      }catch(e){ alert(e.message || 'Post failed'); }
+    });
+
+    // Keep UI in sync on auth changes (after clicking magic link)
+    supabase.auth.onAuthStateChange(async () => {
+      await refreshAuthUI();
+      // Reload to let geo.js auto-hydrate nearby lists for the signed-in user (optional)
+      // location.reload();
+    });
+
+    refreshAuthUI();
+  </script>
+</body>
+</html>

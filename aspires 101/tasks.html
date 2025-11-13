@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Task Board · Aspire 101</title>
+
+  <!-- Icons & base CSS -->
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Supabase -->
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --brand:#ffcc00; --ink:#e8eef7; --muted:#9aa4b2; --line:rgba(255,255,255,.09);
+      --card:#0c1117; --bg:#0b0f14;
+    }
+    body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    .container{max-width:1100px;margin:0 auto;padding:0 16px}
+    .site-header{position:sticky;top:0;z-index:50;background:rgba(11,15,20,.7);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+    .nav{display:flex;align-items:center;justify-content:space-between;min-height:64px}
+    .brand{display:flex;gap:10px;align-items:center;color:#fff;text-decoration:none;font-weight:900}
+    .brand-logo{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);object-fit:cover}
+    .nav-right{display:flex;gap:10px;align-items:center}
+    .nav-link{color:#d8e0ef;text-decoration:none}
+    .btn{display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#0b0f14;color:#e8eef7;font-weight:800;cursor:pointer}
+    .btn.cta{background:var(--brand);border:0;color:#0b0d12}
+    .section{padding:18px 0}
+    .h1{font-size:clamp(28px,6vw,56px);line-height:1.05;margin:18px 0 6px}
+    .sub{color:var(--muted);margin:0 0 10px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .label{font-size:13px;color:var(--muted)}
+    .field{height:40px;border:1px solid var(--line);border-radius:12px;padding:0 12px;background:#0b0f14;color:#e8eef7;width:100%}
+    textarea.field{height:auto;padding:10px 12px}
+    .field:focus{outline:none;border-color:rgba(255,255,255,.22)}
+    .chips{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 4px}
+    .chip{border:1px solid var(--line);background:#0b0f14;border-radius:999px;padding:8px 12px;font-weight:800;color:#dfe7f6;cursor:pointer}
+    .chip.is-on{background:rgba(255,255,255,.06)}
+    .board-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    @media (max-width:960px){.board-grid{display:none} #mobile-list{display:block}}
+    .col h3{margin:0 0 6px}
+    .task{border:1px solid var(--line);border-radius:12px;padding:12px;background:#0b0f14;margin-bottom:10px}
+    .muted{color:var(--muted)}
+    .muted-center{color:var(--muted);text-align:center}
+    .hide{display:none!important}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left}
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html">
+        <img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt="">
+        <span>Aspire 101</span>
+      </a>
+      <nav class="nav-right">
+        <a class="nav-link" href="about.html">About</a>
+        <a class="nav-link" href="support.html">Support</a>
+        <a class="btn" href="account.html">Account</a>
+        <button id="signout-btn" class="btn cta" type="button">Sign out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container section">
+    <h1 class="h1">Task board</h1>
+    <p class="sub">Post tasks, track status, and see your posting history.</p>
+
+    <!-- Post form + My tasks side-by-side -->
+    <div class="card" style="display:grid;grid-template-columns:1.15fr .85fr;gap:16px">
+      <form id="post-form" class="form" autocomplete="off">
+        <div>
+          <label class="label" for="f-title">Title</label>
+          <input class="field" id="f-title" placeholder="Need airport ride" required/>
+        </div>
+
+        <div>
+          <label class="label" for="f-budget">Budget (optional)</label>
+          <input class="field" id="f-budget" type="number" min="0" step="0.01" placeholder="20.00"/>
+        </div>
+
+        <div style="grid-column:1 / -1">
+          <label class="label" for="f-details">Details</label>
+          <textarea class="field" id="f-details" rows="3" placeholder="Short details (time, place, notes…)"></textarea>
+        </div>
+
+        <div>
+          <label class="label" for="f-city">City (optional)</label>
+          <input class="field" id="f-city" placeholder="New York"/>
+        </div>
+
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn cta" type="submit" id="post-btn">Post task</button>
+        </div>
+      </form>
+
+      <aside>
+        <strong>My recent tasks</strong>
+        <table class="table" style="margin-top:8px">
+          <thead><tr><th>Title</th><th>Status</th><th>Created</th></tr></thead>
+          <tbody id="mine-body">
+            <tr><td colspan="3" class="muted-center">Sign in to see your history.</td></tr>
+          </tbody>
+        </table>
+      </aside>
+    </div>
+
+    <!-- Mobile chips -->
+    <div class="chips" id="chips">
+      <button class="chip is-on" data-filter="all" type="button">All</button>
+      <button class="chip" data-filter="todo" type="button">To-do</button>
+      <button class="chip" data-filter="in_progress" type="button">In progress</button>
+      <button class="chip" data-filter="done" type="button">Done</button>
+    </div>
+
+    <!-- Mobile list -->
+    <div id="mobile-list" aria-live="polite" style="display:none"></div>
+
+    <!-- Desktop board -->
+    <div class="board-grid" id="board" aria-live="polite">
+      <div class="col">
+        <h3>To-do</h3>
+        <div id="col-todo"></div>
+      </div>
+      <div class="col">
+        <h3>In progress</h3>
+        <div id="col-in_progress"></div>
+      </div>
+      <div class="col">
+        <h3>Done</h3>
+        <div id="col-done"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== Auth + page logic ===== -->
+  <script>
+    (async function(){
+      const url  = document.querySelector('meta[name="supabase-url"]').content;
+      const anon = document.querySelector('meta[name="supabase-anon"]').content;
+      const sb   = window.supabase.createClient(url, anon);
+      window.__supabase = sb;
+
+      // header signout
+      document.getElementById('signout-btn')?.addEventListener('click', async ()=>{
+        try { await sb.auth.signOut(); } catch(e){}
+        location.replace('index.html');
+      });
+
+      // util
+      const $  = (s, el=document)=> el.querySelector(s);
+      const $$ = (s, el=document)=> Array.from(el.querySelectorAll(s));
+      const esc = s => (s??'').toString().replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+      const fmt = (d)=> new Date(d).toLocaleString([], {month:'short', day:'numeric'});
+
+      // --- paint board
+      function taskCard(t){
+        return `
+          <div class="task" data-status="${esc(t.status||'todo')}" data-id="${t.id}">
+            <strong>${esc(t.title)}</strong>
+            ${t.details ? `<p class="muted" style="margin:6px 0 0">${esc(t.details)}</p>`:''}
+            <div class="muted" style="font-size:12px;margin-top:8px">
+              ${t.city ? esc(t.city)+' · ' : ''}${t.budget != null ? '$'+Number(t.budget).toFixed(2) : ''}
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+              ${t.status!=='in_progress' ? `<button class="btn" data-action="move" data-to="in_progress" data-id="${t.id}" type="button">Start</button>` : ''}
+              ${t.status!=='done' ? `<button class="btn" data-action="move" data-to="done" data-id="${t.id}" type="button">Complete</button>` : ''}
+              ${t.status!=='todo' ? `<button class="btn" data-action="move" data-to="todo" data-id="${t.id}" type="button">Reset</button>` : ''}
+              ${t._mine ? `<button class="btn" data-action="delete" data-id="${t.id}" type="button">Delete</button>` : ''}
+            </div>
+          </div>`;
+      }
+
+      async function loadAll(){
+        const { data:session } = await sb.auth.getSession();
+        const myId = session?.session?.user?.id || null;
+
+        const { data, error } = await sb
+          .from('tasks')
+          .select('id, owner_id, title, details, city, budget, status, created_at')
+          .order('created_at',{ascending:false})
+          .limit(200);
+        if (error){ console.error(error); paintEmpty(); return; }
+
+        // mark which are mine (so delete button only shows for owner)
+        (data||[]).forEach(t => t._mine = (t.owner_id === myId));
+
+        const groups = { todo:[], in_progress:[], done:[] };
+        (data||[]).forEach(t => (groups[t.status]||groups.todo).push(t));
+
+        $('#col-todo').innerHTML        = groups.todo.map(taskCard).join('')        || '<p class="muted">No tasks.</p>';
+        $('#col-in_progress').innerHTML = groups.in_progress.map(taskCard).join('') || '<p class="muted">No tasks.</p>';
+        $('#col-done').innerHTML        = groups.done.map(taskCard).join('')        || '<p class="muted">No tasks.</p>';
+        $('#mobile-list').innerHTML     = (data||[]).map(taskCard).join('')         || '<p class="muted">No tasks.</p>';
+
+        // my history
+        if (myId){
+          const mine = (data||[]).filter(t=>t.owner_id===myId).slice(0,12);
+          $('#mine-body').innerHTML = mine.length
+            ? mine.map(t=>`<tr><td>${esc(t.title)}</td><td>${esc(t.status)}</td><td>${fmt(t.created_at)}</td></tr>`).join('')
+            : '<tr><td colspan="3" class="muted-center">You have no tasks yet.</td></tr>';
+        }else{
+          $('#mine-body').innerHTML = '<tr><td colspan="3" class="muted-center">Sign in to see your history.</td></tr>';
+        }
+      }
+
+      function paintEmpty(){
+        ['#col-todo','#col-in_progress','#col-done','#mobile-list'].forEach(sel=>{
+          const el = $(sel); if (el) el.innerHTML = '<p class="muted">No tasks.</p>';
+        });
+      }
+
+      async function moveTask(id, to){
+        const { error } = await sb.from('tasks').update({ status: to }).eq('id', id);
+        if (error) return alert(error.message || 'Failed to update task.');
+        await loadAll();
+      }
+      async function deleteTask(id){
+        const { error } = await sb.from('tasks').delete().eq('id', id);
+        if (error) return alert(error.message || 'Failed to delete task.');
+        await loadAll();
+      }
+
+      // actions
+      document.body.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const id = btn.dataset.id, act = btn.dataset.action;
+        if (act==='move') moveTask(id, btn.dataset.to);
+        if (act==='delete' && confirm('Delete this task?')) deleteTask(id);
+      });
+
+      // post form (IMPORTANT: writes owner_id so RLS passes)
+      $('#post-form')?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+
+        const title   = $('#f-title')?.value?.trim();
+        const details = $('#f-details')?.value?.trim() || null;
+        const city    = $('#f-city')?.value?.trim() || null;
+        const budgetV = $('#f-budget')?.value?.trim();
+        const budget  = budgetV === '' ? null : Number(budgetV);
+
+        const { data:{ user }, error: uerr } = await sb.auth.getUser();
+        if (uerr){ console.error(uerr); alert('Auth error. Please sign in again.'); return; }
+        if (!user){ alert('Please sign in first.'); return; }
+        if (!title){ alert('Please enter a title.'); return; }
+
+        const row = { owner_id: user.id, title, details, city, budget, status:'todo' };
+
+        const { data, error } = await sb.from('tasks').insert(row).select('id').single();
+        if (error){ alert(`Insert failed: ${error.message}`); return; }
+
+        e.target.reset();
+        await loadAll();
+      });
+
+      // mobile chips filter
+      $$('#chips .chip').forEach(chip=>{
+        chip.addEventListener('click', ()=>{
+          $$('#chips .chip').forEach(c=>c.classList.remove('is-on'));
+          chip.classList.add('is-on');
+          const f = chip.dataset.filter;
+          $$('#mobile-list .task').forEach(el=>{
+            el.classList.toggle('hide', f!=='all' && el.dataset.status!==f);
+          });
+        });
+      });
+
+      // load + realtime
+      await loadAll();
+      sb.channel('tasks_realtime')
+        .on('postgres_changes',{event:'*', schema:'public', table:'tasks'}, loadAll)
+        .subscribe();
+    })();
+  </script>
+</body>
+</html>

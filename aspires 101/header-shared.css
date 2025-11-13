@@ -1,0 +1,138 @@
+:root{
+    --brand:#FFCC00; --ink:#0B0D12;
+    --text:#0f172a; --muted:#6b7280; --border:#e5e7eb;
+    --panel:#ffffff;
+  }
+  
+  /* Reset + base */
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color:var(--text); min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  
+  /* Background (soft gradient + tile grid + noise) */
+  .bg-grid{
+    position:relative; min-height:100vh;
+    background:
+      radial-gradient(1200px 700px at 10% -10%, rgba(255,204,0,0.10), transparent),
+      radial-gradient(900px 600px at 100% 10%, rgba(20,184,166,0.08), transparent),
+      linear-gradient(180deg, #ffffff 0%, #fbfbfb 55%, #f6f7f8 100%);
+  }
+  .bg-grid::before{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image:
+      linear-gradient(0deg, rgba(0,0,0,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,.04) 1px, transparent 1px);
+    background-size:36px 36px, 36px 36px; mix-blend:multiply; opacity:.55;
+  }
+  .bg-grid::after{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background-image:url('data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2230%22 height=%2230%22%3E%3Cdefs%3E%3CradialGradient id=%22g%22 cx=%220%22 cy=%220%22 r=%221%22%3E%3Cstop offset=%220%22 stop-color=%22000%22/%3E%3Cstop offset=%221%22 stop-color=%22000%22 stop-opacity=%220%22/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width=%2230%22 height=%2230%22 fill=%22url(%23g)%22/%3E%3C/svg%3E');
+    opacity:.06; mix-blend:multiply;
+  }
+  
+  /* Layout */
+  .container{max-width:1100px;margin:0 auto;padding:0 24px}
+  .section{padding:64px 0}
+  
+  /* Header */
+  /* NOTE: support BOTH .header and .site-header markup you’ve used */
+  .header,
+  .site-header{
+    position:sticky; top:0; z-index:50;
+    border-bottom:1px solid rgba(226,232,240,.8);
+    backdrop-filter:blur(12px);
+    background:linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.72));
+  }
+  .nav{
+    display:flex; align-items:center; justify-content:space-between;
+    min-height:66px; /* lock a steady row height */
+    padding:8px 0;
+  }
+  .nav a{color:#334155;text-decoration:none;font-size:14px; line-height:1}
+  .nav .gap{display:flex;gap:18px;align-items:center}
+  
+  /* Brand (fix overlap + consistent baseline) */
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit; white-space:nowrap}
+  .brand:focus{outline:none}
+  .brand:focus-visible{outline:0}
+  .brand-logo{
+    width:32px; height:32px; flex:0 0 32px;
+    border-radius:8px; border:1px solid var(--border);
+    background:#fff; object-fit:cover;
+  }
+  .brand-name{font-weight:800; letter-spacing:.2px; line-height:1; font-size:16px}
+  
+  /* CTA in header — perfectly centered pill */
+  .btn-cta,
+  .btn.primary{
+    display:inline-flex; align-items:center; justify-content:center;
+    background:var(--brand); color:var(--ink);
+    border-radius:999px; padding:10px 18px; font-weight:800;
+    border:1px solid transparent; line-height:1;
+    transform:translateY(0);
+  }
+  
+  /* Hero */
+  .hero{padding:96px 0 54px; text-align:center}
+  .eyebrow{
+    display:inline-flex;gap:8px;padding:6px 10px;border-radius:999px;
+    border:1px solid rgba(255,204,0,.35);background:rgba(255,204,0,.12);
+    color:#a16207;font-size:12px
+  }
+  .h1{font-size:56px;line-height:1.04;margin:14px auto 10px;letter-spacing:-.02em;max-width:13ch}
+  .lead{margin:0 auto;max-width:680px;color:var(--muted);font-size:18px}
+  .actions{display:flex;justify-content:center;gap:12px;margin-top:18px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;border-radius:16px;padding:12px 18px;font-weight:800;
+    border:1px solid var(--border);background:#fff;color:#0f172a;text-decoration:none; line-height:1
+  }
+  
+  /* Cards / features */
+  .grid{display:grid;gap:16px}
+  .features{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:18px}
+  .muted{color:var(--muted)}
+  .cta-panel{text-align:center;background:#fff;border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:32px}
+  
+  /* Forms (signup/signin/account/tasks) */
+  .form{display:grid;gap:12px;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .label{font-size:14px;color:#475569;margin-bottom:6px;display:block}
+  .field{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;font-size:14px}
+  .field:focus{outline:none;box-shadow:0 0 0 3px rgba(255,204,0,.25)}
+  .checkbox{display:flex;align-items:center;gap:8px;color:#475569;font-size:14px}
+  .col-2{grid-column:1/-1}
+  .notice{padding:10px 12px;border-radius:10px;font-size:14px;margin:8px 0;display:none}
+  .ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#065f46}
+  .bad{background:#fff1f2;border:1px solid #fecaca;color:#9f1239}
+  
+  /* Tables */
+  .table{width:100%;border-collapse:separate;border-spacing:0 10px}
+  .table th{font-size:12px;color:#64748b;text-align:left;padding:4px 8px}
+  .table td{background:#fff;border:1px solid var(--border);padding:10px;border-left:0;border-right:0}
+  
+  /* Footer */
+  .footer{border-top:1px solid var(--border);padding:36px 0;margin-top:48px;background:transparent}
+  .footline{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .footbrand{display:flex;align-items:center;gap:10px;color:#64748b;font-size:14px}
+  
+  /* ===== Logo extras ===== */
+  .hero-mark{display:inline-flex;align-items:center;gap:16px;margin:10px 0 0}
+  .hero-logo{
+    width:84px;height:84px; flex:0 0 84px;
+    border-radius:20px; border:1px solid var(--border);
+    background:#fff; object-fit:cover;
+  }
+  
+  /* Responsive */
+  @media (max-width:760px){
+    .h1{font-size:40px}
+    .form{grid-template-columns:1fr}
+    .col-2{grid-column:auto}
+    .brand-logo{width:28px;height:28px; flex-basis:28px}
+    .brand-name{font-size:15px}
+    .hero-logo{width:64px;height:64px; flex-basis:64px}
+  }
+  

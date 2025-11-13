@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard · Swipe + Explore</title>
+
+<style>
+  :root{
+    --brand:#ffcc00;--ink:#0f172a;--muted:#64748b;--bg:#f7f7f8;--card:#fff;--border:#e5e7eb;
+    --shadow:0 10px 30px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box} html,body{height:100%}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+  .container{max-width:1100px;margin:0 auto;padding:16px}
+
+  /* Tabs */
+  .tabs{display:flex;gap:8px;margin:12px 0 18px}
+  .tab{border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer}
+  .tab.is-on{background:var(--brand);border-color:transparent}
+  .panel{display:none}
+  .panel.is-on{display:block}
+
+  /* ===================== SWIPE DECK ===================== */
+  .deck-wrap{display:grid;grid-template-columns:1fr 340px;gap:20px}
+  @media (max-width:960px){.deck-wrap{grid-template-columns:1fr}}
+  .deck{position:relative;height:72vh;min-height:440px;border-radius:16px}
+  .card{
+    position:absolute;inset:0;background:var(--card);border-radius:16px;border:1px solid var(--border);
+    box-shadow:var(--shadow);overflow:hidden;touch-action:none; /* we manage gestures */
+    display:grid;grid-template-rows:1fr auto;
+  }
+  .card:not(.is-top){transform:translateY(calc(var(--i,0)*6px)) scale(calc(1 - var(--i,0)*0.02));opacity:0.98}
+  .card img{width:100%;height:100%;object-fit:cover}
+  .card footer{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;background:#fff}
+  .title{font-weight:800}
+  .meta{color:var(--muted);font-size:14px}
+  .badges{position:absolute;top:16px;left:16px;display:flex;gap:8px;pointer-events:none}
+  .badge{
+    padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.92);border:1px solid var(--border);
+    font-weight:800;font-size:13px;box-shadow:var(--shadow)
+  }
+  .stamp{
+    position:absolute;top:18px;right:18px;padding:8px 10px;border-radius:10px;font-weight:900;
+    border:3px solid transparent;background:rgba(255,255,255,.85);backdrop-filter:blur(4px);transform:rotate(-8deg);display:none
+  }
+  .stamp.like{color:#16a34a;border-color:#16a34a}
+  .stamp.pass{color:#ef4444;border-color:#ef4444}
+  .stamp.save{color:#0ea5e9;border-color:#0ea5e9}
+
+  /* controls */
+  .deck-ctrls{display:flex;gap:10px;align-items:center;margin-top:12px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border-radius:999px;
+    border:1px solid var(--border);background:#fff;font-weight:800;cursor:pointer
+  }
+  .btn.icon{width:46px;height:46px;padding:0;border-radius:999px}
+  .btn.primary{background:var(--brand);border-color:transparent}
+
+  /* ===================== EXPLORE GRID (XHS-ish) ===================== */
+  .grid{column-count:4;column-gap:12px}
+  @media (max-width:1200px){.grid{column-count:3}}
+  @media (max-width:900px){.grid{column-count:2}}
+  @media (max-width:560px){.grid{column-count:1}}
+  .tile{
+    break-inside:avoid;border-radius:14px;border:1px solid var(--border);background:#fff;margin:0 0 12px;overflow:hidden;
+    box-shadow:var(--shadow)
+  }
+  .tile .ph{width:100%;display:block;background:#f2f2f3}
+  .tile h4{margin:10px 12px 0;font-size:15px}
+  .tile .row{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:13px;margin:8px 12px 10px}
+  .chip{background:#f5f7fa;border:1px solid var(--border);padding:3px 8px;border-radius:999px}
+  .like{cursor:pointer;user-select:none}
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="margin:6px 0 0">Dashboard</h1>
+    <p class="meta" style="margin:4px 0 16px">Swipe to decide or explore the grid.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab is-on" data-tab="deck" role="tab" aria-selected="true">Discover (Swipe)</button>
+      <button class="tab" data-tab="explore" role="tab" aria-selected="false">Explore (Grid)</button>
+    </div>
+
+    <!-- ===================== SWIPE PANEL ===================== -->
+    <section id="panel-deck" class="panel is-on">
+      <div class="deck-wrap">
+        <div>
+          <div id="deck" class="deck" aria-live="polite"></div>
+          <div class="deck-ctrls">
+            <button class="btn icon" data-action="pass" aria-label="Pass">👎</button>
+            <button class="btn icon primary" data-action="save" aria-label="Save">📌</button>
+            <button class="btn icon" data-action="like" aria-label="Like">👍</button>
+            <span class="meta" id="deck-counter"></span>
+          </div>
+        </div>
+        <aside>
+          <div class="tile" style="padding:14px">
+            <h3 style="margin:0 0 8px">Tips</h3>
+            <ul class="meta" style="margin:0 0 0 18px;line-height:1.6">
+              <li>Drag right = Like</li>
+              <li>Drag left = Pass</li>
+              <li>Drag up = Save</li>
+              <li>Keys: ← / → / ↑</li>
+            </ul>
+          </div>
+          <div class="tile" style="padding:14px">
+            <h3 style="margin:0 0 8px">Queue</h3>
+            <p class="meta" id="queue-info">loading…</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===================== EXPLORE PANEL ===================== -->
+    <section id="panel-explore" class="panel">
+      <div id="grid" class="grid" aria-live="polite"></div>
+      <div style="text-align:center;margin:16px 0">
+        <button id="load-more" class="btn">Load more</button>
+      </div>
+    </section>
+  </div>
+
+<script>
+/* ---------- Tab logic ---------- */
+document.querySelectorAll('.tab').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(x=>{
+      x.classList.toggle('is-on', x===b);
+      x.setAttribute('aria-selected', x===b ? 'true' : 'false');
+    });
+    const key = b.dataset.tab;
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('is-on'));
+    document.querySelector('#panel-' + key).classList.add('is-on');
+  });
+});
+
+/* =========================================================
+   SWIPE DECK (Tinder-like)
+   ========================================================= */
+const deckEl = document.getElementById('deck');
+const counterEl = document.getElementById('deck-counter');
+const queueInfo = document.getElementById('queue-info');
+
+// sample data (replace with your API results)
+const deckData = [
+  {id:'a1', title:'Math Tutor • 2 hrs', city:'NYC', tags:['Tutor','Urgent'], img:'https://images.unsplash.com/photo-1529078155058-5d716f45d604?q=80&w=1600&auto=format&fit=crop'},
+  {id:'a2', title:'Grocery Delivery', city:'Brooklyn', tags:['Delivery'], img:'https://images.unsplash.com/photo-1542834369-f10ebf06d3cb?q=80&w=1600&auto=format&fit=crop'},
+  {id:'a3', title:'Cat Sitting Weekend', city:'Queens', tags:['Pet'], img:'https://images.unsplash.com/photo-1518791841217-8f162f1e1131?q=80&w=1600&auto=format&fit=crop'},
+  {id:'a4', title:'Design a Flyer', city:'Remote', tags:['Design'], img:'https://images.unsplash.com/photo-1529336953121-ad5a0d43d0f8?q=80&w=1600&auto=format&fit=crop'},
+];
+
+let deckIndex = 0; // 0 = top card index
+function paintDeck(){
+  deckEl.innerHTML='';
+  const remain = deckData.slice(deckIndex);
+  queueInfo.textContent = `${remain.length} in queue`;
+  counterEl.textContent = remain.length ? `${remain.length} left` : 'All done 🎉';
+
+  remain.slice(0,4).forEach((row, i)=>{
+    const c = document.createElement('article');
+    c.className = 'card';
+    c.style.setProperty('--i', i);
+    if (i===0) c.classList.add('is-top');
+    c.dataset.id = row.id;
+
+    c.innerHTML = `
+      <div class="badges">${row.tags.map(t=>`<span class="badge">${t}</span>`).join('')}</div>
+      <div class="stamp like">LIKE</div>
+      <div class="stamp pass">NOPE</div>
+      <div class="stamp save">SAVE</div>
+      <img alt="" src="${row.img}">
+      <footer>
+        <div>
+          <div class="title">${row.title}</div>
+          <div class="meta">${row.city}</div>
+        </div>
+        <button class="btn">Details</button>
+      </footer>
+    `;
+    deckEl.appendChild(c);
+  });
+  bindTopCard();
+}
+
+function bindTopCard(){
+  const top = deckEl.querySelector('.card.is-top');
+  if (!top) return;
+  let startX=0,startY=0,dx=0,dy=0,drag=false;
+
+  const likeStamp=top.querySelector('.stamp.like');
+  const passStamp=top.querySelector('.stamp.pass');
+  const saveStamp=top.querySelector('.stamp.save');
+
+  const onDown = e=>{
+    drag=true;
+    const p = getPoint(e);
+    startX=p.x; startY=p.y; dx=0; dy=0;
+    top.setPointerCapture?.(e.pointerId || 0);
+  };
+  const onMove = e=>{
+    if(!drag) return;
+    const p = getPoint(e);
+    dx = p.x - startX; dy = p.y - startY;
+    const rot = dx/16;
+    top.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
+    // visual stamps
+    const ax = Math.abs(dx), ay=Math.abs(dy);
+    likeStamp.style.display = dx>20 ? 'inline-block':'none';
+    passStamp.style.display = dx<-20 ? 'inline-block':'none';
+    saveStamp.style.display = dy<-30 && ax<120 ? 'inline-block':'none';
+  };
+  const onUp = ()=>{
+    if(!drag) return;
+    drag=false;
+    const threshold = 120; // horizontal
+    const upThreshold = 140; // vertical
+    if (dx > threshold) fling('right');
+    else if (dx < -threshold) fling('left');
+    else if (-dy > upThreshold && Math.abs(dx)<threshold) fling('up');
+    else reset();
+  };
+
+  top.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp, {once:true});
+
+  function reset(){
+    top.style.transition='transform .2s ease';
+    top.style.transform='';
+    likeStamp.style.display = passStamp.style.display = saveStamp.style.display = 'none';
+    setTimeout(()=> top.style.transition='', 220);
+  }
+
+  function fling(dir){
+    const to = {left:'-120%', right:'120%', up:'0'}[dir];
+    const y  = dir==='up' ? '-140%' : dy*1.2;
+    top.style.transition='transform .22s ease-out';
+    top.style.transform=`translate(${to}, ${y}) rotate(${dx/10}deg)`;
+    setTimeout(()=> {
+      decide(dir, top.dataset.id);
+      deckIndex++;
+      paintDeck();
+    }, 200);
+  }
+
+  function getPoint(e){
+    if(e.touches?.length){return {x:e.touches[0].clientX, y:e.touches[0].clientY}}
+    return {x:e.clientX, y:e.clientY}
+  }
+}
+
+function decide(type, id){
+  // TODO: send to your backend (like/pass/save)
+  // e.g., fetch('/api/decide', {method:'POST', body: JSON.stringify({id,type})})
+  console.log('decide', type, id);
+}
+
+/* Programmatic controls */
+document.querySelectorAll('[data-action]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const top = deckEl.querySelector('.card.is-top');
+    if (!top) return;
+    // simulate a fling quickly
+    const type = b.dataset.action;
+    const synthetic = {left:-130, right:130, up: -160}[type==='pass'?'left':type];
+    if (type==='pass') simulate(-130,0,'left');
+    if (type==='like') simulate(130,0,'right');
+    if (type==='save') simulate(0,-160,'up');
+
+    function simulate(x,y,dir){
+      top.style.transition='transform .22s ease-out';
+      top.style.transform=`translate(${x}%, ${y}%) rotate(${x/7}deg)`;
+      setTimeout(()=>{ decide(dir, top.dataset.id); deckIndex++; paintDeck(); }, 190);
+    }
+  });
+});
+
+/* Keyboard shortcuts */
+window.addEventListener('keydown', (e)=>{
+  if (e.key==='ArrowLeft') document.querySelector('[data-action="pass"]').click();
+  if (e.key==='ArrowRight') document.querySelector('[data-action="like"]').click();
+  if (e.key==='ArrowUp') document.querySelector('[data-action="save"]').click();
+});
+
+paintDeck();
+
+/* =========================================================
+   EXPLORE GRID (Xiaohongshu-like)
+   ========================================================= */
+const gridEl = document.getElementById('grid');
+let page=0;
+
+function makeTile(row){
+  const el = document.createElement('article');
+  el.className='tile';
+  el.innerHTML = `
+    <img class="ph" alt="" loading="lazy" src="${row.img}" />
+    <h4>${row.title}</h4>
+    <div class="row">
+      <span class="chip">${row.tag}</span>
+      <span class="like" aria-label="like">♡ ${row.likes}</span>
+    </div>`;
+  el.querySelector('.like').addEventListener('click', (ev)=>{
+    row.likes++;
+    ev.currentTarget.textContent = `♥ ${row.likes}`;
+  });
+  return el;
+}
+
+function loadMore(n=10){
+  const rows = Array.from({length:n}).map((_,i)=>({
+    id:`g${page}-${i}`,
+    title:['Quick Lunch','Cozy Study Nook','Cat Moment','City Stroll','Desk Setup'][i%5],
+    tag:['Life','Study','Pet','City','Setup'][i%5],
+    likes: Math.floor(Math.random()*80)+10,
+    img: `https://picsum.photos/seed/${page}-${i}/600/${400 + (i%5)*40}`
+  }));
+  rows.forEach(r=> gridEl.appendChild(makeTile(r)));
+  page++;
+}
+loadMore(14);
+document.getElementById('load-more').addEventListener('click', ()=> loadMore(10));
+
+/* Optional: infinite load near bottom */
+window.addEventListener('scroll', ()=>{
+  if (!document.getElementById('panel-explore').classList.contains('is-on')) return;
+  const nearBottom = window.innerHeight + window.scrollY > document.body.offsetHeight - 800;
+  if (nearBottom) loadMore(8);
+});
+</script>
+</body>
+</html>

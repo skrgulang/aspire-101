@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Account · Aspire 101</title>
+
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- CSP -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 img-src 'self' data: https://*.supabase.co https://images.unsplash.com;
+                 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                 font-src https://fonts.gstatic.com;
+                 script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net;
+                 connect-src 'self'
+                   https://ikxjemnugoodfuxjaqoe.supabase.co
+                   https://*.supabase.co https://*.supabase.in https://*.supabase.net
+                   wss://*.supabase.co wss://*.supabase.in wss://*.supabase.net;">
+
+  <!-- Supabase creds -->
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI"/>
+
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#0d1218; --ink:#e9eef6; --muted:#a6b0be;
+      --line:rgba(255,255,255,.06); --brand:#ffcc00; --brand-ink:#0b0f14;
+    }
+    html,body{margin:0}
+    body.theme-dark{background:var(--bg); color:var(--ink); font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif}
+    .hero{position:relative; padding:56px 0 24px; border-bottom:1px solid var(--line); overflow:hidden}
+    .hero h1{margin:0 0 8px; font-size:clamp(34px,6vw,64px); line-height:1.04; letter-spacing:-.02em; font-weight:900}
+    .hero p{margin:0; color:var(--muted); max-width:860px}
+    .glow{position:absolute; inset:auto -10% -60% auto; width:1200px; height:900px;
+      background:
+        radial-gradient(700px 480px at 70% 35%, rgba(255,204,0,.18), transparent 70%),
+        radial-gradient(980px 640px at 100% 80%, rgba(255,204,0,.12), transparent 60%);
+      filter:blur(6px); pointer-events:none}
+
+    .container-narrow{max-width:1200px; margin:0 auto; padding:0 18px}
+    .grid{max-width:1200px; margin:0 auto; padding:28px 18px 80px; display:grid; gap:18px; grid-template-columns: 360px 1fr}
+    @media (max-width:1020px){ .grid{grid-template-columns:1fr} }
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); border:1px solid var(--line); border-radius:16px; padding:18px}
+    .card h3{margin:0 0 12px; font-size:20px}
+    .muted{color:var(--muted)}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .field{width:100%; height:44px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:#0c1117; color:var(--ink); padding:0 12px; outline:none}
+    .field:focus{border-color:rgba(255,255,255,.24)}
+    textarea.field{height:auto; padding:12px}
+    .avatar-wrap{display:flex; gap:14px; align-items:center}
+    .avatar{width:86px; height:86px; border-radius:999px; background:#0c1117; border:1px solid rgba(255,255,255,.14); display:grid; place-items:center; font-weight:900; font-size:28px}
+    .avatar img{width:100%; height:100%; border-radius:999px; object-fit:cover}
+    .hint{font-size:13px; color:#9aa6b2}
+    .kvs{display:grid; grid-template-columns:140px 1fr; gap:8px 12px}
+    .kvs .k{color:var(--muted)}
+    .table{width:100%; border-collapse:collapse}
+    .table th,.table td{padding:10px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top}
+    .tag{display:inline-block; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.04); font-weight:700; font-size:13px}
+    .notice{padding:10px 12px; border:1px solid var(--line); border-radius:12px; margin-top:10px}
+    .notice.ok{background:rgba(16,185,129,.12)} .notice.bad{background:rgba(239,68,68,.12)}
+    .inline-note{font-size:12px; margin-top:4px}
+    .note-ok{color:#34d399} .note-bad{color:#f87171} .note-warn{color:#fbbf24}
+  </style>
+</head>
+
+<body class="theme-dark">
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="index.html" aria-label="Aspire 101">
+        <img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt="">
+        <span class="brand-name">Aspire 101</span>
+      </a>
+      <nav class="nav-right">
+        <a class="nav-link" href="about.html">About</a>
+        <a class="nav-link" href="support.html">Support</a>
+
+        <!-- unauth -->
+        <a class="nav-link" id="nav-signin" href="signin.html">Sign In</a>
+        <a class="btn cta" id="nav-signup" href="signup.html">Sign Up</a>
+
+        <!-- auth -->
+        <a class="nav-link" id="nav-dashboard" href="dashboard.html" style="display:none">Dashboard</a>
+        <button class="btn cta" id="nav-signout" type="button" style="display:none">Sign out</button>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container-narrow">
+      <h1>Your account</h1>
+      <p>Edit your profile, update your avatar, and manage sign-in.</p>
+    </div>
+    <div class="glow" aria-hidden="true"></div>
+  </section>
+
+  <main class="grid" id="account-root" style="display:none">
+    <!-- LEFT -->
+    <aside class="card">
+      <h3>Profile</h3>
+      <div class="avatar-wrap" style="margin-bottom:12px">
+        <div class="avatar" id="avatar"><span>A</span></div>
+        <div>
+          <div class="row">
+            <input id="file" type="file" accept="image/*" style="display:none">
+            <button class="btn ghost" id="pick" type="button">Choose image</button>
+            <button class="btn cta" id="upload" type="button" style="display:none">Upload</button>
+          </div>
+          <div class="hint" id="upload-hint"></div>
+        </div>
+      </div>
+
+      <div class="kvs" style="margin-top:8px">
+        <div class="k">Email / Phone</div><div id="id-line">—</div>
+        <div class="k">Login type</div><div id="type-line">—</div>
+        <div class="k">Member since</div><div id="since-line">—</div>
+      </div>
+
+      <div class="notice" id="profile-msg" style="display:none"></div>
+    </aside>
+
+    <!-- RIGHT -->
+    <section class="card">
+      <h3>Details</h3>
+      <form id="details-form" class="row" style="gap:12px; margin-bottom:10px">
+        <div style="flex:1 1 220px; min-width:220px">
+          <label class="hint">Username</label>
+          <input class="field" id="username" placeholder="yourhandle" autocomplete="off">
+          <div id="u-note" class="inline-note"></div>
+        </div>
+        <div style="flex:1 1 260px; min-width:260px">
+          <label class="hint">Name / Nickname</label>
+          <input class="field" id="name" placeholder="e.g., Rina">
+        </div>
+        <div style="flex:1 1 260px; min-width:260px">
+          <label class="hint">School (optional)</label>
+          <input class="field" id="school" placeholder="Purdue University">
+        </div>
+        <div style="flex:1 1 220px; min-width:220px">
+          <label class="hint">City (optional)</label>
+          <input class="field" id="city" placeholder="West Lafayette">
+        </div>
+        <div style="flex:1 1 100%; min-width:260px">
+          <label class="hint">Bio (optional)</label>
+          <textarea class="field" id="bio" rows="3" placeholder="A few lines about you…"></textarea>
+        </div>
+        <div class="row" style="gap:10px">
+          <button class="btn cta" type="submit">Save changes</button>
+          <button class="btn ghost" id="resend" type="button">Resend verification email</button>
+        </div>
+      </form>
+
+      <h3 style="margin-top:18px">Recent activity</h3>
+      <table class="table" id="activity">
+        <thead><tr><th>Item</th><th>Type</th><th>When</th></tr></thead>
+        <tbody>
+          <tr><td colspan="3" class="muted">Loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <section class="container-narrow" id="signedout" style="display:none; padding:24px 18px 80px">
+    <div class="card" style="max-width:720px; margin:0 auto">
+      <h3>Not signed in</h3>
+      <p class="muted">You need an account to view this page.</p>
+      <div class="row">
+        <a class="btn ghost" href="signin.html">Sign In</a>
+        <a class="btn cta" href="signup.html">Create account</a>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    // ── Supabase bootstrap ──────────────────────────────────────────────────────
+    const url  = document.querySelector('meta[name="supabase-url"]').content;
+    const anon = document.querySelector('meta[name="supabase-anon"]').content;
+    let sb;
+    try {
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+      sb = createClient(url, anon);
+    } catch {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+      sb = createClient(url, anon);
+    }
+
+    const $ = (s, el=document)=> el.querySelector(s);
+    const esc = s => (s??'').toString().replace(/[&<>]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
+
+    // ── Header ─────────────────────────────────────────────────────────────────
+    function paintHeader(session){
+      const authed = !!session?.user;
+      $('#nav-signin').style.display    = authed ? 'none' : '';
+      $('#nav-signup').style.display    = authed ? 'none' : '';
+      $('#nav-dashboard').style.display = authed ? '' : 'none';
+      $('#nav-signout').style.display   = authed ? '' : 'none';
+    }
+    $('#nav-signout').addEventListener('click', async ()=>{
+      try{ await sb.auth.signOut(); }catch{}
+      location.href='index.html';
+    });
+
+    async function hydrate({ retries=8, delay=150 }={}){
+      for (let i=0;i<retries;i++){
+        const { data:{ session } } = await sb.auth.getSession();
+        if (session?.user) return session;
+        await new Promise(r=>setTimeout(r, delay));
+      }
+      const { data:{ user } } = await sb.auth.getUser();
+      return user ? { user } : null;
+    }
+
+    // ── Username helpers (client-side mirror of DB rules) ─────────────────────
+    function cleanUsername(raw){
+      if (!raw) return '';
+      let s = (raw+'').toLowerCase().trim();
+      s = s.replace(/\s+/g,'_');      // spaces -> underscore
+      s = s.replace(/[^a-z0-9_]/g,''); // strip others
+      s = s.replace(/_+/g,'_');       // collapse
+      return s;
+    }
+    function usernameLocalViolation(u){
+      if (!u) return 'Please enter a username (letters/digits/underscore).';
+      if (u.length < 3 || u.length > 24) return 'Username must be 3–24 characters.';
+      if (/^[0-9_]/.test(u)) return 'Username must start with a letter.';
+      return null; // final ban-list check is server-side
+    }
+
+    let CURRENT_USER = null;
+    let CURRENT_PROFILE = null;
+
+    function paintProfile(u, profile){
+      CURRENT_USER = u; CURRENT_PROFILE = profile;
+      paintHeader({ user:u });
+      $('#signedout').style.display = u ? 'none' : '';
+      $('#account-root').style.display = u ? '' : 'none';
+      if (!u) return;
+
+      const m = u.user_metadata || {};
+      // avatar
+      const a = $('#avatar'); a.innerHTML='';
+      if (m.avatar_url){
+        const img = new Image();
+        img.onload = ()=> a.appendChild(img);
+        img.onerror = ()=> a.textContent = (m.name||u.email||u.phone||'?').charAt(0).toUpperCase();
+        img.src = m.avatar_url;
+      } else {
+        a.textContent = (m.name||u.email||u.phone||'?').charAt(0).toUpperCase();
+      }
+      // lines
+      $('#id-line').textContent   = u.email || u.phone || '—';
+      $('#type-line').textContent = u.email ? (/\.edu$/i.test(u.email) ? 'school email' : 'personal email') : 'phone';
+      $('#since-line').textContent = u.created_at ? new Date(u.created_at).toLocaleString() : '—';
+
+      // form (prefer DB profile fields)
+      $('#username').value= profile?.username || '';
+      $('#name').value    = profile?.name || m.name || '';
+      $('#school').value  = profile?.school || m.school || '';
+      $('#city').value    = profile?.city || m.city || '';
+      $('#bio').value     = profile?.bio || m.bio || '';
+      $('#u-note').textContent = '';
+      $('#u-note').className = 'inline-note';
+    }
+
+    // Ensure a profiles row exists (keyed by id)
+    async function ensureProfile(u){
+      try{
+        const { error } = await sb.from('profiles').upsert(
+          { id: u.id, name: u.user_metadata?.name || null },
+          { onConflict:'id' }
+        );
+        if (error) throw error;
+      }catch(_) {}
+    }
+
+    async function loadProfile(u){
+      try{
+        const { data, error } = await sb.from('profiles').select('*').eq('id', u.id).maybeSingle();
+        if (error) throw error;
+        return data || null;
+      }catch{ return null; }
+    }
+
+    async function loadActivity(u){
+      const tbody = $('#activity tbody');
+      tbody.innerHTML = `<tr><td colspan="3" class="muted">Loading…</td></tr>`;
+      try{
+        const items = [];
+        const { data:tasks } = await sb.from('tasks').select('id,title,created_at').eq('user_id', u.id).order('created_at',{ascending:false}).limit(10);
+        (tasks||[]).forEach(t=> items.push({ t:'Task', label:t.title, when:new Date(t.created_at) }));
+        try{
+          const { data:posts } = await sb.from('posts').select('id,title,created_at').eq('user_id', u.id).order('created_at',{ascending:false}).limit(10);
+          (posts||[]).forEach(p=> items.push({ t:'Post', label:p.title, when:new Date(p.created_at) }));
+        }catch(_){}
+        items.sort((a,b)=> b.when - a.when);
+        tbody.innerHTML = items.length
+          ? items.slice(0,10).map(i=>`
+              <tr>
+                <td>${esc(i.label)}</td>
+                <td><span class="tag">${i.t}</span></td>
+                <td>${i.when.toLocaleString()}</td>
+              </tr>`).join('')
+          : `<tr><td colspan="3" class="muted">No recent activity yet.</td></tr>`;
+      }catch{
+        tbody.innerHTML = `<tr><td colspan="3" class="muted">Couldn’t load activity.</td></tr>`;
+      }
+    }
+
+    // Initial
+    let session = await hydrate();
+    let user = session?.user || null;
+    paintHeader(user ? {user} : null);
+    if (!user){
+      $('#signedout').style.display = '';
+      $('#account-root').style.display = 'none';
+    }else{
+      await ensureProfile(user);
+      const profile = await loadProfile(user);
+      paintProfile(user, profile);
+      loadActivity(user);
+    }
+
+    sb.auth.onAuthStateChange(async (_e, s)=>{
+      const u = s?.user || null;
+      if (!u){
+        $('#account-root').style.display = 'none';
+        $('#signedout').style.display = '';
+        paintHeader(null);
+      }else{
+        await ensureProfile(u);
+        const p = await loadProfile(u);
+        paintProfile(u, p);
+        loadActivity(u);
+      }
+    });
+
+    // ── Live username availability check ───────────────────────────────────────
+    let uTimer = null;
+    $('#username').addEventListener('input', ()=>{
+      const raw   = $('#username').value;
+      const clean = cleanUsername(raw);
+      if (raw !== clean) $('#username').value = clean;
+
+      const note = $('#u-note');
+      const viol = usernameLocalViolation(clean);
+      if (viol){ note.textContent = viol; note.className='inline-note note-bad'; return; }
+
+      note.textContent = 'Checking…'; note.className='inline-note note-warn';
+      clearTimeout(uTimer);
+      uTimer = setTimeout(async ()=>{
+        try{
+          const { count, error } = await sb
+            .from('profiles')
+            .select('id', { count:'exact', head:true })
+            .eq('username', clean)
+            .neq('id', CURRENT_USER?.id || '');
+          if (error) throw error;
+          if ((count||0) > 0){
+            note.textContent = 'That username is taken.'; note.className='inline-note note-bad';
+          }else{
+            note.textContent = 'Looks good!'; note.className='inline-note note-ok';
+          }
+        }catch{
+          note.textContent = 'Could not check right now.'; note.className='inline-note note-warn';
+        }
+      }, 250);
+    });
+
+    // ── Save details (to public.profiles) ─────────────────────────────────────
+    $('#details-form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const msg = $('#profile-msg');
+
+      const username = cleanUsername($('#username').value.trim());
+      const name     = $('#name').value.trim();
+      const school   = $('#school').value.trim();
+      const city     = $('#city').value.trim();
+      const bio      = $('#bio').value.trim();
+
+      const viol = usernameLocalViolation(username);
+      if (viol){
+        msg.className='notice bad'; msg.textContent=viol; msg.style.display='block';
+        return;
+      }
+
+      try{
+        // Upsert keyed by id (matches unique/PK on profiles.id)
+        const payload = { id: CURRENT_USER.id, username, name, school, city, bio };
+        const { error } = await sb.from('profiles').upsert(payload, { onConflict:'id' });
+        if (error) throw error;
+
+        const fresh = await loadProfile(CURRENT_USER);
+        paintProfile(CURRENT_USER, fresh);
+
+        msg.className='notice ok'; msg.textContent='Saved!'; msg.style.display='block';
+        setTimeout(()=> msg.style.display='none', 1400);
+      }catch(err){
+        msg.className='notice bad';
+        msg.textContent = err?.message || 'Save failed.';
+        msg.style.display='block';
+      }
+    });
+
+    // ── Avatar upload ─────────────────────────────────────────────────────────
+    let pending = null;
+    $('#pick').addEventListener('click', ()=> $('#file').click());
+    $('#file').addEventListener('change', ()=>{
+      pending = $('#file').files?.[0] || null;
+      $('#upload').style.display = pending ? '' : 'none';
+      $('#upload-hint').textContent = pending ? `Selected: ${pending.name}` : '';
+    });
+    $('#upload').addEventListener('click', async ()=>{
+      const u = (await sb.auth.getUser()).data.user;
+      if (!pending || !u) return;
+      const hint = $('#upload-hint');
+      try{
+        hint.textContent='Uploading…';
+        const safe = pending.name.replace(/\s+/g,'_');
+        const path = `${u.id}/${Date.now()}_${safe}`;
+        const { error:upErr } = await sb.storage.from('avatars').upload(path, pending, { cacheControl:'3600', upsert:false, contentType: pending.type });
+        if (upErr) throw upErr;
+        const { data:pub } = sb.storage.from('avatars').getPublicUrl(path);
+        const url = pub?.publicUrl; if (!url) throw new Error('No public URL');
+        const { error:updErr } = await sb.auth.updateUser({ data:{ avatar_url:url }});
+        if (updErr) throw updErr;
+        pending = null; $('#file').value=''; $('#upload').style.display='none';
+        hint.textContent='Avatar updated!';
+        const fresh = (await sb.auth.getUser()).data.user;
+        const p = await loadProfile(fresh);
+        paintProfile(fresh, p);
+      }catch(e){ hint.textContent = e.message || 'Upload failed.'; }
+    });
+
+    // ── Resend verification ───────────────────────────────────────────────────
+    $('#resend').addEventListener('click', async ()=>{
+      const { data:{ user:u } } = await sb.auth.getUser();
+      if (!u?.email) return alert('This account uses phone login (no email).');
+      const { error } = await sb.auth.resend({ type:'signup', email:u.email });
+      if (error) return alert(error.message || 'Failed to send');
+      alert('Verification email sent. Check inbox/spam.');
+    });
+  </script>
+</body>
+</html>

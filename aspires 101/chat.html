@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Chat · Aspire 101</title>
+
+<link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+<link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+<!-- Supabase creds (same as other pages) -->
+<meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
+<meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI"/>
+
+<style>
+  :root{--bg:#0b0f14;--card:#0c1117;--ink:#e8eef7;--muted:#9aa4b2;--line:rgba(255,255,255,.1);--brand:#ffcc00;--ink-dark:#0b0f14;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;gap:10px;align-items:center;color:inherit;text-decoration:none}
+  .brand-logo{width:32px;height:32px;border-radius:8px;border:1px solid var(--line)}
+  .container{max-width:920px;margin:0 auto;padding:16px}
+  .room-card{background:var(--card);border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;height:calc(100vh - 130px)}
+  .messages{flex:1;overflow:auto;padding:12px}
+  .msg{margin:8px 0;max-width:80%}
+  .mine{margin-left:auto;text-align:right}
+  .bubble{display:inline-block;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+  .bubble.mine{background:var(--brand);color:var(--ink-dark);border-color:transparent}
+  .meta{font-size:12px;color:var(--muted);margin-top:4px}
+  .composer{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:center}
+  .field{flex:1;height:44px;border-radius:12px;border:1px solid var(--line);background:#0b0f14;color:var(--ink);padding:0 12px;outline:none}
+  .btn{height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:#0b0f14;color:var(--ink);font-weight:800;cursor:pointer}
+  .btn.cta{background:var(--brand);color:var(--ink-dark);border:0}
+  .notice{margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:12px;display:none}
+  img.attachment{max-width:260px;border-radius:10px;border:1px solid var(--line);display:block;margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="dashboard.html"><img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt=""><b>Aspire 101</b></a>
+  <div id="room-title" class="muted">Chat</div>
+</header>
+
+<main class="container">
+  <div id="flash" class="notice"></div>
+  <div class="room-card">
+    <div id="messages" class="messages" aria-live="polite"></div>
+    <div class="composer">
+      <input id="text" class="field" placeholder="Write a message… (Enter to send)"/>
+      <input id="file" type="file" accept="image/*" style="display:none"/>
+      <button id="pick" class="btn" type="button">+ Image</button>
+      <button id="send" class="btn cta" type="button">Send</button>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script type="module">
+  let createClient; try{ ({createClient}=await import('https://esm.sh/@supabase/supabase-js@2')); }catch{}
+  const url=document.querySelector('meta[name="supabase-url"]').content;
+  const anon=document.querySelector('meta[name="supabase-anon"]').content;
+  const sb=createClient?createClient(url,anon):window.supabase.createClient(url,anon,{auth:{persistSession:true}});
+
+  const params=new URLSearchParams(location.search);
+  const TASK_ID=params.get('task');
+
+  const $=(s,el=document)=>el.querySelector(s);
+  const flash=(t,ok=false)=>{const f=$('#flash');f.textContent=t;f.style.display='block';f.style.background=ok?'rgba(16,185,129,.12)':'rgba(239,68,68,.12)';};
+  const esc=s=>(s??'').toString().replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
+
+  if(!TASK_ID){ flash('No task specified.',false); }
+
+  // Verify participation (poster or claimer); fetch partner username
+  let ME=null, PARTNER='Partner';
+  async function checkAccess(){
+    const { data:{user} } = await sb.auth.getUser();
+    if(!user){ location.href='signin.html'; return; }
+    ME=user;
+    const { data:t } = await sb.from('tasks')
+      .select('id,title,user_id,accepted_by,poster_name,accepted_name')
+      .eq('id', TASK_ID).maybeSingle();
+    if(!t){ flash('Task not found.'); return; }
+    const amPoster = t.user_id === user.id;
+    const amClaimer = t.accepted_by === user.id;
+    if(!amPoster && !amClaimer){ flash('You are not a participant of this task.'); return; }
+    $('#room-title').textContent = t.title || 'Chat';
+    PARTNER = amPoster ? (t.accepted_name||'Partner') : (t.poster_name||'Partner');
+
+    // ensure a room exists (RLS allows if participant)
+    await sb.from('task_rooms').upsert({ task_id: TASK_ID }).select().maybeSingle();
+    loadMessages();
+    subscribeRealtime();
+  }
+
+  const list=$('#messages');
+
+  function paintMessage(m){
+    const mine = m.sender === ME.id;
+    const wrap = document.createElement('div');
+    wrap.className = 'msg'+(mine?' mine':'');
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble'+(mine?' mine':'');
+    if (m.body) bubble.innerHTML = esc(m.body);
+    if (m.image_url){
+      const img = document.createElement('img');
+      img.className='attachment';
+      img.src = m.image_url;
+      bubble.appendChild(img);
+    }
+    const meta=document.createElement('div');
+    meta.className='meta';
+    const who = mine ? 'You' : PARTNER;
+    meta.textContent = `${who} • ${new Date(m.created_at).toLocaleString()}`;
+    wrap.appendChild(bubble); wrap.appendChild(meta);
+    list.appendChild(wrap);
+  }
+
+  async function loadMessages(){
+    list.innerHTML='';
+    const { data, error } = await sb.from('task_messages')
+      .select('*').eq('task_id', TASK_ID).order('created_at', { ascending:true }).limit(500);
+    if(error){ flash(error.message); return; }
+    (data||[]).forEach(paintMessage);
+    list.scrollTop = list.scrollHeight;
+  }
+
+  function subscribeRealtime(){
+    sb.channel(`room_${TASK_ID}`)
+      .on('postgres_changes', { event:'INSERT', schema:'public', table:'task_messages', filter:`task_id=eq.${TASK_ID}` }, (payload)=>{
+        paintMessage(payload.new);
+        list.scrollTop = list.scrollHeight;
+      })
+      .subscribe();
+  }
+
+  async function send(body, image_url=null){
+    if(!body && !image_url) return;
+    const { error } = await sb.from('task_messages').insert({
+      task_id: TASK_ID, sender: ME.id, body, image_url
+    });
+    if(error){ flash(error.message); return; }
+  }
+
+  // UI wiring
+  $('#send').addEventListener('click', async ()=>{
+    const val=$('#text').value.trim();
+    if(!val) return;
+    $('#text').value='';
+    await send(val,null);
+  });
+  $('#text').addEventListener('keydown', async (e)=>{
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); $('#send').click(); }
+  });
+
+  // image upload (public bucket "chat-attachments")
+  let pending=null;
+  $('#pick').addEventListener('click',()=>$('#file').click());
+  $('#file').addEventListener('change',()=>{ pending=$('#file').files?.[0]||null; if(pending){ uploadImage(); } });
+  async function uploadImage(){
+    if(!pending) return;
+    const safe=pending.name.replace(/\s+/g,'_');
+    const path=`${ME.id}/${TASK_ID}/${Date.now()}_${safe}`;
+    try{
+      const { error } = await sb.storage.from('chat-attachments').upload(path, pending, {
+        cacheControl:'3600', upsert:false, contentType: pending.type
+      });
+      if(error) throw error;
+      const { data:{ publicUrl } } = sb.storage.from('chat-attachments').getPublicUrl(path);
+      await send('', publicUrl);
+    }catch(err){ flash(err.message||'Upload failed'); }
+    finally{ pending=null; $('#file').value=''; }
+  }
+
+  checkAccess();
+</script>
+</body>
+</html>

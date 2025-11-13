@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Task · Aspire 101</title>
+
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Supabase -->
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    .meta{color:#9aa4b2}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .grow{flex:1}
+    .pill{display:inline-block;padding:6px 10px;border:1px solid var(--border);border-radius:999px}
+    .list{display:grid;gap:10px;margin-top:8px}
+    .item{border:1px solid var(--border);border-radius:12px;padding:12px;background:#0c1117}
+  </style>
+</head>
+<body class="theme-dark">
+<header class="site-header">
+  <div class="container nav">
+    <a class="brand" href="index.html">
+      <img class="brand-logo" src="pictures/19171758147211_.pic_hd.jpg" alt=""><span>Aspire 101</span>
+    </a>
+    <nav class="nav-right">
+      <a class="nav-link" href="dashboard.html">Dashboard</a>
+      <a class="btn" href="tasks.html">Task Board</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container section" style="max-width:900px">
+  <div id="task-card" class="card">
+    <div class="meta" id="task-id"></div>
+    <h1 class="h1" id="task-title">Loading…</h1>
+    <p class="meta" id="task-sub"></p>
+    <p id="task-details" style="margin-top:10px"></p>
+    <div class="row" style="margin-top:10px">
+      <span class="pill" id="task-status">—</span>
+      <span class="pill" id="task-budget">—</span>
+      <span class="pill" id="task-city">—</span>
+    </div>
+  </div>
+
+  <!-- React / Offer -->
+  <div class="card" style="margin-top:14px">
+    <h2 class="h2" style="margin:0 0 8px">Respond</h2>
+    <div class="row">
+      <button class="btn" id="btn-like"  type="button">👍 Like</button>
+      <button class="btn" id="btn-pass"  type="button">👎 Pass</button>
+      <button class="btn" id="btn-save"  type="button">📌 Save</button>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <input class="field grow" id="offer-note" placeholder="Short note (optional)"/>
+      <input class="field" style="width:140px" id="offer-amount" type="number" min="0" step="1" placeholder="Amount"/>
+      <button class="btn cta" id="btn-offer" type="button">Send offer</button>
+    </div>
+
+    <p class="meta" id="action-msg" style="margin-top:8px"></p>
+  </div>
+
+  <!-- Offers -->
+  <div class="card" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 class="h2" style="margin:0">Offers</h2>
+      <small class="meta" id="offers-count"></small>
+    </div>
+    <div id="offers" class="list"><div class="meta">No offers yet.</div></div>
+  </div>
+
+  <!-- Reactions -->
+  <div class="card" style="margin-top:14px">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 class="h2" style="margin:0">Reactions</h2>
+      <small class="meta" id="reax-count"></small>
+    </div>
+    <div id="reax" class="list"><div class="meta">No reactions yet.</div></div>
+  </div>
+</main>
+
+<script>
+(function(){
+  const url  = document.querySelector('meta[name="supabase-url"]').content;
+  const anon = document.querySelector('meta[name="supabase-anon"]').content;
+  const sb   = window.supabase.createClient(url, anon);
+
+  const qs = new URLSearchParams(location.search);
+  const taskId = qs.get('id');
+
+  const $  = (s,el=document)=>el.querySelector(s);
+  const esc = s => (s??'').toString().replace(/[&<>]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
+  const msg = (t,ok=false)=>{ const el=$('#action-msg'); el.textContent=t; el.style.color=ok?'#86efac':'#fca5a5'; };
+
+  if (!taskId){ $('#task-title').textContent='Task not found'; throw new Error('no id'); }
+
+  async function loadTask(){
+    const { data, error } = await sb.from('tasks').select('*').eq('id', taskId).maybeSingle();
+    if (error || !data){ $('#task-title').textContent='Not found'; return; }
+    $('#task-id').textContent = `#${data.id}`;
+    $('#task-title').textContent = data.title || 'Untitled task';
+    $('#task-details').textContent = data.details || '';
+    $('#task-status').textContent = data.status || 'todo';
+    $('#task-budget').textContent = data.budget!=null ? `$${Number(data.budget).toFixed(2)}` : 'No budget';
+    $('#task-city').textContent = data.city || 'No city';
+    const who = data.owner_id || data.owner || null;
+    $('#task-sub').textContent = `Created ${new Date(data.created_at).toLocaleString()}${who?` · owner: ${who.slice(0,8)}…`:''}`;
+  }
+
+  function paintOffers(rows){
+    $('#offers-count').textContent = `${rows.length} offer${rows.length===1?'':''}`;
+    $('#offers').innerHTML = rows.length ? rows.map(o=>`
+      <div class="item">
+        <div class="row" style="justify-content:space-between">
+          <strong>$${Number(o.amount||0).toFixed(2)}</strong>
+          <span class="meta">${new Date(o.created_at).toLocaleString()}</span>
+        </div>
+        <div class="meta">by ${esc((o.bidder_id||'').slice(0,8))}…</div>
+        ${o.note ? `<div style="margin-top:6px">${esc(o.note)}</div>`:''}
+      </div>
+    `).join('') : `<div class="meta">No offers yet.</div>`;
+  }
+  function paintReax(rows){
+    $('#reax-count').textContent = `${rows.length} reaction${rows.length===1?'':''}`;
+    $('#reax').innerHTML = rows.length ? rows.map(r=>`
+      <div class="item">
+        <div class="row" style="justify-content:space-between">
+          <strong>${esc(r.type)}</strong>
+          <span class="meta">${new Date(r.created_at).toLocaleString()}</span>
+        </div>
+        <div class="meta">by ${esc((r.user_id||'').slice(0,8))}…</div>
+      </div>
+    `).join('') : `<div class="meta">No reactions yet.</div>`;
+  }
+
+  async function loadOffers(){ 
+    const { data, error } = await sb.from('task_offers').select('*').eq('task_id', taskId).order('created_at', {ascending:false});
+    paintOffers(error?[]:data||[]);
+  }
+  async function loadReax(){
+    const { data, error } = await sb.from('task_reactions').select('*').eq('task_id', taskId).order('created_at', {ascending:false});
+    paintReax(error?[]:data||[]);
+  }
+
+  // Actions
+  async function addReaction(type){
+    const { data:{ user } } = await sb.auth.getUser();
+    if (!user) return msg('Please sign in to react.');
+    const { error } = await sb.from('task_reactions').insert([{ task_id: taskId, user_id: user.id, type }]);
+    if (error) return msg(error.message||'Failed.');
+    msg('Reaction added ✅', true); loadReax();
+  }
+  async function addOffer(){
+    const { data:{ user } } = await sb.auth.getUser();
+    if (!user) return msg('Please sign in to offer.');
+    const amount = Number($('#offer-amount').value||0);
+    const note   = $('#offer-note').value.trim()||null;
+    const { error } = await sb.from('task_offers').insert([{ task_id: taskId, bidder_id: user.id, amount, note }]);
+    if (error) return msg(error.message||'Failed.');
+    $('#offer-amount').value=''; $('#offer-note').value='';
+    msg('Offer sent ✅', true); loadOffers();
+  }
+
+  // Bind
+  $('#btn-like').addEventListener('click', ()=>addReaction('like'));
+  $('#btn-pass').addEventListener('click', ()=>addReaction('pass'));
+  $('#btn-save').addEventListener('click', ()=>addReaction('save'));
+  $('#btn-offer').addEventListener('click', addOffer);
+
+  // Realtime
+  sb.channel('task_detail_'+taskId)
+    .on('postgres_changes',{event:'*', schema:'public', table:'task_offers', filter:`task_id=eq.${taskId}`}, loadOffers)
+    .on('postgres_changes',{event:'*', schema:'public', table:'task_reactions', filter:`task_id=eq.${taskId}`}, loadReax)
+    .subscribe();
+
+  // Initial load
+  loadTask(); loadOffers(); loadReax();
+})();
+</script>
+</body>
+</html>

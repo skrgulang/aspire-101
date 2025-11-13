@@ -1,0 +1,680 @@
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { createClient } from "@supabase/supabase-js";
+import {
+  ArrowRight, ShieldCheck, MessageSquare, MapPin, Stars,
+  SendHorizontal, ClipboardList, LogIn, UserPlus, LogOut,
+  CheckCircle2, Sparkles
+} from "lucide-react";
+
+/** ====== Brand + Assets =================================================== */
+const assets = {
+  // Replace these with your hosted image URLs if needed
+  heroBg:
+    "/mnt/data/f0ee16b6-db26-46d1-8336-7993738939f9.png",
+  logo:
+    "/mnt/data/f05eb57c-d9d1-4a91-aa27-4c55fccb54db.png",
+};
+
+const brand = {
+  primary: "#FFCC00",
+  dark: "#0B0D12",
+};
+
+/** ====== Supabase client (set env vars below) ============================= */
+const SUPABASE_URL =
+  (import.meta as any)?.env?.VITE_SUPABASE_URL ||
+  (typeof process !== "undefined" && (process as any)?.env?.NEXT_PUBLIC_SUPABASE_URL) ||
+  "https://YOUR-PROJECT.supabase.co";
+
+const SUPABASE_ANON_KEY =
+  (import.meta as any)?.env?.VITE_SUPABASE_ANON_KEY ||
+  (typeof process !== "undefined" && (process as any)?.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
+  "YOUR-ANON-KEY";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/** ====== Helpers ========================================================== */
+const emailType = (email: string) => (/@.+\.edu$/i.test(email) ? "school" : "personal");
+
+/** ====== Root Component ==================================================== */
+export default function AspireLanding() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getUser().then(({ data }) => alive && setUser(data?.user || null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user || null);
+    });
+    return () => sub?.subscription?.unsubscribe();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-white text-slate-900">
+      <SiteHeader user={user} />
+      <Hero />
+      <FeatureGrid />
+      <HowItWorks />
+      <AuthSection user={user} />
+      <SurveySection user={user} />
+      <SiteFooter />
+      <FloatingCTA />
+    </div>
+  );
+}
+
+/** ====== Header =========================================================== */
+function SiteHeader({ user }: { user: any }) {
+  return (
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur">
+      <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+        <a href="#home" className="flex items-center gap-3 font-semibold">
+          <div className="h-9 w-9 rounded-md overflow-hidden ring-1 ring-slate-200 bg-white flex items-center justify-center">
+            <img src={assets.logo} alt="Aspire Logo" className="h-full w-full object-cover" />
+          </div>
+          <span className="tracking-wide">ASPIRE</span>
+        </a>
+        <nav className="hidden md:flex items-center gap-8 text-sm text-slate-600">
+          <a href="#features" className="hover:text-slate-900">功能</a>
+          <a href="#how" className="hover:text-slate-900">怎么用</a>
+          <a href="#auth" className="hover:text-slate-900">创建账号</a>
+          <a href="#survey" className="hover:text-slate-900">意向问卷</a>
+        </nav>
+        {user ? (
+          <a href="#auth" className="rounded-2xl border px-3 py-2 text-sm hover:bg-slate-50">我的账户</a>
+        ) : (
+          <a
+            href="#auth"
+            className="rounded-2xl px-4 py-2 text-sm"
+            style={{ backgroundColor: brand.primary, color: brand.dark }}
+          >
+            创建账号
+          </a>
+        )}
+      </div>
+    </header>
+  );
+}
+
+/** ====== Hero ============================================================= */
+function Hero() {
+  return (
+    <section id="home" className="relative">
+      <div
+        className="w-full"
+        style={{
+          backgroundImage: `linear-gradient(rgba(9,12,18,0.65), rgba(9,12,18,0.65)), url(${assets.heroBg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-6 py-20 md:py-28 grid md:grid-cols-2 gap-12 items-center">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45 }}
+            className="text-white"
+          >
+            <div
+              className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs"
+              style={{
+                backgroundColor: "rgba(255, 204, 0, 0.12)",
+                color: brand.primary,
+                border: `1px solid ${brand.primary}33`,
+              }}
+            >
+              校园·同城互助
+            </div>
+            <h1 className="mt-4 text-4xl md:text-6xl font-bold leading-tight">
+              一键发单 / 接单 · 更快完成你的事
+            </h1>
+            <p className="mt-4 text-lg text-slate-200 max-w-xl">
+              跑腿、拼车、取包裹、拼饭、约自习、兼职协作……马上发布需求，优先匹配同校/同城靠谱的人来帮你。
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="#auth"
+                className="rounded-2xl px-4 py-2"
+                style={{ backgroundColor: brand.primary, color: brand.dark }}
+              >
+                我要发单 <ArrowRight className="inline ml-1 h-4 w-4" />
+              </a>
+              <a
+                href="#auth"
+                className="rounded-2xl px-4 py-2 border border-white/30 text-white bg-white/10 backdrop-blur"
+              >
+                我要接单
+              </a>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.1 }}
+          >
+            <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur text-white shadow-xl p-6">
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3"><SendHorizontal className="h-5 w-5 mt-0.5" />发布任务/接单，支持备注与预算</li>
+                <li className="flex items-start gap-3"><MapPin className="h-5 w-5 mt-0.5" />同校/同城优先，距离近、响应快</li>
+                <li className="flex items-start gap-3"><ShieldCheck className="h-5 w-5 mt-0.5" />实名校验 + 评价体系，安心可信</li>
+                <li className="flex items-start gap-3"><MessageSquare className="h-5 w-5 mt-0.5" />站内私聊与通知，进度不错过</li>
+              </ul>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** ====== Features ========================================================= */
+function FeatureGrid() {
+  const items = [
+    { icon: <SendHorizontal className="h-5 w-5" />, title: "一键发单", desc: "填写需求与预算，立刻发布" },
+    { icon: <Stars className="h-5 w-5" />, title: "评分信用", desc: "完成任务即积累口碑与等级" },
+    { icon: <MapPin className="h-5 w-5" />, title: "同城同校", desc: "优先推送给附近与同校用户" },
+    { icon: <ClipboardList className="h-5 w-5" />, title: "任务看板", desc: "待接单/进行中/已完成一目了然" },
+  ];
+  return (
+    <section id="features" className="py-16 bg-slate-50">
+      <div className="max-w-7xl mx-auto px-6">
+        <h2 className="text-3xl font-semibold">核心功能</h2>
+        <p className="mt-2 text-slate-600 max-w-2xl">只保留对用户最有用的入口，其他都让路。</p>
+        <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {items.map((f, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, delay: i * 0.05 }}
+              className="rounded-2xl border border-slate-200 hover:shadow-md transition p-5"
+            >
+              <div className="flex items-center gap-2 font-medium">{f.icon}{f.title}</div>
+              <p className="mt-2 text-sm text-slate-600">{f.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** ====== How it works ===================================================== */
+function HowItWorks() {
+  const steps = [
+    { k: 1, t: "提交需求/创建账号", d: "选择发单/接单/合作入驻，填写联系方式与需求" },
+    { k: 2, t: "匹配沟通", d: "根据同城同校与标签匹配，站内私聊快速确认" },
+    { k: 3, t: "完成与评价", d: "完成任务并互评，积累信用、赢取更多机会" },
+  ];
+  return (
+    <section id="how" className="py-16">
+      <div className="max-w-7xl mx-auto px-6">
+        <h2 className="text-3xl font-semibold">3 步上手</h2>
+        <div className="mt-8 grid md:grid-cols-3 gap-6">
+          {steps.map((s, i) => (
+            <motion.div
+              key={s.k}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, delay: i * 0.05 }}
+              className="rounded-2xl border border-slate-200 p-6"
+            >
+              <div className="text-xs text-slate-500">Step {s.k}</div>
+              <div className="mt-1 font-medium">{s.t}</div>
+              <p className="mt-2 text-sm text-slate-600">{s.d}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** ====== Auth + Account =================================================== */
+function AuthSection({ user }: { user: any }) {
+  return (
+    <section id="auth" className="py-18 bg-slate-50">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-3xl font-semibold">创建账号 / 登录</h2>
+          <a
+            href="#home"
+            className="hidden md:inline-flex rounded-2xl px-4 py-2"
+            style={{ backgroundColor: brand.primary, color: brand.dark }}
+          >
+            返回顶部
+          </a>
+        </div>
+        <p className="mt-2 text-slate-600">
+          支持学校邮箱（.edu）与个人邮箱（如 Gmail/Outlook 等），注册后即可开始发单或接单。
+        </p>
+
+        {user ? (
+          <AccountPanel user={user} />
+        ) : (
+          <div className="mt-8 grid md:grid-cols-2 gap-6">
+            <div className="rounded-2xl border border-slate-200 p-6">
+              <div className="font-medium flex items-center gap-2">
+                <UserPlus className="h-4 w-4" /> 创建账号
+              </div>
+              <SignupForm />
+            </div>
+            <div className="rounded-2xl border border-slate-200 p-6">
+              <div className="font-medium flex items-center gap-2">
+                <LogIn className="h-4 w-4" /> 登录
+              </div>
+              <SigninForm />
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SignupForm() {
+  const [form, setForm] = useState({
+    name: "", email: "", password: "", school: "", city: "", agree: false,
+  });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<{type:"ok"|"error";text:string}|null>(null);
+
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = e.target;
+    setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
+  };
+
+  const validate = () => {
+    if (!form.name.trim()) return "请输入姓名/昵称";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "请输入有效邮箱";
+    if (form.password.length < 6) return "密码至少 6 位";
+    if (!form.agree) return "请勾选同意服务条款与隐私政策";
+    return null;
+  };
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const err = validate();
+    if (err) return setMsg({ type: "error", text: err });
+
+    setLoading(true);
+    setMsg(null);
+    try {
+      const meta = {
+        name: form.name,
+        school: form.school,
+        city: form.city,
+        email_type: emailType(form.email),
+      };
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: { data: meta, emailRedirectTo: window.location.href },
+      });
+      if (error) throw error;
+      setMsg({ type: "ok", text: "注册成功！请前往邮箱完成验证（若未见请查垃圾箱）。" });
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.message || "注册失败，请稍后再试" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form className="mt-4 space-y-4" onSubmit={onSubmit}>
+      {msg && (
+        <div className={`rounded-lg px-3 py-2 text-sm border ${
+          msg.type === "ok"
+            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : "border-rose-200 bg-rose-50 text-rose-800"
+        }`}>
+          {msg.text}
+        </div>
+      )}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm text-slate-600">姓名/昵称</label>
+          <input
+            name="name" value={form.name} onChange={onChange}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            placeholder="例如：Kaori"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-slate-600">邮箱（学校或个人）</label>
+          <input
+            name="email" type="email" value={form.email} onChange={onChange}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            placeholder="name@school.edu 或 name@gmail.com"
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            将自动识别为 {emailType(form.email) === "school" ? "学校邮箱" : "个人邮箱"}
+          </p>
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm text-slate-600">密码</label>
+          <input
+            name="password" type="password" value={form.password} onChange={onChange}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            placeholder="至少 6 位"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-slate-600">学校（可选）</label>
+          <input
+            name="school" value={form.school} onChange={onChange}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            placeholder="例如：Purdue University"
+          />
+        </div>
+      </div>
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div>
+          <label className="text-sm text-slate-600">城市（可选）</label>
+          <input
+            name="city" value={form.city} onChange={onChange}
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+            placeholder="例如：West Lafayette"
+          />
+        </div>
+        <label className="flex items-center gap-2 mt-6 text-sm text-slate-600">
+          <input
+            name="agree" type="checkbox" checked={form.agree} onChange={onChange}
+            className="rounded border-slate-300"
+          />
+          我同意《服务条款》和《隐私政策》
+        </label>
+      </div>
+      <div className="pt-2 flex items-center gap-3">
+        <button
+          disabled={loading}
+          type="submit"
+          className="rounded-2xl px-4 py-2 disabled:opacity-75"
+          style={{ backgroundColor: brand.primary, color: brand.dark }}
+        >
+          {loading ? "创建中…" : "创建账号"}
+        </button>
+        <span className="text-xs text-slate-500">注册即表示同意基本社区规范</span>
+      </div>
+    </form>
+  );
+}
+
+function SigninForm() {
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<{type:"ok"|"error";text:string}|null>(null);
+
+  const onChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMsg(null);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+      if (error) throw error;
+      setMsg({ type: "ok", text: "登录成功，正在加载账户…" });
+    } catch (e: any) {
+      setMsg({ type: "error", text: e.message || "登录失败，请检查邮箱和密码" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form className="mt-4 space-y-4" onSubmit={onSubmit}>
+      {msg && (
+        <div className={`rounded-lg px-3 py-2 text-sm border ${
+          msg.type === "ok"
+            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : "border-rose-200 bg-rose-50 text-rose-800"
+        }`}>
+          {msg.text}
+        </div>
+      )}
+      <div>
+        <label className="text-sm text-slate-600">邮箱</label>
+        <input
+          name="email" type="email" value={form.email} onChange={onChange}
+          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+          placeholder="name@school.edu 或 name@gmail.com"
+        />
+      </div>
+      <div>
+        <label className="text-sm text-slate-600">密码</label>
+        <input
+          name="password" type="password" value={form.password} onChange={onChange}
+          className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+          placeholder="你的密码"
+        />
+      </div>
+      <div className="pt-2 flex items-center gap-3">
+        <button
+          disabled={loading}
+          type="submit"
+          className="rounded-2xl px-4 py-2"
+          style={{ backgroundColor: brand.dark, color: "#fff" }}
+        >
+          {loading ? "登录中…" : "登录"}
+        </button>
+        <a href="#" className="text-sm text-slate-500 hover:underline">忘记密码？</a>
+      </div>
+    </form>
+  );
+}
+
+function AccountPanel({ user }: { user: any }) {
+  const [signingOut, setSigningOut] = useState(false);
+  const meta = user?.user_metadata || {};
+  return (
+    <div className="mt-8">
+      <div className="rounded-2xl border border-slate-200 p-6">
+        <div className="flex items-start justify-between gap-6 flex-wrap">
+          <div className="space-y-1">
+            <div className="text-slate-900 font-medium flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> 已登录
+            </div>
+            <div className="text-sm text-slate-600">{user?.email}</div>
+            {user?.confirmed_at ? (
+              <div className="text-xs text-emerald-700">邮箱已验证</div>
+            ) : (
+              <div className="text-xs text-amber-700">尚未验证邮箱（请查收验证邮件）</div>
+            )}
+            <div className="mt-3 grid sm:grid-cols-2 gap-x-10 gap-y-1 text-sm">
+              <span>昵称：{meta.name || "-"}</span>
+              <span>学校：{meta.school || "-"}</span>
+              <span>城市：{meta.city || "-"}</span>
+              <span>邮箱类型：{meta.email_type || emailType(user?.email || "")}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={async () => { setSigningOut(true); await supabase.auth.signOut(); setSigningOut(false); }}
+              className="rounded-2xl border px-3 py-2 text-sm hover:bg-slate-50"
+            >
+              <LogOut className="inline h-4 w-4 mr-1" /> {signingOut ? "退出中…" : "退出"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** ====== Survey (optional: saves to Supabase) ============================= */
+function SurveySection({ user }: { user: any }) {
+  return (
+    <section id="survey" className="py-16">
+      <div className="max-w-7xl mx-auto px-6">
+        <h2 className="text-3xl font-semibold">意向问卷（快速三题）</h2>
+        <p className="mt-2 text-slate-600">帮助我们了解你的真实需求，优先为你匹配更合适的功能与内测资格。</p>
+        <div className="mt-6"><SurveyForm user={user} /></div>
+      </div>
+    </section>
+  );
+}
+
+function SurveyForm({ user }: { user: any }) {
+  const [q1, setQ1] = useState<string[]>([]);
+  const [q2, setQ2] = useState("");
+  const [q2Other, setQ2Other] = useState("");
+  const [q3, setQ3] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const q1Options = [
+    "生活问题（租房、购物、搬家等）",
+    "社交活动（交友、聚会、约玩）",
+    "顺风车/代跑腿",
+    "学业辅导/咨询",
+    "留学中介/申请服务",
+  ];
+  const q2Options = ["安全性与隐私保障", "服务价格", "用户数量与活跃度", "平台功能多样性", "Other"];
+
+  const toggleQ1 = (val: string) =>
+    setQ1((list) => (list.includes(val) ? list.filter((v) => v !== val) : [...list, val]));
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr(null);
+    if (!q1.length) return setErr("请选择：最常遇到的需求");
+    if (!q2) return setErr("请选择：最关注的因素");
+    if (!q3) return setErr("请选择：是否愿意加入内部测试");
+
+    setSaving(true);
+    try {
+      // Optional: create table "intake_survey" then uncomment to save
+      const payload = {
+        user_id: user?.id || null,
+        q1,
+        q2: q2 === "Other" ? `Other: ${q2Other}` : q2,
+        q2_other: q2 === "Other" ? q2Other : null,
+        q3,
+      };
+      const { error } = await supabase.from("intake_survey").insert(payload);
+      if (error) throw error;
+      setDone(true);
+    } catch (e) {
+      console.warn("[survey save]", e);
+      setDone(true); // still show success UX even if not saved
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (done) {
+    return (
+      <div className="rounded-2xl border border-slate-200 p-8 text-center">
+        <Sparkles className="h-6 w-6 mx-auto text-amber-500" />
+        <div className="mt-2 text-lg font-medium">感谢提交！</div>
+        <p className="mt-2 text-slate-600">
+          我们会基于你的选择优先邀请内测。你也可以先 <a href="#auth" className="underline">创建账号</a> 开始发单/接单。
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 p-6">
+      {err && <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 text-rose-800 text-sm px-3 py-2">{err}</div>}
+      <form className="space-y-6" onSubmit={onSubmit}>
+        <div>
+          <div className="font-medium">在留学过程中，您最常遇到的需求是？ <span className="text-rose-600">*</span></div>
+          <div className="mt-3 grid sm:grid-cols-2 gap-3">
+            {q1Options.map((opt) => (
+              <label key={opt} className="flex items-center gap-2 text-sm text-slate-700 border border-slate-200 rounded-xl px-3 py-2">
+                <input type="checkbox" checked={q1.includes(opt)} onChange={() => toggleQ1(opt)} className="rounded border-slate-300" />
+                {opt}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="font-medium">您最关注的因素是？ <span className="text-rose-600">*</span></div>
+          <div className="mt-3 grid sm:grid-cols-2 gap-3">
+            {q2Options.map((opt) => (
+              <label key={opt} className="flex items-center gap-2 text-sm text-slate-700 border border-slate-200 rounded-xl px-3 py-2">
+                <input type="radio" name="q2" checked={q2 === opt} onChange={() => setQ2(opt)} className="border-slate-300" />
+                {opt}
+                {opt === "Other" && q2 === "Other" && (
+                  <input
+                    type="text"
+                    value={q2Other}
+                    onChange={(e) => setQ2Other(e.target.value)}
+                    placeholder="请填写"
+                    className="ml-2 flex-1 rounded-lg border border-slate-200 px-2 py-1"
+                  />
+                )}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="font-medium">你愿意加入内部测试吗？ <span className="text-rose-600">*</span></div>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {["愿意", "不愿意"].map((opt) => (
+              <label key={opt} className="flex items-center gap-2 text-sm text-slate-700 border border-slate-200 rounded-xl px-3 py-2">
+                <input type="radio" name="q3" checked={q3 === opt} onChange={() => setQ3(opt)} className="border-slate-300" />
+                {opt}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <button
+            disabled={saving}
+            type="submit"
+            className="rounded-2xl px-4 py-2 disabled:opacity-75"
+            style={{ backgroundColor: brand.primary, color: brand.dark }}
+          >
+            {saving ? "提交中…" : "提交意向"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/** ====== Footer + Floating CTA =========================================== */
+function SiteFooter() {
+  return (
+    <footer className="py-12 border-t border-slate-200 bg-white">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-3">
+          <img src={assets.logo} alt="Aspire Logo" className="h-7 w-7 rounded" />
+          <span className="text-sm text-slate-600">© {new Date().getFullYear()} Aspire</span>
+        </div>
+        <div className="text-xs text-slate-500">品牌风格美化 · 学校/个人邮箱注册 · Supabase 账号系统</div>
+      </div>
+    </footer>
+  );
+}
+
+function FloatingCTA() {
+  return (
+    <a
+      href="#auth"
+      className="fixed bottom-6 right-6 inline-flex items-center gap-2 rounded-full shadow-lg border border-slate-200 bg-white px-4 py-2 text-sm hover:shadow-xl transition"
+      aria-label="创建账号"
+      style={{ color: brand.dark }}
+    >
+      <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: brand.primary }} />
+      创建账号
+    </a>
+  );
+}
