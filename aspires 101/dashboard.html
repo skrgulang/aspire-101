@@ -1,95 +1,175 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Dashboard · Aspire 101</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard · Aspire 101</title>
 
-<!-- Brand -->
-<link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
-<link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <!-- Brand -->
+  <link rel="icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link rel="apple-touch-icon" href="pictures/19171758147211_.pic_hd.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
 
-<!-- Supabase -->
-<meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
-<meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- Supabase -->
+  <meta name="supabase-url"  content="https://ikxjemnugoodfuxjaqoe.supabase.co"/>
+  <meta name="supabase-anon" content="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlreGplbW51Z29vZGZ1eGphcW9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzA5NzgsImV4cCI6MjA3NTAwNjk3OH0.lD79rdsoaUYnKuEISTO5V2sQwwAdi0yindiEg60NkZI">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
-<style>
-:root{
-  --brand:#ffcc00; --ink:#e8eef7; --muted:#9aa4b2; --line:rgba(255,255,255,.09);
-  --card:#0c1117; --bg:#0b0f14; --tab-h:52px; --header-h:72px;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
-body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--ink)}
-.container{max-width:1200px;margin:0 auto;padding:0 20px}
+  <style>
+  :root{
+    --brand:#ffcc00; --ink:#e8eef7; --muted:#9aa4b2; --line:rgba(255,255,255,.09);
+    --card:#0c1117; --bg:#0b0f14; --tab-h:52px; --header-h:72px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+  }
+  .container{max-width:1200px;margin:0 auto;padding:0 20px}
 
-/* Header (matches site) */
-.site-header{position:sticky;top:0;z-index:40;backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(11,15,20,.86),rgba(11,15,20,.72));border-bottom:1px solid var(--line)}
-.nav{display:grid;grid-template-columns:auto 1fr;align-items:center;min-height:72px;gap:16px}
-.brand{display:flex;gap:12px;align-items:center;color:#fff;text-decoration:none}
-.brand-logo{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);object-fit:cover}
-.brand-name{font-weight:900;font-size:22px;letter-spacing:.2px}
-.nav-right{display:flex;align-items:center;justify-content:flex-end;gap:18px}
-.nav-link{color:#d9e0ea;text-decoration:none;font-weight:800}
-.btn{display:inline-flex;align-items:center;justify-content:center;height:44px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:#0b0f14;color:#0b0d12;font-weight:900;cursor:pointer}
-.btn.cta{border:0;background:var(--brand);color:#0b0d12;box-shadow:0 10px 30px rgba(255,204,0,.22)}
-.btn.ghost{background:#0b0f14;color:var(--ink)}
-.btn.small{height:36px;padding:0 14px}
-.btn[disabled]{opacity:.6;cursor:not-allowed}
+  /* Header */
+  .site-header{
+    position:sticky;
+    top:0;
+    z-index:40;
+    backdrop-filter:blur(10px);
+    background:linear-gradient(180deg,rgba(11,15,20,.86),rgba(11,15,20,.72));
+    border-bottom:1px solid var(--line);
+  }
+  .nav{display:grid;grid-template-columns:auto 1fr;align-items:center;min-height:72px;gap:16px}
+  .brand{display:flex;gap:12px;align-items:center;color:#fff;text-decoration:none}
+  .brand-logo{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);object-fit:cover}
+  .brand-name{font-weight:900;font-size:22px;letter-spacing:.2px}
+  .nav-right{display:flex;align-items:center;justify-content:flex-end;gap:18px}
+  .nav-link{color:#d9e0ea;text-decoration:none;font-weight:800}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    height:44px;padding:0 18px;
+    border-radius:999px;border:1px solid var(--line);
+    background:#0b0f14;color:#0b0d12;font-weight:900;cursor:pointer;
+  }
+  .btn.cta{border:0;background:var(--brand);color:#0b0d12;box-shadow:0 10px 30px rgba(255,204,0,.22)}
+  .btn.ghost{background:#0b0f14;color:var(--ink)}
+  .btn.small{height:36px;padding:0 14px}
+  .btn[disabled]{opacity:.6;cursor:not-allowed}
 
-/* Toast */
-.toast{position:sticky;top:calc(var(--header-h) + 6px);z-index:45;margin:10px auto 0;max-width:900px;border-radius:12px;border:1px solid var(--line);padding:12px 16px;background:#151a21;font-weight:800;display:none}
-.toast.ok{outline:2px solid rgba(16,185,129,.45)}
-.toast.bad{outline:2px solid rgba(239,68,68,.45)}
+  /* Toast */
+  .toast{
+    position:sticky;
+    top:calc(var(--header-h) + 6px);
+    z-index:45;
+    margin:10px auto 0;
+    max-width:900px;
+    border-radius:12px;
+    border:1px solid var(--line);
+    padding:12px 16px;
+    background:#151a21;
+    font-weight:800;
+    display:none;
+  }
+  .toast.ok{outline:2px solid rgba(16,185,129,.45)}
+  .toast.bad{outline:2px solid rgba(239,68,68,.45)}
 
-/* Page hero */
-.h1{font-size:clamp(28px,4.8vw,56px);font-weight:900;letter-spacing:-.02em;margin:10px 0 6px}
-.sub{color:#a9b3c4;margin:.45rem 0 0}
+  /* Page hero */
+  .h1{font-size:clamp(28px,4.8vw,56px);font-weight:900;letter-spacing:-.02em;margin:10px 0 6px}
+  .sub{color:#a9b3c4;margin:.45rem 0 0}
 
-/* Tabs */
-.tabbar-wrap{position:sticky;top:var(--header-h);z-index:35;backdrop-filter:saturate(1.1) blur(6px);background:linear-gradient(180deg,rgba(11,15,20,.84),rgba(11,15,20,.74));border-bottom:1px solid var(--line)}
-.tabbar{height:var(--tab-h);display:flex;align-items:end;gap:22px;position:relative}
-.tablink{appearance:none;background:none;border:0;cursor:pointer;color:#cfd7e3;font-weight:900;padding:0 2px 12px;font-size:18px}
-.tablink[aria-selected="true"]{color:#fff}
-.tab-indicator{position:absolute;left:0;bottom:0;height:3px;border-radius:2px;width:40px;background:var(--brand);box-shadow:0 8px 22px rgba(255,204,0,.28);transform:translateX(0);transition:transform .25s,width .25s}
+  /* Tabs */
+  .tabbar-wrap{
+    position:sticky;
+    top:var(--header-h);
+    z-index:35;
+    backdrop-filter:saturate(1.1) blur(6px);
+    background:linear-gradient(180deg,rgba(11,15,20,.84),rgba(11,15,20,.74));
+    border-bottom:1px solid var(--line);
+  }
+  .tabbar{height:var(--tab-h);display:flex;align-items:end;gap:22px;position:relative}
+  .tablink{
+    appearance:none;background:none;border:0;cursor:pointer;
+    color:#cfd7e3;font-weight:900;padding:0 2px 12px;font-size:18px;
+  }
+  .tablink[aria-selected="true"]{color:#fff}
+  .tab-indicator{
+    position:absolute;left:0;bottom:0;height:3px;border-radius:2px;width:40px;
+    background:var(--brand);box-shadow:0 8px 22px rgba(255,204,0,.28);
+    transform:translateX(0);transition:transform .25s,width .25s;
+  }
 
-/* Sections & cards */
-.section{padding:18px 0 28px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
-.label{font-size:13px;color:#9aa4b2}
-.field{height:44px;border:1px solid var(--line);border-radius:12px;padding:0 12px;background:#0b0f14;color:#e8eef7;width:100%}
-textarea.field{height:auto;padding:10px 12px}
-select.field{height:44px}
+  /* Cards & fields */
+  .section{padding:18px 0 28px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .label{font-size:13px;color:var(--muted)}
+  .field{
+    height:44px;border:1px solid var(--line);border-radius:12px;
+    padding:0 12px;background:#0b0f14;color:#e8eef7;width:100%;
+  }
+  textarea.field{height:auto;padding:10px 12px}
+  select.field{height:44px}
 
-/* Find grid */
-.searchbar{display:grid;grid-template-columns: 180px 180px 1fr 1fr 180px 140px;gap:12px;align-items:end}
-@media (max-width:1100px){.searchbar{grid-template-columns:1fr 1fr}}
+  /* Find grid */
+  .searchbar{
+    display:grid;
+    grid-template-columns: 180px 180px 1fr 1fr 180px 140px;
+    gap:12px;align-items:end;
+  }
+  @media (max-width:1100px){.searchbar{grid-template-columns:1fr 1fr}}
 
-/* Tables */
-.table{width:100%;border-collapse:collapse}
-.table th,.table td{padding:12px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
-.muted{color:#9aa4b2}
-.muted-center{color:#9aa4b2;text-align:center}
-.tag{display:inline-block;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:#cfd7e3}
+  /* Tables */
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{
+    padding:12px 8px;border-bottom:1px solid var(--line);
+    text-align:left;vertical-align:middle;
+  }
+  .muted{color:var(--muted)}
+  .muted-center{color:var(--muted);text-align:center}
+  .tag{
+    display:inline-block;padding:4px 10px;border:1px solid var(--line);
+    border-radius:999px;font-size:12px;color:#cfd7e3;
+  }
 
-/* GPS chip */
-.gps-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);padding:6px 10px;border-radius:999px;margin-top:8px;font-size:13px}
-.gps-chip i{width:12px;height:12px;background:#10b981;border-radius:3px;display:inline-block}
+  /* GPS chip */
+  .gps-chip{
+    display:inline-flex;align-items:center;gap:8px;
+    background:rgba(16,185,129,.12);
+    border:1px solid rgba(16,185,129,.35);
+    padding:6px 10px;border-radius:999px;
+    margin-top:8px;font-size:13px;
+  }
+  .gps-chip i{width:12px;height:12px;background:#10b981;border-radius:3px;display:inline-block}
 
-/* Pager */
-.pager{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px;border-top:1px solid var(--line);border-radius:0 0 16px 16px;background:linear-gradient(180deg,#0d131a,#0a0f14)}
-.pager .btn{height:40px}
-.perpage{display:flex;align-items:center;gap:8px;color:#cfd7e3}
+  /* Pager */
+  .pager{
+    display:flex;align-items:center;justify-content:flex-end;gap:10px;
+    padding:12px;border-top:1px solid var(--line);
+    border-radius:0 0 16px 16px;
+    background:linear-gradient(180deg,#0d131a,#0a0f14);
+  }
+  .pager .btn{height:40px}
+  .perpage{display:flex;align-items:center;gap:8px;color:#cfd7e3}
 
-/* Inline */
-.inline{display:flex;align-items:center;gap:16px}
-.help{color:#a9b3c4;margin-top:8px}
-</style>
+  /* Radio row */
+  .inline{display:flex;align-items:center;gap:16px}
+  .help{color:#a9b3c4;margin-top:8px}
+
+  /* Chat box */
+  .chat-box{
+    margin-top:8px;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:#05080c;
+    padding:10px 12px;
+    max-height:260px;
+    overflow-y:auto;
+    font-size:14px;
+  }
+  </style>
 </head>
 
 <body>
+  <!-- HEADER -->
   <header class="site-header">
     <div class="container nav">
       <a class="brand" href="index.html" aria-label="Aspire 101 home">
@@ -112,17 +192,18 @@ select.field{height:44px}
     <p class="sub">Find a Match or post fast. We request location on load and when settings change.</p>
   </section>
 
+  <!-- TABS -->
   <div class="tabbar-wrap">
     <div class="container tabbar" role="tablist" id="tabbar">
       <button class="tablink" data-panel="find"   role="tab" aria-selected="true">Find a Match</button>
       <button class="tablink" data-panel="claims" role="tab" aria-selected="false">My Claims</button>
-      <button class="tablink" data-panel="posts"  role="tab" aria-selected="false">My Posts</button>
       <button class="tablink" data-panel="post"   role="tab" aria-selected="false">Quick Post</button>
       <button class="tablink" id="mod-tab" data-panel="mod" role="tab" aria-selected="false" style="display:none">Moderate</button>
       <span class="tab-indicator" id="tab-indicator" aria-hidden="true"></span>
     </div>
   </div>
 
+  <!-- MAIN -->
   <main class="container section" style="max-width:1200px">
     <!-- FIND -->
     <section id="panel-find" aria-live="polite">
@@ -214,30 +295,43 @@ select.field{height:44px}
       <div class="card">
         <h2 style="margin:0 0 8px;font-size:22px">My Claims</h2>
         <p class="muted" style="margin-top:4px">Tasks you have accepted. You can unclaim any of them.</p>
+
+        <div class="inline" style="margin-top:8px;margin-bottom:4px">
+          <span class="label">Budget filter</span>
+          <select id="claims-budget" class="field" style="max-width:180px;height:40px">
+            <option value="any" selected>Any</option>
+            <option value="0-50">$0–$50</option>
+            <option value="50-100">$50–$100</option>
+            <option value="100-200">$100–$200</option>
+            <option value="200-500">$200–$500</option>
+            <option value="500-1000">$500–$1,000</option>
+            <option value="1000+">$1,000+</option>
+          </select>
+        </div>
+
         <table class="table" style="margin-top:8px">
           <thead><tr>
-            <th>Title</th><th>Budget</th><th>City</th><th>Owner</th><th>Claimed at</th><th style="width:140px">Action</th>
+            <th>Title</th><th>Budget</th><th>City</th><th>Owner</th><th>Claimed at</th><th style="width:180px">Action</th>
           </tr></thead>
           <tbody id="claims-body"><tr><td colspan="6" class="muted-center">Loading…</td></tr></tbody>
         </table>
       </div>
-    </section>
 
-    <!-- MY POSTS (your own tasks) -->
-    <section id="panel-posts" style="display:none">
-      <div class="card">
-        <h2 style="margin:0 0 8px;font-size:22px">My Posts</h2>
-        <p class="muted" style="margin-top:4px">Everything you’ve posted with current status.</p>
-        <table class="table" style="margin-top:8px">
-          <thead>
-            <tr><th>Title</th><th>Budget</th><th>City</th><th>Status</th><th>Created</th></tr>
-          </thead>
-          <tbody id="myposts-body"><tr><td colspan="5" class="muted-center">Loading…</td></tr></tbody>
-        </table>
+      <!-- Claimer chat card -->
+      <div class="card" id="chat-card" style="margin-top:12px;display:none">
+        <h2 style="margin:0 0 4px;font-size:20px">Task chat</h2>
+        <p class="muted" id="chat-task-label" style="margin-top:0"></p>
+
+        <div id="chat-messages" class="chat-box"></div>
+
+        <form id="chat-form" class="inline" style="margin-top:10px;gap:8px">
+          <input id="chat-input" class="field" placeholder="Type a message…" autocomplete="off"/>
+          <button class="btn cta" type="submit">Send</button>
+        </form>
       </div>
     </section>
 
-    <!-- QUICK POST -->
+    <!-- QUICK POST + MY POSTS -->
     <section id="panel-post" style="display:none">
       <div class="card">
         <h2 style="margin:0 0 8px;font-size:22px">Quick Post</h2>
@@ -285,565 +379,875 @@ select.field{height:44px}
           </div>
         </form>
       </div>
+
+      <!-- My Posts UNDER Quick Post -->
+      <div class="card" style="margin-top:12px">
+        <h2 style="margin:0 0 8px;font-size:20px">My Posts</h2>
+        <p class="muted" style="margin-top:4px">Everything you’ve posted with current status.</p>
+        <table class="table" style="margin-top:8px">
+          <thead>
+            <tr>
+              <th>Title</th><th>Budget</th><th>City</th><th>Status</th><th>Created</th>
+            </tr>
+          </thead>
+          <tbody id="mine-body"><tr><td colspan="5" class="muted-center">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Owner chat card (for tasks you posted that got claimed) -->
+      <div class="card" id="owner-chat-card" style="margin-top:12px;display:none">
+        <h2 style="margin:0 0 4px;font-size:20px">Task chat</h2>
+        <p class="muted" id="owner-chat-label" style="margin-top:0"></p>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <span class="label" style="min-width:80px">Select task</span>
+          <select id="owner-chat-task" class="field" style="max-width:320px;height:40px"></select>
+        </div>
+
+        <div id="owner-chat-messages" class="chat-box"></div>
+
+        <form id="owner-chat-form" class="inline" style="margin-top:10px;gap:8px">
+          <input id="owner-chat-input" class="field" placeholder="Type a message to your claimer…" autocomplete="off"/>
+          <button class="btn cta" type="submit">Send</button>
+        </form>
+      </div>
     </section>
 
     <!-- MODERATION -->
     <section id="panel-mod" style="display:none">
       <div class="card">
-        <h2 style="margin:0 0 8px;font-size:22px">Pending Tasks</h2>
-        <p class="muted" style="margin-top:4px">Approve or reject submissions. A reason helps educate users.</p>
+        <h2 style="margin:0 0 8px;font-size:22px">Moderation</h2>
+        <p class="muted" style="margin-top:4px">
+          Pending tasks plus a view of approved ones. Approve or reject submissions.
+        </p>
         <table class="table" style="margin-top:8px">
           <thead><tr>
-            <th style="width:20%">Title</th><th>Details</th><th style="width:10%">Budget</th><th style="width:16%">User</th><th style="width:12%">Submitted</th><th style="width:230px">Moderate</th>
+            <th style="width:18%">Title</th>
+            <th>Details</th>
+            <th style="width:8%">Budget</th>
+            <th style="width:12%">User</th>
+            <th style="width:10%">Status</th>
+            <th style="width:12%">Submitted</th>
+            <th style="width:230px">Moderate</th>
           </tr></thead>
-          <tbody id="mod-body"><tr><td colspan="6" class="muted-center">Loading…</td></tr></tbody>
+          <tbody id="mod-body"><tr><td colspan="7" class="muted-center">Loading…</td></tr></tbody>
         </table>
       </div>
     </section>
   </main>
 
-<script>
-(function(){
-  const $=(s,el=document)=>el.querySelector(s);
-  const $$=(s,el=document)=>Array.from(el.querySelectorAll(s));
-  const esc=s=>(s??'').toString().replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
-  const MI_TO_KM = 1.60934;
+  <script>
+  (function(){
+    const $=(s,el=document)=>el.querySelector(s);
+    const $$=(s,el=document)=>Array.from(el.querySelectorAll(s));
+    const esc=s=>(s??'').toString().replace(/[&<>"]/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
+    const escAttr = s => esc(s).replace(/"/g,'&quot;');
+    const MI_TO_KM = 1.60934;
+    const PUBLIC_VIEW = 'tasks_public';
 
-  /* ---------- toast ---------- */
-  const toast = $('#toast');
-  function showToast(msg, ok=false){
-    toast.textContent = msg;
-    toast.className = 'toast ' + (ok?'ok':'bad');
-    toast.style.display='block';
-    clearTimeout(showToast.t);
-    showToast.t = setTimeout(()=>{ toast.style.display='none'; }, 3500);
-  }
-
-  /* ---------- supabase ---------- */
-  const SB_URL  = document.querySelector('meta[name="supabase-url"]').content;
-  const SB_ANON = document.querySelector('meta[name="supabase-anon"]').content;
-  const sb = window.supabase?.createClient?.(SB_URL, SB_ANON, { auth:{ persistSession:true, detectSessionInUrl:true } });
-
-  let CURRENT_USER = null;
-
-  async function getMeOnce(){
-    try{
-      const { data:{ session } } = await sb.auth.getSession();
-      if (session?.user) return session.user;
-    }catch{}
-    try{
-      const { data:{ user } } = await sb.auth.getUser();
-      if (user) return user;
-    }catch{}
-    return null;
-  }
-  async function ensureSessionReady(maxTries=6, delayMs=140){
-    let u = await getMeOnce();
-    if (u){ CURRENT_USER=u; return u; }
-    try{ await sb.auth.refreshSession(); }catch{}
-    for(let i=0;i<maxTries && !u;i++){
-      await new Promise(r=>setTimeout(r, delayMs));
-      u = await getMeOnce();
+    /* ---------- toast ---------- */
+    const toast = $('#toast');
+    function showToast(msg, ok=false){
+      toast.textContent = msg;
+      toast.className = 'toast ' + (ok?'ok':'bad');
+      toast.style.display='block';
+      clearTimeout(showToast.t);
+      showToast.t = setTimeout(()=>{ toast.style.display='none'; }, 3500);
     }
-    CURRENT_USER = u || null;
-    return CURRENT_USER;
-  }
-  async function getMe(){ if (CURRENT_USER) return CURRENT_USER; return ensureSessionReady(1,0); }
 
-  /* ---------- tabs ---------- */
-  const tabbar=$('#tabbar'), indicator=$('#tab-indicator'), tabs=$$('.tablink',tabbar);
-  const panels={ find:$('#panel-find'), claims:$('#panel-claims'), posts:$('#panel-posts'), post:$('#panel-post'), mod:$('#panel-mod') };
+    /* ---------- supabase ---------- */
+    const SB_URL  = document.querySelector('meta[name="supabase-url"]').content;
+    const SB_ANON = document.querySelector('meta[name="supabase-anon"]').content;
+    const sb = window.supabase?.createClient?.(SB_URL, SB_ANON, { auth:{ persistSession:true, detectSessionInUrl:true } });
 
-  function moveIndicator(btn){
-    if(!btn) return;
-    const r=btn.getBoundingClientRect(), base=tabbar.getBoundingClientRect();
-    indicator.style.width = Math.max(40, r.width) + 'px';
-    indicator.style.transform = `translateX(${r.left - base.left}px)`;
-  }
-  function selectTab(btn){
-    tabs.forEach(b=>b.setAttribute('aria-selected', b===btn ? 'true':'false'));
-    Object.entries(panels).forEach(([k,el])=> el.style.display = (k===btn.dataset.panel)?'':'none');
-    requestAnimationFrame(()=> moveIndicator(btn));
-    try{ history.replaceState(null,'','#'+btn.dataset.panel);}catch{}
-    if (btn.dataset.panel==='find')   { ensureLocationFlow(false); searchTasks(true); }
-    if (btn.dataset.panel==='claims') { loadClaims(); }
-    if (btn.dataset.panel==='posts')  { loadMyPosts(); }
-    if (btn.dataset.panel==='post')   { /* no load needed */ }
-    if (btn.dataset.panel==='mod')    { loadPending(); }
-  }
-  tabbar.addEventListener('click',e=>{ const b=e.target.closest('.tablink'); if(b) selectTab(b); });
-  window.addEventListener('resize', ()=> moveIndicator(tabs.find(b=>b.getAttribute('aria-selected')==='true')));
+    let CURRENT_USER = null;
+    let ACTIVE_CHAT_TASK_ID = null;        // claimer side
+    let OWNER_TASKS = [];                  // tasks you posted
+    let OWNER_ACTIVE_TASK_ID = null;       // owner side
 
-  /* ---------- location ---------- */
-  const geoChip = $('#geo-chip'), geoMsg = $('#geo-msg');
-  function setGeoChip(text){ geoMsg.textContent=text||''; geoChip.style.display = text ? 'inline-flex':'none'; }
-  let coords=null;
-  async function requestLocation(){
-    if(!window.isSecureContext || !('geolocation' in navigator)){ setGeoChip('GPS unavailable'); return null; }
-    setGeoChip('Requesting location…');
-    return new Promise((resolve)=>{
-      navigator.geolocation.getCurrentPosition(async (pos)=>{
-        coords = pos.coords;
-        try{
-          const url = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(coords.latitude)}&lon=${encodeURIComponent(coords.longitude)}&format=json&zoom=10&accept-language=en`;
-          const res = await fetch(url, { headers: { 'Accept':'application/json' }});
-          const data = await res.json();
-          const a = data.address || {};
-          const city  = a.city || a.town || a.village || a.hamlet || a.suburb || '';
-          const state = a.state || a.region || '';
-          const cc    = (a.country_code||'').toUpperCase();
-          if (city || state){
-            setGeoChip(`✅ ${[city, state].filter(Boolean).join(', ')}${cc?` (${cc})`:''}`);
-          }else if (data.display_name){
-            setGeoChip(`✅ ${data.display_name.split(',').slice(0,2).join(', ')}`);
-          }else{
+    async function getMeOnce(){
+      try{
+        const { data:{ session } } = await sb.auth.getSession();
+        if (session?.user) return session.user;
+      }catch{}
+      try{
+        const { data:{ user } } = await sb.auth.getUser();
+        if (user) return user;
+      }catch{}
+      return null;
+    }
+    async function ensureSessionReady(maxTries=6, delayMs=140){
+      let u = await getMeOnce();
+      if (u){ CURRENT_USER=u; return u; }
+      try{ await sb.auth.refreshSession(); }catch{}
+      for(let i=0;i<maxTries && !u;i++){
+        await new Promise(r=>setTimeout(r, delayMs));
+        u = await getMeOnce();
+      }
+      CURRENT_USER = u || null;
+      return CURRENT_USER;
+    }
+    async function getMe(){ if (CURRENT_USER) return CURRENT_USER; return ensureSessionReady(1,0); }
+
+    /* ---------- tabs ---------- */
+    const tabbar=$('#tabbar'), indicator=$('#tab-indicator'), tabs=$$('.tablink',tabbar);
+    const panels={ find:$('#panel-find'), claims:$('#panel-claims'), post:$('#panel-post'), mod:$('#panel-mod') };
+
+    function moveIndicator(btn){
+      if(!btn) return;
+      const r=btn.getBoundingClientRect(), base=tabbar.getBoundingClientRect();
+      indicator.style.width = Math.max(40, r.width) + 'px';
+      indicator.style.transform = `translateX(${r.left - base.left}px)`;
+    }
+    function selectTab(btn){
+      tabs.forEach(b=>b.setAttribute('aria-selected', b===btn ? 'true':'false'));
+      Object.entries(panels).forEach(([k,el])=> el.style.display = (k===btn.dataset.panel)?'':'none');
+      requestAnimationFrame(()=> moveIndicator(btn));
+      try{ history.replaceState(null,'','#'+btn.dataset.panel);}catch{}
+      if (btn.dataset.panel==='find')   { ensureLocationFlow(false); searchTasks(true); }
+      if (btn.dataset.panel==='claims') { loadClaims(); }
+      if (btn.dataset.panel==='post')   { loadMine(); }
+      if (btn.dataset.panel==='mod')    { loadPendingAndApproved(); }
+    }
+    tabbar.addEventListener('click',e=>{ const b=e.target.closest('.tablink'); if(b) selectTab(b); });
+    window.addEventListener('resize', ()=> moveIndicator(tabs.find(b=>b.getAttribute('aria-selected')==='true')));
+
+    /* ---------- location ---------- */
+    const geoChip = $('#geo-chip'), geoMsg = $('#geo-msg');
+    function setGeoChip(text){ geoMsg.textContent=text||''; geoChip.style.display = text ? 'inline-flex':'none'; }
+    let coords=null;
+    async function requestLocation(){
+      if(!window.isSecureContext || !('geolocation' in navigator)){ setGeoChip('GPS unavailable'); return null; }
+      setGeoChip('Requesting location…');
+      return new Promise((resolve)=>{
+        navigator.geolocation.getCurrentPosition(async (pos)=>{
+          coords = pos.coords;
+          try{
+            const url = `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(coords.latitude)}&lon=${encodeURIComponent(coords.longitude)}&format=json&zoom=10&accept-language=en`;
+            const res = await fetch(url, { headers: { 'Accept':'application/json' }});
+            const data = await res.json();
+            const a = data.address || {};
+            const city  = a.city || a.town || a.village || a.hamlet || '';
+            const state = a.state || a.region || '';
+            const cc    = (a.country_code||'').toUpperCase();
+            if (city || state){
+              setGeoChip(`✅ ${[city, state].filter(Boolean).join(', ')}${cc?` (${cc})`:''}`);
+            }else if (data.display_name){
+              setGeoChip(`✅ ${data.display_name.split(',').slice(0,2).join(', ')}`);
+            }else{
+              setGeoChip(`✅ ${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)}`);
+            }
+          }catch(_e){
             setGeoChip(`✅ ${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)}`);
           }
-        }catch(_e){
-          setGeoChip(`✅ ${coords.latitude.toFixed(3)}, ${coords.longitude.toFixed(3)}`);
-        }
-        resolve(coords);
-      }, (err)=>{
-        setGeoChip('❌ '+(err?.message||'Permission denied'));
-        resolve(null);
-      }, { enableHighAccuracy:true, timeout:12000, maximumAge:60000 });
-    });
-  }
-  async function ensureLocationFlow(force){
-    if($('#loc-mode').value!=='gps'){ setGeoChip(''); return; }
-    if(!coords || force) await requestLocation();
-  }
-
-  /* ---------- helpers ---------- */
-  function displayNameForTask(t, nameMap) {
-    if (t.anonymous) return 'Anonymous';
-    const fromMap = nameMap?.get(t.user_id);
-    const poster = t.poster_name && t.poster_name !== 'Member' ? t.poster_name : null;
-    return esc(fromMap || poster || 'Member');
-  }
-  async function enrichWithUsernames(rows){
-    const ids = Array.from(new Set(rows.map(r=>r.user_id).filter(Boolean)));
-    if (!ids.length) return new Map();
-    const { data } = await sb.from('profiles').select('id,username,email').in('id', ids);
-    const map = new Map();
-    (data||[]).forEach(p=>{
-      map.set(p.id, (p.username && p.username.trim()) || p.email || 'Member');
-    });
-    return map;
-  }
-
-  /* ---------- FIND + paging ---------- */
-  const locMode=$('#loc-mode'), distSel=$('#q-distance'), budgetSel=$('#q-budget'), keyInput=$('#q-key'), cityInput=$('#q-city');
-  const tbody=$('#find-body');
-  const perSel=$('#per-page'), prevBtn=$('#prev-page'), nextBtn=$('#next-page');
-
-  let CURRENT_ROWS = [];
-  let PAGE = 0;
-
-  function parseBudgetRange(v){
-    if (!v || v==='any') return [null,null];
-    if (v.endsWith('+')) return [Number(v.replace('+','')), null];
-    const [a,b]=v.split('-').map(Number);
-    return [isNaN(a)?null:a, isNaN(b)?null:b];
-  }
-
-  function rowActionCell(t){
-    const me = CURRENT_USER?.id || null;
-    const mine = me && t.user_id === me;
-    const claimed = !!t.accepted_by;
-    if (mine) return `<span class="tag">my post</span>`;
-    if (!me)  return `<a class="btn small ghost" href="account.html">Sign in</a>`;
-    if (!claimed) return `<button class="btn small cta" data-act="claim" data-id="${t.id}">Claim</button>`;
-    if (t.accepted_by === me) return `<button class="btn small cta" data-act="unclaim" data-id="${t.id}">Unclaim</button>`;
-    return `<span class="tag">claimed</span>`;
-  }
-
-  function addressCell(t){
-    // Only if user chose to show and value exists
-    if (t.has_detailed_address && (t.detailed_address||'').trim()) {
-      return esc(t.detailed_address.trim());
+          resolve(coords);
+        }, (err)=>{
+          setGeoChip('❌ '+(err?.message||'Permission denied'));
+          resolve(null);
+        }, { enableHighAccuracy:true, timeout:12000, maximumAge:60000 });
+      });
     }
-    return '—';
-  }
+    async function ensureLocationFlow(force){
+      if($('#loc-mode').value!=='gps'){ setGeoChip(''); return; }
+      if(!coords || force) await requestLocation();
+    }
 
-  async function paintPage(){
-    const start = PAGE * Number(perSel.value);
-    const end   = start + Number(perSel.value);
-    const pageRows = CURRENT_ROWS.slice(start, end);
+    /* ---------- helpers ---------- */
+    function displayNameForTask(t, nameMap) {
+      if (t.anonymous) return 'Anonymous';
+      const fromMap = nameMap?.get(t.user_id);
+      const poster = t.poster_name && t.poster_name !== 'Member' ? t.poster_name : null;
+      return esc(fromMap || poster || 'Member');
+    }
+    async function enrichWithUsernames(rows){
+      const ids = Array.from(new Set(rows.map(r=>r.user_id).filter(Boolean)));
+      if (!ids.length) return new Map();
+      const { data } = await sb.from('profiles').select('id,display_name').in('id', ids);
+      const map = new Map();
+      (data||[]).forEach(p=>{
+        map.set(p.id, (p.display_name && p.display_name.trim()) || 'Member');
+      });
+      return map;
+    }
+    const normStatus = v => (v==null ? '' : String(v).toLowerCase());
+    const getTaskId = row => row.task_id || row.id;
 
-    if(!pageRows.length){ tbody.innerHTML='<tr><td colspan="7" class="muted-center">No results. Try a search.</td></tr>'; }
-    else{
-      const nameMap = await enrichWithUsernames(pageRows);
-      tbody.innerHTML='';
-      pageRows.forEach(r=>{
-        const when = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+    /* ---------- FIND + paging ---------- */
+    const locMode=$('#loc-mode'), distSel=$('#q-distance'), budgetSel=$('#q-budget'), keyInput=$('#q-key'), cityInput=$('#q-city');
+    const tbody=$('#find-body');
+    const perSel=$('#per-page'), prevBtn=$('#prev-page'), nextBtn=$('#next-page');
+
+    let CURRENT_ROWS = [];
+    let PAGE = 0;
+
+    function parseBudgetRange(v){
+      if (!v || v==='any') return [null,null];
+      if (v.endsWith('+')) return [Number(v.replace('+','')), null];
+      const [a,b]=v.split('-').map(Number);
+      return [isNaN(a)?null:a, isNaN(b)?null:b];
+    }
+
+    function rowActionCell(t, taskId){
+      const id = taskId || t.id || t.task_id;
+      const me = CURRENT_USER?.id || null;
+      const mine = me && t.user_id === me;
+      const claimed = !!t.accepted_by;
+      if (mine) return `<span class="tag">my post</span>`;
+      if (!me)  return `<a class="btn small ghost" href="account.html">Sign in</a>`;
+      if (!claimed) return `<button class="btn small cta" data-act="claim" data-id="${id}">Claim</button>`;
+      if (t.accepted_by === me) return `<button class="btn small cta" data-act="unclaim" data-id="${id}">Unclaim</button>`;
+      return `<span class="tag">claimed</span>`;
+    }
+
+    function addressCell(t){
+      if (t.has_detailed_address && (t.detailed_address||'').trim()) {
+        return esc(t.detailed_address.trim());
+      }
+      return '—';
+    }
+
+    async function paintPage(){
+      const start = PAGE * Number(perSel.value);
+      const end   = start + Number(perSel.value);
+      const pageRows = CURRENT_ROWS.slice(start, end);
+
+      if(!pageRows.length){
+        tbody.innerHTML='<tr><td colspan="7" class="muted-center">No results. Try a search.</td></tr>';
+      } else {
+        const nameMap = await enrichWithUsernames(pageRows);
+        tbody.innerHTML='';
+        pageRows.forEach(r=>{
+          const when = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+          const taskId = getTaskId(r);
+          const tr=document.createElement('tr');
+          tr.innerHTML=`
+            <td>${esc(r.title)}</td>
+            <td>${r.budget!=null?('$'+Number(r.budget).toFixed(0)):'—'}</td>
+            <td>${esc(r.city||'')}</td>
+            <td>${addressCell(r)}</td>
+            <td>${displayNameForTask(r, nameMap)}</td>
+            <td>${when}</td>
+            <td>${rowActionCell(r, taskId)}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      prevBtn.disabled = PAGE<=0;
+      nextBtn.disabled = end >= CURRENT_ROWS.length;
+    }
+
+    async function searchTasks(resetPage){
+      await ensureSessionReady(6,140);
+      await ensureLocationFlow(false);
+
+      const key = keyInput.value.trim().toLowerCase();
+      const cityKey = cityInput.value.trim().toLowerCase();
+      const [bmin,bmax] = parseBudgetRange(budgetSel.value);
+      const mode = locMode.value;
+
+      try{
+        let rows = [];
+
+        if(mode==='gps'){
+          const v = distSel.value;
+          const km = (v==='any') ? 50000 : Math.round(Number(v) * MI_TO_KM);
+          const resp = await sb.rpc('nearby_tasks', { p_lat: coords?.latitude||0, p_lng: coords?.longitude||0, p_km: km });
+          rows = resp?.data || [];
+        }else{
+          let q = sb.from(PUBLIC_VIEW)
+            .select('*')
+            .order('created_at',{ascending:false})
+            .limit(300);
+
+          if (key){
+            q = q.or(`title.ilike.%${key}%,details.ilike.%${key}%,city.ilike.%${key}%`);
+          }
+          if (cityKey){
+            q = q.ilike('city', `%${cityKey}%`);
+          }
+          if (bmin!=null) q = q.gte('budget', bmin);
+          if (bmax!=null) q = q.lte('budget', bmax);
+
+          const { data, error } = await q;
+          rows = error ? [] : (data||[]);
+        }
+
+        rows = rows.filter(r => normStatus(r.status) === 'approved');
+        if (key){
+          const k=key;
+          rows = rows.filter(r =>
+            (r.title||'').toLowerCase().includes(k) ||
+            (r.details||'').toLowerCase().includes(k) ||
+            (r.city||'').toLowerCase().includes(k)
+          );
+        }
+        if (cityKey){ rows = rows.filter(r => (r.city||'').toLowerCase().includes(cityKey)); }
+        if (bmin!=null) rows = rows.filter(r => (r.budget??0) >= bmin);
+        if (bmax!=null) rows = rows.filter(r => (r.budget??0) <= bmax);
+
+        rows.sort((a,b)=> new Date(b.created_at||0) - new Date(a.created_at||0));
+        CURRENT_ROWS = rows;
+        if (resetPage) PAGE = 0;
+        await paintPage();
+      }catch(err){
+        showToast('Search failed: '+(err?.message||'unknown'), false);
+      }
+    }
+
+    keyInput.addEventListener('keyup', e=>{ if(e.key==='Enter') searchTasks(true); });
+    [locMode, distSel, budgetSel, cityInput].forEach(el=> el.addEventListener('change', ()=> searchTasks(true)));
+    $('#q-search').addEventListener('click', ()=> searchTasks(true));
+    perSel.addEventListener('change', ()=> paintPage());
+    prevBtn.addEventListener('click', ()=>{ if(PAGE>0){ PAGE--; paintPage(); } });
+    nextBtn.addEventListener('click', ()=>{ const maxPage=Math.floor((CURRENT_ROWS.length-1)/Number(perSel.value)); if(PAGE<maxPage){ PAGE++; paintPage(); } });
+
+    /* ---------- claim / unclaim ---------- */
+    async function claimTask(taskId){
+      await getMe();
+      if(!CURRENT_USER){ location.href='account.html'; return; }
+
+      const name = CURRENT_USER.user_metadata?.full_name || CURRENT_USER.email || 'Member';
+
+      const { data, error } = await sb
+        .from('tasks')
+        .update({ accepted_by: CURRENT_USER.id, accepted_name: name })
+        .eq('id', taskId)
+        .is('accepted_by', null)
+        .select('id,accepted_by')
+        .limit(1);
+
+      if (error){
+        showToast('Claim failed: ' + (error.message || 'update blocked'), false);
+        return;
+      }
+      if (!data || !data.length){
+        showToast('Task is not available (already claimed or missing).', false);
+        return;
+      }
+      showToast('Claimed!', true);
+    }
+
+    async function unclaimTask(taskId){
+      await getMe();
+      if(!CURRENT_USER){ location.href='account.html'; return; }
+
+      const { data, error } = await sb
+        .from('tasks')
+        .update({ accepted_by: null, accepted_name: null })
+        .eq('id', taskId)
+        .eq('accepted_by', CURRENT_USER.id)
+        .select('id')
+        .limit(1);
+
+      if (error){
+        showToast('Unclaim failed: ' + (error.message || 'update blocked'), false);
+        return;
+      }
+      if (!data || !data.length){
+        showToast('You do not currently hold this claim.', false);
+        return;
+      }
+      showToast('Unclaimed.', true);
+    }
+
+    $('#find-body').addEventListener('click', async (e)=>{
+      const btn = e.target.closest('button[data-act]'); if(!btn) return;
+      const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act'); btn.disabled = true;
+      try{
+        if (act==='claim') await claimTask(id);
+        if (act==='unclaim') await unclaimTask(id);
+      }finally{
+        btn.disabled=false;
+        await Promise.all([searchTasks(false), loadClaims(), loadMine()]);
+      }
+    });
+
+    /* ---------- My Claims + budget filter ---------- */
+    function parseBudgetRangeClaims(v){
+      if (!v || v === 'any') return [null,null];
+      if (v.endsWith('+')) return [Number(v.replace('+','')), null];
+      const [a,b] = v.split('-').map(Number);
+      return [isNaN(a)?null:a, isNaN(b)?null:b];
+    }
+
+    async function loadClaims(){
+      const body=$('#claims-body');
+      body.innerHTML='<tr><td colspan="6" class="muted-center">Checking session…</td></tr>';
+      await ensureSessionReady(6,140);
+      if (!CURRENT_USER){
+        body.innerHTML='<tr><td colspan="6" class="muted-center"><a href="account.html">Sign in to see claims</a></td></tr>';
+        return;
+      }
+      const { data, error } = await sb.from('tasks')
+        .select('*')
+        .eq('accepted_by', CURRENT_USER.id)
+        .order('updated_at',{ascending:false})
+        .limit(100);
+
+      if (error){
+        body.innerHTML='<tr><td colspan="6" class="muted-center">Could not load claims.</td></tr>';
+        return;
+      }
+
+      const filterSel = $('#claims-budget');
+      const [bmin,bmax] = parseBudgetRangeClaims(filterSel ? filterSel.value : 'any');
+
+      let rows = data || [];
+      if (bmin != null) rows = rows.filter(r => (r.budget ?? 0) >= bmin);
+      if (bmax != null) rows = rows.filter(r => (r.budget ?? 0) <= bmax);
+
+      body.innerHTML='';
+      if(!rows.length){
+        body.innerHTML='<tr><td colspan="6" class="muted-center">No claimed tasks yet.</td></tr>';
+        $('#chat-card').style.display='none';
+        return;
+      }
+      const nameMap = await enrichWithUsernames(rows);
+      rows.forEach(t=>{
         const tr=document.createElement('tr');
-        tr.innerHTML=`
-          <td>${esc(r.title)}</td>
-          <td>${r.budget!=null?('$'+Number(r.budget).toFixed(0)):'—'}</td>
-          <td>${esc(r.city||'')}</td>
-          <td>${addressCell(r)}</td>
-          <td>${displayNameForTask(r, nameMap)}</td>
-          <td>${when}</td>
-          <td>${rowActionCell(r)}</td>`;
-        tbody.appendChild(tr);
+        tr.innerHTML=`<td>${esc(t.title)}</td>
+          <td>${t.budget!=null?('$'+Number(t.budget).toFixed(0)):'—'}</td>
+          <td>${esc(t.city||'')}</td>
+          <td>${displayNameForTask(t, nameMap)}</td>
+          <td>${new Date(t.updated_at||t.created_at||Date.now()).toLocaleString()}</td>
+          <td style="display:flex;gap:6px">
+            <button class="btn small ghost" type="button"
+              data-chat-task="${t.id}"
+              data-chat-title="${escAttr(t.title)}">
+              Chat
+            </button>
+            <button class="btn small cta" type="button" data-claims-unclaim="${t.id}">
+              Unclaim
+            </button>
+          </td>`;
+        body.appendChild(tr);
       });
     }
 
-    prevBtn.disabled = PAGE<=0;
-    nextBtn.disabled = end >= CURRENT_ROWS.length;
-  }
+    $('#claims-budget')?.addEventListener('change', ()=> loadClaims());
 
-  async function searchTasks(resetPage){
-    await ensureSessionReady(6,140);
-    await ensureLocationFlow(false);
-
-    const key = keyInput.value.trim().toLowerCase();
-    const cityKey = cityInput.value.trim().toLowerCase();
-    const [bmin,bmax] = parseBudgetRange(budgetSel.value);
-    const mode = locMode.value;
-
-    try{
-      let rows = [];
-
-      if(mode==='gps'){
-        const v = distSel.value;
-        const km = (v==='any') ? 50000 : Math.round(Number(v) * MI_TO_KM);
-        const resp = await sb.rpc('nearby_tasks', { p_lat: coords?.latitude||0, p_lng: coords?.longitude||0, p_km: km });
-        rows = resp?.data || [];
-      }else{
-        let q = sb.from('tasks').select('*').eq('status','approved').order('created_at',{ascending:false}).limit(300);
-        if (key){ q = q.or(`title.ilike.%${key}%,details.ilike.%${key}%,city.ilike.%${key}%`); }
-        if (cityKey){ q = q.ilike('city', `%${cityKey}%`); }
-        if (bmin!=null) q = q.gte('budget', bmin);
-        if (bmax!=null) q = q.lte('budget', bmax);
-        const { data, error } = await q;
-        rows = error ? [] : (data||[]);
-      }
-
-      rows = rows.filter(r => r.status === 'approved');
-      if (key){
-        const k=key;
-        rows = rows.filter(r =>
-          (r.title||'').toLowerCase().includes(k) ||
-          (r.details||'').toLowerCase().includes(k) ||
-          (r.city||'').toLowerCase().includes(k)
-        );
-      }
-      if (cityKey){ rows = rows.filter(r => (r.city||'').toLowerCase().includes(cityKey)); }
-      if (bmin!=null) rows = rows.filter(r => (r.budget??0) >= bmin);
-      if (bmax!=null) rows = rows.filter(r => (r.budget??0) <= bmax);
-
-      rows.sort((a,b)=> new Date(b.created_at||0) - new Date(a.created_at||0));
-      CURRENT_ROWS = rows;
-      if (resetPage) PAGE = 0;
-      await paintPage();
-    }catch(err){
-      showToast('Search failed: '+(err?.message||'unknown'), false);
-    }
-  }
-
-  // events
-  ['change','keyup'].forEach(evt => keyInput.addEventListener(evt, e=>{ if(e.key==='Enter') searchTasks(true); }));
-  ;[locMode, distSel, budgetSel, cityInput].forEach(el=> el.addEventListener('change', ()=> searchTasks(true)));
-  $('#q-search').addEventListener('click', ()=> searchTasks(true));
-  perSel.addEventListener('change', ()=> paintPage());
-  prevBtn.addEventListener('click', ()=>{ if(PAGE>0){ PAGE--; paintPage(); } });
-  nextBtn.addEventListener('click', ()=>{ const maxPage=Math.floor((CURRENT_ROWS.length-1)/Number(perSel.value)); if(PAGE<maxPage){ PAGE++; paintPage(); } });
-
-  /* ---------- claim / unclaim ---------- */
-  async function claimTask(taskId){
-    await getMe();
-    if(!CURRENT_USER){ location.href='account.html'; return; }
-    const { data: row, error: getErr } = await sb
-      .from('tasks')
-      .select('id,status,accepted_by')
-      .eq('id', taskId)
-      .maybeSingle();
-
-    if (getErr || !row){ showToast('Claim failed: task not found', false); return; }
-    if (row.status !== 'approved'){ showToast('This task isn’t approved yet.', false); return; }
-    if (row.accepted_by){ showToast('Already claimed by someone.', false); return; }
-
-    const name = CURRENT_USER.user_metadata?.full_name || CURRENT_USER.email || 'Member';
-    const { error } = await sb
-      .from('tasks')
-      .update({ accepted_by: CURRENT_USER.id, accepted_name: name })
-      .eq('id', taskId)
-      .is('accepted_by', null)
-      .eq('status','approved');
-
-    if (error){ showToast('Claim failed: ' + (error.message || 'update blocked'), false); return; }
-    showToast('Claimed!', true);
-  }
-  async function unclaimTask(taskId){
-    await getMe();
-    if(!CURRENT_USER){ location.href='account.html'; return; }
-    const { error } = await sb
-      .from('tasks')
-      .update({ accepted_by: null, accepted_name: null })
-      .eq('id', taskId)
-      .eq('accepted_by', CURRENT_USER.id);
-    if (error){ showToast('Unclaim failed: ' + (error.message || 'update blocked'), false); return; }
-    showToast('Unclaimed.', true);
-  }
-  $('#find-body').addEventListener('click', async (e)=>{
-    const btn = e.target.closest('button[data-act]'); if(!btn) return;
-    const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act'); btn.disabled = true;
-    try{
-      if (act==='claim') await claimTask(id);
-      if (act==='unclaim') await unclaimTask(id);
-    }finally{
-      btn.disabled=false;
-      await Promise.all([searchTasks(false), loadClaims()]);
-    }
-  });
-
-  /* ---------- My Claims ---------- */
-  async function loadClaims(){
-    const body=$('#claims-body');
-    body.innerHTML='<tr><td colspan="6" class="muted-center">Checking session…</td></tr>';
-    await ensureSessionReady(6,140);
-    if (!CURRENT_USER){
-      body.innerHTML='<tr><td colspan="6" class="muted-center"><a href="account.html">Sign in to see claims</a></td></tr>';
-      return;
-    }
-    const { data, error } = await sb.from('tasks')
-      .select('*')
-      .eq('accepted_by', CURRENT_USER.id)
-      .order('updated_at',{ascending:false})
-      .limit(100);
-    if (error){ body.innerHTML='<tr><td colspan="6" class="muted-center">Could not load claims.</td></tr>'; return; }
-    body.innerHTML='';
-    if(!data?.length){ body.innerHTML='<tr><td colspan="6" class="muted-center">No claimed tasks yet.</td></tr>'; return; }
-    const nameMap = await enrichWithUsernames(data);
-    data.forEach(t=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${esc(t.title)}</td>
-        <td>${t.budget!=null?('$'+Number(t.budget).toFixed(0)):'—'}</td>
-        <td>${esc(t.city||'')}</td>
-        <td>${displayNameForTask(t, nameMap)}</td>
-        <td>${new Date(t.updated_at||t.created_at||Date.now()).toLocaleString()}</td>
-        <td><button class="btn small cta" data-claims-unclaim="${t.id}">Unclaim</button></td>`;
-      body.appendChild(tr);
+    document.addEventListener('click', async (e)=>{
+      const b = e.target.closest('button[data-claims-unclaim]');
+      if(!b) return;
+      const id = b.getAttribute('data-claims-unclaim'); b.disabled = true;
+      try{ await unclaimTask(id); }finally{ b.disabled=false; await Promise.all([loadClaims(), searchTasks(false), loadMine()]); }
     });
-  }
-  document.addEventListener('click', async (e)=>{
-    const b = e.target.closest('button[data-claims-unclaim]'); if(!b) return;
-    const id = b.getAttribute('data-claims-unclaim'); b.disabled = true;
-    try{ await unclaimTask(id); }finally{ b.disabled=false; await Promise.all([loadClaims(), searchTasks(false)]); }
-  });
 
-  /* ---------- My Posts (your tasks) ---------- */
-  async function loadMyPosts(){
-    const body=$('#myposts-body');
-    body.innerHTML='<tr><td colspan="5" class="muted-center">Loading…</td></tr>';
-    await ensureSessionReady(6,140);
-    if (!CURRENT_USER){ body.innerHTML='<tr><td colspan="5" class="muted-center"><a href="account.html">Sign in to see your posts</a></td></tr>'; return; }
-    const { data, error } = await sb.from('tasks')
-      .select('*')
-      .eq('user_id', CURRENT_USER.id)
-      .order('created_at',{ascending:false})
-      .limit(200);
-    if (error){ body.innerHTML='<tr><td colspan="5" class="muted-center">Could not load your posts.</td></tr>'; return; }
-    body.innerHTML='';
-    if(!data?.length){ body.innerHTML='<tr><td colspan="5" class="muted-center">No posts yet.</td></tr>'; return; }
-    data.forEach(t=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${esc(t.title)}</td>
-        <td>${t.budget!=null?('$'+Number(t.budget).toFixed(0)):'—'}</td>
-        <td>${esc(t.city||'')}</td>
-        <td>${esc(t.status || (t.accepted_by?'claimed':'pending'))}</td>
-        <td>${new Date(t.created_at||Date.now()).toLocaleString()}</td>`;
-      body.appendChild(tr);
-    });
-  }
+    /* ---------- generic render chat ---------- */
+    async function renderChat(taskId, box){
+      if (!taskId || !box) return;
+      box.innerHTML = '<div class="muted">Loading…</div>';
 
-  /* ---------- Quick Post form ---------- */
-  const radios = $$('input[name="has_detail"]');
-  const detailInput = $('#detail-input');
-  function updateDetailUI(){
-    const val = (radios.find(r=>r.checked)||{}).value || 'no';
-    if (val === 'yes'){
-      detailInput.disabled = false;
-      detailInput.placeholder = 'Enter detailed address (optional)';
-      if (detailInput.value.trim().toLowerCase() === 'no') detailInput.value = '';
-    }else{
-      detailInput.disabled = true;
-      detailInput.value = 'No';
-      detailInput.placeholder = 'No';
-    }
-  }
-  radios.forEach(r=> r.addEventListener('change', updateDetailUI));
-  updateDetailUI();
-
-  const nowISO = ()=> new Date().toISOString();
-
-  document.querySelector('#task-create')?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const form=e.currentTarget;
-    const msg = $('#create-msg'); msg.style.display='block'; msg.textContent='Saving…';
-    const btn = form.querySelector('button[type="submit"]'); btn.disabled=true;
-
-    await ensureSessionReady(6,140);
-    if(!CURRENT_USER){ msg.textContent='Please sign in first.'; btn.disabled=false; return; }
-
-    const fd=new FormData(form);
-    const anonymous = !!fd.get('anonymous');
-
-    const hasDetail = (fd.get('has_detail') === 'yes');
-    const detailedAddrRaw = (fd.get('detailed_address')||'').toString().trim();
-    const detailedAddress = hasDetail ? (detailedAddrRaw || null) : null;
-
-    const row={
-      user_id: CURRENT_USER.id,
-      title:   (fd.get('title')||'').toString().trim(),
-      details: (fd.get('details')||'').toString().trim(),
-      city:    (fd.get('city')||'').toString().trim() || null,
-      budget:  fd.get('budget') ? Number(fd.get('budget')) : null,
-      status:  'pending',
-      anonymous: anonymous,
-      poster_name: anonymous ? null : (CURRENT_USER.user_metadata?.full_name||CURRENT_USER.email||'Member'),
-      has_detailed_address: !!hasDetail,
-      detailed_address: detailedAddress,
-      created_at: nowISO()
-    };
-    if(!row.title || !row.details){ msg.textContent='Please fill title & details.'; btn.disabled=false; return; }
-
-    try{
-      const { error } = await sb.from('tasks').insert([row]);
-      if (error) throw error;
-      msg.textContent='Submitted! Your task is pending review.';
-    }catch(err){
-      msg.textContent='Error: '+(err?.message||'post failed');
-    }finally{
-      try{ form.reset(); }catch{}
-      updateDetailUI();
-      btn.disabled=false;
-      await loadMyPosts();
-      selectTab(tabs.find(b=>b.dataset.panel==='posts'));
-    }
-  });
-
-  /* ---------- Moderation ---------- */
-  async function showModeratorTabIfNeeded(){
-    await ensureSessionReady(6,140);
-    if(!CURRENT_USER) return;
-    const { data } = await sb.from('profiles').select('role').eq('id', CURRENT_USER.id).maybeSingle();
-    if ((data?.role||'') === 'moderator'){
-      $('#mod-tab').style.display='';
-    }
-  }
-  function shortId(u){ return (u||'').toString().slice(0,8); }
-  async function loadPending(){
-    const body=$('#mod-body');
-    body.innerHTML='<tr><td colspan="6" class="muted-center">Loading…</td></tr>';
-    await ensureSessionReady(6,140);
-
-    let data = [];
-    try{
-      const rpc = await sb.rpc('list_pending_tasks');      // use RPC if installed
-      if (rpc?.error) throw rpc.error;
-      data = rpc?.data || [];
-    }catch{
-      const { data: rows, error } = await sb.from('tasks') // fallback (requires proper RLS/policy)
+      const { data, error } = await sb
+        .from('task_messages')
         .select('*')
-        .eq('status','pending')
-        .order('created_at',{ascending:false})
-        .limit(200);
-      if (error){ body.innerHTML='<tr><td colspan="6" class="muted-center">Failed to load pending.</td></tr>'; return; }
-      data = rows||[];
-    }
+        .eq('task_id', taskId)
+        .order('created_at', { ascending:true });
 
-    body.innerHTML='';
-    if(!data.length){ body.innerHTML='<tr><td colspan="6" class="muted-center">No pending tasks 🎉</td></tr>'; return; }
-
-    const nameMap = await enrichWithUsernames(data);
-    data.forEach(t=>{
-      const tr=document.createElement('tr');
-      tr.innerHTML=`
-        <td>${esc(t.title)}</td>
-        <td>${esc(t.details||'')}</td>
-        <td>${t.budget!=null?('$'+Number(t.budget).toFixed(0)):'—'}</td>
-        <td>${esc(nameMap.get(t.user_id)||'Member')}<br><span class="muted">${shortId(t.user_id)}</span></td>
-        <td>${new Date(t.created_at||Date.now()).toLocaleString()}</td>
-        <td>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="field" data-reason="${t.id}" placeholder="Reason (optional)" style="height:36px"/>
-            <button class="btn small cta" data-approve="${t.id}">Approve</button>
-            <button class="btn small" data-reject="${t.id}">Reject</button>
-          </div>
-        </td>`;
-      body.appendChild(tr);
-    });
-  }
-  document.addEventListener('click', async (e)=>{
-    const ap = e.target.closest('button[data-approve]');
-    const rj = e.target.closest('button[data-reject]');
-    if(!ap && !rj) return;
-    await ensureSessionReady(6,140);
-    const id = (ap?ap:rj).getAttribute(ap?'data-approve':'data-reject');
-    const reason = $(`input[data-reason="${id}"]`)?.value || null;
-    (ap||rj).disabled = true;
-    try{
-      const approve = !!ap;
-      try{
-        const { error } = await sb.rpc('moderate_task', { p_task_id: id, p_approve: approve, p_reason: reason });
-        if (error) throw error;
-      }catch{
-        const newStatus = approve ? 'approved' : 'rejected';
-        const { error } = await sb.from('tasks')
-          .update({ status:newStatus, reviewed_by: CURRENT_USER?.id||null, reviewed_at: new Date().toISOString(), mod_reason: reason||null })
-          .eq('id', id)
-          .eq('status','pending');
-        if (error) throw error;
+      if (error){
+        box.innerHTML = '<div class="muted">Could not load messages.</div>';
+        return;
       }
-      showToast(approve?'Approved.':'Rejected.', true);
-    }catch(err){
-      showToast(err?.message||'Action failed', false);
-    }finally{
-      (ap||rj).disabled = false;
-      await Promise.all([loadPending(), searchTasks(false), loadMyPosts(), loadClaims()]);
+
+      box.innerHTML = '';
+      if (!data || !data.length){
+        box.innerHTML = '<div class="muted">No messages yet.</div>';
+        return;
+      }
+
+      data.forEach(m=>{
+        const mine = CURRENT_USER && m.sender_id === CURRENT_USER.id;
+        const div = document.createElement('div');
+        div.style.margin = '4px 0';
+        div.style.textAlign = mine ? 'right' : 'left';
+        div.innerHTML = `
+          <span style="
+            display:inline-block;
+            padding:4px 8px;
+            border-radius:10px;
+            background:${mine ? 'rgba(255,204,0,.15)' : '#111827'};
+          ">
+            ${esc(m.body)}
+          </span>
+          <span class="muted" style="font-size:11px;margin-left:4px;">
+            ${new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+          </span>
+        `;
+        box.appendChild(div);
+      });
+
+      box.scrollTop = box.scrollHeight;
     }
-  });
 
-  /* ---------- header actions & auth events ---------- */
-  $('#signout-btn')?.addEventListener('click', async ()=>{
-    try{ await sb?.auth?.signOut?.(); }catch{}
-    CURRENT_USER=null;
-    $('#mod-tab').style.display='none';
-    await Promise.all([loadMyPosts(), loadClaims(), searchTasks(true)]);
-  });
+    /* ---------- Chat (claimer side) ---------- */
+    function openChat(taskId, title){
+      ACTIVE_CHAT_TASK_ID = taskId;
+      $('#chat-card').style.display = '';
+      $('#chat-task-label').textContent = `Chat for: ${title}`;
+      $('#chat-input').value = '';
+      renderChat(taskId, $('#chat-messages'));
+    }
 
-  sb.auth.onAuthStateChange(async (_evt, session)=>{
-    CURRENT_USER = session?.user || CURRENT_USER || null;
-    if (!CURRENT_USER) await ensureSessionReady(4,120);
-    if (panels.claims.style.display!=='none') loadClaims();
-    if (panels.posts.style.display!=='none')  loadMyPosts();
-    if (panels.find.style.display!=='none')   searchTasks(false);
-  });
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-chat-task]');
+      if (!btn) return;
+      const taskId = btn.getAttribute('data-chat-task');
+      const title  = btn.getAttribute('data-chat-title') || '';
+      // if we are on My Claims tab, this is claimer chat:
+      if (panels.claims.style.display !== 'none'){
+        openChat(taskId, title);
+      }else if (panels.post.style.display !== 'none'){
+        // owner side handled via dropdown (we refresh from loadMine)
+        OWNER_ACTIVE_TASK_ID = taskId;
+        refreshOwnerChatFromMine();
+      }
+    });
 
-  /* ---------- init ---------- */
-  window.addEventListener('load', async ()=>{
-    await ensureSessionReady(6,140);
-    await showModeratorTabIfNeeded();
-    const startPanel = (location.hash||'').replace('#','') || 'find';
-    const startBtn = tabs.find(b=>b.dataset.panel===startPanel) || tabs[0];
-    selectTab(startBtn);
-    setTimeout(()=>moveIndicator(startBtn), 0);
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>moveIndicator(startBtn));
-  });
+    $('#chat-form')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const input = $('#chat-input');
+      const text  = input.value.trim();
+      if (!text || !ACTIVE_CHAT_TASK_ID) return;
 
-  // realtime refresh
-  try{
-    sb.channel('tasks_live').on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, ()=>{
-      if (panels.find.style.display!=='none')   searchTasks(false);
+      await ensureSessionReady(4,120);
+      if (!CURRENT_USER){
+        showToast('Please sign in to chat.', false);
+        return;
+      }
+
+      const { error } = await sb.from('task_messages').insert([{
+        task_id:   ACTIVE_CHAT_TASK_ID,
+        sender_id: CURRENT_USER.id,
+        body:      text
+      }]);
+      if (error){
+        showToast('Send failed: ' + (error.message || 'unknown'), false);
+        return;
+      }
+      input.value = '';
+      await renderChat(ACTIVE_CHAT_TASK_ID, $('#chat-messages'));
+    });
+
+    /* ---------- Quick Post / My Posts (owner) ---------- */
+    const radios = $$('input[name="has_detail"]');
+    const detailInput = $('#detail-input');
+    function updateDetailUI(){
+      const val = (radios.find(r=>r.checked)||{}).value || 'no';
+      if (val === 'yes'){
+        detailInput.disabled = false;
+        detailInput.placeholder = 'Enter detailed address (optional)';
+        if (detailInput.value.trim().toLowerCase() === 'no') detailInput.value = '';
+      }else{
+        detailInput.disabled = true;
+        detailInput.value = 'No';
+        detailInput.placeholder = 'No';
+      }
+    }
+    radios.forEach(r=> r.addEventListener('change', updateDetailUI));
+    updateDetailUI();
+
+    const nowISO = ()=> new Date().toISOString();
+
+    async function loadMine(){
+      const body=$('#mine-body');
+      body.innerHTML='<tr><td colspan="5" class="muted-center">Loading…</td></tr>';
+      await ensureSessionReady(6,140);
+      let rows = [];
+      if (CURRENT_USER){
+        const { data } = await sb.from('tasks')
+          .select('*')
+          .eq('user_id', CURRENT_USER.id)
+          .order('created_at',{ascending:false})
+          .limit(50);
+        rows = data || [];
+      }
+      OWNER_TASKS = rows;
+      body.innerHTML='';
+      if(!rows.length){
+        body.innerHTML='<tr><td colspan="5" class="muted-center">No tasks yet.</td></tr>';
+        $('#owner-chat-card').style.display='none';
+        return;
+      }
+      rows.forEach(t=>{
+        const tr=document.createElement('tr');
+        const label = t.accepted_by ? 'claimed' : (t.status || 'pending');
+        tr.innerHTML=`<td>${esc(t.title)}</td>
+          <td>${t.budget!=null?('$'+Number(t.budget).toFixed(0)):'—'}</td>
+          <td>${esc(t.city||'')}</td>
+          <td>${esc(label)}</td>
+          <td>${new Date(t.created_at||Date.now()).toLocaleString()}</td>`;
+        body.appendChild(tr);
+      });
+
+      refreshOwnerChatFromMine();
+    }
+
+    function refreshOwnerChatFromMine(){
+      const card   = $('#owner-chat-card');
+      const select = $('#owner-chat-task');
+      const label  = $('#owner-chat-label');
+      const box    = $('#owner-chat-messages');
+      if (!card || !select || !box) return;
+
+      const rows = OWNER_TASKS.filter(t => t.accepted_by); // only claimed posts
+
+      if (!rows.length){
+        card.style.display = 'none';
+        label.textContent = 'No claimed tasks yet. Chat will appear when someone claims your post.';
+        box.innerHTML = '<div class="muted">No chats yet.</div>';
+        return;
+      }
+
+      card.style.display = '';
+      select.innerHTML = rows.map(t=>`<option value="${t.id}">${esc(t.title)} — ${esc(t.accepted_name || 'claimer')}</option>`).join('');
+
+      if (!OWNER_ACTIVE_TASK_ID || !rows.some(t=>t.id === OWNER_ACTIVE_TASK_ID)){
+        OWNER_ACTIVE_TASK_ID = rows[0].id;
+      }
+      select.value = OWNER_ACTIVE_TASK_ID;
+
+      const cur = rows.find(t=>t.id === OWNER_ACTIVE_TASK_ID);
+      label.textContent = cur ? `Chat with claimer for: ${esc(cur.title)}` : '';
+      renderChat(OWNER_ACTIVE_TASK_ID, box);
+    }
+
+    $('#owner-chat-task')?.addEventListener('change', (e)=>{
+      OWNER_ACTIVE_TASK_ID = e.target.value;
+      refreshOwnerChatFromMine();
+    });
+
+    $('#owner-chat-form')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const input = $('#owner-chat-input');
+      const text  = input.value.trim();
+      if (!text || !OWNER_ACTIVE_TASK_ID) return;
+
+      await ensureSessionReady(4,120);
+      if (!CURRENT_USER){
+        showToast('Please sign in to chat.', false);
+        return;
+      }
+
+      const { error } = await sb.from('task_messages').insert([{
+        task_id:   OWNER_ACTIVE_TASK_ID,
+        sender_id: CURRENT_USER.id,
+        body:      text
+      }]);
+      if (error){
+        showToast('Send failed: ' + (error.message || 'unknown'), false);
+        return;
+      }
+      input.value = '';
+      await renderChat(OWNER_ACTIVE_TASK_ID, $('#owner-chat-messages'));
+    });
+
+    document.querySelector('#task-create')?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const form=e.currentTarget;
+      const msg = $('#create-msg'); msg.style.display='block'; msg.textContent='Saving…';
+      const btn = form.querySelector('button[type="submit"]'); btn.disabled=true;
+
+      await ensureSessionReady(6,140);
+      if(!CURRENT_USER){ msg.textContent='Please sign in first.'; btn.disabled=false; return; }
+
+      const fd=new FormData(form);
+      const anonymous = !!fd.get('anonymous');
+
+      const hasDetail = (fd.get('has_detail') === 'yes');
+      const detailedAddrRaw = (fd.get('detailed_address')||'').toString().trim();
+      const detailedAddress = hasDetail ? (detailedAddrRaw || null) : null;
+
+      const row={
+        user_id: CURRENT_USER.id,
+        title:   (fd.get('title')||'').toString().trim(),
+        details: (fd.get('details')||'').toString().trim(),
+        city:    (fd.get('city')||'').toString().trim() || null,
+        budget:  fd.get('budget') ? Number(fd.get('budget')) : null,
+        status:  'pending',
+        anonymous: anonymous,
+        poster_name: anonymous ? null : (CURRENT_USER.user_metadata?.full_name||CURRENT_USER.email||'Member'),
+        has_detailed_address: !!hasDetail,
+        detailed_address: detailedAddress,
+        created_at: nowISO()
+      };
+      if(!row.title || !row.details){ msg.textContent='Please fill title & details.'; btn.disabled=false; return; }
+
+      try{
+        const { error } = await sb.from('tasks').insert([row]);
+        if (error) throw error;
+        msg.textContent='Submitted! Your task is pending review.';
+      }catch(err){
+        msg.textContent='Error: '+(err?.message||'post failed');
+      }finally{
+        try{ form.reset(); }catch{}
+        updateDetailUI();
+        btn.disabled=false;
+        await loadMine();
+      }
+    });
+
+    /* ---------- Moderation ---------- */
+    async function showModeratorTabIfNeeded(){
+      await ensureSessionReady(6,140);
+      if(!CURRENT_USER) return;
+
+      if (CURRENT_USER.id === '12f26519-a57e-4a3f-abf5-41e3e9057d28'){
+        $('#mod-tab').style.display='';
+        return;
+      }
+
+      const { data } = await sb.from('profiles')
+        .select('id,role,is_moderator')
+        .eq('id', CURRENT_USER.id)
+        .maybeSingle();
+      if ((data?.role||'') === 'moderator' || data?.is_moderator === true){
+        $('#mod-tab').style.display='';
+      }
+    }
+    function shortId(u){ return (u||'').toString().slice(0,8); }
+
+    async function loadPendingAndApproved(){
+      const body=$('#mod-body');
+      body.innerHTML='<tr><td colspan="7" class="muted-center">Loading…</td></tr>';
+      await ensureSessionReady(6,140);
+
+      let data = [];
+      try{
+        const { data: rows, error } = await sb.from('tasks')
+          .select('*')
+          .in('status', ['pending','approved','Pending','Approved'])
+          .order('created_at',{ascending:false})
+          .limit(300);
+        if (error){ body.innerHTML='<tr><td colspan="7" class="muted-center">Failed to load.</td></tr>'; return; }
+        data = rows || [];
+      }catch{
+        body.innerHTML='<tr><td colspan="7" class="muted-center">Failed to load.</td></tr>';
+        return;
+      }
+
+      body.innerHTML='';
+      if(!data.length){ body.innerHTML='<tr><td colspan="7" class="muted-center">No tasks to review.</td></tr>'; return; }
+
+      const nameMap = await enrichWithUsernames(data);
+      data.forEach(t=>{
+        const tr=document.createElement('tr');
+        const statusLabel = esc(t.status || '');
+        tr.innerHTML=`
+          <td>${esc(t.title)}</td>
+          <td>${esc(t.details||'')}</td>
+          <td>${t.budget!=null?('$'+Number(t.budget).toFixed(0)):'—'}</td>
+          <td>${esc(nameMap.get(t.user_id)||'Member')}<br><span class="muted">${shortId(t.user_id)}</span></td>
+          <td>${statusLabel}</td>
+          <td>${new Date(t.created_at||Date.now()).toLocaleString()}</td>
+          <td>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input class="field" data-reason="${t.id}" placeholder="Reason (optional)" style="height:36px"/>
+              <button class="btn small cta" data-approve="${t.id}">Approve</button>
+              <button class="btn small" data-reject="${t.id}">Reject</button>
+            </div>
+          </td>`;
+        body.appendChild(tr);
+      });
+    }
+
+    document.addEventListener('click', async (e)=>{
+      const ap = e.target.closest('button[data-approve]');
+      const rj = e.target.closest('button[data-reject]');
+      if(!ap && !rj) return;
+      await ensureSessionReady(6,140);
+      const id = (ap?ap:rj).getAttribute(ap?'data-approve':'data-reject');
+      const reason = $(`input[data-reason="${id}"]`)?.value || null;
+      (ap||rj).disabled = true;
+      try{
+        const approve = !!ap;
+        try{
+          const { error } = await sb.rpc('moderate_task', { p_task_id: id, p_approve: approve, p_reason: reason });
+          if (error) throw error;
+        }catch{
+          const newStatus = approve ? 'approved' : 'rejected';
+          const { error } = await sb.from('tasks')
+            .update({
+              status:newStatus,
+              reviewed_by: CURRENT_USER?.id||null,
+              reviewed_at: new Date().toISOString(),
+              mod_reason: reason||null
+            })
+            .eq('id', id);
+          if (error) throw error;
+        }
+        showToast(approve?'Approved.':'Rejected.', true);
+      }catch(err){
+        showToast(err?.message||'Action failed', false);
+      }finally{
+        (ap||rj).disabled = false;
+        await Promise.all([loadPendingAndApproved(), searchTasks(false), loadMine()]);
+      }
+    });
+
+    /* ---------- header actions & auth events ---------- */
+    $('#signout-btn')?.addEventListener('click', async ()=>{
+      try{ await sb?.auth?.signOut?.(); }catch{}
+      CURRENT_USER=null;
+      $('#mod-tab').style.display='none';
+      await Promise.all([loadMine(), loadClaims(), searchTasks(true)]);
+    });
+
+    sb.auth.onAuthStateChange(async (_evt, session)=>{
+      CURRENT_USER = session?.user || CURRENT_USER || null;
+      if (!CURRENT_USER) await ensureSessionReady(4,120);
       if (panels.claims.style.display!=='none') loadClaims();
-      if (panels.posts.style.display!=='none')  loadMyPosts();
-      if (panels.mod.style.display!=='none')    loadPending();
-    }).subscribe();
-  }catch{}
-})();
-</script>
+      else if (panels.find.style.display!=='none') searchTasks(false);
+      else if (panels.post.style.display!=='none') loadMine();
+    });
+
+    /* ---------- init ---------- */
+    window.addEventListener('load', async ()=>{
+      await ensureSessionReady(6,140);
+      await showModeratorTabIfNeeded();
+      const startPanel = (location.hash||'').replace('#','') || 'find';
+      const startBtn = tabs.find(b=>b.dataset.panel===startPanel) || tabs[0];
+      selectTab(startBtn);
+      setTimeout(()=>moveIndicator(startBtn), 0);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(()=>moveIndicator(startBtn));
+    });
+
+    // realtime refresh + "your task was claimed" notice + live chat updates
+    try{
+      sb.channel('tasks_live')
+        .on('postgres_changes', { event:'*', schema:'public', table:'tasks' }, (payload)=>{
+          const rowNew = payload.new || {};
+          const rowOld = payload.old || {};
+
+          // Notify task owner when someone claims their task
+          if (
+            CURRENT_USER &&
+            rowNew.user_id === CURRENT_USER.id &&
+            (!rowOld.accepted_by && rowNew.accepted_by)
+          ){
+            const title = rowNew.title || 'your task';
+            showToast(`Your task "${title}" was just claimed.`, true);
+          }
+
+          if (panels.find.style.display!=='none')   searchTasks(false);
+          if (panels.claims.style.display!=='none') loadClaims();
+          if (panels.post.style.display!=='none')   loadMine();
+          if (panels.mod.style.display!=='none')    loadPendingAndApproved();
+        })
+        .subscribe();
+
+      sb.channel('task_messages_live')
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:'task_messages' }, (payload)=>{
+          const m = payload.new;
+          if (m.task_id === ACTIVE_CHAT_TASK_ID){
+            renderChat(ACTIVE_CHAT_TASK_ID, $('#chat-messages'));
+          }
+          if (m.task_id === OWNER_ACTIVE_TASK_ID){
+            renderChat(OWNER_ACTIVE_TASK_ID, $('#owner-chat-messages'));
+          }
+        })
+        .subscribe();
+    }catch{}
+  })();
+  </script>
 </body>
 </html>
