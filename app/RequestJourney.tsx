@@ -176,6 +176,12 @@ export default function RequestJourney({ requestText }: RequestJourneyProps) {
             <small>The mini fridge got moved. You and Maya are now connected on Aspire.</small>
           </div>
         </div>
+
+        <div className={`journeyScrollCue ${progress > .94 ? 'isDone' : ''}`} aria-hidden="true">
+          <span>{progress < .08 ? 'SCROLL TO START WALKING' : progress < .88 ? 'KEEP SCROLLING' : 'ALMOST HOME'}</span>
+          <i />
+          <b>{Math.round(progress * 100)}%</b>
+        </div>
       </div>
     </section>
   );
