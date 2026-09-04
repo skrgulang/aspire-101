@@ -7,7 +7,7 @@ const features = [
     number: '01',
     label: 'REQUESTS',
     title: 'Ask campus for what you need.',
-    copy: 'Post a need in normal language and give it the context that matters — time, place, price, or just the kind of person you are looking for.',
+    copy: 'Post a need in normal language and add what matters — time, place, budget, or simply the kind of person you are looking for.',
     tags: ['Nearby', 'Today', 'Flexible'],
     demoTitle: 'Need help moving a mini fridge this afternoon',
     demoMeta: 'Campus · Today · $30',
@@ -15,6 +15,16 @@ const features = [
   },
   {
     number: '02',
+    label: 'CAMPUS LIFE',
+    title: 'Figure out campus without figuring it out alone.',
+    copy: 'Ask where people study, how something works, who wants to explore, what is happening tonight, or anything else that helps a new place feel familiar faster.',
+    tags: ['Local advice', 'Explore', 'First weeks'],
+    demoTitle: 'First week here — where do people actually study late?',
+    demoMeta: '8 student replies · 3 spots saved',
+    accent: 'SETTLE IN'
+  },
+  {
+    number: '03',
     label: 'STUDY',
     title: 'Find help before the exam finds you.',
     copy: 'Tutors, study partners, quick concept checks, and people who have already taken the class — without digging through five different group chats.',
@@ -24,7 +34,7 @@ const features = [
     accent: 'STUDY MODE'
   },
   {
-    number: '03',
+    number: '04',
     label: 'RIDES + LOGISTICS',
     title: 'Get across campus — or out of town.',
     copy: 'Airport rides, weekend carpools, moving help, pickups, and the random logistics that college constantly creates.',
@@ -34,7 +44,7 @@ const features = [
     accent: 'ON THE MOVE'
   },
   {
-    number: '04',
+    number: '05',
     label: 'MARKET',
     title: 'Campus stuff should stay on campus.',
     copy: 'Buy, sell, borrow, or find the things students actually need — desks, mini fridges, textbooks, lamps, monitors, and more.',
@@ -44,7 +54,7 @@ const features = [
     accent: 'LOCAL MARKET'
   },
   {
-    number: '05',
+    number: '06',
     label: 'PROJECTS',
     title: 'Find the missing person for the thing you want to build.',
     copy: 'Hackathon teams, startups, class projects, creators, coders, designers, and collaborators who can turn an idea into something real.',
@@ -54,7 +64,7 @@ const features = [
     accent: 'BUILD TOGETHER'
   },
   {
-    number: '06',
+    number: '07',
     label: 'OPPORTUNITIES',
     title: 'Useful opportunities should find students earlier.',
     copy: 'Research, internships, campus programs, events, referrals, and high-signal opportunities can surface around what you are already trying to do.',
@@ -64,20 +74,20 @@ const features = [
     accent: 'WHAT’S NEXT'
   },
   {
-    number: '07',
+    number: '08',
     label: 'PEOPLE',
-    title: 'A useful request can become a useful connection.',
-    copy: 'The person who helps once might become a study partner, teammate, collaborator, friend, or simply someone worth knowing on campus.',
+    title: 'A useful request can become a familiar face.',
+    copy: 'The person who helps once might become a study partner, teammate, collaborator, friend, or simply someone you are happy to see again on campus.',
     tags: ['Profiles', 'Connections', 'Community'],
     demoTitle: 'Maya helped with your request',
     demoMeta: 'You are now connected on Aspire',
     accent: 'PEOPLE > POSTS'
   },
   {
-    number: '08',
+    number: '09',
     label: 'TRUST',
     title: 'Know who you are dealing with.',
-    copy: 'College-focused identity, profiles, response history, and reputation signals can make student-to-student interactions feel more accountable.',
+    copy: 'College-focused identity, profiles, response history, and reputation signals can make student-to-student interactions feel more accountable and more comfortable.',
     tags: ['Student identity', 'Reputation', 'History'],
     demoTitle: 'Verified student profile',
     demoMeta: '4.9 rating · 18 completed requests',
@@ -125,9 +135,9 @@ export default function FeatureTour() {
     <section ref={ref} id="features" className="featureTour" style={style}>
       <div className="featureSticky shell">
         <div className="featureTourIntro">
-          <p className="eyebrow">THE ASPIRE UNIVERSE</p>
-          <h2>One request can open a lot more than one door.</h2>
-          <p className="featureTourLead">Keep scrolling. Aspire expands from a simple request into the everyday network around college life.</p>
+          <p className="eyebrow">EVERYDAY COLLEGE, IN ONE PLACE</p>
+          <h2>Start with a request. Stay for everything around it.</h2>
+          <p className="featureTourLead">Keep scrolling. Aspire grows from a simple ask into the people, practical help, opportunities, and campus knowledge that make college feel easier to navigate.</p>
 
           <div className="featureRail" aria-hidden="true">
             <div className="featureRailFill" />
@@ -143,7 +153,7 @@ export default function FeatureTour() {
         <div className="featureScene">
           <div className="featureSceneGlow" aria-hidden="true" />
           <div className="featureSceneTop">
-            <span>{feature.number} / 08</span>
+            <span>{feature.number} / 09</span>
             <span>{feature.accent}</span>
           </div>
 
