@@ -8,29 +8,29 @@ type RequestJourneyProps = {
 
 const stages = [
   {
-    kicker: '01 · POSTED',
-    title: 'Your request starts moving.',
-    copy: 'One post enters the campus network instead of disappearing into another group chat.'
+    kicker: '01 · ARRIVE',
+    title: 'A new campus can feel huge.',
+    copy: 'New room, new routes, new people. Aspire starts where that unfamiliar feeling usually begins: one small thing you need help with.'
   },
   {
-    kicker: '02 · DISCOVERED',
-    title: 'The right people start seeing it.',
-    copy: 'Aspire brings the request closer to students who are nearby, relevant, or able to help.'
+    kicker: '02 · ASK',
+    title: 'Start with one small request.',
+    copy: 'A ride, a study partner, help moving in, advice, a teammate — ask normally and let the campus network do the rest.'
   },
   {
-    kicker: '03 · RESPONSES',
-    title: 'Replies turn into real options.',
-    copy: 'Offers, people, and useful context gather around the original request as you move forward.'
+    kicker: '03 · DISCOVER',
+    title: 'Campus starts answering back.',
+    copy: 'Relevant students, replies, and useful local context begin showing up around the thing you asked for.'
   },
   {
-    kicker: '04 · MATCHED',
-    title: 'Choose the response that fits.',
-    copy: 'The noise falls away. One useful connection moves to the center.'
+    kicker: '04 · CONNECT',
+    title: 'Help becomes a person you know.',
+    copy: 'One useful response can become a teammate, a study buddy, a friend, or simply one more familiar face on campus.'
   },
   {
-    kicker: '05 · DONE',
-    title: 'A request becomes momentum.',
-    copy: 'The task gets handled — and sometimes the person who helped becomes part of your network.'
+    kicker: '05 · BELONG',
+    title: 'Campus starts feeling like home.',
+    copy: 'The request gets handled, the place feels a little smaller, and you are no longer figuring everything out alone.'
   }
 ];
 
@@ -96,20 +96,20 @@ export default function RequestJourney({ requestText }: RequestJourneyProps) {
         <div className="journeyAmbient" aria-hidden="true" />
 
         <div className="journeyCopy">
-          <p className="eyebrow">FOLLOW ONE REQUEST</p>
+          <p className="eyebrow">FOLLOW A STUDENT, NOT JUST A REQUEST</p>
           <div className="journeyStageCounter">0{stageIndex + 1} / 05</div>
           <h2>{stages[stageIndex].title}</h2>
           <p>{stages[stageIndex].copy}</p>
           <div className="journeyStageLabel">{stages[stageIndex].kicker}</div>
 
           <div className="journeyStats">
-            <div><strong>{seen}</strong><span>students reached</span></div>
+            <div><strong>{seen}</strong><span>students around you</span></div>
             <div><strong>{matches}</strong><span>possible matches</span></div>
             <div><strong>{replies}</strong><span>replies</span></div>
           </div>
         </div>
 
-        <div className="journeyCanvas" aria-label="A request moving through the Aspire network">
+        <div className="journeyCanvas" aria-label="A student and request moving through the Aspire campus network">
           <svg className="journeyRoad" viewBox="0 0 620 760" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
             <path className="journeyRoadBase" d="M120 62 C 465 48, 510 168, 330 230 S 92 322, 224 408 S 548 456, 438 565 S 170 610, 325 710" />
             <path
@@ -121,18 +121,35 @@ export default function RequestJourney({ requestText }: RequestJourneyProps) {
           </svg>
 
           <div className="journeyRequestMover">
-            <div className="journeyRequestCard">
-              <span className="journeyCardTag">OPEN REQUEST</span>
-              <strong>{requestText}</strong>
-              <small>{progress > .82 ? 'Matched ✓' : progress > .40 ? `${replies} replies arriving` : 'Moving through campus…'}</small>
+            <div className="journeyTraveler">
+              <div className="aspireWalker" aria-hidden="true">
+                <div className="walkerFigure">
+                  <div className="walkerHair" />
+                  <div className="walkerHead" />
+                  <div className="walkerBackpack" />
+                  <div className="walkerTorso" />
+                  <div className="walkerArm walkerArmA" />
+                  <div className="walkerArm walkerArmB" />
+                  <div className="walkerLeg walkerLegA" />
+                  <div className="walkerLeg walkerLegB" />
+                </div>
+                <div className="walkerShadow" />
+                <span className="walkerTag">{stageIndex === 4 ? 'HOME' : 'YOU'}</span>
+              </div>
+
+              <div className="journeyRequestCard">
+                <span className="journeyCardTag">YOUR REQUEST</span>
+                <strong>{requestText}</strong>
+                <small>{progress > .82 ? 'Matched ✓' : progress > .40 ? `${replies} replies arriving` : progress > .18 ? 'Moving through campus…' : 'First day, first ask'}</small>
+              </div>
             </div>
           </div>
 
-          <div className={`journeyNode nodeOne ${progress > .10 ? 'active' : ''}`}><i /><span>POSTED</span></div>
-          <div className={`journeyNode nodeTwo ${progress > .28 ? 'active' : ''}`}><i /><span>SEEN</span></div>
-          <div className={`journeyNode nodeThree ${progress > .47 ? 'active' : ''}`}><i /><span>REPLIES</span></div>
-          <div className={`journeyNode nodeFour ${progress > .68 ? 'active' : ''}`}><i /><span>MATCH</span></div>
-          <div className={`journeyNode nodeFive ${progress > .88 ? 'active' : ''}`}><i /><span>DONE</span></div>
+          <div className={`journeyNode nodeOne ${progress > .08 ? 'active' : ''}`}><i /><span>ARRIVE</span></div>
+          <div className={`journeyNode nodeTwo ${progress > .24 ? 'active' : ''}`}><i /><span>ASK</span></div>
+          <div className={`journeyNode nodeThree ${progress > .44 ? 'active' : ''}`}><i /><span>DISCOVER</span></div>
+          <div className={`journeyNode nodeFour ${progress > .66 ? 'active' : ''}`}><i /><span>CONNECT</span></div>
+          <div className={`journeyNode nodeFive ${progress > .88 ? 'active' : ''}`}><i /><span>HOME</span></div>
 
           <article className={`journeyResponse responseA ${progress > .46 ? 'show' : ''} ${progress > .70 ? 'fade' : ''}`}>
             <div className="responseAvatar">M</div>
@@ -149,14 +166,14 @@ export default function RequestJourney({ requestText }: RequestJourneyProps) {
 
           <div className={`journeyMatch ${progress > .72 ? 'show' : ''}`}>
             <div className="matchPulse" />
-            <span>MATCHED WITH MAYA</span>
+            <span>CONNECTED WITH MAYA</span>
             <strong>Mini fridge move · 4:00 PM</strong>
           </div>
 
           <div className={`journeyDone ${progress > .91 ? 'show' : ''}`}>
-            <span>REQUEST COMPLETE</span>
-            <strong>Mini fridge moved.</strong>
-            <small>You and Maya are now connected on Aspire.</small>
+            <span>HOME FEELS CLOSER</span>
+            <strong>One less thing to figure out alone.</strong>
+            <small>The mini fridge got moved. You and Maya are now connected on Aspire.</small>
           </div>
         </div>
       </div>
