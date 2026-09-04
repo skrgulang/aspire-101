@@ -1,4 +1,5 @@
 import './globals.css';
+import './footer.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 
@@ -7,7 +8,7 @@ const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','7
 
 export const metadata: Metadata = {
   title: 'Aspire 101 — Post what you need. Find who can help.',
-  description: 'A college request network for tutoring, rides, projects, campus help, buy and sell, collaboration, and more.'
+  description: 'A college request network where students post what they need, find who can help, and make things happen.'
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
