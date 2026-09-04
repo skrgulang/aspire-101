@@ -6,8 +6,8 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','700'], variable: '--font-display' });
 
 export const metadata: Metadata = {
-  title: 'Aspire 101 — The student network for what comes next',
-  description: 'Learn, connect, build, and discover opportunities with Aspire 101.'
+  title: 'Aspire 101 — Post what you need. Find who can help.',
+  description: 'A college request network for tutoring, rides, projects, campus help, buy and sell, collaboration, and more.'
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
