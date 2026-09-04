@@ -4,43 +4,43 @@ import { useRef, useState } from 'react';
 
 const stories = [
   {
-    school: 'Berkeley',
-    name: 'Mia',
-    feature: 'MOVE-IN HELP',
-    quote: 'I moved in yesterday and had someone help carry a desk upstairs in like 15 minutes.',
-    detail: 'Post practical campus help and find students nearby who can actually show up.',
+    school: 'Rutgers',
+    name: 'Tony',
+    feature: 'CAMPUS LIFE',
+    quote: 'I was new to campus and just asked where people actually go to study late. I got useful answers right away.',
+    detail: 'Ask the everyday campus questions that are hard to find in an orientation guide or scattered group chats.',
     image: 'https://images.pexels.com/photos/7683887/pexels-photo-7683887.jpeg?auto=compress&cs=tinysrgb&w=900'
   },
   {
-    school: 'Purdue',
-    name: 'Noah',
-    feature: 'STUDY',
-    quote: 'Found a study buddy in one post instead of asking five different group chats.',
-    detail: 'Find tutors, study partners, course advice, and people taking the same classes.',
+    school: 'Berkeley',
+    name: 'Joyi',
+    feature: 'MOVE-IN HELP',
+    quote: 'I needed help moving a desk into my place and found students nearby who could help me that afternoon.',
+    detail: 'Post practical move-in or moving requests and find students close by who can actually show up.',
     image: 'https://images.pexels.com/photos/7683700/pexels-photo-7683700.jpeg?auto=compress&cs=tinysrgb&w=900'
   },
   {
-    school: 'UCLA',
-    name: 'Ari',
+    school: 'UC Davis',
+    name: 'Lihui',
     feature: 'RIDES',
-    quote: 'Split a ride to the airport with two students from campus. Way easier than figuring it out alone.',
-    detail: 'Coordinate airport rides, carpools, pickups, and everyday student logistics.',
+    quote: 'I found another Davis student heading the same way and split the ride instead of figuring everything out by myself.',
+    detail: 'Coordinate airport rides, carpools, pickups, and the random transportation needs that come with college life.',
     image: 'https://images.pexels.com/photos/7972533/pexels-photo-7972533.jpeg?auto=compress&cs=tinysrgb&w=900'
   },
   {
-    school: 'USC',
-    name: 'Jordan',
+    school: 'Purdue',
+    name: 'Nathan',
     feature: 'PROJECTS',
-    quote: 'Needed a designer for a hackathon and met someone from another major that same night.',
-    detail: 'Recruit teammates, collaborators, coders, designers, and builders around campus.',
+    quote: 'I needed someone who knew design for a weekend project and found another Purdue student who wanted to build too.',
+    detail: 'Find teammates, designers, coders, and collaborators for projects, hackathons, startups, and class ideas.',
     image: 'https://images.pexels.com/photos/7972544/pexels-photo-7972544.jpeg?auto=compress&cs=tinysrgb&w=900'
   },
   {
-    school: 'UCSD',
-    name: 'Sofia',
-    feature: 'CAMPUS LIFE',
-    quote: 'The best part is I can just ask the random campus question I would normally keep to myself.',
-    detail: 'Ask for local advice, places, people, and the little things that help campus feel familiar.',
+    school: 'Purdue',
+    name: 'Ryan',
+    feature: 'CLASSMATES',
+    quote: 'I found classmates from my course who helped me figure things out and study with me before the exam.',
+    detail: 'Find people taking the same classes, ask quick questions, and turn one request into a study group or familiar face.',
     image: 'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=900'
   }
 ];
