@@ -9,6 +9,7 @@ import './trust-loop.css';
 import './exchange-ui.css';
 import './ambassadors.css';
 import './scroll-experience.css';
+import './global-journey.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
