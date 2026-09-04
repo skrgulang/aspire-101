@@ -9,7 +9,7 @@ const stops = [
   ['how', 'HOW IT WORKS'],
   ['home', 'WHY ASPIRE'],
   ['trust', 'TRUST + REPUTATION'],
-  ['work-with-us', 'WORK WITH US'],
+  ['ambassadors', 'AMBASSADORS'],
   ['faq', 'Q&A']
 ];
 
