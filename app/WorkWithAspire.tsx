@@ -1,25 +1,63 @@
-export default function WorkWithAspire() {
-  return (
-    <section id="work-with-us" className="workWithAspire">
-      <div className="workBackdrop" aria-hidden="true" />
-      <div className="shell workInner">
-        <div className="workCopy">
-          <p className="eyebrow">WANT TO WORK WITH ASPIRE?</p>
-          <h2>Help make campus feel smaller.</h2>
-          <p>We’re building Aspire campus by campus. If you want to represent your school, bring a student organization into the network, collaborate as a local business, or help build the product itself, we want to hear from you.</p>
-          <div className="workActions">
-            <a className="button buttonGold" href="https://discord.com/invite/sfKv7k9Sbt" target="_blank" rel="noreferrer">Join the community <span>↗</span></a>
-            <a className="quietLink" href="https://www.linkedin.com/company/108901932/" target="_blank" rel="noreferrer">Connect on LinkedIn</a>
-          </div>
-        </div>
+const campuses = [
+  {
+    school: 'UC Berkeley',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sather%20gate%20berkeley.jpg?width=900',
+    credit: 'Mizzlbrd · CC BY-SA 4.0'
+  },
+  {
+    school: 'UCLA',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Royce%20Hall.jpg?width=900',
+    credit: 'Eric Chan · CC BY 2.0'
+  },
+  {
+    school: 'UC Davis',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/UC%20Davis%20campus%20buildings%20and%20scenes%20%2816188061937%29.jpg?width=900',
+    credit: 'UC Davis Arboretum · CC BY 2.0'
+  },
+  {
+    school: 'UC Irvine',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Uc%20Irvine%20Campus%20%28108521889%29.jpeg?width=900',
+    credit: 'Claudia Caro Sullivan · CC BY-SA 3.0'
+  },
+  {
+    school: 'UC San Diego',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/UC%20San%20Diego%20Geisel%20Library.jpg?width=900',
+    credit: 'Westxtk · CC BY-SA 4.0'
+  },
+  {
+    school: 'Purdue',
+    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Purdue%20EngineeringMall.jpg?width=900',
+    credit: 'Tstuddud · Public domain'
+  }
+];
 
-        <div className="workCards">
-          <article><span>01</span><h3>Campus ambassadors</h3><p>Bring Aspire to your campus, shape what students actually need, and help build the first trusted local network.</p><b>FOR STUDENTS ↗</b></article>
-          <article><span>02</span><h3>Clubs + organizations</h3><p>Use requests to find members, volunteers, teammates, event help, photographers, and collaborators across campus.</p><b>FOR CAMPUS GROUPS ↗</b></article>
-          <article><span>03</span><h3>Businesses + partners</h3><p>Explore student-focused collaborations, useful local offers, campus activations, and ways to support student life.</p><b>FOR PARTNERS ↗</b></article>
-          <article><span>04</span><h3>Build with us</h3><p>Interested in product, engineering, design, growth, community, or operations? Help shape what Aspire becomes next.</p><b>FOR BUILDERS ↗</b></article>
+export default function WorkWithAspire() {
+  const loop = [...campuses, ...campuses];
+
+  return (
+    <section id="ambassadors" className="campusAmbassadors">
+      <div className="shell ambassadorHead">
+        <div>
+          <p className="eyebrow">CAMPUS AMBASSADORS</p>
+          <h2>Bring Aspire to your campus.</h2>
+        </div>
+        <a className="ambassadorLink" href="/ambassadors">We’re recruiting <span>↗</span></a>
+      </div>
+
+      <div className="campusRail" aria-label="Campuses where Aspire is recruiting student ambassadors">
+        <div className="campusRailTrack">
+          {loop.map((campus, index) => (
+            <article className="campusRailCard" key={`${campus.school}-${index}`} aria-hidden={index >= campuses.length}>
+              <img src={campus.image} alt={index < campuses.length ? `${campus.school} campus` : ''} />
+              <div className="campusRailShade" />
+              <strong>{campus.school}</strong>
+              <small>{campus.credit}</small>
+            </article>
+          ))}
         </div>
       </div>
+
+      <p className="ambassadorNote shell">Student-led, campus by campus.</p>
     </section>
   );
 }
