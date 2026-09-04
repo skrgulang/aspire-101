@@ -1,7 +1,7 @@
 import './globals.css';
 import './footer.css';
 import './request-road.css';
-import './feature-tour.css';
+import './campus-stories.css';
 import './belonging.css';
 import './journey-immersive.css';
 import type { Metadata } from 'next';
