@@ -1,25 +1,27 @@
-const campus = ['UC Berkeley', 'Purdue', 'UCI', 'USC', 'UCLA'];
-
-const pillars = [
+const pathways = [
   {
-    eyebrow: 'LEARN',
-    title: 'Turn goals into a path.',
-    copy: 'Find the right resources, study circles, and people for what you want to learn next.'
+    number: '01',
+    label: 'LEARN',
+    title: 'Know what to learn next.',
+    copy: 'Turn a goal into a clearer path with relevant resources, peers, and context.'
   },
   {
-    eyebrow: 'CONNECT',
-    title: 'Meet people who move you forward.',
-    copy: 'Discover classmates, mentors, collaborators, and communities around your campus.'
+    number: '02',
+    label: 'CONNECT',
+    title: 'Find people with shared momentum.',
+    copy: 'Meet collaborators, mentors, study partners, and people moving in a similar direction.'
   },
   {
-    eyebrow: 'BUILD',
-    title: 'Make something real.',
-    copy: 'Join projects, find teammates, and create a portfolio beyond the classroom.'
+    number: '03',
+    label: 'BUILD',
+    title: 'Move from interest to experience.',
+    copy: 'Discover projects, teams, and opportunities to make something real beyond the classroom.'
   },
   {
-    eyebrow: 'LAUNCH',
-    title: 'Find your next opportunity.',
-    copy: 'Explore internships, research, accelerators, and student opportunities in one place.'
+    number: '04',
+    label: 'LAUNCH',
+    title: 'See the next door before it closes.',
+    copy: 'Surface internships, research, programs, competitions, and other high-signal opportunities.'
   }
 ];
 
@@ -28,121 +30,111 @@ export default function Home() {
     <main>
       <header className="nav shell">
         <a className="brand" href="#top" aria-label="Aspire 101 home">
-          <span className="brandMark">A</span>
+          <span className="brandMark"><i />A101</span>
           <span>Aspire 101</span>
         </a>
         <nav className="navLinks" aria-label="Primary navigation">
-          <a href="#product">Product</a>
-          <a href="#how">How it works</a>
-          <a href="#campus">Campus</a>
-          <a href="#schools">For schools</a>
+          <a href="#idea">Why Aspire</a>
+          <a href="#pathways">What you can do</a>
+          <a href="#about">About</a>
         </nav>
         <div className="navActions">
           <a className="textLink" href="/login">Log in</a>
-          <a className="button buttonLight" href="/signup">Join Aspire</a>
+          <a className="button buttonPrimary" href="/signup">Join Aspire <span>↗</span></a>
         </div>
       </header>
 
       <section id="top" className="hero shell">
-        <div className="heroGlow heroGlowOne" />
-        <div className="heroGlow heroGlowTwo" />
-        <p className="kicker">THE STUDENT NETWORK FOR WHAT COMES NEXT.</p>
-        <h1>
-          Find your people.
-          <br />
-          Build your <em>future.</em>
-        </h1>
-        <p className="heroCopy">
-          Aspire connects students with the people, knowledge, projects, and opportunities that help them move forward.
-        </p>
-        <div className="heroCta">
-          <a className="button buttonAccent" href="/signup">Join with your school email</a>
-          <a className="quietLink" href="#how">See how it works <span>↗</span></a>
-        </div>
-        <p className="micro">Built for college students · School email verification</p>
-
-        <div className="goalCard" id="product">
-          <div className="goalTopline">
-            <span>YOUR GOAL</span>
-            <span className="statusDot">Live preview</span>
+        <div className="heroGrid" aria-hidden="true" />
+        <div className="heroCopyBlock">
+          <p className="kicker"><span /> BUILT FOR STUDENT MOMENTUM</p>
+          <h1>Turn ambition<br />into <span>momentum.</span></h1>
+          <p className="heroCopy">
+            Aspire helps students discover the right people, knowledge, projects, and opportunities for what they want to do next.
+          </p>
+          <div className="heroCta">
+            <a className="button buttonPrimary" href="/signup">Start your Aspire <span>↗</span></a>
+            <a className="quietLink" href="#idea">See the idea <span>↓</span></a>
           </div>
-          <p className="goalPrompt">“I want to break into AI.”</p>
-          <div className="resultGrid">
-            <article>
-              <span>LEARN</span>
-              <strong>Machine learning path</strong>
-              <p>Python · Linear algebra · Intro ML</p>
-            </article>
-            <article>
-              <span>CONNECT</span>
-              <strong>12 relevant students</strong>
-              <p>Peers learning or building in AI</p>
-            </article>
-            <article>
-              <span>BUILD</span>
-              <strong>3 student projects</strong>
-              <p>Open roles for new contributors</p>
-            </article>
-            <article>
-              <span>LAUNCH</span>
-              <strong>5 opportunities</strong>
-              <p>Internships · research · hackathons</p>
-            </article>
+          <div className="heroNote">
+            <strong>One goal.</strong>
+            <span>Useful next steps, not more noise.</span>
+          </div>
+        </div>
+
+        <div className="compass" id="product">
+          <div className="compassHeader">
+            <span>ASPIRE COMPASS</span>
+            <span className="livePill">YOUR NEXT MOVE</span>
+          </div>
+          <div className="goalNode">
+            <small>CURRENT GOAL</small>
+            <strong>I want to break into AI.</strong>
+            <span>Finding high-signal paths…</span>
+          </div>
+          <div className="orbit orbitOne" />
+          <div className="orbit orbitTwo" />
+          <div className="signal signalLearn"><b>LEARN</b><span>ML roadmap</span></div>
+          <div className="signal signalPeople"><b>PEOPLE</b><span>12 relevant peers</span></div>
+          <div className="signal signalBuild"><b>BUILD</b><span>3 open projects</span></div>
+          <div className="signal signalLaunch"><b>NEXT</b><span>5 opportunities</span></div>
+          <div className="compassFooter">
+            <span>◉ Personalized around your direction</span>
+            <span>01 / 04</span>
           </div>
         </div>
       </section>
 
-      <section id="campus" className="socialProof shell">
-        <p>Built for ambitious students across campus communities.</p>
-        <div className="campusRow">
-          {campus.map((school) => <span key={school}>{school}</span>)}
+      <section id="idea" className="idea shell">
+        <div className="ideaIntro">
+          <p className="sectionLabel">THE IDEA</p>
+          <h2>Aspire is not another feed.</h2>
+        </div>
+        <div className="ideaSteps">
+          <article><span>01</span><p>Tell Aspire where you want to go.</p></article>
+          <article><span>02</span><p>See people, paths, projects, and opportunities that actually relate.</p></article>
+          <article><span>03</span><p>Choose the next move that creates momentum.</p></article>
         </div>
       </section>
 
-      <section id="how" className="manifesto shell">
-        <p className="sectionLabel">ONE PLATFORM, FOUR WAYS FORWARD.</p>
-        <h2>College gives you a campus. Aspire helps you use it.</h2>
-        <div className="pillarGrid">
-          {pillars.map((pillar) => (
-            <article className="pillar" key={pillar.eyebrow}>
-              <span>{pillar.eyebrow}</span>
-              <h3>{pillar.title}</h3>
-              <p>{pillar.copy}</p>
-              <a href="/signup">Explore <span>↗</span></a>
+      <section id="pathways" className="pathways shell">
+        <div className="pathwayHeading">
+          <p className="sectionLabel">ONE SYSTEM · FOUR DIRECTIONS</p>
+          <h2>Whatever your next move is, start closer to it.</h2>
+        </div>
+        <div className="pathwayList">
+          {pathways.map((item) => (
+            <article className="pathway" key={item.number}>
+              <span className="pathwayNumber">{item.number}</span>
+              <span className="pathwayLabel">{item.label}</span>
+              <h3>{item.title}</h3>
+              <p>{item.copy}</p>
+              <a href="/signup" aria-label={`Explore ${item.label}`}>↗</a>
             </article>
           ))}
         </div>
       </section>
 
-      <section id="schools" className="campusPanel shell">
-        <div>
-          <p className="sectionLabel">VERIFIED CAMPUS COMMUNITIES</p>
-          <h2>Your school becomes your network.</h2>
-          <p>Use your school email to join a trusted campus layer designed around learning, collaboration, and opportunity.</p>
-        </div>
-        <div className="emailCard">
-          <label htmlFor="school-email">School email</label>
-          <div className="emailRow">
-            <input id="school-email" placeholder="you@school.edu" type="email" />
-            <a className="button buttonAccent" href="/signup">Continue</a>
-          </div>
-          <small>We use your school email to verify your campus identity.</small>
-        </div>
+      <section className="statement shell">
+        <div className="statementLine"><span>Not more scrolling.</span><strong>More direction.</strong></div>
+        <div className="statementLine"><span>Not more contacts.</span><strong>Better connections.</strong></div>
+        <div className="statementLine"><span>Not more tabs.</span><strong>One place to move forward.</strong></div>
       </section>
 
-      <section className="finalCta shell">
-        <p className="sectionLabel">ASPIRE 101</p>
-        <h2>Don’t just go to college.<br /><em>Go somewhere.</em></h2>
-        <p>Start with the people, projects, and opportunities already around you.</p>
-        <a className="button buttonLight" href="/signup">Join Aspire</a>
+      <section id="about" className="finalCta shell">
+        <div className="finalOrb" aria-hidden="true"><span>A101</span></div>
+        <p className="sectionLabel">YOUR NEXT MOVE STARTS HERE</p>
+        <h2>What do you want<br />to do <span>next?</span></h2>
+        <p>Start with a direction. Aspire helps you find momentum.</p>
+        <a className="button buttonPrimary" href="/signup">Join Aspire <span>↗</span></a>
       </section>
 
       <footer className="footer shell">
-        <a className="brand" href="#top"><span className="brandMark">A</span><span>Aspire 101</span></a>
+        <a className="brand" href="#top"><span className="brandMark"><i />A101</span><span>Aspire 101</span></a>
         <p>Learn · Connect · Build · Launch</p>
         <div>
-          <a href="#product">Product</a>
-          <a href="#schools">For schools</a>
+          <a href="#idea">Why Aspire</a>
+          <a href="#pathways">What you can do</a>
           <a href="/about">About</a>
         </div>
       </footer>
