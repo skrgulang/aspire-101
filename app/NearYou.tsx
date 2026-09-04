@@ -10,6 +10,10 @@ type RequestItem = {
   meta: string;
   price: string;
   distance: number;
+  poster: string;
+  school: string;
+  rating: string;
+  completed: number;
 };
 
 const campuses: Record<CampusKey, { lat: number; lng: number; label: string }> = {
@@ -22,34 +26,34 @@ const campuses: Record<CampusKey, { lat: number; lng: number; label: string }> =
 
 const requests: Record<CampusKey, RequestItem[]> = {
   Berkeley: [
-    { tag: 'MOVE-IN', title: 'Need help carrying a desk up two flights', meta: 'Today · 3 replies', price: '$30', distance: 0.4 },
-    { tag: 'STUDY', title: 'Math 55 study partner before Thursday', meta: 'Tonight · 2 replies', price: 'Study together', distance: 0.7 },
-    { tag: 'MARKET', title: 'Looking for a mini fridge near campus', meta: 'Pickup today · 4 offers', price: 'Under $80', distance: 1.1 },
-    { tag: 'CAMPUS', title: 'Where do people actually study late?', meta: '8 replies · 3 spots saved', price: 'Local advice', distance: 0.3 }
+    { tag: 'MOVE-IN', title: 'Need help carrying a desk up two flights', meta: 'Today · 3 responses', price: '$30', distance: 0.4, poster: 'Joyi', school: 'Berkeley', rating: '4.9', completed: 8 },
+    { tag: 'STUDY', title: 'Math 55 study partner before Thursday', meta: 'Tonight · 2 responses', price: 'Study together', distance: 0.7, poster: 'Maya', school: 'Berkeley', rating: '4.8', completed: 11 },
+    { tag: 'MARKET', title: 'Looking for a mini fridge near campus', meta: 'Pickup today · 4 offers', price: 'Under $80', distance: 1.1, poster: 'Ethan', school: 'Berkeley', rating: 'NEW', completed: 0 },
+    { tag: 'CAMPUS', title: 'Where do people actually study late?', meta: '8 answers · 3 spots saved', price: 'Local advice', distance: 0.3, poster: 'Sofia', school: 'Berkeley', rating: '4.7', completed: 6 }
   ],
   Purdue: [
-    { tag: 'RIDE', title: 'Anyone heading to IND Friday morning?', meta: 'Fri 7:30 AM · 3 interested', price: 'Split gas', distance: 0.8 },
-    { tag: 'PROJECT', title: 'Need a designer for a weekend AI build', meta: 'This weekend · 5 replies', price: 'Team up', distance: 0.5 },
-    { tag: 'CLASSMATES', title: 'Looking for people from my calc section', meta: 'Tonight · 4 replies', price: 'Study together', distance: 0.6 },
-    { tag: 'CAMPUS', title: 'Need someone to help move a chair', meta: 'Today · 2 nearby', price: '$20', distance: 1.2 }
+    { tag: 'RIDE', title: 'Anyone heading to IND Friday morning?', meta: 'Fri 7:30 AM · 3 interested', price: 'Split gas', distance: 0.8, poster: 'Nathan', school: 'Purdue', rating: '4.9', completed: 10 },
+    { tag: 'PROJECT', title: 'Need a designer for a weekend AI build', meta: 'This weekend · 5 responses', price: 'Team up', distance: 0.5, poster: 'Nathan', school: 'Purdue', rating: '4.9', completed: 10 },
+    { tag: 'CLASSMATES', title: 'Looking for people from my calc section', meta: 'Tonight · 4 responses', price: 'Study together', distance: 0.6, poster: 'Ryan', school: 'Purdue', rating: '4.8', completed: 9 },
+    { tag: 'CAMPUS', title: 'Need someone to help move a chair', meta: 'Today · 2 nearby', price: '$20', distance: 1.2, poster: 'Avery', school: 'Purdue', rating: 'NEW', completed: 0 }
   ],
   Rutgers: [
-    { tag: 'CAMPUS', title: 'Best quiet study spot after 10 PM?', meta: '6 replies · just now', price: 'Local advice', distance: 0.4 },
-    { tag: 'RIDE', title: 'Ride to Newark airport this weekend?', meta: 'Sat · 2 interested', price: 'Split gas', distance: 0.9 },
-    { tag: 'STUDY', title: 'Looking for an econ study group', meta: 'Tonight · 3 replies', price: 'Join in', distance: 1.0 },
-    { tag: 'MARKET', title: 'Need a cheap desk lamp', meta: '4 nearby offers', price: 'Under $20', distance: 0.7 }
+    { tag: 'CAMPUS', title: 'Best quiet study spot after 10 PM?', meta: '6 answers · just now', price: 'Local advice', distance: 0.4, poster: 'Tony', school: 'Rutgers', rating: '4.8', completed: 14 },
+    { tag: 'RIDE', title: 'Ride to Newark airport this weekend?', meta: 'Sat · 2 interested', price: 'Split gas', distance: 0.9, poster: 'Tony', school: 'Rutgers', rating: '4.8', completed: 14 },
+    { tag: 'STUDY', title: 'Looking for an econ study group', meta: 'Tonight · 3 responses', price: 'Join in', distance: 1.0, poster: 'Priya', school: 'Rutgers', rating: '4.9', completed: 5 },
+    { tag: 'MARKET', title: 'Need a cheap desk lamp', meta: '4 nearby offers', price: 'Under $20', distance: 0.7, poster: 'Noah', school: 'Rutgers', rating: 'NEW', completed: 0 }
   ],
   'UC Davis': [
-    { tag: 'RIDE', title: 'Anyone going toward Sacramento tonight?', meta: 'Today · 2 interested', price: 'Split gas', distance: 0.6 },
-    { tag: 'BIKE', title: 'Need help fixing a bike chain', meta: 'Today · 3 replies', price: '$15', distance: 0.5 },
-    { tag: 'STUDY', title: 'Stats review group before Friday?', meta: 'Tonight · 5 replies', price: 'Study together', distance: 0.9 },
-    { tag: 'CAMPUS', title: 'Where can I print late at night?', meta: '7 replies', price: 'Local advice', distance: 0.4 }
+    { tag: 'RIDE', title: 'Anyone going toward Sacramento tonight?', meta: 'Today · 2 interested', price: 'Split gas', distance: 0.6, poster: 'Lihui', school: 'UC Davis', rating: '4.9', completed: 7 },
+    { tag: 'BIKE', title: 'Need help fixing a bike chain', meta: 'Today · 3 responses', price: '$15', distance: 0.5, poster: 'Lihui', school: 'UC Davis', rating: '4.9', completed: 7 },
+    { tag: 'STUDY', title: 'Stats review group before Friday?', meta: 'Tonight · 5 responses', price: 'Study together', distance: 0.9, poster: 'Cam', school: 'UC Davis', rating: '4.7', completed: 4 },
+    { tag: 'CAMPUS', title: 'Where can I print late at night?', meta: '7 answers', price: 'Local advice', distance: 0.4, poster: 'Rina', school: 'UC Davis', rating: 'NEW', completed: 0 }
   ],
   UCLA: [
-    { tag: 'RIDE', title: 'LAX ride share Friday afternoon?', meta: 'Fri · 4 interested', price: 'Split gas', distance: 0.7 },
-    { tag: 'PROJECT', title: 'Photographer needed for club event', meta: 'This week · 3 replies', price: '$50', distance: 0.9 },
-    { tag: 'STUDY', title: 'Need help reviewing linear algebra', meta: 'Tonight · 2 replies', price: '$25', distance: 0.5 },
-    { tag: 'MARKET', title: 'Selling a desk and chair set', meta: 'Pickup today · 5 saves', price: '$45', distance: 1.1 }
+    { tag: 'RIDE', title: 'LAX ride share Friday afternoon?', meta: 'Fri · 4 interested', price: 'Split gas', distance: 0.7, poster: 'Ari', school: 'UCLA', rating: '4.8', completed: 12 },
+    { tag: 'PROJECT', title: 'Photographer needed for club event', meta: 'This week · 3 responses', price: '$50', distance: 0.9, poster: 'Leo', school: 'UCLA', rating: '4.9', completed: 6 },
+    { tag: 'STUDY', title: 'Need help reviewing linear algebra', meta: 'Tonight · 2 responses', price: '$25', distance: 0.5, poster: 'Kai', school: 'UCLA', rating: 'NEW', completed: 0 },
+    { tag: 'MARKET', title: 'Selling a desk and chair set', meta: 'Pickup today · 5 saves', price: '$45', distance: 1.1, poster: 'Mina', school: 'UCLA', rating: '4.7', completed: 8 }
   ]
 };
 
@@ -110,7 +114,7 @@ export default function NearYou() {
         <div>
           <p className="eyebrow">WHAT'S HAPPENING AROUND YOU</p>
           <h2>See requests near your campus.</h2>
-          <p>Browse first. Use location or pick a campus manually. Posting, replying, claiming, and chat start after you log in.</p>
+          <p>Browse first. Use location or pick a campus manually. Posting and responding require an account; private chat opens from an accepted connection.</p>
         </div>
         <div className="nearLocationBox">
           <span className="nearLocationLabel">YOUR AREA</span>
@@ -142,6 +146,10 @@ export default function NearYou() {
             <div className="nearCardTop"><span>{item.tag}</span><span>{item.distance.toFixed(1)} mi</span></div>
             <h3>{item.title}</h3>
             <p>{item.meta}</p>
+            <div className="nearPoster">
+              <span>{item.poster.charAt(0)}</span>
+              <div><strong>{item.poster} @ {item.school}</strong><small>{item.rating === 'NEW' ? 'New to Aspire' : `★ ${item.rating} · ${item.completed} completed`}</small></div>
+            </div>
             <div className="nearCardBottom"><strong>{item.price}</strong><button type="button">Preview ↗</button></div>
           </article>
         ))}
@@ -149,15 +157,17 @@ export default function NearYou() {
 
       <div className="nearFeatureStrip" aria-label="Aspire product flow">
         <span><b>01</b> Search nearby</span>
-        <span><b>02</b> Claim or reply</span>
-        <span><b>03</b> Chat directly</span>
-        <span><b>04</b> Track your posts</span>
+        <span><b>02</b> Send a response</span>
+        <span><b>03</b> Mutual connect</span>
+        <span><b>04</b> Chat + review</span>
       </div>
 
       <div className="nearLoginGate">
-        <div><span>READY TO ASK?</span><strong>Posting needs an Aspire account.</strong><p>Browse without logging in. When you want to post, reply, claim a request, or message someone, we’ll ask you to sign in.</p></div>
+        <div><span>READY TO ASK?</span><strong>Posting needs an Aspire account.</strong><p>Browse without logging in. Sign in to post or respond. A private conversation begins after a connection is accepted — not from random unsolicited DMs.</p></div>
         <div><a className="button buttonGold" href="/login">Log in to post <span>↗</span></a><a className="quietLink" href="/signup">Create an account</a></div>
       </div>
+
+      <small className="nearPrototype">Prototype request and reputation data shown for the product concept.</small>
 
       {selected && (
         <div className="nearPreview" role="dialog" aria-label="Request preview">
@@ -165,7 +175,12 @@ export default function NearYou() {
           <span>{selected.tag} · {selected.distance.toFixed(1)} MI AWAY</span>
           <h3>{selected.title}</h3>
           <p>{selected.meta}</p>
+          <div className="previewProfile">
+            <span>{selected.poster.charAt(0)}</span>
+            <div><strong>{selected.poster} @ {selected.school}</strong><small>{selected.rating === 'NEW' ? 'New to Aspire' : `★ ${selected.rating} · ${selected.completed} completed connections`}</small></div>
+          </div>
           <strong>{selected.price}</strong>
+          <p className="previewConsent">Respond to show interest. The requester decides whether to connect, and private chat starts from that accepted connection.</p>
           <a className="button buttonGold" href="/login">Log in to respond <span>↗</span></a>
         </div>
       )}
