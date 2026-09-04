@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { aspireLogo } from './logo';
 import RequestJourney from './RequestJourney';
+import FeatureTour from './FeatureTour';
 
 const categories = ['Anything', 'Study', 'Ride', 'Buy & Sell', 'Projects', 'Campus'];
 
@@ -13,37 +14,6 @@ const examples = [
   { tag: 'MARKET', title: 'Looking for a mini fridge near campus', meta: 'Pickup today · 4 offers', price: 'Under $80' },
   { tag: 'CAMPUS', title: 'Need two people to help move a desk upstairs', meta: 'Today · 4 nearby', price: '$30' },
   { tag: 'CAREER', title: 'Can someone review my resume for product roles?', meta: 'Remote · 6 replies', price: '$15' }
-];
-
-const featureCards = [
-  {
-    number: '01',
-    label: 'GET HELP',
-    title: 'Ask for what you actually need.',
-    copy: 'Tutoring, moving help, advice, rides, errands, creative work — post it once and let the right students find it.',
-    className: 'feature featureGold'
-  },
-  {
-    number: '02',
-    label: 'FIND PEOPLE',
-    title: 'Turn a request into a connection.',
-    copy: 'Find classmates, collaborators, project partners, creators, and people who are useful to know beyond one request.',
-    className: 'feature featureDark'
-  },
-  {
-    number: '03',
-    label: 'BUILD THINGS',
-    title: 'Start with “who wants in?”',
-    copy: 'Post a project, recruit a teammate, find a skill you are missing, or join something already moving.',
-    className: 'feature featureCream'
-  },
-  {
-    number: '04',
-    label: 'DISCOVER MORE',
-    title: 'Useful campus signal, minus the noise.',
-    copy: 'Opportunities, events, requests, and useful student-to-student activity in one place built around college life.',
-    className: 'feature featureOutline'
-  }
 ];
 
 const logoStyle = {
@@ -72,8 +42,8 @@ export default function Home() {
         </a>
         <nav className="navLinks" aria-label="Primary navigation">
           <a href="#journey">Request journey</a>
+          <a href="#features">Everything Aspire</a>
           <a href="#requests">Requests</a>
-          <a href="#possibilities">What you can do</a>
         </nav>
         <div className="navActions">
           <a className="textLink" href="/login">Log in</a>
@@ -188,6 +158,8 @@ export default function Home() {
         <RequestJourney requestText={previewRequest} />
       </div>
 
+      <FeatureTour />
+
       <section id="requests" className="requestWall shell">
         <div className="sectionHeading">
           <p className="eyebrow">REAL COLLEGE LIFE IS MESSY. GOOD.</p>
@@ -201,24 +173,6 @@ export default function Home() {
               <div className="requestTileTop"><span>{item.tag}</span><span>↗</span></div>
               <h3>{item.title}</h3>
               <div className="requestTileBottom"><span>{item.meta}</span><strong>{item.price}</strong></div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section id="possibilities" className="possibilities shell">
-        <div className="sectionHeading compact">
-          <p className="eyebrow">MORE THAN A MARKETPLACE</p>
-          <h2>The request is the beginning, not the whole product.</h2>
-        </div>
-
-        <div className="featureGrid">
-          {featureCards.map((feature) => (
-            <article className={feature.className} key={feature.number}>
-              <div className="featureTop"><span>{feature.number}</span><span>{feature.label}</span></div>
-              <h3>{feature.title}</h3>
-              <p>{feature.copy}</p>
-              <a href="/signup">Explore <span>↗</span></a>
             </article>
           ))}
         </div>
