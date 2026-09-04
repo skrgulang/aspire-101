@@ -1,14 +1,12 @@
 const faqs = [
   ['What can I use Aspire for?', 'Everyday college needs: study help, classmates, rides, moving help, buying and selling, project teammates, local questions, campus life, and opportunities.'],
-  ['Can I browse without an account?', 'Yes. Public requests and campus activity can be browsed first. Posting, responding, accepting a connection, and private messaging require you to log in.'],
-  ['How does matching work?', 'Someone responds to a request instead of instantly claiming it. The requester chooses who they want to connect with, and either person can step away before confirming. Private chat starts from that accepted connection.'],
-  ['Can anyone message me?', 'Not by default. Aspire is designed around context-first conversations. A private chat should begin from a real request or connection instead of random unsolicited DMs.'],
-  ['Does everyone get a rating?', 'Every registered account can build one reputation because the same student may ask for help one day and help someone else the next. New accounts start as “New to Aspire,” and reputation appears only after real completed connections.'],
-  ['How do reviews work?', 'Reviews are two-way. Both students can review the experience after a completed connection. The product direction is to use blind or delayed reviews so one person cannot easily retaliate after seeing the other person’s review.'],
-  ['What if someone is unsafe or breaks the rules?', 'Ratings are for normal experience quality. Harassment, threats, scams, violence, illegal activity, or serious safety issues should be reported to Aspire for moderation. For emergencies or imminent danger, contact local authorities or campus emergency services.'],
-  ['Why does Aspire ask for my location?', 'Location is optional and is used to make nearby requests more relevant. You can skip it and choose a campus manually instead. Precise addresses should not be exposed publicly just because location is enabled.'],
-  ['Is Aspire only for new students?', 'No. Feeling at home is the mission, but Aspire should stay useful from move-in week through finals — and for upperclassmen who need help, people, projects, rides, or campus knowledge too.'],
-  ['How is Aspire different from a group chat or marketplace?', 'Aspire starts with what you need. Instead of searching through scattered chats or separate apps, one request can reach the right part of your campus network and turn into a useful connection with accountability on both sides.']
+  ['Can I browse without an account?', 'Yes. Public requests and campus activity can be browsed first. Posting, responding, connecting, private chat, and reviews require you to log in.'],
+  ['How does a connection actually happen?', 'There is no instant first-click claim. Someone responds to a request, the requester chooses whether they want to connect, and the responder confirms. Private chat opens from that accepted connection.'],
+  ['What changes when money is involved?', 'Aspire should clearly label paid help, split-cost requests, and buying or selling. Before the interaction is marked in progress, both sides should confirm the important details such as amount, scope, timing, and meetup expectations.'],
+  ['Does everyone get one star rating?', 'No. We are moving toward a contextual Trust Passport instead of one giant score. It can show completed connections, whether people would connect again, useful behavior tags, and the types of interactions that created that reputation. New members simply show New to Aspire.'],
+  ['What if something is unsafe or illegal?', 'That is a safety issue, not a rating issue. Harassment, threats, scams, violence, illegal activity, or serious misconduct should go through reporting and moderation. Emergencies should be handled by campus or local emergency services.'],
+  ['Why does Aspire ask for my location?', 'Location is optional and helps make nearby requests more relevant. You can deny it and choose a campus manually. Precise location should not be exposed publicly just because you browsed or posted.'],
+  ['How is Aspire different from a group chat or marketplace?', 'Aspire starts with context: what you need, where it matters, and what kind of exchange it is. One request can become an answer, paid help, a shared cost, an item exchange, a teammate, or a new connection without digging through unrelated chats.']
 ];
 
 export default function FAQ() {
@@ -17,7 +15,7 @@ export default function FAQ() {
       <div className="faqIntro">
         <p className="eyebrow">QUESTIONS BEFORE YOU START?</p>
         <h2>The last stop before your own request.</h2>
-        <p>By here, you’ve seen the journey. These are the things students usually want to know before jumping in.</p>
+        <p>By here, you’ve seen the journey. These are the product rules students should understand before jumping in.</p>
       </div>
       <div className="faqList">
         {faqs.map(([question, answer], index) => (
