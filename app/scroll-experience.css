@@ -1,0 +1,170 @@
+html{scroll-behavior:smooth}
+
+/* Slow, scroll-driven reveals inspired by editorial landing pages. These only apply
+   in browsers that support view timelines; everyone else gets the full content. */
+@supports (animation-timeline:view()){
+  .nearYouHeader,
+  .nearToolbar,
+  .nearGrid,
+  .nearLoginGate,
+  .howIntro,
+  .howSteps,
+  .campusStoriesTop,
+  .storyUseCases,
+  .aspireAction,
+  .campusStoryRail,
+  .campusStoriesBottom,
+  .homeMissionInner,
+  .trustLoopIntro,
+  .trustModeTabs,
+  .trustPlayground,
+  .trustReviewRow,
+  .trustPassportStage,
+  .safetyLine,
+  .ambassadorHead,
+  .campusRail,
+  .ambassadorNote,
+  .faqIntro,
+  .faqList{
+    animation-name:aspireSlowReveal;
+    animation-duration:1ms;
+    animation-fill-mode:both;
+    animation-timing-function:linear;
+    animation-timeline:view(block);
+    animation-range:entry 0% cover 30%;
+    transform-origin:center bottom;
+    will-change:opacity,transform,filter;
+  }
+
+  .campusStoryRail,.campusRail{
+    animation-name:aspirePhotoReveal;
+    animation-range:entry 0% cover 34%;
+  }
+}
+
+@keyframes aspireSlowReveal{
+  from{opacity:.08;transform:translateY(76px) scale(.985);filter:blur(10px)}
+  to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+}
+
+@keyframes aspirePhotoReveal{
+  from{opacity:.1;transform:translateY(54px) scale(.985);filter:blur(8px)}
+  to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}
+}
+
+/* The little student is now a real page-level navigator, not a section decoration. */
+.campusGuide{
+  position:fixed;
+  right:18px;
+  top:50%;
+  z-index:90;
+  width:116px;
+  height:min(68vh,620px);
+  transform:translateY(-50%);
+  opacity:1;
+  pointer-events:auto;
+  transition:opacity .3s ease;
+}
+.campusGuide.show{transform:translateY(-50%);opacity:1}
+.campusGuideCurrent{
+  position:absolute;
+  right:38px;
+  top:var(--guide-y);
+  transform:translateY(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:4px;
+  white-space:nowrap;
+  pointer-events:none;
+  transition:top .08s linear;
+}
+.campusGuideCurrent span{
+  color:#665f55;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.13em;
+}
+.campusGuideCurrent strong{
+  color:#b7ad9d;
+  font-size:8px;
+  font-weight:950;
+  letter-spacing:.13em;
+}
+.campusGuideTrack{
+  position:absolute;
+  right:15px;
+  top:0;
+  bottom:0;
+  width:1px;
+  border-radius:999px;
+  background:rgba(255,255,255,.11);
+}
+.campusGuideTrack i{
+  display:block;
+  width:100%;
+  height:var(--guide-progress);
+  border-radius:999px;
+  background:linear-gradient(var(--gold),#ffdc69);
+  box-shadow:0 0 18px rgba(255,194,28,.28);
+}
+.campusGuideStops{
+  position:absolute;
+  right:11px;
+  top:0;
+  bottom:0;
+  width:9px;
+}
+.campusGuideStops button{
+  position:absolute;
+  left:50%;
+  width:8px;
+  height:8px;
+  padding:0;
+  transform:translate(-50%,-50%);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:50%;
+  background:#0c0b08;
+  cursor:pointer;
+  transition:transform .2s ease,background .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+.campusGuideStops button:hover,
+.campusGuideStops button.active{
+  transform:translate(-50%,-50%) scale(1.45);
+  border-color:var(--gold);
+  background:var(--gold);
+  box-shadow:0 0 12px rgba(255,194,28,.32);
+}
+.campusGuideWalker{
+  position:absolute;
+  right:1px;
+  top:var(--guide-y);
+  width:28px;
+  height:38px;
+  transform:translateY(-50%);
+  filter:drop-shadow(0 6px 12px rgba(0,0,0,.4));
+  transition:top .08s linear;
+  pointer-events:none;
+}
+.guideHead{position:absolute;left:9px;top:0;width:10px;height:10px;border-radius:50%;background:#f2dfb5;border:1px solid #0b0905}
+.guideBody{position:absolute;left:7px;top:10px;width:14px;height:17px;border-radius:5px;background:var(--gold);border:1px solid #0b0905}
+.guideLeg{position:absolute;top:25px;width:4px;height:12px;border-radius:5px;background:#f2dfb5;transform-origin:top}
+.guideLegA{left:8px;animation:guideWalkA .65s ease-in-out infinite alternate}
+.guideLegB{right:8px;animation:guideWalkB .65s ease-in-out infinite alternate}
+
+@media(max-width:1100px){
+  .campusGuide{right:8px;width:96px}
+  .campusGuideCurrent{right:34px}
+}
+
+@media(max-width:900px){
+  .campusGuide{display:none}
+}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .campusGuideWalker,.guideLeg{animation:none!important;transition:none!important}
+  @supports (animation-timeline:view()){
+    .nearYouHeader,.nearToolbar,.nearGrid,.nearLoginGate,.howIntro,.howSteps,.campusStoriesTop,.storyUseCases,.aspireAction,.campusStoryRail,.campusStoriesBottom,.homeMissionInner,.trustLoopIntro,.trustModeTabs,.trustPlayground,.trustReviewRow,.trustPassportStage,.safetyLine,.ambassadorHead,.campusRail,.ambassadorNote,.faqIntro,.faqList{animation:none!important;opacity:1!important;transform:none!important;filter:none!important}
+  }
+}
