@@ -4,6 +4,10 @@ import { FormEvent, useState } from 'react';
 import { aspireLogo } from './logo';
 import RequestJourney from './RequestJourney';
 import FeatureTour from './FeatureTour';
+import NearYou from './NearYou';
+import WorkWithAspire from './WorkWithAspire';
+import FAQ from './FAQ';
+import CampusGuide from './CampusGuide';
 
 const categories = ['Anything', 'Study', 'Ride', 'Buy & Sell', 'Projects', 'Campus'];
 
@@ -41,9 +45,9 @@ export default function Home() {
           <span>Aspire 101</span>
         </a>
         <nav className="navLinks" aria-label="Primary navigation">
-          <a href="#journey">Request journey</a>
-          <a href="#features">Everything Aspire</a>
-          <a href="#home">Why Aspire</a>
+          <a href="#nearby">Near you</a>
+          <a href="#how">How it works</a>
+          <a href="#work-with-us">Work with Aspire</a>
         </nav>
         <div className="navActions">
           <a className="textLink" href="/login">Log in</a>
@@ -62,12 +66,12 @@ export default function Home() {
             From your first week on campus to finals, post what you need, find students who can help, and turn an unfamiliar place into people you know.
           </p>
           <div className="heroCta">
-            <a className="button buttonGold" href="#request-demo">Post a request <span>↗</span></a>
-            <a className="quietLink" href="#journey">Walk the campus journey <span>↓</span></a>
+            <a className="button buttonGold" href="/login">Log in to post <span>↗</span></a>
+            <a className="quietLink" href="#nearby">See requests near you <span>↓</span></a>
           </div>
           <div className="heroMiniProof">
-            <span>Students helping students.</span>
-            <span>Useful from move-in week onward.</span>
+            <span>Browse before logging in.</span>
+            <span>Post + reply after sign-in.</span>
             <span>Feel at home faster.</span>
           </div>
         </div>
@@ -80,9 +84,9 @@ export default function Home() {
             <div className="composerTop">
               <div>
                 <span className="composerLabel">WHAT DO YOU NEED?</span>
-                <strong>Make a request</strong>
+                <strong>Try a request</strong>
               </div>
-              <span className="demoPill">DEMO</span>
+              <span className="demoPill">PREVIEW</span>
             </div>
 
             <div className="categoryRow" aria-label="Request category">
@@ -126,7 +130,7 @@ export default function Home() {
             </div>
             <div className="matchBottom">
               <div><strong>5</strong><span>possible matches</span></div>
-              <a href="/signup">Open request ↗</a>
+              <a href="/login">Log in to publish ↗</a>
             </div>
           </article>
 
@@ -155,6 +159,8 @@ export default function Home() {
         </div>
       </section>
 
+      <NearYou />
+
       <div id="journey">
         <RequestJourney requestText={previewRequest} />
       </div>
@@ -181,22 +187,22 @@ export default function Home() {
 
       <section id="how" className="how shell">
         <div className="howIntro">
-          <p className="eyebrow">THREE MOVES. THAT'S IT.</p>
-          <h2>Ask.<br />Match.<br /><span>Make it happen.</span></h2>
+          <p className="eyebrow">THE ORIGINAL ASPIRE FLOW, CLEANER</p>
+          <h2>Browse.<br />Claim.<br /><span>Chat + move.</span></h2>
         </div>
 
         <div className="howSteps">
           <article>
             <div className="stepNumber">01</div>
-            <div><h3>Post what you need</h3><p>Say it normally. Add the details that matter. Choose a category if you want.</p></div>
+            <div><h3>Find requests around you</h3><p>Search by campus, location, distance, category, keyword, or budget — the same useful Find a Match idea, brought into the new experience.</p></div>
           </article>
           <article>
             <div className="stepNumber">02</div>
-            <div><h3>Find the right response</h3><p>See people, replies, offers, or related campus activity around your request.</p></div>
+            <div><h3>Claim or reply</h3><p>Open a request, respond, or claim something you can help with. Your accepted requests stay organized in one place.</p></div>
           </article>
           <article>
             <div className="stepNumber">03</div>
-            <div><h3>Connect and move</h3><p>Message, coordinate, collaborate, exchange, or simply get the thing done.</p></div>
+            <div><h3>Chat and keep track</h3><p>Coordinate directly, see what you posted, follow the status, and keep campus help from getting lost across five different group chats.</p></div>
           </article>
         </div>
       </section>
@@ -231,16 +237,21 @@ export default function Home() {
         <div className="trustItem"><span>03</span><h3>Identity + reputation</h3><p>Profiles and trust signals can make C2C interactions feel more accountable and more comfortable.</p></div>
       </section>
 
+      <WorkWithAspire />
+
       <section className="finalCta shell">
         <div className="finalLogo"><img src={aspireLogo} alt="Aspire 101" /></div>
         <p className="eyebrow">DON’T FIGURE OUT CAMPUS ALONE.</p>
         <h2>Find help. Find people. Feel at home.</h2>
-        <p>Start with one request. Let campus feel a little smaller from there.</p>
+        <p>Browse what’s happening nearby. When you’re ready to ask, log in and put your own request into motion.</p>
         <div className="finalActions">
-          <a className="button buttonGold" href="/signup">Start with a request <span>↗</span></a>
-          <a className="quietLink" href="#requests">See what students ask for</a>
+          <a className="button buttonGold" href="/login">Log in to post <span>↗</span></a>
+          <a className="quietLink" href="#nearby">Browse near you</a>
         </div>
       </section>
+
+      <FAQ />
+      <CampusGuide />
     </main>
   );
 }
