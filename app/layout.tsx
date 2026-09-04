@@ -5,6 +5,7 @@ import './campus-stories.css';
 import './belonging.css';
 import './journey-immersive.css';
 import './expansion.css';
+import './trust-loop.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
