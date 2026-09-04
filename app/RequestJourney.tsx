@@ -6,33 +6,7 @@ type RequestJourneyProps = {
   requestText: string;
 };
 
-const stages = [
-  {
-    kicker: '01 · ARRIVE',
-    title: 'A new campus can feel huge.',
-    copy: 'New room, new routes, new people. Aspire starts where that unfamiliar feeling usually begins: one small thing you need help with.'
-  },
-  {
-    kicker: '02 · ASK',
-    title: 'Start with one small request.',
-    copy: 'A ride, a study partner, help moving in, advice, a teammate — ask normally and let the campus network do the rest.'
-  },
-  {
-    kicker: '03 · DISCOVER',
-    title: 'Campus starts answering back.',
-    copy: 'Relevant students, replies, and useful local context begin showing up around the thing you asked for.'
-  },
-  {
-    kicker: '04 · CONNECT',
-    title: 'Help becomes a person you know.',
-    copy: 'One useful response can become a teammate, a study buddy, a friend, or simply one more familiar face on campus.'
-  },
-  {
-    kicker: '05 · BELONG',
-    title: 'Campus starts feeling like home.',
-    copy: 'The request gets handled, the place feels a little smaller, and you are no longer figuring everything out alone.'
-  }
-];
+const stageLabels = ['ARRIVE', 'ASK', 'DISCOVER', 'CONNECT', 'BELONG'];
 
 export default function RequestJourney({ requestText }: RequestJourneyProps) {
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -98,9 +72,11 @@ export default function RequestJourney({ requestText }: RequestJourneyProps) {
         <div className="journeyCopy">
           <p className="eyebrow">FOLLOW A STUDENT, NOT JUST A REQUEST</p>
           <div className="journeyStageCounter">0{stageIndex + 1} / 05</div>
-          <h2>{stages[stageIndex].title}</h2>
-          <p>{stages[stageIndex].copy}</p>
-          <div className="journeyStageLabel">{stages[stageIndex].kicker}</div>
+          <h2>Campus starts feeling like home.</h2>
+          <p>
+            Start with one request. As you keep moving, Aspire brings help, useful places, familiar faces, and more of campus into view.
+          </p>
+          <div className="journeyStageLabel">0{stageIndex + 1} · {stageLabels[stageIndex]}</div>
 
           <div className="journeyStats">
             <div><strong>{seen}</strong><span>students around you</span></div>
