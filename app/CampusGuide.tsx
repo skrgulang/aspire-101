@@ -49,7 +49,10 @@ export default function CampusGuide() {
     };
   }, []);
 
-  const style = { '--guide-progress': `${progress * 100}%` } as CSSProperties;
+  const style = {
+    '--guide-progress': `${progress * 100}%`,
+    '--guide-y': `${16 + progress * 190}px`
+  } as CSSProperties;
 
   return (
     <aside className={visible ? 'campusGuide show' : 'campusGuide'} style={style} aria-hidden="true">
