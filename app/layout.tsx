@@ -3,6 +3,7 @@ import './footer.css';
 import './request-road.css';
 import './feature-tour.css';
 import './belonging.css';
+import './journey-immersive.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
