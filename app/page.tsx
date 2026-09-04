@@ -171,12 +171,24 @@ export default function Home() {
 
         <FeatureTour />
 
-        <section id="home" className="homeMission">
-          <div className="homeMissionInner shell">
-            <p className="eyebrow">WHY ASPIRE</p>
-            <h2>College feels better when you’re not <span>figuring it out alone.</span></h2>
-            <p>One request can turn an unfamiliar campus into people you know.</p>
+        <section id="home" className="homeMission connectionMoment">
+          <div className="connectionMomentMedia" aria-hidden="true">
+            <img src="https://images.pexels.com/photos/7972544/pexels-photo-7972544.jpeg?auto=compress&cs=tinysrgb&w=1800" alt="" />
           </div>
+          <div className="connectionMomentInner">
+            <div className="connectionMomentCopy">
+              <p className="eyebrow">CONNECTIONS START WITH DOING</p>
+              <h2>Do more <span>together.</span></h2>
+              <p>Find classmates, teammates, collaborators, and people who are up for the same thing.</p>
+            </div>
+            <div className="connectionMomentNotes" aria-hidden="true">
+              <span className="connectionNote noteA"><b>✦</b> Math 55 study tonight?</span>
+              <span className="connectionNote noteB"><b>↗</b> Need a designer for a weekend build</span>
+              <span className="connectionNote noteC"><b>+</b> Anyone want to ski Saturday?</span>
+              <span className="connectionNote noteD"><b>◎</b> Looking for a photographer</span>
+            </div>
+          </div>
+          <span className="connectionMomentTag">one ask → people you know</span>
         </section>
 
         <TrustLoop />
