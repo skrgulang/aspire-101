@@ -8,6 +8,7 @@ import NearYou from './NearYou';
 import WorkWithAspire from './WorkWithAspire';
 import FAQ from './FAQ';
 import CampusGuide from './CampusGuide';
+import TrustLoop from './TrustLoop';
 
 const categories = ['Anything', 'Study', 'Ride', 'Buy & Sell', 'Projects', 'Campus'];
 
@@ -71,8 +72,8 @@ export default function Home() {
           </div>
           <div className="heroMiniProof">
             <span>Browse before logging in.</span>
-            <span>Post + reply after sign-in.</span>
-            <span>Feel at home faster.</span>
+            <span>Mutual connection before private chat.</span>
+            <span>One reputation across Aspire.</span>
           </div>
         </div>
 
@@ -129,7 +130,7 @@ export default function Home() {
               <span>A</span><span>M</span><span>J</span><span>+2</span>
             </div>
             <div className="matchBottom">
-              <div><strong>5</strong><span>possible matches</span></div>
+              <div><strong>5</strong><span>possible responses</span></div>
               <a href="/login">Log in to publish ↗</a>
             </div>
           </article>
@@ -187,22 +188,22 @@ export default function Home() {
 
       <section id="how" className="how shell">
         <div className="howIntro">
-          <p className="eyebrow">THE ORIGINAL ASPIRE FLOW, CLEANER</p>
-          <h2>Browse.<br />Claim.<br /><span>Chat + move.</span></h2>
+          <p className="eyebrow">THE ASPIRE FLOW</p>
+          <h2>Browse.<br />Respond.<br /><span>Choose each other.</span></h2>
         </div>
 
         <div className="howSteps">
           <article>
             <div className="stepNumber">01</div>
-            <div><h3>Find requests around you</h3><p>Search by campus, location, distance, category, keyword, or budget — the same useful Find a Match idea, brought into the new experience.</p></div>
+            <div><h3>Find requests around you</h3><p>Browse by campus, location, distance, category, keyword, or budget. Public discovery stays simple.</p></div>
           </article>
           <article>
             <div className="stepNumber">02</div>
-            <div><h3>Claim or reply</h3><p>Open a request, respond, or claim something you can help with. Your accepted requests stay organized in one place.</p></div>
+            <div><h3>Send a response</h3><p>No instant first-click claim. Tell the requester you can help, join, answer, or make an offer. The requester chooses who they want to connect with.</p></div>
           </article>
           <article>
             <div className="stepNumber">03</div>
-            <div><h3>Chat and keep track</h3><p>Coordinate directly, see what you posted, follow the status, and keep campus help from getting lost across five different group chats.</p></div>
+            <div><h3>Connect, chat, complete</h3><p>Private chat opens from a real request after a connection is accepted. Coordinate, finish the request, then both sides can review the experience.</p></div>
           </article>
         </div>
       </section>
@@ -231,12 +232,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="trust shell">
-        <div className="trustItem"><span>01</span><h3>College-focused</h3><p>Designed around student needs from move-in week to finals and everything between.</p></div>
-        <div className="trustItem"><span>02</span><h3>Request-first</h3><p>Start with what you need instead of digging through endless feeds and scattered chats.</p></div>
-        <div className="trustItem"><span>03</span><h3>Identity + reputation</h3><p>Profiles and trust signals can make C2C interactions feel more accountable and more comfortable.</p></div>
-      </section>
-
+      <TrustLoop />
       <WorkWithAspire />
 
       <section className="finalCta shell">
