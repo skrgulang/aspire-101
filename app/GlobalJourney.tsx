@@ -6,7 +6,7 @@ const chapters = [
   ['nearby', 'EXPLORE'],
   ['how', 'CONNECT'],
   ['features', 'STORIES'],
-  ['home', 'WHY ASPIRE'],
+  ['home', 'TOGETHER'],
   ['trust', 'TRUST'],
   ['ambassadors', 'CAMPUS'],
   ['faq', 'Q&A']
@@ -30,7 +30,7 @@ export default function GlobalJourney() {
       const end = document.getElementById('faq');
       if (!start || !end) return;
 
-      const startY = start.offsetTop - window.innerHeight * 0.25;
+      const startY = start.offsetTop - window.innerHeight * 0.08;
       const endY = end.offsetTop + end.offsetHeight - window.innerHeight * 0.42;
       const focusY = window.scrollY + window.innerHeight * 0.48;
       const value = Math.max(0, Math.min(1, (focusY - startY) / Math.max(1, endY - startY)));
@@ -80,9 +80,19 @@ export default function GlobalJourney() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  const walkerStarted = chapter >= 1;
+  const firstFriend = chapter >= 2;
+  const secondFriend = chapter >= 3;
+
   return (
     <div className={visible ? 'globalJourney isVisible' : 'globalJourney'} style={style} aria-hidden={!visible}>
       <div className="globalJourneyGlow" />
+      <div className="globalJourneyAtmosphere" aria-hidden="true">
+        <span>study together</span>
+        <span>build something</span>
+        <span>ride together</span>
+      </div>
+
       <svg className="globalJourneyRoad" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
         <path className="globalRoadHalo" d={road} />
         <path className="globalRoadBase" d={road} />
@@ -95,7 +105,7 @@ export default function GlobalJourney() {
         />
       </svg>
 
-      <div className="globalWalker" aria-hidden="true">
+      <div className={walkerStarted ? 'globalWalker show' : 'globalWalker'} aria-hidden="true">
         <span className="globalWalkerShadow" />
         <span className="globalWalkerHead" />
         <span className="globalWalkerBody" />
@@ -103,6 +113,13 @@ export default function GlobalJourney() {
         <span className="globalWalkerArm armB" />
         <span className="globalWalkerLeg legA" />
         <span className="globalWalkerLeg legB" />
+
+        <span className={firstFriend ? 'globalFriend friendOne show' : 'globalFriend friendOne'}>
+          <i className="friendHead" /><i className="friendBody" /><i className="friendLeg left" /><i className="friendLeg right" />
+        </span>
+        <span className={secondFriend ? 'globalFriend friendTwo show' : 'globalFriend friendTwo'}>
+          <i className="friendHead" /><i className="friendBody" /><i className="friendLeg left" /><i className="friendLeg right" />
+        </span>
       </div>
 
       <nav className="globalJourneyNav" aria-label="Homepage journey">
