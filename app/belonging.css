@@ -1,0 +1,223 @@
+.journeyTraveler {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.journeyRequestMover {
+  width: 330px;
+}
+
+.journeyRequestCard {
+  flex: 1 1 auto;
+}
+
+.aspireWalker {
+  position: relative;
+  flex: 0 0 62px;
+  width: 62px;
+  height: 82px;
+  display: grid;
+  place-items: end center;
+  filter: drop-shadow(0 10px 18px rgba(0,0,0,.34));
+}
+
+.walkerFigure {
+  position: relative;
+  width: 48px;
+  height: 70px;
+  transform-origin: 50% 100%;
+  animation: walkerBob .72s ease-in-out infinite alternate;
+}
+
+.walkerHead {
+  position: absolute;
+  left: 17px;
+  top: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f4dfb1;
+  border: 2px solid #17130c;
+  z-index: 4;
+}
+
+.walkerHair {
+  position: absolute;
+  left: 16px;
+  top: 0;
+  width: 18px;
+  height: 9px;
+  border-radius: 12px 12px 5px 5px;
+  background: #17130c;
+  z-index: 5;
+}
+
+.walkerTorso {
+  position: absolute;
+  left: 13px;
+  top: 18px;
+  width: 24px;
+  height: 29px;
+  border-radius: 9px 9px 7px 7px;
+  background: linear-gradient(180deg, #ffd64d, var(--gold));
+  border: 2px solid #17130c;
+  z-index: 3;
+}
+
+.walkerBackpack {
+  position: absolute;
+  left: 7px;
+  top: 21px;
+  width: 14px;
+  height: 25px;
+  border-radius: 7px;
+  background: #262117;
+  border: 2px solid #17130c;
+  z-index: 2;
+}
+
+.walkerArm,
+.walkerLeg {
+  position: absolute;
+  width: 7px;
+  border-radius: 999px;
+  background: #f4dfb1;
+  border: 2px solid #17130c;
+  transform-origin: 50% 3px;
+}
+
+.walkerArm {
+  top: 23px;
+  height: 25px;
+  z-index: 1;
+}
+
+.walkerArmA { left: 10px; animation: walkerArmA .72s ease-in-out infinite alternate; }
+.walkerArmB { right: 8px; animation: walkerArmB .72s ease-in-out infinite alternate; }
+
+.walkerLeg {
+  top: 43px;
+  height: 25px;
+  background: #fff4d6;
+  z-index: 1;
+}
+
+.walkerLegA { left: 16px; animation: walkerLegA .72s ease-in-out infinite alternate; }
+.walkerLegB { right: 12px; animation: walkerLegB .72s ease-in-out infinite alternate; }
+
+.walkerShadow {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.42);
+  filter: blur(2px);
+  animation: walkerShadow .72s ease-in-out infinite alternate;
+}
+
+.walkerTag {
+  position: absolute;
+  right: -4px;
+  top: 0;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #0d0a05;
+  border: 1px solid rgba(255,194,28,.34);
+  color: var(--gold);
+  font-size: 6px;
+  font-weight: 950;
+  letter-spacing: .12em;
+  white-space: nowrap;
+}
+
+@keyframes walkerBob {
+  from { transform: translateY(0) rotate(-1deg); }
+  to { transform: translateY(-3px) rotate(1deg); }
+}
+@keyframes walkerArmA { from { transform: rotate(24deg); } to { transform: rotate(-24deg); } }
+@keyframes walkerArmB { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
+@keyframes walkerLegA { from { transform: rotate(18deg); } to { transform: rotate(-18deg); } }
+@keyframes walkerLegB { from { transform: rotate(-18deg); } to { transform: rotate(18deg); } }
+@keyframes walkerShadow { from { transform: scaleX(1); opacity: .36; } to { transform: scaleX(.82); opacity: .24; } }
+
+.journeyNode.active span {
+  color: #f5e4bd;
+}
+
+.journeyDone {
+  background: linear-gradient(145deg, #fff4d6, #ffe8a6);
+}
+
+.featureTour {
+  min-height: 850vh;
+}
+
+.homeMission {
+  position: relative;
+  padding: 118px 0 130px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  overflow: hidden;
+}
+
+.homeMission::before {
+  content: '';
+  position: absolute;
+  width: 560px;
+  height: 560px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,194,28,.12), transparent 68%);
+  pointer-events: none;
+}
+
+.homeMissionInner {
+  position: relative;
+  z-index: 2;
+  max-width: 930px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.homeMission h2 {
+  margin: 18px 0 0;
+  font-size: clamp(52px, 7vw, 96px);
+  line-height: .95;
+  letter-spacing: -.065em;
+}
+
+.homeMission h2 span {
+  color: var(--gold);
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 650;
+}
+
+.homeMission p:last-child {
+  max-width: 680px;
+  margin: 26px auto 0;
+  color: #9d9587;
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+@media (max-width: 650px) {
+  .journeyRequestMover { width: 235px; }
+  .aspireWalker { flex-basis: 48px; width: 48px; transform: scale(.82); transform-origin: center bottom; }
+  .journeyTraveler { gap: 7px; }
+  .homeMission { padding: 88px 0 96px; }
+  .homeMission p:last-child { font-size: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walkerFigure,
+  .walkerArmA,
+  .walkerArmB,
+  .walkerLegA,
+  .walkerLegB,
+  .walkerShadow { animation: none !important; }
+}
