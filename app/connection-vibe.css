@@ -1,0 +1,45 @@
+.globalWalker{opacity:0;transform:translate(-50%,-50%) scale(.84);transition:left .08s linear,top .08s linear,opacity .45s ease,transform .45s cubic-bezier(.16,1,.3,1)}
+.globalWalker.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.globalFriend{position:absolute;left:50%;top:2px;width:22px;height:36px;opacity:0;transform:translate(-50%,8px) scale(.72);transition:opacity .55s ease,transform .6s cubic-bezier(.16,1,.3,1);filter:drop-shadow(0 5px 9px rgba(0,0,0,.35))}
+.globalFriend.show{opacity:1}
+.globalFriend.friendOne{transform:translate(-37px,8px) scale(.78)}
+.globalFriend.friendOne.show{transform:translate(-37px,0) scale(.78)}
+.globalFriend.friendTwo{transform:translate(18px,9px) scale(.74)}
+.globalFriend.friendTwo.show{transform:translate(18px,1px) scale(.74)}
+.globalFriend i{position:absolute;display:block;font-style:normal}
+.friendHead{left:7px;top:0;width:9px;height:9px;border-radius:50%;background:#ecd7ad;border:1px solid #090704}
+.friendBody{left:5px;top:9px;width:13px;height:16px;border-radius:5px;background:#e7dfca;border:1px solid rgba(9,7,3,.95)}
+.friendTwo .friendBody{background:#b6a67c}
+.friendLeg{top:24px;width:4px;height:11px;border-radius:4px;background:#ecd7ad;transform-origin:top;animation:friendWalk .7s ease-in-out infinite alternate}
+.friendLeg.left{left:6px}.friendLeg.right{right:5px;animation-direction:alternate-reverse}
+@keyframes friendWalk{from{transform:rotate(13deg)}to{transform:rotate(-13deg)}}
+
+.globalJourneyAtmosphere{position:absolute;inset:0;pointer-events:none;opacity:.7}
+.globalJourneyAtmosphere span{position:absolute;padding:7px 10px;border:1px solid rgba(255,194,28,.11);border-radius:999px;background:rgba(12,10,7,.38);backdrop-filter:blur(10px);color:rgba(248,229,184,.28);font-size:7px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;animation:ambientFloat 7s ease-in-out infinite alternate}
+.globalJourneyAtmosphere span:nth-child(1){left:12%;top:22%}.globalJourneyAtmosphere span:nth-child(2){right:17%;top:56%;animation-delay:-2.2s}.globalJourneyAtmosphere span:nth-child(3){left:18%;bottom:13%;animation-delay:-4.1s}
+@keyframes ambientFloat{from{translate:0 0}to{translate:0 -10px}}
+
+/* Reuse the existing Why Aspire slot as a visual, youth-focused connection moment. */
+.journeyWorld .homeMission.connectionMoment{min-height:86vh;padding:0;border-top:0;display:flex;align-items:stretch;background:transparent;overflow:hidden}
+.connectionMoment::before{display:none}
+.connectionMomentMedia{position:absolute;inset:5% 4%;border-radius:36px;overflow:hidden;background:#12100c;box-shadow:0 40px 120px rgba(0,0,0,.32)}
+.connectionMomentMedia img{width:100%;height:100%;object-fit:cover;filter:saturate(.78) contrast(1.04) brightness(.64);transform:scale(1.03)}
+.connectionMomentMedia::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,6,4,.88) 0%,rgba(7,6,4,.56) 46%,rgba(7,6,4,.20) 72%,rgba(7,6,4,.36) 100%),linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.48))}
+.connectionMomentInner{position:relative;z-index:3;width:min(100% - 44px,1320px);margin:auto;display:grid;grid-template-columns:minmax(0,650px) 1fr;gap:60px;align-items:center;padding-block:120px}
+.connectionMomentCopy .eyebrow{color:#dccb9e}
+.connectionMomentCopy h2{margin:15px 0 0;max-width:640px;font-size:clamp(58px,7.4vw,112px);line-height:.88;letter-spacing:-.072em;color:#fff8e8}
+.connectionMomentCopy h2 span{font-family:var(--font-display),Georgia,serif;font-style:italic;font-weight:650;color:var(--gold)}
+.connectionMomentCopy>p:last-child{max-width:510px;margin:24px 0 0;color:#d3c7b1;font-size:15px;line-height:1.7}
+.connectionMomentNotes{position:relative;min-height:420px}
+.connectionNote{position:absolute;padding:13px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(12,10,7,.63);backdrop-filter:blur(16px);color:#fff0cf;font-size:11px;font-weight:800;box-shadow:0 16px 45px rgba(0,0,0,.22);animation:connectionNoteFloat 5s ease-in-out infinite alternate}
+.connectionNote b{color:var(--gold);margin-right:7px}
+.connectionNote.noteA{left:5%;top:12%;transform:rotate(-4deg)}
+.connectionNote.noteB{right:8%;top:31%;transform:rotate(4deg);animation-delay:-1.4s}
+.connectionNote.noteC{left:18%;bottom:25%;transform:rotate(3deg);animation-delay:-2.8s}
+.connectionNote.noteD{right:16%;bottom:7%;transform:rotate(-5deg);animation-delay:-3.7s}
+@keyframes connectionNoteFloat{from{translate:0 0}to{translate:0 -9px}}
+.connectionMomentTag{position:absolute;right:6%;bottom:7%;z-index:3;color:rgba(255,245,218,.54);font-size:9px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+
+@media(max-width:900px){.connectionMomentInner{grid-template-columns:1fr;padding-block:90px}.connectionMomentNotes{min-height:300px}.connectionMomentMedia{inset:3% 2%;border-radius:28px}.globalJourneyAtmosphere{opacity:.4}}
+@media(max-width:650px){.journeyWorld .homeMission.connectionMoment{min-height:760px}.connectionMomentInner{width:min(100% - 28px,1320px);padding-block:80px}.connectionMomentCopy h2{font-size:54px}.connectionMomentCopy>p:last-child{font-size:13px}.connectionMomentNotes{min-height:260px}.connectionNote{font-size:9px;padding:10px 12px}.connectionNote.noteB{right:2%}.connectionNote.noteD{right:5%}.globalJourneyAtmosphere{display:none}}
+@media(prefers-reduced-motion:reduce){.globalFriend,.globalJourneyAtmosphere span,.connectionNote{animation:none!important;transition:none!important}}
