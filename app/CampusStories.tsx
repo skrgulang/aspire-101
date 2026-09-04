@@ -58,7 +58,7 @@ export default function CampusStories() {
   }
 
   return (
-    <section id="stories" className="campusStories">
+    <section id="features" className="campusStories">
       <div className="campusStoriesTop shell">
         <div>
           <p className="eyebrow">REAL CAMPUS MOMENTS</p>
