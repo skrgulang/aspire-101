@@ -1,3 +1,5 @@
+import { aspireLogo } from './logo';
+
 const pathways = [
   {
     number: '01',
@@ -25,12 +27,20 @@ const pathways = [
   }
 ];
 
+const logoStyle = {
+  width: 34,
+  height: 34,
+  borderRadius: 10,
+  objectFit: 'cover' as const,
+  boxShadow: '0 0 0 1px rgba(255,255,255,.10), 0 8px 24px rgba(0,0,0,.22)'
+};
+
 export default function Home() {
   return (
     <main>
       <header className="nav shell">
         <a className="brand" href="#top" aria-label="Aspire 101 home">
-          <span className="brandMark"><i />A101</span>
+          <img src={aspireLogo} alt="" style={logoStyle} />
           <span>Aspire 101</span>
         </a>
         <nav className="navLinks" aria-label="Primary navigation">
@@ -122,7 +132,9 @@ export default function Home() {
       </section>
 
       <section id="about" className="finalCta shell">
-        <div className="finalOrb" aria-hidden="true"><span>A101</span></div>
+        <div className="finalOrb" aria-hidden="true">
+          <img src={aspireLogo} alt="" style={{ width: 78, height: 78, borderRadius: 22, objectFit: 'cover', opacity: .92, boxShadow: '0 24px 70px rgba(0,0,0,.32)' }} />
+        </div>
         <p className="sectionLabel">YOUR NEXT MOVE STARTS HERE</p>
         <h2>What do you want<br />to do <span>next?</span></h2>
         <p>Start with a direction. Aspire helps you find momentum.</p>
@@ -130,7 +142,7 @@ export default function Home() {
       </section>
 
       <footer className="footer shell">
-        <a className="brand" href="#top"><span className="brandMark"><i />A101</span><span>Aspire 101</span></a>
+        <a className="brand" href="#top"><img src={aspireLogo} alt="" style={logoStyle} /><span>Aspire 101</span></a>
         <p>Learn · Connect · Build · Launch</p>
         <div>
           <a href="#idea">Why Aspire</a>
