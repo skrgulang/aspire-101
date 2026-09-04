@@ -12,15 +12,6 @@ import TrustLoop from './TrustLoop';
 
 const categories = ['Anything', 'Study', 'Ride', 'Buy & Sell', 'Projects', 'Campus'];
 
-const examples = [
-  { tag: 'STUDY', title: 'Need help with linear algebra before Thursday', meta: 'Tonight · 2 replies', price: '$25' },
-  { tag: 'RIDE', title: 'Looking for a ride to the airport Friday morning', meta: 'Fri 7:30 AM · 3 interested', price: 'Split gas' },
-  { tag: 'PROJECT', title: 'Need a designer for a weekend hackathon team', meta: 'This weekend · 5 replies', price: 'Team up' },
-  { tag: 'MARKET', title: 'Looking for a mini fridge near campus', meta: 'Pickup today · 4 offers', price: 'Under $80' },
-  { tag: 'CAMPUS', title: 'Need two people to help move a desk upstairs', meta: 'Today · 4 nearby', price: '$30' },
-  { tag: 'NEW HERE', title: 'First week here — where do people actually study late?', meta: '8 replies · 3 spots saved', price: 'Local advice' }
-];
-
 const logoStyle = {
   width: 38,
   height: 38,
@@ -46,7 +37,7 @@ export default function Home() {
           <span>Aspire 101</span>
         </a>
         <nav className="navLinks" aria-label="Primary navigation">
-          <a href="#nearby">Near you</a>
+          <a href="#nearby">Browse requests</a>
           <a href="#how">How it works</a>
           <a href="#work-with-us">Work with Aspire</a>
         </nav>
@@ -64,16 +55,16 @@ export default function Home() {
           <p className="eyebrow"><span className="eyebrowDot" /> THE COLLEGE REQUEST NETWORK</p>
           <h1>Need something?<br /><span>Ask campus.</span></h1>
           <p className="heroCopy">
-            From your first week on campus to finals, post what you need, find students who can help, and turn an unfamiliar place into people you know.
+            Aspire is where college students post what they need — study help, rides, moving help, items, teammates, or local advice — and connect with nearby students when both sides choose to.
           </p>
           <div className="heroCta">
             <a className="button buttonGold" href="/login">Log in to post <span>↗</span></a>
-            <a className="quietLink" href="#nearby">See requests near you <span>↓</span></a>
+            <a className="quietLink" href="#nearby">Browse requests near you <span>↓</span></a>
           </div>
           <div className="heroMiniProof">
-            <span>Browse before logging in.</span>
-            <span>Mutual connection before private chat.</span>
-            <span>One reputation across Aspire.</span>
+            <span>Browse nearby requests.</span>
+            <span>Respond when you can help.</span>
+            <span>Connect only when both sides agree.</span>
           </div>
         </div>
 
@@ -166,63 +157,29 @@ export default function Home() {
         <RequestJourney requestText={previewRequest} />
       </div>
 
-      <FeatureTour />
-
-      <section id="requests" className="requestWall shell">
-        <div className="sectionHeading">
-          <p className="eyebrow">REAL COLLEGE LIFE IS MESSY. GOOD.</p>
-          <h2>One place for the random stuff that makes campus work.</h2>
-          <p>Not just rides. Not just tutoring. Aspire is built around the simple idea that students constantly need things — and other students can often help.</p>
-        </div>
-
-        <div className="requestGrid">
-          {examples.map((item, index) => (
-            <article className={`requestTile requestTile${index + 1}`} key={item.title}>
-              <div className="requestTileTop"><span>{item.tag}</span><span>↗</span></div>
-              <h3>{item.title}</h3>
-              <div className="requestTileBottom"><span>{item.meta}</span><strong>{item.price}</strong></div>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <section id="how" className="how shell">
         <div className="howIntro">
-          <p className="eyebrow">THE ASPIRE FLOW</p>
-          <h2>Browse.<br />Respond.<br /><span>Choose each other.</span></h2>
+          <p className="eyebrow">HOW ASPIRE WORKS</p>
+          <h2>Post.<br />Respond.<br /><span>Choose each other.</span></h2>
         </div>
 
         <div className="howSteps">
           <article>
             <div className="stepNumber">01</div>
-            <div><h3>Find requests around you</h3><p>Browse by campus, location, distance, category, keyword, or budget. Public discovery stays simple.</p></div>
+            <div><h3>Post what you need</h3><p>Ask for study help, a ride, moving help, an item, a teammate, or something else happening around campus.</p></div>
           </article>
           <article>
             <div className="stepNumber">02</div>
-            <div><h3>Send a response</h3><p>No instant first-click claim. Tell the requester you can help, join, answer, or make an offer. The requester chooses who they want to connect with.</p></div>
+            <div><h3>Students respond</h3><p>People nearby can answer, offer help, join, or make an offer. Nobody instantly claims you or your request.</p></div>
           </article>
           <article>
             <div className="stepNumber">03</div>
-            <div><h3>Connect, chat, complete</h3><p>Private chat opens from a real request after a connection is accepted. Coordinate, finish the request, then both sides can review the experience.</p></div>
+            <div><h3>You both choose to connect</h3><p>Once both sides agree, private chat opens so you can coordinate the details and complete the request.</p></div>
           </article>
         </div>
       </section>
 
-      <section className="campusEnergy">
-        <div className="shell campusEnergyInner">
-          <div className="energyCopy">
-            <p className="eyebrow darkEyebrow">BUILT FOR WHEN CAMPUS IS STILL NEW</p>
-            <h2>From “where do I go?”<br />to “I know someone.”</h2>
-            <p>Your first weeks can be full of tiny questions nobody puts in an orientation guide. Aspire turns those moments into help, local knowledge, and connections — then stays useful long after campus stops feeling new.</p>
-          </div>
-          <div className="energyStack" aria-hidden="true">
-            <div className="energyCard cardA"><span>need a gym buddy</span><b>OPEN</b></div>
-            <div className="energyCard cardB"><span>selling desk lamp</span><b>$12</b></div>
-            <div className="energyCard cardC"><span>hackathon teammate?</span><b>CS + DESIGN</b></div>
-            <div className="energyCard cardD"><span>best late study spot?</span><b>8 REPLIES</b></div>
-          </div>
-        </div>
-      </section>
+      <FeatureTour />
 
       <section id="home" className="homeMission">
         <div className="homeMissionInner shell">
