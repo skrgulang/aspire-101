@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { aspireLogo } from './logo';
+import RequestJourney from './RequestJourney';
 
 const categories = ['Anything', 'Study', 'Ride', 'Buy & Sell', 'Projects', 'Campus'];
 
@@ -70,9 +71,9 @@ export default function Home() {
           <span>Aspire 101</span>
         </a>
         <nav className="navLinks" aria-label="Primary navigation">
+          <a href="#journey">Request journey</a>
           <a href="#requests">Requests</a>
           <a href="#possibilities">What you can do</a>
-          <a href="#how">How it works</a>
         </nav>
         <div className="navActions">
           <a className="textLink" href="/login">Log in</a>
@@ -92,7 +93,7 @@ export default function Home() {
           </p>
           <div className="heroCta">
             <a className="button buttonGold" href="#request-demo">Post a request <span>↗</span></a>
-            <a className="quietLink" href="#requests">See what students ask for <span>↓</span></a>
+            <a className="quietLink" href="#journey">Watch a request move <span>↓</span></a>
           </div>
           <div className="heroMiniProof">
             <span>Students helping students.</span>
@@ -182,6 +183,10 @@ export default function Home() {
           <span>POST IT ON ASPIRE.</span>
         </div>
       </section>
+
+      <div id="journey">
+        <RequestJourney requestText={previewRequest} />
+      </div>
 
       <section id="requests" className="requestWall shell">
         <div className="sectionHeading">
@@ -273,12 +278,6 @@ export default function Home() {
           <a className="quietLink" href="#requests">Browse examples</a>
         </div>
       </section>
-
-      <footer className="footer shell">
-        <a className="brand" href="#top"><img src={aspireLogo} alt="" style={logoStyle} /><span>Aspire 101</span></a>
-        <p>Post what you need. Find who can help.</p>
-        <div><a href="#requests">Requests</a><a href="#how">How it works</a><a href="/about">About</a></div>
-      </footer>
     </main>
   );
 }
