@@ -5,7 +5,7 @@ export default function SiteFooter() {
     <footer className="siteFooter">
       <div className="footerMain shell">
         <section className="footerLead">
-          <a className="footerBrand" href="#top" aria-label="Aspire 101 home">
+          <a className="footerBrand" href="/#top" aria-label="Aspire 101 home">
             <img src={aspireLogo} alt="" />
             <span>Aspire 101</span>
           </a>
@@ -31,9 +31,9 @@ export default function SiteFooter() {
         <section className="footerColumn">
           <h4>Explore</h4>
           <nav>
-            <a href="#requests">Requests</a>
-            <a href="#possibilities">What you can do</a>
-            <a href="#how">How it works</a>
+            <a href="/#nearby">Near you</a>
+            <a href="/#features">Campus stories</a>
+            <a href="/#how">How it works</a>
             <a href="/signup">Get started</a>
           </nav>
         </section>
@@ -41,10 +41,11 @@ export default function SiteFooter() {
         <section className="footerColumn">
           <h4>Company</h4>
           <nav>
-            <a href="/about">About</a>
-            <a href="/support">Support</a>
+            <a href="/#home">About Aspire</a>
+            <a href="/#work-with-us">Work with Aspire</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
+            <a href="/guidelines">Community Guidelines</a>
           </nav>
         </section>
 
@@ -62,7 +63,8 @@ export default function SiteFooter() {
         <p>© 2026 Aspire 101</p>
         <div className="footerLegal">
           <a href="/privacy">Privacy Policy</a>
-          <a href="/terms">Terms</a>
+          <a href="/terms">Terms of Service</a>
+          <a href="/guidelines">Guidelines</a>
         </div>
         <div className="footerTagline"><i /> Post what you need. Find who can help.</div>
       </div>
