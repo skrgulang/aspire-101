@@ -2,13 +2,12 @@
 
 import { FormEvent, useState } from 'react';
 import { aspireLogo } from './logo';
-import RequestJourney from './RequestJourney';
 import FeatureTour from './FeatureTour';
 import NearYou from './NearYou';
 import WorkWithAspire from './WorkWithAspire';
 import FAQ from './FAQ';
-import CampusGuide from './CampusGuide';
 import TrustLoop from './TrustLoop';
+import GlobalJourney from './GlobalJourney';
 
 const categories = ['Anything', 'Study', 'Ride', 'Buy & Sell', 'Projects', 'Campus'];
 
@@ -143,48 +142,47 @@ export default function Home() {
         </div>
       </section>
 
-      <NearYou />
+      <div className="journeyWorld">
+        <GlobalJourney />
 
-      <div id="journey">
-        <RequestJourney requestText={previewRequest} />
+        <NearYou />
+
+        <section id="how" className="how shell">
+          <div className="howIntro">
+            <p className="eyebrow">HOW ASPIRE WORKS</p>
+            <h2>Post.<br />Respond.<br /><span>Connect.</span></h2>
+          </div>
+
+          <div className="howSteps">
+            <article>
+              <div className="stepNumber">01</div>
+              <div><h3>Post what you need</h3><p>Help, rides, items, classmates, projects, or local advice.</p></div>
+            </article>
+            <article>
+              <div className="stepNumber">02</div>
+              <div><h3>Students respond</h3><p>People nearby answer, offer help, join, or make an offer.</p></div>
+            </article>
+            <article>
+              <div className="stepNumber">03</div>
+              <div><h3>You both connect</h3><p>When both sides agree, private chat opens.</p></div>
+            </article>
+          </div>
+        </section>
+
+        <FeatureTour />
+
+        <section id="home" className="homeMission">
+          <div className="homeMissionInner shell">
+            <p className="eyebrow">WHY ASPIRE</p>
+            <h2>College feels better when you’re not <span>figuring it out alone.</span></h2>
+            <p>One request can turn an unfamiliar campus into people you know.</p>
+          </div>
+        </section>
+
+        <TrustLoop />
+        <WorkWithAspire />
+        <FAQ />
       </div>
-
-      <section id="how" className="how shell">
-        <div className="howIntro">
-          <p className="eyebrow">HOW ASPIRE WORKS</p>
-          <h2>Post.<br />Respond.<br /><span>Connect.</span></h2>
-        </div>
-
-        <div className="howSteps">
-          <article>
-            <div className="stepNumber">01</div>
-            <div><h3>Post what you need</h3><p>Help, rides, items, classmates, projects, or local advice.</p></div>
-          </article>
-          <article>
-            <div className="stepNumber">02</div>
-            <div><h3>Students respond</h3><p>People nearby answer, offer help, join, or make an offer.</p></div>
-          </article>
-          <article>
-            <div className="stepNumber">03</div>
-            <div><h3>You both connect</h3><p>When both sides agree, private chat opens.</p></div>
-          </article>
-        </div>
-      </section>
-
-      <FeatureTour />
-
-      <section id="home" className="homeMission">
-        <div className="homeMissionInner shell">
-          <p className="eyebrow">WHY ASPIRE</p>
-          <h2>College feels better when you’re not <span>figuring it out alone.</span></h2>
-          <p>One request can turn an unfamiliar campus into people you know.</p>
-        </div>
-      </section>
-
-      <TrustLoop />
-      <WorkWithAspire />
-      <FAQ />
-      <CampusGuide />
     </main>
   );
 }
