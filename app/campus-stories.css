@@ -1,12 +1,84 @@
 .campusStories {
   position: relative;
-  padding: 108px 0 120px;
+  padding: 116px 0 126px;
   background:
-    radial-gradient(circle at 50% 0%, rgba(255,194,28,.10), transparent 30rem),
-    #0a0907;
+    radial-gradient(circle at var(--stories-x, 50%) var(--stories-y, 45%), rgba(255,194,28,.13), transparent 24rem),
+    radial-gradient(circle at 12% 18%, rgba(112,139,99,.08), transparent 22rem),
+    radial-gradient(circle at 88% 78%, rgba(255,228,168,.07), transparent 26rem),
+    #090806;
   overflow: hidden;
   border-block: 1px solid rgba(255,255,255,.07);
+  isolation: isolate;
 }
+
+.campusStories::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.12) 1px, transparent 1.5px),
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 44px 44px, 88px 88px, 88px 88px;
+  opacity: .22;
+  mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+  pointer-events: none;
+  z-index: -3;
+}
+
+.campusStories::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(118deg, rgba(255,255,255,.014) 0 1px, transparent 1px 12px);
+  opacity: .28;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  z-index: -2;
+}
+
+.storyBgWords {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  color: rgba(255,255,255,.022);
+  font-size: clamp(130px, 16vw, 280px);
+  font-weight: 950;
+  line-height: .78;
+  letter-spacing: -.08em;
+}
+
+.storyBgWords span { position: absolute; white-space: nowrap; }
+.storyBgWords span:nth-child(1) { top: 10%; left: -3%; transform: rotate(-8deg); }
+.storyBgWords span:nth-child(2) { top: 40%; right: -8%; transform: rotate(7deg); }
+.storyBgWords span:nth-child(3) { bottom: 2%; left: 9%; transform: rotate(-4deg); }
+
+.storyDoodles { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.storyDoodles span {
+  position: absolute;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,194,28,.18);
+  border-radius: 999px;
+  background: rgba(16,13,8,.62);
+  color: rgba(255,229,157,.58);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  backdrop-filter: blur(10px);
+  animation: storyFloat 5s ease-in-out infinite alternate;
+}
+.doodleA { left: 4%; top: 37%; transform: rotate(-8deg); }
+.doodleB { right: 4%; top: 25%; transform: rotate(8deg); animation-delay: -.8s !important; }
+.doodleC { left: 8%; bottom: 12%; transform: rotate(5deg); animation-delay: -1.8s !important; }
+.doodleD { right: 8%; bottom: 18%; transform: rotate(-5deg); animation-delay: -2.6s !important; }
+@keyframes storyFloat { from { translate: 0 0; } to { translate: 0 -9px; } }
+
+.campusStoriesTop,
+.storyUseCases,
+.aspireAction,
+.campusStoriesBottom { position: relative; z-index: 3; }
 
 .campusStoriesTop {
   display: flex;
@@ -17,10 +89,25 @@
 
 .campusStoriesTop h2 {
   margin: 16px 0 0;
-  max-width: 820px;
-  font-size: clamp(48px, 6vw, 88px);
-  line-height: .96;
-  letter-spacing: -.06em;
+  max-width: 880px;
+  font-size: clamp(52px, 6.6vw, 96px);
+  line-height: .92;
+  letter-spacing: -.065em;
+}
+
+.campusStoriesTop h2 span {
+  color: var(--gold);
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 650;
+}
+
+.storiesLead {
+  max-width: 680px;
+  margin: 24px 0 0;
+  color: #9d9587;
+  font-size: 15px;
+  line-height: 1.7;
 }
 
 .storyControls {
@@ -28,28 +115,28 @@
   align-items: center;
   gap: 10px;
   flex: 0 0 auto;
+  margin-bottom: 10px;
 }
 
 .storyControls button {
-  width: 46px;
-  height: 46px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.035);
   color: #fff6df;
   font-size: 18px;
   cursor: pointer;
-  transition: .25s ease;
+  transition: transform .25s ease, background .25s ease, border-color .25s ease, color .25s ease;
 }
-
 .storyControls button:hover,
 .storyControls button:focus-visible {
   color: #0b0905;
   background: var(--gold);
   border-color: var(--gold);
+  transform: translateY(-2px) scale(1.04);
   outline: none;
 }
-
 .storyControls span {
   min-width: 62px;
   color: #756d60;
@@ -59,41 +146,160 @@
   text-align: center;
 }
 
-.campusStoryRail {
+.storyUseCases {
   display: flex;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 38px;
+}
+.storyUseCases button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.025);
+  color: #8d8578;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .09em;
+  cursor: pointer;
+  transition: .25s ease;
+}
+.storyUseCases button i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3d382f;
+  transition: .25s ease;
+}
+.storyUseCases button:hover,
+.storyUseCases button.active {
+  color: #0b0905;
+  background: var(--gold);
+  border-color: var(--gold);
+  transform: translateY(-2px);
+}
+.storyUseCases button.active i,
+.storyUseCases button:hover i { background: #0b0905; }
+
+.aspireAction {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr auto 1fr auto 1fr;
+  gap: 14px;
+  align-items: stretch;
+  margin-top: 26px;
+  padding: 16px;
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(14,12,8,.70);
+  box-shadow: 0 26px 80px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.025);
+  backdrop-filter: blur(18px);
+}
+
+.actionIntro,
+.actionStep {
+  min-width: 0;
+  padding: 16px 17px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(255,255,255,.055);
+}
+.actionIntro > span,
+.actionStep > span {
+  display: block;
+  color: var(--gold);
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .14em;
+}
+.actionIntro strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff4da;
+  font-size: 20px;
+  letter-spacing: -.03em;
+}
+.actionIntro p {
+  margin: 8px 0 0;
+  color: #7f776a;
+  font-size: 10px;
+  line-height: 1.5;
+}
+.actionStep { position: relative; overflow: hidden; }
+.actionStep b {
+  position: absolute;
+  right: 12px;
+  top: 9px;
+  color: rgba(255,255,255,.10);
+  font-size: 28px;
+  letter-spacing: -.05em;
+}
+.actionStep strong {
+  display: block;
+  margin-top: 18px;
+  color: #eee4d2;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.actionResult {
+  background: linear-gradient(145deg, rgba(255,194,28,.96), rgba(255,218,93,.94));
+  border-color: rgba(255,214,95,.7);
+}
+.actionResult > span,
+.actionResult strong { color: #0b0905; }
+.actionResult b { color: rgba(0,0,0,.15); }
+.actionArrow {
+  display: grid;
+  place-items: center;
+  color: #5c554a;
+  font-size: 18px;
+}
+
+.campusStoryRail {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  gap: 20px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
-  padding: 42px max(32px, calc((100vw - 1240px) / 2)) 22px;
+  padding: 46px max(32px, calc((100vw - 1240px) / 2)) 28px;
+  perspective: 1200px;
 }
-
 .campusStoryRail::-webkit-scrollbar { display: none; }
 
 .campusStoryCard {
   position: relative;
-  flex: 0 0 clamp(280px, 27vw, 410px);
-  min-height: 570px;
-  border-radius: 28px;
+  flex: 0 0 clamp(290px, 27vw, 410px);
+  min-height: 590px;
+  border-radius: 30px;
   overflow: hidden;
   scroll-snap-align: center;
-  border: 1px solid rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.10);
   background: #15120d;
-  transform: scale(.96) rotate(-1deg);
-  opacity: .72;
-  transition: transform .45s cubic-bezier(.2,.8,.2,1), opacity .35s ease, border-color .35s ease;
+  transform: scale(.94) rotate(-2deg) translateY(10px);
+  opacity: .62;
+  transition:
+    transform .5s cubic-bezier(.16,1,.3,1),
+    opacity .35s ease,
+    border-color .35s ease,
+    box-shadow .35s ease,
+    filter .35s ease;
   cursor: pointer;
+  filter: saturate(.72);
 }
-
-.campusStoryCard:nth-child(even) { transform: scale(.96) rotate(1deg); }
-
+.campusStoryCard:nth-child(even) { transform: scale(.94) rotate(2deg) translateY(16px); }
 .campusStoryCard.active,
 .campusStoryCard:focus-visible {
   opacity: 1;
-  transform: scale(1) rotate(0deg);
-  border-color: rgba(255,194,28,.45);
+  transform: scale(1) rotate(0deg) translateY(0);
+  border-color: rgba(255,194,28,.48);
+  box-shadow: 0 28px 80px rgba(0,0,0,.32), 0 0 0 1px rgba(255,194,28,.06);
   outline: none;
+  filter: saturate(1);
 }
 
 .campusStoryCard img {
@@ -102,54 +308,66 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: saturate(.88) contrast(1.04) brightness(.82);
-  transform: scale(1.03);
-  transition: transform .7s cubic-bezier(.2,.8,.2,1), filter .45s ease;
+  filter: saturate(.85) contrast(1.05) brightness(.76);
+  transform: scale(1.035);
+  transition: transform .8s cubic-bezier(.16,1,.3,1), filter .5s ease;
 }
-
-.campusStoryCard.active img { transform: scale(1.08); filter: saturate(1) contrast(1.02) brightness(.9); }
+.campusStoryCard.active img { transform: scale(1.10); filter: saturate(1.02) contrast(1.03) brightness(.88); }
 
 .storyShade {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.10) 40%, rgba(0,0,0,.78) 100%),
-    linear-gradient(120deg, rgba(255,194,28,.08), transparent 42%);
+    linear-gradient(180deg, rgba(0,0,0,.02) 0%, rgba(0,0,0,.10) 37%, rgba(0,0,0,.86) 100%),
+    linear-gradient(120deg, rgba(255,194,28,.13), transparent 44%);
 }
 
-.storyFeature {
+.storyFeature,
+.storyCardHint {
   position: absolute;
-  left: 18px;
+  z-index: 3;
   top: 18px;
-  z-index: 2;
   padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(9,8,6,.76);
-  border: 1px solid rgba(255,255,255,.16);
-  color: var(--gold);
   backdrop-filter: blur(12px);
   font-size: 8px;
   font-weight: 950;
-  letter-spacing: .14em;
+  letter-spacing: .13em;
 }
+.storyFeature {
+  left: 18px;
+  background: rgba(9,8,6,.74);
+  border: 1px solid rgba(255,255,255,.15);
+  color: var(--gold);
+}
+.storyCardHint {
+  right: 18px;
+  background: rgba(255,248,230,.90);
+  color: #0c0905;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: .3s ease;
+}
+.campusStoryCard.active .storyCardHint,
+.campusStoryCard:hover .storyCardHint { opacity: 1; transform: translateY(0); }
 
 .storyQuote {
   position: absolute;
   z-index: 3;
-  left: 18px;
-  right: 18px;
-  bottom: 18px;
-  padding: 18px;
-  border-radius: 20px;
-  background: rgba(255,248,230,.96);
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  padding: 19px;
+  border-radius: 21px;
+  background: rgba(255,248,230,.94);
   color: #0d0a05;
   box-shadow: 0 16px 45px rgba(0,0,0,.24);
-  transform: translateY(8px);
-  transition: transform .35s ease;
+  transform: translateY(9px) rotate(-.4deg);
+  transition: transform .4s cubic-bezier(.16,1,.3,1), background .35s ease;
+  backdrop-filter: blur(14px);
 }
-
-.campusStoryCard.active .storyQuote { transform: translateY(0); }
-
+.campusStoryCard:nth-child(even) .storyQuote { transform: translateY(9px) rotate(.4deg); }
+.campusStoryCard.active .storyQuote { transform: translateY(0) rotate(0deg); background: rgba(255,248,230,.98); }
 .storyQuote > span {
   display: block;
   color: #8c7441;
@@ -157,20 +375,28 @@
   font-weight: 900;
   letter-spacing: .06em;
 }
-
 .storyQuote strong {
   display: block;
   margin-top: 9px;
   font-size: clamp(18px, 1.7vw, 26px);
-  line-height: 1.12;
-  letter-spacing: -.035em;
+  line-height: 1.11;
+  letter-spacing: -.038em;
 }
-
-.storyQuote p {
-  margin: 10px 0 0;
-  color: #6c6255;
-  font-size: 11px;
-  line-height: 1.5;
+.storyTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 13px;
+}
+.storyTags em {
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: rgba(255,194,28,.14);
+  color: #6d571f;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 850;
 }
 
 .campusStoriesBottom {
@@ -178,17 +404,16 @@
   justify-content: space-between;
   gap: 28px;
   align-items: end;
-  padding-top: 20px;
+  padding-top: 18px;
 }
-
 .campusStoriesBottom p {
-  max-width: 720px;
+  max-width: 760px;
   margin: 0;
   color: #b8ae9e;
-  font-size: 16px;
+  font-size: 17px;
   line-height: 1.7;
 }
-
+.campusStoriesBottom p strong { color: #fff0c4; }
 .campusStoriesBottom small {
   max-width: 410px;
   color: #5f594f;
@@ -197,18 +422,51 @@
   text-align: right;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .campusStoryCard:not(.active):hover {
+    opacity: .86;
+    transform: scale(.97) rotate(0deg) translateY(-4px);
+    border-color: rgba(255,194,28,.25);
+  }
+  .campusStoryCard:hover img { transform: scale(1.08); }
+}
+
+@media (max-width: 1050px) {
+  .aspireAction { grid-template-columns: 1fr 1fr 1fr; }
+  .actionIntro { grid-column: 1 / -1; }
+  .actionArrow { display: none; }
+}
+
 @media (max-width: 800px) {
-  .campusStories { padding: 82px 0 92px; }
+  .campusStories { padding: 86px 0 96px; }
   .campusStoriesTop { align-items: start; flex-direction: column; }
+  .campusStoriesTop h2 { font-size: clamp(46px, 12vw, 72px); }
+  .storyControls { margin-bottom: 0; }
+  .storyDoodles { opacity: .45; }
+  .storyUseCases { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  .storyUseCases::-webkit-scrollbar { display: none; }
+  .aspireAction { grid-template-columns: 1fr; }
+  .actionIntro { grid-column: auto; }
   .campusStoryRail { padding-inline: 20px; }
-  .campusStoryCard { flex-basis: min(82vw, 360px); min-height: 520px; }
+  .campusStoryCard { flex-basis: min(84vw, 360px); min-height: 540px; }
   .campusStoriesBottom { flex-direction: column; align-items: start; }
   .campusStoriesBottom small { text-align: left; }
 }
 
+@media (max-width: 520px) {
+  .campusStories { padding-top: 74px; }
+  .storiesLead { font-size: 13px; }
+  .campusStoryCard { min-height: 510px; }
+  .storyCardHint { display: none; }
+  .storyQuote strong { font-size: 19px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .storyDoodles span,
   .campusStoryCard,
   .campusStoryCard img,
   .storyQuote,
-  .storyControls button { transition: none !important; }
+  .storyCardHint,
+  .storyControls button,
+  .storyUseCases button { animation: none !important; transition: none !important; }
 }
