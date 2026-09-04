@@ -37,9 +37,9 @@ export default function Home() {
           <span>Aspire 101</span>
         </a>
         <nav className="navLinks" aria-label="Primary navigation">
-          <a href="#nearby">Browse requests</a>
+          <a href="#nearby">Browse</a>
           <a href="#how">How it works</a>
-          <a href="#work-with-us">Work with Aspire</a>
+          <a href="#ambassadors">Ambassadors</a>
         </nav>
         <div className="navActions">
           <a className="textLink" href="/login">Log in</a>
@@ -54,17 +54,9 @@ export default function Home() {
         <div className="heroCopyBlock">
           <p className="eyebrow"><span className="eyebrowDot" /> THE COLLEGE REQUEST NETWORK</p>
           <h1>Need something?<br /><span>Ask campus.</span></h1>
-          <p className="heroCopy">
-            Aspire is where college students post what they need — study help, rides, moving help, items, teammates, or local advice — and connect with nearby students when both sides choose to.
-          </p>
+          <p className="heroCopy">Post what you need. Students nearby can respond. You choose who to connect with.</p>
           <div className="heroCta">
-            <a className="button buttonGold" href="/login">Log in to post <span>↗</span></a>
-            <a className="quietLink" href="#nearby">Browse requests near you <span>↓</span></a>
-          </div>
-          <div className="heroMiniProof">
-            <span>Browse nearby requests.</span>
-            <span>Respond when you can help.</span>
-            <span>Connect only when both sides agree.</span>
+            <a className="button buttonGold" href="#nearby">Browse requests <span>↓</span></a>
           </div>
         </div>
 
@@ -107,7 +99,7 @@ export default function Home() {
                 <span>◷ Today</span>
                 <span>#{activeCategory}</span>
               </div>
-              <button className="button buttonGold" type="submit">See a preview <span>→</span></button>
+              <button className="button buttonGold" type="submit">Preview <span>→</span></button>
             </div>
           </form>
 
@@ -160,21 +152,21 @@ export default function Home() {
       <section id="how" className="how shell">
         <div className="howIntro">
           <p className="eyebrow">HOW ASPIRE WORKS</p>
-          <h2>Post.<br />Respond.<br /><span>Choose each other.</span></h2>
+          <h2>Post.<br />Respond.<br /><span>Connect.</span></h2>
         </div>
 
         <div className="howSteps">
           <article>
             <div className="stepNumber">01</div>
-            <div><h3>Post what you need</h3><p>Ask for study help, a ride, moving help, an item, a teammate, or something else happening around campus.</p></div>
+            <div><h3>Post what you need</h3><p>Help, rides, items, classmates, projects, or local advice.</p></div>
           </article>
           <article>
             <div className="stepNumber">02</div>
-            <div><h3>Students respond</h3><p>People nearby can answer, offer help, join, or make an offer. Nobody instantly claims you or your request.</p></div>
+            <div><h3>Students respond</h3><p>People nearby answer, offer help, join, or make an offer.</p></div>
           </article>
           <article>
             <div className="stepNumber">03</div>
-            <div><h3>You both choose to connect</h3><p>Once both sides agree, private chat opens so you can coordinate the details and complete the request.</p></div>
+            <div><h3>You both connect</h3><p>When both sides agree, private chat opens.</p></div>
           </article>
         </div>
       </section>
@@ -183,26 +175,14 @@ export default function Home() {
 
       <section id="home" className="homeMission">
         <div className="homeMissionInner shell">
-          <p className="eyebrow">WHY ASPIRE EXISTS</p>
+          <p className="eyebrow">WHY ASPIRE</p>
           <h2>College feels better when you’re not <span>figuring it out alone.</span></h2>
-          <p>For a lot of students, arriving on campus means starting from zero: new streets, new routines, and no idea who to ask. Aspire is meant to make that transition warmer — one request, one helpful person, and one familiar connection at a time.</p>
+          <p>One request can turn an unfamiliar campus into people you know.</p>
         </div>
       </section>
 
       <TrustLoop />
       <WorkWithAspire />
-
-      <section className="finalCta shell">
-        <div className="finalLogo"><img src={aspireLogo} alt="Aspire 101" /></div>
-        <p className="eyebrow">DON’T FIGURE OUT CAMPUS ALONE.</p>
-        <h2>Find help. Find people. Feel at home.</h2>
-        <p>Browse what’s happening nearby. When you’re ready to ask, log in and put your own request into motion.</p>
-        <div className="finalActions">
-          <a className="button buttonGold" href="/login">Log in to post <span>↗</span></a>
-          <a className="quietLink" href="#nearby">Browse near you</a>
-        </div>
-      </section>
-
       <FAQ />
       <CampusGuide />
     </main>
