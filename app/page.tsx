@@ -13,7 +13,7 @@ const examples = [
   { tag: 'PROJECT', title: 'Need a designer for a weekend hackathon team', meta: 'This weekend · 5 replies', price: 'Team up' },
   { tag: 'MARKET', title: 'Looking for a mini fridge near campus', meta: 'Pickup today · 4 offers', price: 'Under $80' },
   { tag: 'CAMPUS', title: 'Need two people to help move a desk upstairs', meta: 'Today · 4 nearby', price: '$30' },
-  { tag: 'CAREER', title: 'Can someone review my resume for product roles?', meta: 'Remote · 6 replies', price: '$15' }
+  { tag: 'NEW HERE', title: 'First week here — where do people actually study late?', meta: '8 replies · 3 spots saved', price: 'Local advice' }
 ];
 
 const logoStyle = {
@@ -43,7 +43,7 @@ export default function Home() {
         <nav className="navLinks" aria-label="Primary navigation">
           <a href="#journey">Request journey</a>
           <a href="#features">Everything Aspire</a>
-          <a href="#requests">Requests</a>
+          <a href="#home">Why Aspire</a>
         </nav>
         <div className="navActions">
           <a className="textLink" href="/login">Log in</a>
@@ -59,21 +59,21 @@ export default function Home() {
           <p className="eyebrow"><span className="eyebrowDot" /> THE COLLEGE REQUEST NETWORK</p>
           <h1>Need something?<br /><span>Ask campus.</span></h1>
           <p className="heroCopy">
-            Post what you need, find students who can help, and get things moving — from tutoring and rides to projects, campus life, and everything in between.
+            From your first week on campus to finals, post what you need, find students who can help, and turn an unfamiliar place into people you know.
           </p>
           <div className="heroCta">
             <a className="button buttonGold" href="#request-demo">Post a request <span>↗</span></a>
-            <a className="quietLink" href="#journey">Watch a request move <span>↓</span></a>
+            <a className="quietLink" href="#journey">Walk the campus journey <span>↓</span></a>
           </div>
           <div className="heroMiniProof">
             <span>Students helping students.</span>
-            <span>Request-first.</span>
-            <span>Built for college life.</span>
+            <span>Useful from move-in week onward.</span>
+            <span>Feel at home faster.</span>
           </div>
         </div>
 
         <div className="requestStage" id="request-demo">
-          <div className="stageTape stageTapeOne">CAMPUS MODE</div>
+          <div className="stageTape stageTapeOne">FIRST WEEK · ANY WEEK</div>
           <div className="stageTape stageTapeTwo">OPEN REQUESTS</div>
 
           <form className="requestComposer" onSubmit={previewMatch}>
@@ -145,12 +145,13 @@ export default function Home() {
 
       <section className="goldTicker" aria-label="Example Aspire requests">
         <div>
+          <span>NEW TO CAMPUS?</span><b>✦</b>
           <span>NEED A PHOTOGRAPHER?</span><b>✦</b>
           <span>LOOKING FOR A PROJECT PARTNER?</span><b>✦</b>
           <span>RIDE TO THE AIRPORT?</span><b>✦</b>
           <span>SELLING A MINI FRIDGE?</span><b>✦</b>
           <span>NEED TUTORING?</span><b>✦</b>
-          <span>POST IT ON ASPIRE.</span>
+          <span>ASK CAMPUS.</span>
         </div>
       </section>
 
@@ -203,33 +204,41 @@ export default function Home() {
       <section className="campusEnergy">
         <div className="shell campusEnergyInner">
           <div className="energyCopy">
-            <p className="eyebrow darkEyebrow">BUILT TO FEEL LIKE COLLEGE</p>
-            <h2>Useful enough for Monday.<br />Social enough for Friday.</h2>
-            <p>Aspire should feel alive because campus is alive. Practical requests can turn into collaborators, friendships, opportunities, or simply a much easier day.</p>
+            <p className="eyebrow darkEyebrow">BUILT FOR WHEN CAMPUS IS STILL NEW</p>
+            <h2>From “where do I go?”<br />to “I know someone.”</h2>
+            <p>Your first weeks can be full of tiny questions nobody puts in an orientation guide. Aspire turns those moments into help, local knowledge, and connections — then stays useful long after campus stops feeling new.</p>
           </div>
           <div className="energyStack" aria-hidden="true">
             <div className="energyCard cardA"><span>need a gym buddy</span><b>OPEN</b></div>
             <div className="energyCard cardB"><span>selling desk lamp</span><b>$12</b></div>
             <div className="energyCard cardC"><span>hackathon teammate?</span><b>CS + DESIGN</b></div>
-            <div className="energyCard cardD"><span>resume feedback</span><b>TONIGHT</b></div>
+            <div className="energyCard cardD"><span>best late study spot?</span><b>8 REPLIES</b></div>
           </div>
         </div>
       </section>
 
+      <section id="home" className="homeMission">
+        <div className="homeMissionInner shell">
+          <p className="eyebrow">WHY ASPIRE EXISTS</p>
+          <h2>College feels better when you’re not <span>figuring it out alone.</span></h2>
+          <p>For a lot of students, arriving on campus means starting from zero: new streets, new routines, and no idea who to ask. Aspire is meant to make that transition warmer — one request, one helpful person, and one familiar connection at a time.</p>
+        </div>
+      </section>
+
       <section className="trust shell">
-        <div className="trustItem"><span>01</span><h3>College-focused</h3><p>Designed around student needs and the rhythms of campus life.</p></div>
-        <div className="trustItem"><span>02</span><h3>Request-first</h3><p>Start with what you need instead of digging through endless feeds.</p></div>
-        <div className="trustItem"><span>03</span><h3>Identity + reputation</h3><p>Profiles and trust signals can make C2C interactions feel more accountable.</p></div>
+        <div className="trustItem"><span>01</span><h3>College-focused</h3><p>Designed around student needs from move-in week to finals and everything between.</p></div>
+        <div className="trustItem"><span>02</span><h3>Request-first</h3><p>Start with what you need instead of digging through endless feeds and scattered chats.</p></div>
+        <div className="trustItem"><span>03</span><h3>Identity + reputation</h3><p>Profiles and trust signals can make C2C interactions feel more accountable and more comfortable.</p></div>
       </section>
 
       <section className="finalCta shell">
         <div className="finalLogo"><img src={aspireLogo} alt="Aspire 101" /></div>
-        <p className="eyebrow">YOUR CAMPUS CAN PROBABLY HELP.</p>
-        <h2>So... what do you need?</h2>
-        <p>Start with one request. See where it takes you.</p>
+        <p className="eyebrow">DON’T FIGURE OUT CAMPUS ALONE.</p>
+        <h2>Find help. Find people. Feel at home.</h2>
+        <p>Start with one request. Let campus feel a little smaller from there.</p>
         <div className="finalActions">
-          <a className="button buttonGold" href="/signup">Post your first request <span>↗</span></a>
-          <a className="quietLink" href="#requests">Browse examples</a>
+          <a className="button buttonGold" href="/signup">Start with a request <span>↗</span></a>
+          <a className="quietLink" href="#requests">See what students ask for</a>
         </div>
       </section>
     </main>
