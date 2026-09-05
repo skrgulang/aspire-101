@@ -74,6 +74,16 @@ export async function confirmConnectionCompletion(connectionId: string) {
   return Number(data || 0);
 }
 
+export async function setConnectionPaymentMethod(connectionId: string, method: 'none' | 'in_person' | 'aspire') {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('set_connection_payment_method', {
+    p_connection_id: connectionId,
+    p_method: method
+  });
+  if (error) throw error;
+  return data as 'none' | 'in_person' | 'aspire';
+}
+
 export async function createAspireCheckout(connectionId: string) {
   const headers = await bearerHeaders();
   const response = await fetch('/api/stripe/payment/create', {
