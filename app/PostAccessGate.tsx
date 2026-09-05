@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
-import { fetchMySchoolVerification, SchoolVerification } from '../lib/supabase/trust';
+import { fetchMySchoolVerification } from '../lib/supabase/trust';
+import type { SchoolVerification } from '../lib/supabase/trust';
 import PostRequestForm from './PostRequestForm';
 
 export default function PostAccessGate() {
