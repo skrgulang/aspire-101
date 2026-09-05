@@ -1,7 +1,8 @@
 'use client';
 
 import { FormEvent, useEffect, useState } from 'react';
-import { fetchMySchoolVerification, SchoolVerification, submitSchoolVerification } from '../lib/supabase/trust';
+import { fetchMySchoolVerification, submitSchoolVerification } from '../lib/supabase/trust';
+import type { SchoolVerification } from '../lib/supabase/trust';
 
 export default function SchoolVerificationCard({ school }: { school: string }) {
   const [verification, setVerification] = useState<SchoolVerification | null>(null);
