@@ -13,6 +13,7 @@ import './global-journey.css';
 import './connection-vibe.css';
 import './trust-simple.css';
 import './auth.css';
+import './auth-school-detection.css';
 import './post.css';
 import './campus-picker.css';
 import './campus-home.css';
