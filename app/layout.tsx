@@ -36,6 +36,7 @@ import './profile-polish.css';
 import './moderator-polish.css';
 import './discover-v2.css';
 import './payments-connect.css';
+import './connection-payments.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
