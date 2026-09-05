@@ -1,0 +1,376 @@
+.marketingWhy,
+.marketingSafetyStage,
+.marketingDataMini,
+.marketingCommunityRules {
+  position: relative;
+  overflow: hidden;
+  padding: 88px max(22px, 4.6vw);
+  border-top: 1px solid rgba(255,255,255,.07);
+  background: #090806;
+}
+
+.marketingWhy {
+  background:
+    radial-gradient(circle at 78% 28%, rgba(255,194,28,.08), transparent 22rem),
+    radial-gradient(circle at 18% 76%, rgba(255,255,255,.025), transparent 20rem),
+    #090806;
+}
+
+.whySticker {
+  position: absolute;
+  right: 7vw;
+  top: 52px;
+  padding: 12px 16px;
+  border-radius: 7px 7px 15px 7px;
+  background: var(--gold);
+  color: #171109;
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 800;
+  transform: rotate(5deg);
+  box-shadow: 0 14px 34px rgba(0,0,0,.32);
+}
+
+.whyIntro { max-width: 850px; }
+.whyIntro > p,
+.safetyHeadline > p,
+.dataMiniHead > p,
+.rulesCopy > p {
+  margin: 0 0 12px;
+  color: #81796d;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .18em;
+}
+.whyIntro h2,
+.safetyHeadline h2,
+.rulesCopy h2 {
+  margin: 0;
+  font-size: clamp(48px, 5.2vw, 82px);
+  line-height: .92;
+  letter-spacing: -.06em;
+}
+.whyIntro h2 em,
+.safetyHeadline h2 em,
+.rulesCopy h2 em {
+  color: var(--gold);
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-weight: 600;
+}
+.whyIntro > span,
+.rulesCopy > span {
+  display: block;
+  margin-top: 18px;
+  max-width: 650px;
+  color: #9e9688;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.whyCompare {
+  margin-top: 44px;
+  display: grid;
+  grid-template-columns: .95fr 1.05fr;
+  gap: 18px;
+  align-items: stretch;
+}
+.whyOld,
+.whyAspireCard {
+  position: relative;
+  min-height: 410px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 30px;
+  overflow: hidden;
+}
+.whyOld {
+  padding: 30px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 34px),
+    #11100d;
+}
+.whyOld small,
+.whyAspireCard small {
+  color: #81796d;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+.whyOld > strong {
+  display: block;
+  margin-top: 12px;
+  max-width: 430px;
+  font-size: clamp(28px, 3vw, 46px);
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+.whyMess { position: absolute; inset: 120px 22px 22px; }
+.whyMess span {
+  position: absolute;
+  padding: 12px 15px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  background: #1a1814;
+  color: #b7b0a3;
+  font-size: 12px;
+  box-shadow: 0 16px 32px rgba(0,0,0,.26);
+}
+.whyMess span:nth-child(1) { left: 2%; top: 10%; transform: rotate(-5deg); }
+.whyMess span:nth-child(2) { right: 2%; top: 24%; transform: rotate(4deg); }
+.whyMess span:nth-child(3) { left: 14%; bottom: 23%; transform: rotate(2deg); }
+.whyMess span:nth-child(4) { right: 10%; bottom: 5%; transform: rotate(-4deg); }
+
+.whyAspireCard {
+  padding: 30px;
+  background:
+    linear-gradient(145deg, rgba(255,194,28,.10), transparent 35%),
+    #0f0d09;
+}
+.whyAspireCard::after {
+  content: 'JUST POST IT ON ASPIRE ↗';
+  position: absolute;
+  right: 24px;
+  top: 26px;
+  color: rgba(255,194,28,.48);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 12px;
+  font-style: italic;
+  transform: rotate(3deg);
+}
+.whyRow {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 14px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.whyRow:last-child { border-bottom: 0; }
+.whyRow i {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #171109;
+  font-style: normal;
+  font-weight: 900;
+}
+.whyRow span { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; }
+.whyRow del { color: #6f685e; font-size: 11px; }
+.whyRow b { color: #f4efe5; font-size: 17px; letter-spacing: -.03em; }
+
+.marketingSafetyStage {
+  min-height: 720px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #0b0a08;
+}
+.safetyBackdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(7,7,6,.35), rgba(7,7,6,.78)),
+    url('https://images.pexels.com/photos/7972544/pexels-photo-7972544.jpeg?auto=compress&cs=tinysrgb&w=1800') center/cover no-repeat;
+  filter: saturate(.72) brightness(.72);
+  transform: scale(1.02);
+}
+.marketingSafetyStage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 52% 42%, rgba(255,194,28,.12), transparent 22rem);
+}
+.safetyHeadline,
+.safetyObjects,
+.safetyMore { position: relative; z-index: 2; }
+.safetyHeadline { text-align: center; }
+.safetyHeadline h2 { font-size: clamp(50px, 5.8vw, 92px); }
+.safetyObjects {
+  margin: 58px auto 0;
+  width: min(1080px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 34px;
+  align-items: start;
+}
+.safetyObject {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: #fff;
+}
+.safetyObject:nth-child(2) { transform: translateY(34px); }
+.safetyObject small { margin-top: 20px; color: #8d8578; font-size: 9px; font-weight: 900; letter-spacing: .16em; }
+.safetyObject strong { margin-top: 8px; font-size: 25px; letter-spacing: -.045em; }
+.safetyObject span { margin-top: 8px; max-width: 250px; color: #b4ac9e; font-size: 11px; line-height: 1.5; }
+.safetySeal,
+.safetyShield {
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255,194,28,.55);
+  border-radius: 50%;
+  background: rgba(11,9,6,.72);
+  color: var(--gold);
+  font-size: 58px;
+  box-shadow: 0 22px 60px rgba(0,0,0,.38), inset 0 0 0 12px rgba(255,194,28,.04);
+  backdrop-filter: blur(12px);
+}
+.safetyPolaroid {
+  width: 170px;
+  min-height: 128px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border: 10px solid #efe6d2;
+  border-bottom-width: 30px;
+  background: #1c1914;
+  color: #f6d46b;
+  font-size: 22px;
+  font-weight: 900;
+  transform: rotate(-4deg);
+  box-shadow: 0 22px 60px rgba(0,0,0,.4);
+}
+.safetyMore {
+  margin: 52px auto 0;
+  padding: 12px 18px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  background: rgba(10,9,7,.55);
+  color: #eee7da;
+  font-size: 11px;
+  font-weight: 850;
+  backdrop-filter: blur(10px);
+}
+
+.marketingDataMini {
+  padding-top: 70px;
+  padding-bottom: 70px;
+  background:
+    radial-gradient(circle at 82% 34%, rgba(255,194,28,.06), transparent 20rem),
+    #090806;
+}
+.dataMiniHead {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 20px;
+  align-items: end;
+}
+.dataMiniHead > p { grid-column: 1 / -1; }
+.dataMiniHead h2 {
+  margin: 0;
+  font-size: clamp(34px, 4vw, 58px);
+  letter-spacing: -.055em;
+}
+.dataMiniHead > span { color: #81796d; font-size: 10px; font-weight: 800; }
+.dataMiniCollage {
+  position: relative;
+  margin-top: 26px;
+  min-height: 330px;
+}
+.dataMiniNote {
+  position: absolute;
+  width: min(31%, 420px);
+  min-height: 190px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 22px;
+  color: #171109;
+  box-shadow: 0 20px 60px rgba(0,0,0,.30);
+}
+.dataMiniNote1 { left: 4%; top: 18px; background: #f0e2bd; transform: rotate(-3deg); }
+.dataMiniNote2 { left: 36%; top: 72px; background: #f7c51f; transform: rotate(2deg); }
+.dataMiniNote3 { right: 5%; top: 6px; background: #c7c0aa; transform: rotate(-1deg); }
+.dataMiniNote strong { font-size: clamp(44px, 4.6vw, 68px); line-height: .9; letter-spacing: -.06em; }
+.dataMiniNote p { margin: 12px 0 0; font-size: 11px; line-height: 1.45; }
+.dataMiniNote span { margin-top: 14px; font-size: 8px; font-weight: 900; letter-spacing: .08em; opacity: .64; }
+.dataMiniScribble {
+  position: absolute;
+  left: 13%;
+  bottom: 3px;
+  color: rgba(255,255,255,.28);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 12px;
+  font-style: italic;
+  transform: rotate(-6deg);
+}
+
+.marketingCommunityRules {
+  display: grid;
+  grid-template-columns: .8fr 1.2fr;
+  gap: 42px 70px;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(255,194,28,.07), transparent 20rem),
+    #0c0a08;
+}
+.rulesLinks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rulesLinks a {
+  min-height: 150px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 22px;
+  background: rgba(255,255,255,.025);
+  transition: transform .25s ease, border-color .25s ease, background .25s ease;
+}
+.rulesLinks a:hover { transform: translateY(-4px); border-color: rgba(255,194,28,.28); background: rgba(255,194,28,.035); }
+.rulesLinks span { color: #f3ede2; font-size: 17px; font-weight: 850; }
+.rulesLinks b { color: #847c70; font-size: 10px; }
+.rulesDiscipline {
+  grid-column: 1 / -1;
+  margin: 4px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  color: #8f877a;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .whyCompare,
+  .marketingCommunityRules { grid-template-columns: 1fr; }
+  .safetyObjects { grid-template-columns: 1fr; gap: 18px; }
+  .safetyObject:nth-child(2) { transform: none; }
+  .marketingSafetyStage { min-height: auto; }
+  .dataMiniCollage { display: grid; grid-template-columns: 1fr 1fr; min-height: 0; gap: 12px; }
+  .dataMiniNote { position: relative; inset: auto; width: auto; min-height: 180px; transform: none; }
+  .dataMiniNote3 { grid-column: 1 / -1; }
+  .dataMiniScribble { display: none; }
+}
+
+@media (max-width: 620px) {
+  .marketingWhy,
+  .marketingSafetyStage,
+  .marketingDataMini,
+  .marketingCommunityRules { padding: 64px 16px; }
+  .whySticker { top: 18px; right: 16px; font-size: 11px; }
+  .whyOld,
+  .whyAspireCard { min-height: 340px; }
+  .whyRow span { display: grid; gap: 3px; }
+  .whyAspireCard::after { display: none; }
+  .rulesLinks,
+  .dataMiniCollage { grid-template-columns: 1fr; }
+  .dataMiniNote3 { grid-column: auto; }
+  .dataMiniHead { grid-template-columns: 1fr; }
+  .dataMiniHead > p { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .whySticker,
+  .safetyPolaroid,
+  .dataMiniNote1,
+  .dataMiniNote2,
+  .dataMiniNote3 { transform: none; }
+}
