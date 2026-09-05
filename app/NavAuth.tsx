@@ -59,6 +59,7 @@ export default function NavAuth() {
 
   return (
     <div className="navActions navSignedIn">
+      <a className="textLink navConnectionsLink" href="/connections">Connections</a>
       <a className="button buttonGold buttonSmall" href="/post">Post a request <span>+</span></a>
       <span className="navUserChip" title={user.email ?? undefined}>
         <i>{labelFor(user).slice(0, 1).toUpperCase()}</i>
