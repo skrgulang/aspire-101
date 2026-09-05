@@ -2,17 +2,22 @@ import { getSupabaseBrowserClient } from './client';
 import type { AspireRequest } from './requests';
 
 export type SchoolVerificationStatus = 'pending' | 'verified' | 'rejected';
+export type SchoolVerificationMethod = 'manual_id' | 'school_email';
 
 export type SchoolVerification = {
   user_id: string;
   school: string;
-  student_id: string;
+  student_id: string | null;
   status: SchoolVerificationStatus;
   submitted_at: string;
   updated_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;
   review_note: string | null;
+  university_id: string | null;
+  verification_method: SchoolVerificationMethod;
+  school_email: string | null;
+  verified_at: string | null;
 };
 
 export type AppRole = 'member' | 'moderator' | 'admin';
@@ -63,7 +68,10 @@ export async function submitSchoolVerification(school: string, studentId: string
       user_id: authData.user.id,
       school: cleanSchool,
       student_id: cleanId,
-      status: 'pending'
+      status: 'pending',
+      verification_method: 'manual_id',
+      school_email: null,
+      verified_at: null
     }, { onConflict: 'user_id' })
     .select('*')
     .single();
