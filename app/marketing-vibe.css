@@ -1,0 +1,160 @@
+/* Extra polish layer for the public Aspire homepage. Kept intentionally subtle. */
+
+.marketingHome { scroll-behavior: smooth; }
+
+.marketingHero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 72% 22%, rgba(255,194,28,.08), transparent 19rem),
+    radial-gradient(circle at 34% 74%, rgba(111,83,255,.045), transparent 18rem);
+  animation: aspireAmbientGlow 9s ease-in-out infinite alternate;
+}
+
+@keyframes aspireAmbientGlow {
+  from { opacity: .68; transform: translate3d(0,0,0) scale(1); }
+  to { opacity: 1; transform: translate3d(0,-10px,0) scale(1.025); }
+}
+
+.marketingCampusSelect {
+  transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.marketingCampusSelect:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,194,28,.38);
+  background: rgba(18,15,10,.86);
+}
+
+.marketingHeroSticky { animation: aspireStickyFloat 4.2s ease-in-out infinite; }
+@keyframes aspireStickyFloat {
+  0%,100% { translate: 0 0; }
+  50% { translate: 0 -6px; }
+}
+
+.marketingFeatureCard:nth-child(2n) { transform: translateY(7px); }
+.marketingFeatureCard:nth-child(2n):hover { transform: translateY(-4px) rotate(.45deg); }
+.marketingFeatureCard:nth-child(2n+1):hover { transform: translateY(-8px) rotate(-.35deg); }
+
+.marketingFeatureCard::before {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  inset: -40% auto auto -18%;
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,194,28,.13), transparent 67%);
+  opacity: 0;
+  transform: scale(.72);
+  transition: opacity .35s ease, transform .45s ease;
+  pointer-events: none;
+}
+.marketingFeatureCard:hover::before { opacity: 1; transform: scale(1); }
+
+.marketingFeatureDoodle { transition: transform .3s ease, opacity .3s ease; }
+.marketingFeatureCard:hover .marketingFeatureDoodle { transform: rotate(-1deg) translateY(-2px); opacity: 1; }
+.marketingFeatureArrow { transition: transform .25s ease, background .25s ease, border-color .25s ease; }
+.marketingFeatureCard:hover .marketingFeatureArrow {
+  transform: rotate(-12deg) scale(1.05);
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #171109;
+}
+
+.marketingRecentRail > a { position: relative; overflow: hidden; }
+.marketingRecentRail > a::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  right: 10px;
+  top: 10px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 0 rgba(255,194,28,.34);
+  animation: aspireLivePing 2.4s infinite;
+}
+@keyframes aspireLivePing {
+  70% { box-shadow: 0 0 0 8px rgba(255,194,28,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,194,28,0); }
+}
+
+.marketingStorySection { position: relative; overflow: hidden; }
+.marketingStorySection::before {
+  content: 'JUST POST IT ON ASPIRE ↗';
+  position: absolute;
+  right: 5vw;
+  top: 28px;
+  color: rgba(255,194,28,.34);
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  letter-spacing: .04em;
+  transform: rotate(4deg);
+  pointer-events: none;
+}
+
+.marketingStoryCard {
+  transition: transform .32s cubic-bezier(.2,.7,.2,1), border-color .25s ease, box-shadow .32s ease;
+}
+.marketingStoryCard:nth-child(1) { transform: rotate(-.65deg); }
+.marketingStoryCard:nth-child(2) { transform: translateY(14px) rotate(.5deg); }
+.marketingStoryCard:nth-child(3) { transform: rotate(-.25deg); }
+.marketingStoryCard:hover {
+  transform: translateY(-7px) rotate(0deg);
+  border-color: rgba(255,194,28,.30);
+  box-shadow: 0 28px 80px rgba(0,0,0,.35);
+}
+.marketingStoryCard img { transition: transform .6s ease, filter .35s ease; }
+.marketingStoryCard:hover img { transform: scale(1.035); filter: saturate(1.04); }
+
+.marketingStoryChips span {
+  transition: transform .2s ease, background .2s ease, border-color .2s ease;
+}
+.marketingStoryCard:hover .marketingStoryChips span:nth-child(odd) { transform: translateY(-2px) rotate(-1deg); }
+.marketingStoryCard:hover .marketingStoryChips span:nth-child(even) { transform: translateY(-1px) rotate(1deg); }
+
+.marketingCampuses { position: relative; overflow: hidden; }
+.marketingCampuses::before {
+  content: 'DIFFERENT CAMPUSES. SAME ENERGY. ✦';
+  position: absolute;
+  right: 6vw;
+  top: 26px;
+  color: rgba(255,255,255,.18);
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  transform: rotate(-3deg);
+  pointer-events: none;
+}
+
+.marketingCampusCard { transition: transform .28s ease, border-color .28s ease; }
+.marketingCampusCard:nth-child(3n+1) { transform: rotate(-.45deg); }
+.marketingCampusCard:nth-child(3n+2) { transform: rotate(.35deg); }
+.marketingCampusCard:hover { transform: translateY(-6px) rotate(0deg); border-color: rgba(255,194,28,.34); }
+.campusSticky { transition: transform .25s ease, box-shadow .25s ease; }
+.marketingCampusCard:hover .campusSticky { transform: rotate(-1deg) scale(1.035); box-shadow: 0 12px 24px rgba(0,0,0,.34); }
+
+@media (max-width: 760px) {
+  .marketingFeatureCard:nth-child(2n),
+  .marketingFeatureCard:nth-child(2n+1),
+  .marketingStoryCard:nth-child(n),
+  .marketingCampusCard:nth-child(n) { transform: none; }
+  .marketingStorySection::before,
+  .marketingCampuses::before { display: none; }
+  .marketingHeroSticky { animation: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketingHero::before,
+  .marketingHeroSticky,
+  .marketingRecentRail > a::after { animation: none; }
+  .marketingFeatureCard,
+  .marketingStoryCard,
+  .marketingCampusCard,
+  .marketingFeatureCard img,
+  .marketingStoryCard img { transition: none; }
+}
