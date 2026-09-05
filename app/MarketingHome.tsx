@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { aspireLogo } from './logo';
+import MarketingExtras from './MarketingExtras';
 
 const imageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
@@ -73,27 +74,6 @@ const productPages = [
   { label: 'Connections', note: 'Chat. Plan. Do more.', icon: '◌', href: '/connections', className: 'productConnections' },
   { label: 'Safety Center', note: 'Tools when you need them.', icon: '◇', href: '/safety', className: 'productSafety' },
   { label: 'Campus Circle', note: 'Your campus in one place.', icon: '◎', href: '/campus', className: 'productCircle' }
-];
-
-const collegeStats = [
-  {
-    value: '16.4M',
-    label: 'undergraduates enrolled at U.S. degree-granting institutions in fall 2024',
-    source: 'NCES · 2024',
-    href: 'https://nces.ed.gov/programs/digest/d25/tables/dt25_303.70.asp'
-  },
-  {
-    value: '42.4%',
-    label: 'of full-time college students ages 16–24 participated in the labor force in October 2022',
-    source: 'U.S. BLS · 2022',
-    href: 'https://www.bls.gov/opub/ted/2023/labor-force-participation-rates-of-college-students-differ-by-enrollment-status-and-type-of-college.htm'
-  },
-  {
-    value: '$27.8K',
-    label: 'average 2022–23 total cost at public 4-year schools for students living off campus, not with family',
-    source: 'NCES / IPEDS · 2022–23',
-    href: 'https://nces.ed.gov/programs/coe/indicator/cua/undergrad-costs'
-  }
 ];
 
 function featureHref(featureKey: string, user: User | null) {
@@ -175,6 +155,7 @@ export default function MarketingHome() {
 
           <nav className="marketingNavRight" aria-label="Main navigation">
             <a href="#features">What is Aspire?</a>
+            <a href="#why-aspire">Why Aspire?</a>
             <a href="#campuses">For campuses</a>
             {authReady && user ? (
               <a className="marketingJoin" href="/campus">Open campus →</a>
@@ -287,33 +268,7 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      <section className="marketingSafetyStrip" data-reveal="up">
-        <div>
-          <span>◇</span>
-          <strong>A safer, stronger campus together.</strong>
-        </div>
-        <div><b>Verified students</b><small>Built around real campus communities.</small></div>
-        <div><b>Report + block</b><small>Control who you interact with.</small></div>
-        <div><b>Mutual connect</b><small>Both sides choose first.</small></div>
-        <a href="/safety">Safety center →</a>
-      </section>
-
-      <section className="marketingDataSection">
-        <div className="marketingExpandHead marketingDataHead" data-reveal="left">
-          <p>COLLEGE, IN REAL NUMBERS</p>
-          <h2>Real student life.<br /><em>Real everyday logistics.</em></h2>
-          <span>Official U.S. data.</span>
-        </div>
-        <div className="marketingDataGrid marketingDataCollage">
-          {collegeStats.map((stat, index) => (
-            <a className={`marketingDataCard revealDelay${index + 1}`} data-reveal={index === 1 ? 'pop' : index === 0 ? 'left' : 'right'} href={stat.href} target="_blank" rel="noreferrer" key={stat.value}>
-              <strong>{stat.value}</strong>
-              <p>{stat.label}</p>
-              <span>{stat.source} ↗</span>
-            </a>
-          ))}
-        </div>
-      </section>
+      <MarketingExtras />
 
       <section id="campuses" className="marketingCampuses">
         <div className="marketingCampusesHead" data-reveal="left">
