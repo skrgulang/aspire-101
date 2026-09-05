@@ -66,9 +66,9 @@
   box-shadow: 0 34px 90px rgba(0,0,0,.36);
   backdrop-filter: blur(18px);
 }
-.authCardTop { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
-.authCardTop > span { color: var(--gold); font-size: 9px; font-weight: 900; letter-spacing: .15em; }
-.authCardTop a { color: #9d9587; font-size: 11px; font-weight: 700; }
+.authCardTop { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 24px; align-items: center; }
+.authCardTop > span:first-child { color: var(--gold); font-size: 9px; font-weight: 900; letter-spacing: .15em; }
+.authCardHint { color: #746d61; font-size: 10px; font-weight: 650; }
 .authCard label { display: grid; gap: 8px; margin-top: 16px; }
 .authCard label > span { color: #aaa294; font-size: 11px; font-weight: 750; }
 .authCard input {
@@ -82,10 +82,28 @@
   color: var(--white);
 }
 .authCard input:focus { border-color: rgba(255,194,28,.50); box-shadow: 0 0 0 3px rgba(255,194,28,.06); }
+.authFieldNote { margin: 8px 0 0; color: #756e62; font-size: 10px; line-height: 1.55; }
 .authSubmit { width: 100%; margin-top: 22px; }
 .authSubmit:disabled { opacity: .65; cursor: wait; }
+.authCreateAccount {
+  margin-top: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+  color: #81796d;
+  font-size: 11px;
+}
+.authCreateAccount a { color: var(--paper); font-weight: 800; }
+.authCreateAccount a:hover { color: var(--gold); }
 .authMessage { margin: 16px 0 0; color: var(--paper); font-size: 12px; line-height: 1.5; }
 .authLegal { margin: 18px 0 0; color: #686157; font-size: 10px; line-height: 1.5; }
+.authLegal a { color: #8c8477; }
+.authLegal a:hover { color: var(--paper); }
 
 @media (max-width: 860px) {
   .authShell { grid-template-columns: 1fr; min-height: auto; gap: 44px; margin-top: 64px; }
@@ -98,4 +116,5 @@
   .authShell, .authBrand { width: min(100% - 28px, 1180px); }
   .authCard { padding: 22px; border-radius: 22px; }
   .authMiniRequests { margin-top: 32px; }
+  .authCreateAccount { align-items: flex-start; flex-direction: column; gap: 8px; }
 }
