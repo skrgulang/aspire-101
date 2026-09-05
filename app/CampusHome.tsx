@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { AspireRequest, fetchOpenRequests } from '../lib/supabase/requests';
 import { aspireLogo } from './logo';
 import AppDock from './AppDock';
+import AppLoader from './AppLoader';
 
 type CampusDeck = {
   key: string;
@@ -81,6 +82,7 @@ export default function CampusHome() {
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let alive = true;
+    const startedAt = Date.now();
 
     supabase.auth.getUser().then(async ({ data }) => {
       if (!alive) return;
@@ -95,14 +97,23 @@ export default function CampusHome() {
       const resolved = resolveCampus(rawSchool || 'Purdue');
       setName(rawName.trim());
       setCampusKey(resolved.key);
-      setLoading(false);
 
       try {
         const open = await fetchOpenRequests(60);
         if (alive) setRequests(open);
       } catch {
         if (alive) setRequests([]);
+      } finally {
+        const remaining = Math.max(0, 650 - (Date.now() - startedAt));
+        window.setTimeout(() => {
+          if (alive) setLoading(false);
+        }, remaining);
       }
+    }).catch(() => {
+      const remaining = Math.max(0, 650 - (Date.now() - startedAt));
+      window.setTimeout(() => {
+        if (alive) setLoading(false);
+      }, remaining);
     });
 
     return () => { alive = false; };
@@ -126,7 +137,7 @@ export default function CampusHome() {
   }
 
   if (loading) {
-    return <main className="campusHome campusHomeLoading"><span className="campusPulse" /><p>Opening campus…</p></main>;
+    return <AppLoader label="Finding your circle…" detail="Scanning your campus" />;
   }
 
   return (
