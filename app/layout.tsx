@@ -29,6 +29,7 @@ import './safety-ui.css';
 import './connections.css';
 import './app-shell.css';
 import './app-loader.css';
+import './trust-moderation.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
