@@ -1,0 +1,138 @@
+/* Polished consumer profile + trust passport */
+.profilePagePolished { padding: 32px max(18px, 4vw) 160px !important; }
+.profileShellPolished { width: min(1180px, 100%); }
+.profileTopPolished { margin-bottom: 34px; justify-content: space-between; }
+.profileBrand { display: inline-flex; align-items: center; gap: 11px; color: var(--paper); }
+.profileBack { color: #8f877a; font-size: 10px; font-weight: 800; }
+.profileBack:hover { color: var(--gold); }
+
+.profileHeroPolished {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  padding: 28px 0 30px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.profileAvatar {
+  width: 96px;
+  height: 96px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,194,28,.26);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,214,91,.18), transparent 55%),
+    rgba(255,194,28,.07);
+  color: var(--gold);
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -.06em;
+  box-shadow: inset 0 0 40px rgba(255,194,28,.035), 0 18px 60px rgba(0,0,0,.26);
+}
+.profileHeroMeta { display: flex; align-items: center; gap: 9px; }
+.profileHeroMeta span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .18em; }
+.profileHeroMeta b { padding: 5px 8px; border: 1px solid rgba(255,194,28,.18); border-radius: 999px; color: #d4bc6d; background: rgba(255,194,28,.045); font-size: 7px; letter-spacing: .1em; }
+.profileHeroPolished h1 { margin: 8px 0 4px; font-size: clamp(46px, 5.5vw, 72px); }
+.profileHeroPolished .profileHeroCopy > p { margin: 0; color: #918a7e; font-size: 14px; }
+.profileTrustChips { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 7px; }
+.profileTrustChips span { padding: 7px 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; background: rgba(255,255,255,.022); color: #777064; font-size: 8px; font-weight: 850; }
+.profileTrustChips span.verified { border-color: rgba(255,194,28,.19); background: rgba(255,194,28,.045); color: #d9c77f; }
+
+.profileOverview { margin-top: 24px; display: grid; grid-template-columns: minmax(0, 1.28fr) minmax(330px, .72fr); gap: 14px; align-items: start; }
+.profileTrustPanel,
+.profileQuickPanel {
+  border: 1px solid rgba(255,255,255,.085);
+  border-radius: 28px;
+  background: rgba(255,255,255,.018);
+  box-shadow: 0 24px 70px rgba(0,0,0,.18);
+}
+.profileTrustPanel { padding: 24px; }
+.profileQuickPanel { padding: 20px; position: sticky; top: 20px; }
+.profileSectionHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; margin-bottom: 18px; }
+.profileSectionHeading > div > span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .16em; }
+.profileSectionHeading h2 { margin: 6px 0 0; font-size: 30px; letter-spacing: -.045em; }
+.profileSectionHeading > p { max-width: 390px; margin: 0; color: #777065; font-size: 10px; line-height: 1.55; }
+.profileSectionHeading.compact { margin-bottom: 14px; }
+.profileSectionHeading.compact h2 { font-size: 26px; }
+
+.profileTrustCards { display: grid; gap: 10px; }
+.profileTrustCards .profileCard {
+  min-height: 0;
+  padding: 18px;
+  border-radius: 20px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.profileTrustCards .profileSchoolIdCard { grid-column: auto; min-height: 0; }
+.profileTrustCards .profileCard > div:not(.trustCardIcon) { min-width: 0; }
+.profileTrustCards .profileCard > span { grid-column: 1 / -1; }
+.profileTrustCards .profileCard strong { margin-top: 8px; font-size: 20px; }
+.profileTrustCards .profileCard p { margin-top: 6px; }
+.profileTrustCards .profileCard small { color: #6f695f; font-size: 9px; line-height: 1.45; }
+.trustCardIcon { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.08); border-radius: 13px; background: rgba(255,255,255,.025); color: #91897d; font-size: 15px; }
+.profilePhoneCard.isVerified .trustCardIcon { border-color: rgba(255,194,28,.18); color: var(--gold); background: rgba(255,194,28,.05); }
+
+.phoneVerificationBody > span { display: block; color: #777065; font-size: 9px; font-weight: 900; letter-spacing: .12em; }
+.phoneVerificationBody > strong { display: block; }
+.phoneVerifyForm { margin-top: 13px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
+.phoneVerifyForm input { min-height: 44px; padding: 0 13px; border: 1px solid rgba(255,255,255,.10); border-radius: 13px; background: rgba(7,7,6,.82); color: var(--paper); outline: none; font: inherit; font-size: 12px; }
+.phoneVerifyForm input:focus { border-color: rgba(255,194,28,.42); box-shadow: 0 0 0 3px rgba(255,194,28,.05); }
+.phoneVerifyForm .button { min-height: 44px; padding: 0 14px; border-radius: 13px; }
+.phoneCodeForm { grid-template-columns: minmax(0,1fr) auto auto; }
+.phoneVerifyBack { border: 0; background: transparent; color: #857d71; font: inherit; font-size: 9px; cursor: pointer; }
+.phoneVerifyMessage { display: block; margin-top: 8px; color: #bcae87 !important; }
+
+.profileMenuList { display: grid; gap: 7px; }
+.profileMenuRow { min-height: 62px; padding: 11px 12px; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 10px; align-items: center; border: 1px solid rgba(255,255,255,.07); border-radius: 17px; background: rgba(8,8,7,.42); color: inherit; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+a.profileMenuRow:hover { transform: translateY(-1px); border-color: rgba(255,194,28,.18); background: rgba(255,194,28,.028); }
+.profileMenuRow i { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 11px; background: rgba(255,255,255,.035); color: #8e8679; font-style: normal; }
+.profileMenuRow > div { min-width: 0; display: grid; gap: 3px; }
+.profileMenuRow strong { font-size: 11px; }
+.profileMenuRow span { color: #6f695f; font-size: 8px; line-height: 1.35; }
+.profileMenuRow > b { color: #746d62; font-size: 7px; letter-spacing: .08em; white-space: nowrap; }
+.profileMenuRow.moderator { border-color: rgba(255,194,28,.16); background: rgba(255,194,28,.035); }
+.profileMenuRow.moderator i,.profileMenuRow.moderator > b { color: var(--gold); }
+.profileMenuRow.muted { opacity: .68; }
+
+.profileAccountFoot { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.07); display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.profileAccountFoot > div { min-width: 0; display: grid; gap: 3px; }
+.profileAccountFoot span { color: #625c53; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.profileAccountFoot strong { overflow: hidden; text-overflow: ellipsis; color: #999184; font-size: 9px; }
+.profileAccountFoot small { color: #645e55; font-size: 8px; }
+.profileAccountFoot button { border: 0; background: transparent; color: #8c8377; font: inherit; font-size: 9px; text-decoration: underline; cursor: pointer; }
+.profileAccountFoot button:hover { color: var(--paper); }
+.profileOperator { margin: 20px 0 0; color: #555047; font-size: 8px; text-align: center; }
+
+/* Compact the legacy/manual verification fallback inside the new trust panel. */
+.profileTrustCards .profileSchoolIdCard > span,
+.profileTrustCards .profileSchoolIdCard > strong,
+.profileTrustCards .profileSchoolIdCard > p,
+.profileTrustCards .profileSchoolIdCard > small,
+.profileTrustCards .profileSchoolIdCard > form { grid-column: 1 / -1; }
+.profileTrustCards .schoolIdForm { margin-top: 12px; }
+
+@media (max-width: 900px) {
+  .profileOverview { grid-template-columns: 1fr; }
+  .profileQuickPanel { position: static; }
+}
+
+@media (max-width: 640px) {
+  .profilePagePolished { padding: 18px 14px 138px !important; }
+  .profileTopPolished { margin-bottom: 18px; }
+  .profileBack { font-size: 8px; }
+  .profileHeroPolished { grid-template-columns: 70px minmax(0,1fr); gap: 15px; padding: 20px 0 22px; }
+  .profileAvatar { width: 70px; height: 70px; border-radius: 22px; font-size: 22px; }
+  .profileHeroPolished h1 { font-size: clamp(36px, 12vw, 54px); }
+  .profileTrustPanel,.profileQuickPanel { padding: 16px; border-radius: 22px; }
+  .profileSectionHeading { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .profileSectionHeading h2 { font-size: 25px; }
+  .phoneVerifyForm,.phoneCodeForm { grid-template-columns: 1fr; }
+  .phoneVerifyBack { min-height: 34px; text-align: left; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profileMenuRow { transition: none; }
+}
