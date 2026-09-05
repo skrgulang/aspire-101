@@ -37,17 +37,20 @@ export default function SchoolVerificationCard({ school }: { school: string }) {
   }
 
   if (loading) {
-    return <article className="profileCard profileSchoolIdCard"><span>SCHOOL ID</span><strong>Checking…</strong><p>Loading verification status.</p></article>;
+    return <article className="profileCard profileSchoolIdCard"><span>SCHOOL VERIFICATION</span><strong>Checking…</strong><p>Loading verification status.</p></article>;
   }
 
   if (verification?.status === 'verified') {
-    const masked = verification.student_id.length > 4 ? `••••${verification.student_id.slice(-4)}` : verification.student_id;
+    const byEmail = verification.verification_method === 'school_email';
+    const masked = verification.student_id
+      ? verification.student_id.length > 4 ? `••••${verification.student_id.slice(-4)}` : verification.student_id
+      : null;
     return (
       <article id="school-verification" className="profileCard profileSchoolIdCard isVerified">
-        <span>SCHOOL ID</span>
-        <strong>Verified ✓</strong>
-        <p>{verification.school} · {masked}</p>
-        <small>Required for posting. Your full school ID is not shown publicly.</small>
+        <span>{byEmail ? 'SCHOOL EMAIL' : 'SCHOOL ID'}</span>
+        <strong>Verified {verification.school} Student ✓</strong>
+        <p>{byEmail ? verification.school_email : `${verification.school}${masked ? ` · ${masked}` : ''}`}</p>
+        <small>{byEmail ? 'Verified from your confirmed university email. School identity and payment identity are separate.' : 'Verified by Aspire moderation. Your full school ID is not shown publicly.'}</small>
       </article>
     );
   }
@@ -57,9 +60,9 @@ export default function SchoolVerificationCard({ school }: { school: string }) {
 
   return (
     <article id="school-verification" className={`profileCard profileSchoolIdCard ${pending ? 'isPending' : ''} ${rejected ? 'isRejected' : ''}`.trim()}>
-      <span>SCHOOL ID · REQUIRED TO POST</span>
-      <strong>{pending ? 'Waiting for review' : rejected ? 'Needs another look' : 'Verify before posting'}</strong>
-      <p>{rejected && verification?.review_note ? verification.review_note : 'Enter the student ID issued by your university. It stays in the private verification system and is reviewed by Aspire moderators.'}</p>
+      <span>LEGACY SCHOOL ID VERIFICATION</span>
+      <strong>{pending ? 'Waiting for review' : rejected ? 'Needs another look' : 'School email not verified'}</strong>
+      <p>{rejected && verification?.review_note ? verification.review_note : 'New Aspire accounts use a supported university email. Existing beta accounts can still submit a school ID for manual review.'}</p>
 
       {!pending && (
         <form className="schoolIdForm" onSubmit={submit}>
@@ -67,11 +70,11 @@ export default function SchoolVerificationCard({ school }: { school: string }) {
             <span>School ID</span>
             <input value={studentId} onChange={(event) => setStudentId(event.target.value)} placeholder="Student ID number" minLength={3} maxLength={64} autoComplete="off" required />
           </label>
-          <button type="submit" className="button buttonGold" disabled={busy}>{busy ? 'Submitting…' : rejected ? 'Resubmit ID →' : 'Submit for verification →'}</button>
+          <button type="submit" className="button buttonGold" disabled={busy}>{busy ? 'Submitting…' : rejected ? 'Resubmit ID →' : 'Submit for review →'}</button>
         </form>
       )}
 
-      {pending && <small>Posting stays locked until a moderator approves this ID.</small>}
+      {pending && <small>Posting stays locked until a moderator approves this legacy verification.</small>}
       {message && <p className="schoolIdMessage" role="status">{message}</p>}
     </article>
   );
