@@ -9,7 +9,8 @@ import {
   createAspireCheckout,
   fetchCompletionConfirmations,
   fetchConnectionPayments,
-  releaseAspirePayment
+  releaseAspirePayment,
+  setConnectionPaymentMethod
 } from '../lib/supabase/payments';
 import type { CompletionConfirmation, ConnectionPayment } from '../lib/supabase/payments';
 
@@ -98,6 +99,20 @@ export default function ConnectionPaymentsPanel() {
     return request && ['paid_help', 'split_cost', 'buy_sell'].includes(request.kind);
   }), [data.connections, requestMap]);
 
+  async function chooseAspire(connectionId: string) {
+    setBusy(`method-${connectionId}`);
+    setNotice('');
+    try {
+      await setConnectionPaymentMethod(connectionId, 'aspire');
+      setNotice('Pay with Aspire selected for this connection.');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not change the payment method.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function startCheckout(connectionId: string) {
     setBusy(`pay-${connectionId}`);
     setNotice('');
@@ -162,22 +177,33 @@ export default function ConnectionPaymentsPanel() {
           const selfComplete = completionIds.has(data.userId);
           const bothComplete = completionIds.has(connection.requester_id) && completionIds.has(connection.responder_id);
           const canWork = ['confirmed', 'active'].includes(connection.status);
-          const payWithAspire = request.payment_method === 'aspire';
+          const payWithAspire = connection.payment_method === 'aspire';
           const paymentState = payment ? paymentCopy[payment.status] : null;
           const secured = payment?.status === 'secured';
           const released = payment?.status === 'released';
+          const agreedAmount = connection.agreed_amount_cents ?? request.amount_cents;
 
           return (
             <article className={`connectionPaymentCard state-${payment?.status || (payWithAspire ? 'not_started' : 'off_platform')}`} key={connection.id}>
               <div className="connectionPaymentTop">
                 <div><span>{request.category.toUpperCase()} · {payWithAspire ? 'PAY WITH ASPIRE' : 'OFF-PLATFORM PAYMENT'}</span><h3>{request.title}</h3></div>
-                <strong>{money(connection.agreed_amount_cents ?? request.amount_cents, request.currency)}</strong>
+                <strong>{money(agreedAmount, request.currency)}</strong>
               </div>
 
               <div className="connectionPaymentPerson"><i>{profileName(other).slice(0, 1).toUpperCase()}</i><span><strong>{profileName(other)}</strong><small>{isRequester ? 'Receiving money' : 'Requester'}</small></span></div>
 
               {!payWithAspire ? (
-                <div className="connectionPaymentState offPlatform"><b>Not processed by Aspire</b><p>This request is currently set to pay in person or agree payment after connecting.</p></div>
+                <>
+                  <div className="connectionPaymentState offPlatform"><b>Not processed by Aspire</b><p>This connection is currently set to pay in person or agree payment privately. Aspire does not verify those payments.</p></div>
+                  <div className="connectionPaymentActions">
+                    {isRequester && canWork && Number(agreedAmount || 0) > 0 && (
+                      <button type="button" className="button buttonGold" onClick={() => chooseAspire(connection.id)} disabled={busy === `method-${connection.id}`}>
+                        {busy === `method-${connection.id}` ? 'Switching…' : 'Use Pay with Aspire →'}
+                      </button>
+                    )}
+                    {!isRequester && <span className="paymentWaiting">The requester chooses how this connection is paid.</span>}
+                  </div>
+                </>
               ) : (
                 <>
                   <div className={`connectionPaymentState ${payment?.status || 'notStarted'}`}>
