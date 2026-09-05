@@ -1,0 +1,62 @@
+.postCampusField {
+  min-width: 0;
+}
+
+.campusSelectWrap {
+  position: relative;
+}
+
+.campusSelectWrap select {
+  min-height: 54px;
+  padding-right: 44px;
+  cursor: pointer;
+}
+
+.campusSelectWrap > i {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-52%);
+  pointer-events: none;
+  color: var(--gold);
+  font-style: normal;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.postCampusField select:hover {
+  border-color: rgba(255,194,28,.28);
+}
+
+.postCampusField select option {
+  background: #11100c;
+  color: #f6f0e6;
+}
+
+.postCampusField .campusOtherInput {
+  margin-top: 1px;
+  min-height: 50px;
+  border-color: rgba(255,194,28,.22);
+  background: rgba(255,194,28,.035);
+}
+
+.postCampusField > small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.postCampusField > small::before {
+  content: '◎';
+  color: var(--gold);
+}
+
+@media (max-width: 900px) {
+  .postEssentials {
+    grid-template-columns: 1fr;
+  }
+
+  .postCampusField {
+    margin-top: 22px;
+  }
+}
