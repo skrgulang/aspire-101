@@ -1,0 +1,146 @@
+.communityCampusIdentity {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.campusIdentityTag {
+  padding: 6px 8px;
+  border: 1px solid rgba(255,194,28,.18);
+  border-radius: 999px;
+  color: var(--gold);
+  background: rgba(255,194,28,.05);
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: .13em;
+}
+.campusIdentityTag.isVisiting {
+  color: #d7cab2;
+  border-color: rgba(255,255,255,.11);
+  background: rgba(255,255,255,.035);
+}
+
+.returnHomeCampus {
+  border: 0;
+  background: transparent;
+  color: #9c9384;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.returnHomeCampus:hover { color: var(--gold); }
+
+.communityProfileMenuWrap { position: relative; }
+.communityProfileMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 40;
+  width: 220px;
+  padding: 14px;
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  background: rgba(11,10,7,.97);
+  box-shadow: 0 20px 50px rgba(0,0,0,.38);
+  backdrop-filter: blur(18px);
+}
+.communityProfileMenu strong { color: #f4ecdf; font-size: 12px; }
+.communityProfileMenu > span { color: #766f63; font-size: 8px; line-height: 1.4; margin-bottom: 4px; }
+.communityProfileMenu a,
+.communityProfileMenu button {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  background: rgba(255,255,255,.025);
+  color: #a79e90;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+}
+.communityProfileMenu a:hover,
+.communityProfileMenu button:hover { color: var(--paper); border-color: rgba(255,194,28,.20); }
+
+.campusSwitchOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(0,0,0,.68);
+  backdrop-filter: blur(8px);
+}
+.campusSwitchModal {
+  width: min(480px, 100%);
+  padding: 26px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 22px;
+  background: #100e0a;
+  box-shadow: 0 26px 80px rgba(0,0,0,.46);
+}
+.campusSwitchModal > span { color: var(--gold); font-size: 8px; font-weight: 950; letter-spacing: .16em; }
+.campusSwitchModal h2 { margin: 9px 0 10px; color: var(--paper); font-size: 30px; letter-spacing: -.05em; }
+.campusSwitchModal p { margin: 0; color: #958c7d; font-size: 11px; line-height: 1.6; }
+.campusSwitchModal > div { margin-top: 20px; display: flex; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+.campusSwitchModal > div > button:first-child {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 12px;
+  background: rgba(255,255,255,.025);
+  color: #958d80;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.campusUnknownState {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #090806;
+  padding: 28px;
+}
+.campusUnknownCard {
+  width: min(520px, 100%);
+  padding: 30px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 24px;
+  background: rgba(18,16,11,.94);
+}
+.campusUnknownCard img { width: 46px; height: 46px; border-radius: 12px; }
+.campusUnknownCard > span { margin-top: 8px; color: var(--gold); font-size: 8px; font-weight: 950; letter-spacing: .16em; }
+.campusUnknownCard h1 { margin: 0; color: var(--paper); font-size: 34px; letter-spacing: -.05em; }
+.campusUnknownCard p { margin: 0 0 8px; color: #8e8679; font-size: 11px; line-height: 1.6; }
+.campusUnknownCard .button { width: fit-content; }
+
+@media (max-width: 760px) {
+  .communityCampusIdentity { order: 3; width: 100%; justify-content: flex-start; }
+  .communityCampusIdentity .communityCampusPicker { flex: 1; min-width: 0; }
+  .campusIdentityTag { display: inline-flex; }
+  .returnHomeCampus { width: 100%; text-align: left; padding: 0; }
+  .communityProfileMenu { right: 0; width: min(230px, calc(100vw - 32px)); }
+  .campusSwitchModal { padding: 22px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .campusSwitchOverlay { animation: campusOverlayIn .18s ease-out; }
+  .campusSwitchModal { animation: campusModalIn .22s ease-out; }
+  .communityBackdrop img { animation: campusBackdropIn .24s ease-out; }
+  @keyframes campusOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes campusModalIn { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+  @keyframes campusBackdropIn { from { opacity: .25; } to { opacity: 1; } }
+}
