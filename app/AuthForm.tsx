@@ -7,7 +7,7 @@ import { aspireLogo } from './logo';
 
 type Mode = 'login' | 'signup';
 
-function safeNextPath() {
+function readSafeNextPath() {
   if (typeof window === 'undefined') return '/';
   const next = new URLSearchParams(window.location.search).get('next');
   return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
@@ -21,12 +21,17 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [nextPath, setNextPath] = useState('/');
 
   useEffect(() => {
-    if (mode !== 'login') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('confirmed') === '1') {
-      setMessage('Email confirmed. Log in and you’re ready to ask campus.');
+    const safeNext = readSafeNextPath();
+    setNextPath(safeNext);
+
+    if (mode === 'login') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('confirmed') === '1') {
+        setMessage('Email confirmed. Log in and you’re ready to ask campus.');
+      }
     }
   }, [mode]);
 
@@ -37,7 +42,6 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
     try {
       const supabase = getSupabaseBrowserClient();
-      const nextPath = safeNextPath();
 
       if (mode === 'signup') {
         const nextQuery = nextPath === '/' ? '' : `&next=${encodeURIComponent(nextPath)}`;
@@ -77,9 +81,8 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   }
 
   const signup = mode === 'signup';
-  const switchHref = signup
-    ? `/login${typeof window !== 'undefined' && safeNextPath() !== '/' ? `?next=${encodeURIComponent(safeNextPath())}` : ''}`
-    : `/signup${typeof window !== 'undefined' && safeNextPath() !== '/' ? `?next=${encodeURIComponent(safeNextPath())}` : ''}`;
+  const nextQuery = nextPath === '/' ? '' : `?next=${encodeURIComponent(nextPath)}`;
+  const switchHref = signup ? `/login${nextQuery}` : `/signup${nextQuery}`;
 
   return (
     <main className="authPage">
