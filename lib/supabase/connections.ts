@@ -20,6 +20,7 @@ export type AspireConnection = {
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   agreed_amount_cents: number | null;
   agreed_terms: Record<string, unknown>;
+  payment_method: 'none' | 'in_person' | 'aspire';
   created_at: string;
   updated_at: string;
 };
