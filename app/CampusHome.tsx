@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { aspireLogo } from './logo';
 
 type CampusDeck = {
+  key: string;
   label: string;
   note: string;
   href: string;
@@ -14,12 +15,12 @@ type CampusDeck = {
 };
 
 const decks: CampusDeck[] = [
-  { label: 'Rides + errands', note: 'Go somewhere. Pick something up.', href: '/discover?category=Get%20me%20there', className: 'deckRide', glyph: '↗' },
-  { label: 'Study partners', note: 'Find people in your classes.', href: '/discover?category=Study%20%2F%20class', className: 'deckStudy', glyph: '✎' },
-  { label: 'Gaming + duos', note: 'Queue with someone from campus.', href: '/discover?category=Gaming%20%2F%20duos', className: 'deckGaming', glyph: '◉' },
-  { label: 'Projects + builders', note: 'Hackathons, startups, side projects.', href: '/discover?category=Build%20something', className: 'deckBuild', glyph: '✦' },
-  { label: 'Campus people', note: 'Groups, plans, people to do things with.', href: '/discover?category=People%20%2F%20community', className: 'deckPeople', glyph: '+' },
-  { label: 'Buy + sell', note: 'Find stuff around campus.', href: '/discover?category=Buy%20%26%20sell', className: 'deckMarket', glyph: '$' }
+  { key: 'rides', label: 'Rides + errands', note: 'Go somewhere. Pick something up.', href: '/discover?category=Get%20me%20there', className: 'deckRide', glyph: '↗' },
+  { key: 'study', label: 'Study partners', note: 'Find people in your classes.', href: '/discover?category=Study%20%2F%20class', className: 'deckStudy', glyph: '✎' },
+  { key: 'gaming', label: 'Gaming + duos', note: 'Queue with someone from campus.', href: '/discover?category=Gaming%20%2F%20duos', className: 'deckGaming', glyph: '◉' },
+  { key: 'projects', label: 'Projects + builders', note: 'Hackathons, startups, side projects.', href: '/discover?category=Build%20something', className: 'deckBuild', glyph: '✦' },
+  { key: 'people', label: 'Campus people', note: 'Groups, plans, people to do things with.', href: '/discover?category=People%20%2F%20community', className: 'deckPeople', glyph: '+' },
+  { key: 'market', label: 'Buy + sell', note: 'Find stuff around campus.', href: '/discover?category=Buy%20%26%20sell', className: 'deckMarket', glyph: '$' }
 ];
 
 export default function CampusHome() {
@@ -30,13 +31,21 @@ export default function CampusHome() {
   const [active, setActive] = useState(0);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedDeck = params.get('deck');
+    if (requestedDeck) {
+      const requestedIndex = decks.findIndex((deck) => deck.key === requestedDeck);
+      if (requestedIndex >= 0) setActive(requestedIndex);
+    }
+
     const supabase = getSupabaseBrowserClient();
     let alive = true;
 
     supabase.auth.getUser().then(({ data }) => {
       if (!alive) return;
       if (!data.user) {
-        router.replace('/login?next=/campus');
+        const next = requestedDeck ? `/campus?deck=${encodeURIComponent(requestedDeck)}` : '/campus';
+        router.replace(`/login?next=${encodeURIComponent(next)}`);
         return;
       }
       const metadata = data.user.user_metadata ?? {};
@@ -88,7 +97,7 @@ export default function CampusHome() {
       <section className="campusDeckArea" aria-label="Discover campus categories">
         <div className="campusDeckRail" role="tablist" aria-label="Campus discovery decks">
           {decks.map((deck, index) => (
-            <button key={deck.label} type="button" role="tab" aria-selected={active === index} className={active === index ? 'active' : ''} onClick={() => setActive(index)}>
+            <button key={deck.key} type="button" role="tab" aria-selected={active === index} className={active === index ? 'active' : ''} onClick={() => setActive(index)}>
               {deck.label}
             </button>
           ))}
@@ -97,7 +106,7 @@ export default function CampusHome() {
         <div className="campusDeckStage">
           {decks.map((deck, index) => (
             <a
-              key={deck.label}
+              key={deck.key}
               href={deck.href}
               className={`campusDeckCard ${deck.className} ${active === index ? 'active' : ''}`}
               style={{ '--deck-offset': index - active } as React.CSSProperties}
