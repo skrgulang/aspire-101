@@ -66,6 +66,7 @@ export default function ModeratorConsole() {
 
   const pendingIds = useMemo(() => verifications.filter((item) => item.status === 'pending'), [verifications]);
   const openReports = useMemo(() => reports.filter((item) => item.status === 'submitted' || item.status === 'reviewing'), [reports]);
+  const activeRequests = useMemo(() => requests.filter((request) => ['open', 'matched', 'in_progress'].includes(request.status)), [requests]);
 
   async function decideId(item: SchoolVerification, decision: 'verified' | 'rejected') {
     const note = decision === 'rejected' ? window.prompt('Short note for the student:', 'School ID could not be confirmed.') ?? '' : '';
@@ -125,12 +126,23 @@ export default function ModeratorConsole() {
   if (loading) return <AppLoader label="Opening moderation…" detail="Trust + safety queue" />;
 
   return (
-    <main className="moderatorPage">
+    <main className="moderatorPage moderatorPagePolished">
       <div className="moderatorShell">
-        <header className="moderatorTop">
-          <div><span>ASPIRE 101 · {role.toUpperCase()}</span><h1>Moderation.</h1><p>Verify identity signals, review reports, and keep unsafe requests out of campus feeds.</p></div>
+        <header className="moderatorTop moderatorTopPolished">
+          <div>
+            <span>CLOUDORA LABS, INC. · ASPIRE 101</span>
+            <div className="moderatorTitleRow"><h1>Trust & Safety</h1><b>{role.toUpperCase()}</b></div>
+            <p>Review only what needs human judgment. School-email verification stays automatic; exceptions, reports, and risky content come here.</p>
+          </div>
           <a href="/profile">Back to profile →</a>
         </header>
+
+        <section className="moderatorOverview" aria-label="Moderation overview">
+          <article><span>PENDING IDS</span><strong>{pendingIds.length}</strong><small>Manual exceptions</small></article>
+          <article className={openReports.length ? 'attention' : ''}><span>OPEN REPORTS</span><strong>{openReports.length}</strong><small>Need review</small></article>
+          <article><span>ACTIVE REQUESTS</span><strong>{activeRequests.length}</strong><small>Campus feed</small></article>
+          <article className="role"><span>YOUR ACCESS</span><strong>{role === 'admin' ? 'Admin' : 'Moderator'}</strong><small>{role === 'admin' ? 'Can manage moderators' : 'Review access only'}</small></article>
+        </section>
 
         <nav className="moderatorTabs" aria-label="Moderation sections">
           <button className={tab === 'ids' ? 'active' : ''} onClick={() => setTab('ids')} type="button">School IDs <b>{pendingIds.length}</b></button>
@@ -143,13 +155,13 @@ export default function ModeratorConsole() {
 
         {tab === 'ids' && (
           <section className="moderatorPanel">
-            <div className="moderatorPanelHead"><div><span>VERIFICATION QUEUE</span><h2>School IDs</h2></div><p>Entering an ID does not automatically verify someone. A moderator must approve the submission.</p></div>
+            <div className="moderatorPanelHead"><div><span>VERIFICATION EXCEPTIONS</span><h2>School IDs</h2></div><p>Most students should verify through an approved university email. Manual ID review is the fallback, not the default.</p></div>
             <div className="moderatorList">
-              {!pendingIds.length && <div className="moderatorEmpty">No school IDs waiting for review.</div>}
+              {!pendingIds.length && <div className="moderatorEmpty"><i>✓</i><strong>Verification queue is clear.</strong><span>No manual school IDs are waiting for review.</span></div>}
               {pendingIds.map((item) => (
                 <article className="moderatorRow" key={item.user_id}>
-                  <div className="moderatorRowMain"><span>{item.school}</span><strong>{item.student_id}</strong><small>User {item.user_id.slice(0, 8)} · submitted {when(item.submitted_at)}</small></div>
-                  <div className="moderatorRowActions"><button type="button" className="moderatorReject" onClick={() => decideId(item, 'rejected')} disabled={busy === `id-${item.user_id}`}>Reject</button><button type="button" className="button buttonGold" onClick={() => decideId(item, 'verified')} disabled={busy === `id-${item.user_id}`}>Verify ✓</button></div>
+                  <div className="moderatorRowMain"><span>{item.school} · MANUAL ID</span><strong>{item.student_id}</strong><small>User {item.user_id.slice(0, 8)} · submitted {when(item.submitted_at)}</small></div>
+                  <div className="moderatorRowActions"><button type="button" className="moderatorReject" onClick={() => decideId(item, 'rejected')} disabled={busy === `id-${item.user_id}`}>Reject</button><button type="button" className="button buttonGold" onClick={() => decideId(item, 'verified')} disabled={busy === `id-${item.user_id}`}>{busy === `id-${item.user_id}` ? 'Saving…' : 'Verify ✓'}</button></div>
                 </article>
               ))}
             </div>
@@ -158,9 +170,9 @@ export default function ModeratorConsole() {
 
         {tab === 'reports' && (
           <section className="moderatorPanel">
-            <div className="moderatorPanelHead"><div><span>SAFETY QUEUE</span><h2>Reports</h2></div><p>Resolve reports based on platform records and the information provided. Do not assume Aspire can verify offline events.</p></div>
+            <div className="moderatorPanelHead"><div><span>SAFETY QUEUE</span><h2>Reports</h2></div><p>Review platform records and submitted context. Aspire should not claim it can independently verify everything that happens offline.</p></div>
             <div className="moderatorList">
-              {!openReports.length && <div className="moderatorEmpty">No open safety reports.</div>}
+              {!openReports.length && <div className="moderatorEmpty"><i>✓</i><strong>No open safety reports.</strong><span>New reports that need human judgment will appear here.</span></div>}
               {openReports.map((report) => (
                 <article className="moderatorRow moderatorReportRow" key={report.id}>
                   <div className="moderatorRowMain"><span>{report.reason.toUpperCase()} · {report.status.toUpperCase()}</span><strong>{report.details || 'No additional details.'}</strong><small>Report {report.id.slice(0, 8)} · {when(report.created_at)}</small></div>
@@ -173,9 +185,9 @@ export default function ModeratorConsole() {
 
         {tab === 'requests' && (
           <section className="moderatorPanel">
-            <div className="moderatorPanelHead"><div><span>ACTIVE CAMPUS FEED</span><h2>Requests</h2></div><p>Moderators can remove active requests that violate the Guidelines. Every removal is logged.</p></div>
+            <div className="moderatorPanelHead"><div><span>ACTIVE CAMPUS FEED</span><h2>Requests</h2></div><p>Remove content only when necessary. Every moderator removal is logged so enforcement stays reviewable.</p></div>
             <div className="moderatorList">
-              {!requests.length && <div className="moderatorEmpty">No active requests.</div>}
+              {!requests.length && <div className="moderatorEmpty"><i>○</i><strong>No active requests.</strong><span>Live campus requests will appear here.</span></div>}
               {requests.map((request) => (
                 <article className="moderatorRow" key={request.id}>
                   <div className="moderatorRowMain"><span>{request.category.toUpperCase()} · {request.kind.replace('_', ' ').toUpperCase()}</span><strong>{request.title}</strong><small>{request.campus || 'Campus'} · {when(request.created_at)} · {request.status}</small></div>
@@ -188,13 +200,15 @@ export default function ModeratorConsole() {
 
         {tab === 'team' && role === 'admin' && (
           <section className="moderatorPanel moderatorTeamPanel">
-            <div className="moderatorPanelHead"><div><span>ADMIN ONLY</span><h2>Moderator access</h2></div><p>Only give this role to people you trust with private school-ID submissions and safety reports.</p></div>
+            <div className="moderatorPanelHead"><div><span>ADMIN ONLY</span><h2>Moderator access</h2></div><p>Only grant this role to people you trust with verification exceptions, safety reports, and enforcement actions.</p></div>
             <form className="moderatorTeamForm" onSubmit={grantModerator}>
-              <label><span>Aspire account email</span><input type="email" value={teamEmail} onChange={(event) => setTeamEmail(event.target.value)} placeholder="moderator@school.edu" required /></label>
-              <div><button className="button buttonGold" type="submit" disabled={busy === 'team'}>Grant moderator</button><button className="moderatorReject" type="button" onClick={() => void changeModerator(false)} disabled={busy === 'team' || !teamEmail.trim()}>Remove moderator</button></div>
+              <label><span>Existing Aspire account email</span><input type="email" value={teamEmail} onChange={(event) => setTeamEmail(event.target.value)} placeholder="moderator@school.edu" required /></label>
+              <div><button className="button buttonGold" type="submit" disabled={busy === 'team'}>{busy === 'team' ? 'Saving…' : 'Grant moderator'}</button><button className="moderatorReject" type="button" onClick={() => void changeModerator(false)} disabled={busy === 'team' || !teamEmail.trim()}>Remove moderator</button></div>
             </form>
           </section>
         )}
+
+        <footer className="moderatorOperator">Internal operations · Aspire 101 · Cloudora Labs, Inc.</footer>
       </div>
       <AppDock active="profile" />
     </main>
