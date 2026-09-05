@@ -31,6 +31,7 @@ export default function SiteFooter() {
         <section className="footerColumn">
           <h4>Explore</h4>
           <nav>
+            <a href="/discover">Discover requests</a>
             <a href="/#nearby">Near you</a>
             <a href="/#features">Campus stories</a>
             <a href="/#how">How it works</a>
@@ -43,6 +44,7 @@ export default function SiteFooter() {
           <nav>
             <a href="/#home">About Aspire</a>
             <a href="/#work-with-us">Work with Aspire</a>
+            <a href="/safety">Safety Center</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
             <a href="/guidelines">Community Guidelines</a>
@@ -62,6 +64,7 @@ export default function SiteFooter() {
       <div className="footerBottom shell">
         <p>© 2026 Aspire 101</p>
         <div className="footerLegal">
+          <a href="/safety">Safety</a>
           <a href="/privacy">Privacy Policy</a>
           <a href="/terms">Terms of Service</a>
           <a href="/guidelines">Guidelines</a>
