@@ -1,4 +1,4 @@
-import DiscoverRequests from '../DiscoverRequests';
+import DiscoverRequestsV2 from '../DiscoverRequestsV2';
 import AppDock from '../AppDock';
 
 export default function DiscoverPage() {
@@ -6,7 +6,7 @@ export default function DiscoverPage() {
     <main className="postPage discoverPage">
       <div className="postPageGlow" aria-hidden="true" />
       <div className="discoverShell shell">
-        <DiscoverRequests />
+        <DiscoverRequestsV2 />
       </div>
       <AppDock active="discover" />
     </main>
