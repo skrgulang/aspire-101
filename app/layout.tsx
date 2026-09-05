@@ -16,6 +16,7 @@ import './auth.css';
 import './post.css';
 import './campus-picker.css';
 import './campus-home.css';
+import './campus-circle-v2.css';
 import './marketing-home.css';
 import './marketing-story.css';
 import './marketing-vibe.css';
