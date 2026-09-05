@@ -25,6 +25,31 @@ const categories: CategoryOption[] = [
   { label: 'Something else', value: 'Other', icon: '…', prompt: 'Ask campus anything useful.', examples: ['Where do people actually study late?', 'Anyone want to ski Saturday?'], defaultKind: 'community' }
 ];
 
+const campusOptions = [
+  'Purdue University',
+  'UC Berkeley',
+  'UCLA',
+  'UC Davis',
+  'UC Irvine',
+  'UC San Diego',
+  'USC',
+  'Rutgers University',
+  'University of Illinois Urbana-Champaign',
+  'The Ohio State University',
+  'University of Michigan',
+  'Indiana University Bloomington',
+  'Northwestern University',
+  'Penn State University',
+  'University of Wisconsin–Madison',
+  'New York University',
+  'Columbia University',
+  'Boston University',
+  'Northeastern University',
+  'UT Austin',
+  'Georgia Tech',
+  'Arizona State University'
+];
+
 const kinds: { value: RequestKind; label: string; helper: string }[] = [
   { value: 'community', label: 'Community', helper: 'No money expected' },
   { value: 'paid_help', label: 'Paid help', helper: 'Compensation involved' },
@@ -32,6 +57,46 @@ const kinds: { value: RequestKind; label: string; helper: string }[] = [
   { value: 'buy_sell', label: 'Buy & sell', helper: 'An item changes hands' },
   { value: 'collaboration', label: 'Collab', helper: 'Build or do it together' }
 ];
+
+function normalizeSchool(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function matchCampus(value: string) {
+  const normalized = normalizeSchool(value);
+  if (!normalized) return null;
+
+  const aliases: Record<string, string> = {
+    purdue: 'Purdue University',
+    berkeley: 'UC Berkeley',
+    ucberkeley: 'UC Berkeley',
+    ucla: 'UCLA',
+    ucd: 'UC Davis',
+    ucdavis: 'UC Davis',
+    uci: 'UC Irvine',
+    ucirvine: 'UC Irvine',
+    ucsd: 'UC San Diego',
+    ucsandiego: 'UC San Diego',
+    rutgers: 'Rutgers University',
+    uiuc: 'University of Illinois Urbana-Champaign',
+    osu: 'The Ohio State University',
+    ohiostate: 'The Ohio State University',
+    umich: 'University of Michigan',
+    michigan: 'University of Michigan',
+    iub: 'Indiana University Bloomington',
+    indiana: 'Indiana University Bloomington',
+    uwmadison: 'University of Wisconsin–Madison',
+    nyu: 'New York University',
+    gatech: 'Georgia Tech',
+    asu: 'Arizona State University'
+  };
+
+  if (aliases[normalized]) return aliases[normalized];
+  return campusOptions.find((item) => {
+    const option = normalizeSchool(item);
+    return option === normalized || option.includes(normalized) || normalized.includes(option);
+  }) ?? null;
+}
 
 function safetyContext(category: string, kind: RequestKind) {
   if (category === 'Ride') return {
@@ -66,6 +131,7 @@ export default function PostRequestForm() {
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [campus, setCampus] = useState('');
+  const [customCampus, setCustomCampus] = useState('');
   const [category, setCategory] = useState('Ride');
   const [kind, setKind] = useState<RequestKind>('split_cost');
   const [amount, setAmount] = useState('');
@@ -78,6 +144,7 @@ export default function PostRequestForm() {
   const selectedCategory = categories.find((item) => item.value === category) ?? categories[0];
   const context = safetyContext(category, kind);
   const moneyInvolved = useMemo(() => kind === 'paid_help' || kind === 'buy_sell' || kind === 'split_cost', [kind]);
+  const selectedCampus = campus === '__other__' ? customCampus.trim() : campus;
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -90,7 +157,15 @@ export default function PostRequestForm() {
         return;
       }
       const school = data.user.user_metadata?.school;
-      if (typeof school === 'string' && school.trim()) setCampus(school.trim());
+      if (typeof school === 'string' && school.trim()) {
+        const matched = matchCampus(school.trim());
+        if (matched) {
+          setCampus(matched);
+        } else {
+          setCampus('__other__');
+          setCustomCampus(school.trim());
+        }
+      }
       setCheckingAuth(false);
     });
 
@@ -113,6 +188,10 @@ export default function PostRequestForm() {
       setError('Tell campus what you need first.');
       return;
     }
+    if (!selectedCampus) {
+      setError('Choose the campus where you want this request to appear.');
+      return;
+    }
     if (kind === 'paid_help' && (!amount || Number(amount) <= 0)) {
       setError('Add the amount you are offering for paid help.');
       return;
@@ -130,7 +209,7 @@ export default function PostRequestForm() {
         category,
         title,
         details,
-        campus,
+        campus: selectedCampus,
         amount_cents: amountCents,
         payment_method: moneyInvolved ? paymentMethod : 'none'
       });
@@ -157,7 +236,7 @@ export default function PostRequestForm() {
         <article>
           <span>{selectedCategory.label.toUpperCase()}</span>
           <strong>{posted.title}</strong>
-          <small>#{posted.id.slice(0, 8)} · open now</small>
+          <small>{selectedCampus} · #{posted.id.slice(0, 8)} · open now</small>
         </article>
         <p className="postSuccessNote">Students can respond. You still choose who — if anyone — you connect with.</p>
         <div className="postSuccessActions">
@@ -203,9 +282,20 @@ export default function PostRequestForm() {
         </label>
 
         <div className="postEssentials">
-          <label className="postField">
+          <label className="postField postCampusField">
             <span>Campus</span>
-            <input value={campus} onChange={(e) => setCampus(e.target.value)} placeholder="Purdue, Berkeley, Rutgers…" />
+            <div className="campusSelectWrap">
+              <select value={campus} onChange={(e) => setCampus(e.target.value)} required>
+                <option value="" disabled>Choose your campus</option>
+                {campusOptions.map((school) => <option key={school} value={school}>{school}</option>)}
+                <option value="__other__">Other campus…</option>
+              </select>
+              <i aria-hidden="true">⌄</i>
+            </div>
+            {campus === '__other__' && (
+              <input className="campusOtherInput" value={customCampus} onChange={(e) => setCustomCampus(e.target.value)} placeholder="Type your school name" required />
+            )}
+            <small>Your request will be shown in this campus feed.</small>
           </label>
 
           <fieldset className="postKinds">
