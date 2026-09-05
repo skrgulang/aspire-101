@@ -106,7 +106,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         <form className="authCard" onSubmit={submit}>
           <div className="authCardTop">
             <span>{signup ? 'CREATE ACCOUNT' : 'LOG IN'}</span>
-            <a href={switchHref}>{signup ? 'Already joined?' : 'New here?'}</a>
+            <span className="authCardHint">{signup ? 'Already on Aspire?' : 'Your campus starts here.'}</span>
           </div>
 
           {signup && (
@@ -123,9 +123,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           )}
 
           <label>
-            <span>School email</span>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@school.edu" autoComplete="email" required />
+            <span>Email</span>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={signup ? 'you@school.edu' : 'you@example.com'} autoComplete="email" required />
           </label>
+          {signup && <p className="authFieldNote">Use your school email when possible. During beta, other email domains can still create an account.</p>}
 
           <label>
             <span>Password</span>
@@ -133,8 +134,22 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           </label>
 
           <button className="button buttonGold authSubmit" type="submit" disabled={busy}>
-            {busy ? 'One second…' : signup ? 'Join Aspire →' : 'Log in →'}
+            {busy ? 'One second…' : signup ? 'Create account →' : 'Log in →'}
           </button>
+
+          {!signup && (
+            <div className="authCreateAccount">
+              <span>New to Aspire?</span>
+              <a href={switchHref}>Create an account →</a>
+            </div>
+          )}
+
+          {signup && (
+            <div className="authCreateAccount">
+              <span>Already have an account?</span>
+              <a href={switchHref}>Log in →</a>
+            </div>
+          )}
 
           {message && <p className="authMessage" role="status">{message}</p>}
 
