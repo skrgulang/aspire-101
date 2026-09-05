@@ -41,13 +41,13 @@ export async function POST(request: Request) {
     if (!['confirmed', 'active'].includes(connection.status)) throw new Error('CONNECTION_NOT_READY');
 
     const [{ data: aspireRequest }, { data: payoutAccount }, { data: existingPayment }] = await Promise.all([
-      supabase.from('requests').select('id,title,kind,amount_cents,currency,payment_method').eq('id', connection.request_id).maybeSingle(),
+      supabase.from('requests').select('id,title,kind,amount_cents,currency').eq('id', connection.request_id).maybeSingle(),
       supabase.from('payment_accounts').select('stripe_account_id,status,transfers_enabled').eq('user_id', connection.responder_id).maybeSingle(),
       supabase.from('connection_payments').select('*').eq('connection_id', connection.id).maybeSingle()
     ]);
 
     if (!aspireRequest) return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
-    if (aspireRequest.payment_method !== 'aspire') throw new Error('PAYMENT_NOT_REQUIRED');
+    if (connection.payment_method !== 'aspire') throw new Error('PAYMENT_NOT_REQUIRED');
     if (!payoutAccount?.stripe_account_id || payoutAccount.status !== 'READY' || payoutAccount.transfers_enabled !== true) {
       throw new Error('PAYOUT_NOT_READY');
     }
