@@ -12,16 +12,15 @@ export default function PostPage() {
   return (
     <main className="postPage">
       <header className="postNav shell">
-        <a className="brand" href="/" aria-label="Aspire 101 home">
+        <a className="brand" href="/campus" aria-label="Aspire campus home">
           <img src={aspireLogo} alt="" style={logoStyle} />
           <span>Aspire 101</span>
         </a>
-        <nav className="postModeNav" aria-label="Request actions">
+        <nav className="postModeNav" aria-label="Campus actions">
+          <a href="/campus">Decks</a>
           <a className="active" href="/post">Post</a>
-          <a href="/discover">Discover</a>
-          <a href="/safety">Safety</a>
         </nav>
-        <a className="quietLink" href="/">Back to campus ↙</a>
+        <a className="quietLink" href="/discover">Discover →</a>
       </header>
 
       <div className="postPageGlow" aria-hidden="true" />
