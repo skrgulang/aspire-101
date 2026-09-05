@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 import { aspireLogo } from '../logo';
 import AppDock from '../AppDock';
+import AppLoader from '../AppLoader';
 
 type ProfileView = {
   name: string;
@@ -47,7 +48,7 @@ export default function ProfilePage() {
   }
 
   if (!profile) {
-    return <main className="profilePage"><div className="profileShell"><p>Loading profile…</p></div><AppDock active="profile" /></main>;
+    return <AppLoader label="Opening your Aspire…" detail="Loading trust details" />;
   }
 
   return (
