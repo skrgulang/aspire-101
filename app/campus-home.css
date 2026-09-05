@@ -9,6 +9,8 @@
     linear-gradient(180deg, #090907 0%, #0a0907 64%, #0d0b08 100%);
 }
 
+body:has(.campusHome) .siteFooter { display: none; }
+
 .campusHome::before {
   content: '';
   position: absolute;
@@ -120,14 +122,9 @@
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 34px;
   color: #fff;
-  transform:
-    translateX(calc(var(--deck-offset) * 66px))
-    translateY(calc(abs(var(--deck-offset)) * 10px))
-    rotate(calc(var(--deck-offset) * 2.8deg))
-    scale(calc(1 - min(abs(var(--deck-offset)), 3) * .035));
-  opacity: calc(1 - min(abs(var(--deck-offset)), 3) * .22);
+  transform: translateX(calc(var(--deck-offset) * 52px)) rotate(calc(var(--deck-offset) * 2.4deg)) scale(.93);
+  opacity: .28;
   pointer-events: none;
-  z-index: calc(20 - abs(var(--deck-offset)));
   transition: transform .42s cubic-bezier(.2,.7,.2,1), opacity .3s ease, filter .3s ease;
   box-shadow: 0 30px 100px rgba(0,0,0,.40);
   overflow: hidden;
@@ -140,7 +137,7 @@
   pointer-events: none;
 }
 .campusDeckCard.active { pointer-events: auto; opacity: 1; transform: translateX(0) translateY(0) rotate(0deg) scale(1); z-index: 30; }
-.campusDeckCard:not(.active) { filter: saturate(.55) brightness(.72); }
+.campusDeckCard:not(.active) { filter: saturate(.55) brightness(.72); z-index: 10; }
 
 .deckRide { background: linear-gradient(145deg, #151a1e, #283747 58%, #111418); }
 .deckStudy { background: linear-gradient(145deg, #15131e, #43355d 58%, #17131f); }
