@@ -1,0 +1,103 @@
+.connectionsPage {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(255,194,28,.12), transparent 24rem),
+    radial-gradient(circle at 9% 65%, rgba(65,105,255,.055), transparent 30rem),
+    #080705;
+}
+.connectionsShell { padding: 66px 0 105px; }
+.connectionsHub { min-height: 720px; }
+.connectionsHero { display: grid; grid-template-columns: 1fr auto; gap: 44px; align-items: end; }
+.connectionsHero h1 { margin: 14px 0 14px; font-size: clamp(62px, 7vw, 100px); line-height: .88; letter-spacing: -.07em; }
+.connectionsHero h1 span { color: var(--gold); font-family: var(--font-display), Georgia, serif; font-style: italic; font-weight: 600; letter-spacing: -.035em; }
+.connectionsHero > div:first-child > p:last-child { max-width: 660px; color: #9c9487; line-height: 1.65; }
+.connectionsStats { display: flex; gap: 10px; }
+.connectionsStats article { min-width: 116px; padding: 16px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px; background: rgba(255,255,255,.02); }
+.connectionsStats strong { display: block; font-size: 30px; letter-spacing: -.05em; }
+.connectionsStats span { display: block; margin-top: 5px; color: #6f685e; font-size: 9px; }
+.connectionsTabs { margin-top: 36px; padding: 7px; display: flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px; background: rgba(255,255,255,.018); }
+.connectionsTabs button, .connectionsTabs a { min-height: 40px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 12px; background: transparent; color: #847c70; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
+.connectionsTabs button.active { background: var(--paper); color: var(--ink); }
+.connectionsTabs a { margin-left: auto; color: var(--gold); }
+.connectionsNotice { margin-top: 15px; padding: 13px 15px; border: 1px solid rgba(255,194,28,.18); border-radius: 14px; background: rgba(255,194,28,.055); color: #bdb5a7; font-size: 10px; line-height: 1.5; }
+
+.requestInbox, .connectionList { display: grid; gap: 13px; margin-top: 20px; }
+.inboxRequest, .connectionCard { padding: 24px; border: 1px solid rgba(255,255,255,.08); border-radius: 23px; background: linear-gradient(150deg, rgba(255,255,255,.025), rgba(255,255,255,.008)); }
+.inboxRequestHeader { display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: start; }
+.inboxRequestHeader span, .connectionCardTop span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .13em; }
+.inboxRequestHeader h2, .connectionCard h2 { margin: 10px 0 8px; font-size: 28px; letter-spacing: -.04em; }
+.inboxRequestHeader p { margin: 0; color: #7d756a; font-size: 10px; }
+.requestStatus { padding: 7px 10px; border-radius: 999px; background: rgba(255,255,255,.04); color: #928a7d; font-size: 8px; text-transform: uppercase; }
+.status-open { background: rgba(255,194,28,.10); color: var(--gold); }
+.status-matched, .status-in_progress { background: rgba(79,198,135,.09); color: #7fdaa8; }
+.responseList { display: grid; gap: 8px; margin-top: 20px; padding-top: 17px; border-top: 1px solid rgba(255,255,255,.07); }
+.responseRow { display: grid; grid-template-columns: 38px 1fr auto; gap: 12px; align-items: center; padding: 12px 13px; border: 1px solid rgba(255,255,255,.06); border-radius: 15px; background: rgba(255,255,255,.015); }
+.responseAvatar, .connectionPerson i { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--gold); color: #151109; font-style: normal; font-weight: 900; }
+.responseCopy strong { display: block; font-size: 11px; }
+.responseCopy span { display: block; margin-top: 2px; color: #6f685d; font-size: 8px; }
+.responseCopy p { margin: 6px 0 0; color: #a49c8f; font-size: 10px; }
+.responseRow > button { min-height: 37px; padding: 0 12px; border: 0; border-radius: 11px; background: var(--gold); color: #151109; font-weight: 850; cursor: pointer; }
+.responseState { color: #777064; font-size: 9px; text-transform: uppercase; }
+.noResponses { margin: 0; color: #6f685d; font-size: 10px; }
+
+.connectionCardTop { display: flex; justify-content: space-between; gap: 20px; }
+.connectionCardTop small { color: #6f685d; font-size: 9px; }
+.connectionPerson { margin-top: 17px; display: flex; gap: 11px; align-items: center; }
+.connectionPerson div strong { display: block; font-size: 11px; }
+.connectionPerson div span { color: #70695e; font-size: 9px; }
+.connectionChecks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 17px; }
+.connectionChecks span { padding: 8px 10px; border: 1px solid rgba(255,255,255,.07); border-radius: 999px; color: #777064; font-size: 9px; }
+.connectionChecks span.done { border-color: rgba(105,215,154,.18); background: rgba(105,215,154,.05); color: #88d7aa; }
+.connectionActions { display: flex; align-items: center; gap: 10px; margin-top: 20px; padding-top: 17px; border-top: 1px solid rgba(255,255,255,.07); }
+.connectionActions .button { min-height: 40px; padding: 0 14px; }
+.connectionActions > a { margin-left: auto; color: #8e8679; font-size: 9px; font-weight: 800; }
+.connectionCancel { min-height: 40px; padding: 0 13px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: transparent; color: #8c8478; font-weight: 800; cursor: pointer; }
+.connectionCancel:hover { color: #fff; }
+.connectionsEmpty { padding: 60px 24px; text-align: center; border: 1px dashed rgba(255,255,255,.10); border-radius: 22px; }
+.connectionsEmpty strong { font-size: 25px; }
+.connectionsEmpty p { color: #777064; }
+.connectionsEmpty .button { margin-top: 10px; }
+
+.connectionsLoading { min-height: 70vh; display: grid; place-content: center; text-align: center; }
+.connectionsLoading span { width: 35px; height: 35px; justify-self: center; border: 2px solid rgba(255,255,255,.11); border-top-color: var(--gold); border-radius: 50%; animation: postSpin .8s linear infinite; }
+.connectionsLoading p { color: #766f64; font-size: 11px; }
+
+.connectionChatOverlay { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; padding: 22px; background: rgba(3,3,2,.78); backdrop-filter: blur(14px); }
+.connectionChat { width: min(680px, 100%); height: min(720px, 88vh); display: grid; grid-template-rows: auto auto 1fr auto; overflow: hidden; border: 1px solid rgba(255,255,255,.10); border-radius: 27px; background: #0e0d09; box-shadow: 0 40px 120px rgba(0,0,0,.58); }
+.connectionChat header { padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,.07); }
+.connectionChat header span { display: block; color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .13em; }
+.connectionChat header strong { display: block; margin-top: 5px; font-size: 15px; }
+.connectionChat header button { width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; background: transparent; color: #8c8477; cursor: pointer; }
+.chatSafetyBar { padding: 11px 22px; border-bottom: 1px solid rgba(255,194,28,.10); background: rgba(255,194,28,.045); color: #887f70; font-size: 9px; line-height: 1.45; }
+.chatSafetyBar a { color: var(--gold); font-weight: 800; }
+.chatMessages { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
+.chatEmpty { margin: auto; max-width: 360px; text-align: center; }
+.chatEmpty strong { font-size: 22px; }
+.chatEmpty p { color: #756e63; font-size: 10px; line-height: 1.55; }
+.chatBubble { max-width: 75%; align-self: flex-start; padding: 11px 13px; border: 1px solid rgba(255,255,255,.08); border-radius: 15px 15px 15px 4px; background: rgba(255,255,255,.025); }
+.chatBubble.mine { align-self: flex-end; border-radius: 15px 15px 4px 15px; background: var(--gold); color: #151109; }
+.chatBubble p { margin: 0; font-size: 11px; line-height: 1.5; }
+.chatBubble small { display: block; margin-top: 5px; color: #6e675d; font-size: 7px; }
+.chatBubble.mine small { color: rgba(21,17,9,.55); }
+.chatComposer { padding: 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px; border-top: 1px solid rgba(255,255,255,.07); }
+.chatComposer input { min-height: 48px; padding: 0 14px; border: 1px solid rgba(255,255,255,.09); border-radius: 13px; outline: none; background: #090806; color: #fff; }
+.chatComposer button { min-width: 92px; border: 0; border-radius: 13px; background: var(--gold); color: #151109; font-weight: 900; cursor: pointer; }
+.chatComposer button:disabled { opacity: .45; cursor: default; }
+
+@media (max-width: 820px) {
+  .connectionsHero { grid-template-columns: 1fr; }
+  .connectionsStats { overflow-x: auto; }
+  .inboxRequestHeader { grid-template-columns: 1fr; gap: 12px; }
+}
+@media (max-width: 560px) {
+  .connectionsShell { width: min(100% - 22px, 1200px); padding-top: 44px; }
+  .connectionsHero h1 { font-size: clamp(56px, 18vw, 80px); }
+  .connectionsTabs a { display: none; }
+  .responseRow { grid-template-columns: 34px 1fr; }
+  .responseRow > button, .responseState { grid-column: 2; justify-self: start; }
+  .connectionActions { flex-wrap: wrap; }
+  .connectionActions > a { width: 100%; margin-left: 0; }
+  .connectionChatOverlay { padding: 0; }
+  .connectionChat { height: 100vh; border-radius: 0; }
+  .chatBubble { max-width: 88%; }
+}
