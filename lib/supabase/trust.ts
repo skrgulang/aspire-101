@@ -3,6 +3,7 @@ import type { AspireRequest } from './requests';
 
 export type SchoolVerificationStatus = 'pending' | 'verified' | 'rejected';
 export type SchoolVerificationMethod = 'manual_id' | 'school_email';
+export type VerificationProvider = 'aspire' | 'school_email' | 'sheerid' | 'persona';
 
 export type SchoolVerification = {
   user_id: string;
@@ -18,6 +19,9 @@ export type SchoolVerification = {
   verification_method: SchoolVerificationMethod;
   school_email: string | null;
   verified_at: string | null;
+  verification_provider: VerificationProvider;
+  provider_verification_id: string | null;
+  provider_status: string | null;
 };
 
 export type AppRole = 'member' | 'moderator' | 'admin';
@@ -70,8 +74,9 @@ export async function submitSchoolVerification(school: string, studentId: string
       student_id: cleanId,
       status: 'pending',
       verification_method: 'manual_id',
-      school_email: null,
-      verified_at: null
+      verification_provider: 'aspire',
+      provider_verification_id: null,
+      provider_status: 'pending_manual_review'
     }, { onConflict: 'user_id' })
     .select('*')
     .single();
