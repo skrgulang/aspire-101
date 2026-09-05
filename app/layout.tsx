@@ -14,6 +14,7 @@ import './connection-vibe.css';
 import './trust-simple.css';
 import './auth.css';
 import './post.css';
+import './safety-ui.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
