@@ -41,6 +41,15 @@ const decks: CampusDeck[] = [
   { key: 'market', label: 'Market', short: 'buy + sell nearby', href: '/discover?category=Buy%20%26%20sell', glyph: '$', match: (r) => r.kind === 'buy_sell' || /market|sell|buy|fridge|lamp/i.test(`${r.category} ${r.title}`) }
 ];
 
+const sectionNotes: Record<string, string> = {
+  rides: 'Airport · city trips · errands',
+  study: 'Classmates · tutoring · study groups',
+  gaming: 'Duos · squads · campus gamers',
+  projects: 'Hackathons · startups · collaborators',
+  people: 'Friends · plans · communities',
+  market: 'Buy · sell · borrow nearby'
+};
+
 function resolveCampus(rawSchool: string) {
   const normalized = rawSchool.toLowerCase().trim();
   return campuses.find((campus) => campus.aliases.some((alias) => normalized.includes(alias))) ?? campuses[0];
@@ -205,6 +214,34 @@ export default function CampusHome() {
 
       <section className="campusCirclePromise" aria-label="How the circle works">
         <span>Campus-scoped</span><i>•</i><span>Real requests</span><i>•</i><span>Both sides choose</span><i>•</i><span>Chat after a match</span>
+      </section>
+
+      <section className="campusSections" aria-label="Choose a campus section">
+        <div className="campusSectionsHead">
+          <div>
+            <p>GO DEEPER</p>
+            <h2>Pick a section.</h2>
+          </div>
+          <span>Circle first. Then choose where you want to go.</span>
+        </div>
+
+        <div className="campusSectionsGrid">
+          {decks.map((deck, index) => {
+            const matching = campusRequests.filter(deck.match);
+            const preview = matching[0];
+            return (
+              <a key={deck.key} href={deck.href} className={`campusSectionCard section-${deck.key} ${index < 2 ? 'featured' : ''}`}>
+                <div className="campusSectionTop"><i>{deck.glyph}</i><b>{matching.length ? `${matching.length} LIVE` : 'EXPLORE'}</b></div>
+                <div className="campusSectionCopy">
+                  <small>{sectionNotes[deck.key]}</small>
+                  <strong>{deck.label}</strong>
+                  <p>{preview ? compactTitle(preview.title, 58) : deck.short}</p>
+                </div>
+                <span className="campusSectionArrow">→</span>
+              </a>
+            );
+          })}
+        </div>
       </section>
 
       <section className="campusNow">
