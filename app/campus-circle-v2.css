@@ -1,0 +1,208 @@
+.campusCircleV2 {
+  width: min(1240px, 100%);
+  min-height: 660px;
+  margin-top: 8px;
+}
+
+.campusCircleMeta {
+  position: absolute;
+  left: 5%;
+  top: 4%;
+  z-index: 16;
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 18px;
+  background: rgba(12,11,9,.66);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 16px 50px rgba(0,0,0,.24);
+}
+.campusCircleMeta span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .16em; }
+.campusCircleMeta b { margin-top: 4px; font-size: 27px; line-height: 1; letter-spacing: -.05em; }
+.campusCircleMeta small { color: #837c70; font-size: 9px; }
+
+.campusCircleSortNote {
+  position: absolute;
+  right: 9%;
+  bottom: 8%;
+  z-index: 15;
+  color: rgba(255,255,255,.48);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.05;
+  transform: rotate(4deg);
+}
+
+.campusOrbitV2 {
+  width: 590px;
+  height: 590px;
+  border-color: rgba(255,194,28,.19);
+  animation: campusOrbitBreath 8s ease-in-out infinite;
+}
+.campusOrbitV2::before { inset: 76px; border-color: rgba(255,255,255,.075); }
+.campusOrbitV2::after { inset: 168px; border-color: rgba(255,194,28,.07); }
+.campusOrbitV2 > span,
+.campusOrbitV2 > i {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 20px rgba(255,194,28,.45);
+}
+.campusOrbitV2 > span { width: 8px; height: 8px; left: 50%; top: -4px; }
+.campusOrbitV2 > i { width: 5px; height: 5px; right: 9%; bottom: 17%; opacity: .65; }
+
+.campusCircleCenterV2 {
+  width: 250px;
+  height: 250px;
+  overflow: visible;
+}
+.campusCircleCenterV2 > small {
+  margin-top: 0;
+  color: var(--gold);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+.campusCircleCenterV2 > strong { margin-top: 6px; font-size: 31px; }
+.campusCircleCenterV2 > p {
+  max-width: 155px;
+  margin: 6px 0 0;
+  color: #8d8578;
+  font-size: 9px;
+  line-height: 1.35;
+  text-align: center;
+}
+.campusCircleCenterV2 > b { margin-top: 9px; }
+.campusCirclePulse {
+  position: absolute;
+  inset: -9px;
+  border: 1px solid rgba(255,194,28,.14);
+  border-radius: 50%;
+  animation: campusCirclePulse 3s ease-out infinite;
+  pointer-events: none;
+}
+
+.campusOrbitNodeV2 {
+  min-width: 200px;
+  min-height: 78px;
+  overflow: hidden;
+}
+.campusOrbitNodeV2::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: linear-gradient(120deg, transparent 0 55%, rgba(255,194,28,.05));
+  transition: opacity .2s ease;
+  pointer-events: none;
+}
+.campusOrbitNodeV2:hover::after { opacity: 1; }
+.campusOrbitNodeV2 span em {
+  color: #6f685e;
+  font-style: normal;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+.campusOrbitNodeV2.isHot {
+  border-color: rgba(255,194,28,.34);
+  box-shadow: 0 18px 60px rgba(255,194,28,.06), 0 18px 50px rgba(0,0,0,.30);
+}
+.campusOrbitNodeV2.isHot span em { color: var(--gold); }
+
+.topic-rides i { background: rgba(88,163,255,.12); color: #9bc9ff; }
+.topic-study i { background: rgba(174,143,255,.12); color: #c7aaff; }
+.topic-gaming i { background: rgba(70,220,172,.12); color: #8de7c8; }
+.topic-projects i { background: rgba(255,194,28,.12); color: var(--gold); }
+.topic-people i { background: rgba(255,132,184,.12); color: #ffabd0; }
+.topic-market i { background: rgba(167,213,91,.12); color: #c8e993; }
+
+.campusLiveThread {
+  position: absolute;
+  z-index: 13;
+  width: 180px;
+  padding: 11px 13px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 16px;
+  background: rgba(243,238,227,.93);
+  color: #16120d;
+  box-shadow: 0 14px 35px rgba(0,0,0,.24);
+  transition: transform .2s ease;
+}
+.campusLiveThread:hover { transform: translateY(-4px) rotate(0deg); }
+.campusLiveThread span { color: #806d41; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.campusLiveThread strong { font-size: 11px; line-height: 1.2; }
+.thread-1 { left: 9%; top: 48%; transform: rotate(-4deg); }
+.thread-2 { right: 7%; top: 46%; transform: rotate(4deg); }
+
+.campusPostNoteV2 {
+  right: 7%;
+  top: 4%;
+  animation: campusNoteFloat 5.5s ease-in-out infinite;
+}
+
+.campusCirclePromise {
+  width: min(980px, 100%);
+  margin: -4px auto 22px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(255,255,255,.06);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  color: #8b8478;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .04em;
+}
+.campusCirclePromise i { color: rgba(255,194,28,.45); font-style: normal; }
+
+@keyframes campusCirclePulse {
+  0% { transform: scale(.98); opacity: .7; }
+  75% { transform: scale(1.09); opacity: 0; }
+  100% { transform: scale(1.09); opacity: 0; }
+}
+@keyframes campusOrbitBreath {
+  0%, 100% { transform: scale(1); opacity: .86; }
+  50% { transform: scale(1.018); opacity: 1; }
+}
+@keyframes campusNoteFloat {
+  0%, 100% { transform: rotate(4deg) translateY(0); }
+  50% { transform: rotate(2.5deg) translateY(-7px); }
+}
+
+@media (max-width: 980px) {
+  .campusCircleV2 { min-height: 0; }
+  .campusCircleMeta,
+  .campusCircleSortNote,
+  .campusLiveThread { position: static; }
+  .campusCircleMeta { grid-column: 1 / -1; justify-self: start; margin-bottom: 4px; }
+  .campusCircleSortNote { display: none; }
+  .campusLiveThread { width: auto; transform: none; }
+  .thread-1, .thread-2 { grid-column: span 1; }
+  .campusCircleCenterV2 { width: 100%; height: 150px; }
+  .campusCirclePulse { display: none; }
+  .campusCirclePromise { margin-top: 10px; }
+}
+
+@media (max-width: 640px) {
+  .campusCircleMeta { width: 100%; grid-template-columns: auto auto 1fr; align-items: end; gap: 8px; }
+  .campusCircleMeta b { margin: 0; }
+  .campusCircleMeta small { padding-bottom: 3px; }
+  .campusLiveThread { grid-column: 1; }
+  .campusCirclePromise { justify-content: flex-start; gap: 8px; }
+  .campusCirclePromise i:nth-of-type(n+3),
+  .campusCirclePromise span:nth-of-type(n+4) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campusOrbitV2,
+  .campusCirclePulse,
+  .campusPostNoteV2 { animation: none; }
+}
