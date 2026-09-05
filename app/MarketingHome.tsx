@@ -16,11 +16,11 @@ const campuses = [
 ];
 
 const features = [
-  { key: 'rides', label: 'Rides', note: 'airport rides + pickups', icon: '↗', image: 'https://images.pexels.com/photos/7683887/pexels-photo-7683887.jpeg?auto=compress&cs=tinysrgb&w=1000', doodle: 'GOOD RIDES\nGOOD PEOPLE' },
-  { key: 'study', label: 'Study', note: 'find a study buddy', icon: '⌑', image: 'https://images.pexels.com/photos/7683700/pexels-photo-7683700.jpeg?auto=compress&cs=tinysrgb&w=1000', doodle: 'BETTER GRADES\nTOGETHER' },
-  { key: 'gaming', label: 'Gaming', note: 'duos + teammates', icon: '◉', image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1000&q=82', doodle: 'GOOD GAMES\nBETTER PEOPLE' },
-  { key: 'projects', label: 'Projects', note: 'build together', icon: '✦', image: 'https://images.pexels.com/photos/7972544/pexels-photo-7972544.jpeg?auto=compress&cs=tinysrgb&w=1000', doodle: 'IDEAS → BUILD\n→ LAUNCH' },
-  { key: 'people', label: 'People', note: 'friends + campus life', icon: '+', image: 'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=1000', doodle: 'SAME CAMPUS\nDIFFERENT STORIES ♡' }
+  { key: 'rides', label: 'Rides', note: 'airport rides + pickups', icon: '↗', image: 'https://images.pexels.com/photos/7510863/pexels-photo-7510863.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'GOOD RIDES\nGOOD PEOPLE' },
+  { key: 'study', label: 'Study', note: 'find a study buddy', icon: '⌑', image: 'https://images.pexels.com/photos/6146973/pexels-photo-6146973.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'BETTER GRADES\nTOGETHER' },
+  { key: 'gaming', label: 'Gaming', note: 'duos + teammates', icon: '◉', image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=84', doodle: 'GOOD GAMES\nBETTER PEOPLE' },
+  { key: 'projects', label: 'Projects', note: 'build together', icon: '✦', image: 'https://images.pexels.com/photos/6145955/pexels-photo-6145955.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'IDEAS → BUILD\n→ LAUNCH' },
+  { key: 'people', label: 'People', note: 'friends + campus life', icon: '+', image: 'https://images.pexels.com/photos/8198540/pexels-photo-8198540.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'SAME CAMPUS\nDIFFERENT STORIES ♡' }
 ];
 
 const recent = [
@@ -36,7 +36,7 @@ const featureStories = [
     step: '01',
     title: 'Ask campus.',
     line: 'Post what you need.',
-    image: 'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    image: 'https://images.pexels.com/photos/6139799/pexels-photo-6139799.jpeg?auto=compress&cs=tinysrgb&w=1400',
     chips: ['Ride to IND?', 'Valorant duo?', 'Move a desk?', 'Study tonight?'],
     className: 'storyAsk'
   },
@@ -44,7 +44,7 @@ const featureStories = [
     step: '02',
     title: 'Find your people.',
     line: 'Browse by what you’re actually here for.',
-    image: 'https://images.pexels.com/photos/7972544/pexels-photo-7972544.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    image: 'https://images.pexels.com/photos/7683401/pexels-photo-7683401.jpeg?auto=compress&cs=tinysrgb&w=1400',
     chips: ['Study', 'Gaming', 'Projects', 'People'],
     className: 'storyDiscover'
   },
@@ -52,15 +52,55 @@ const featureStories = [
     step: '03',
     title: 'Connect when it fits.',
     line: 'Both sides choose. Then chat opens.',
-    image: 'https://images.pexels.com/photos/7683700/pexels-photo-7683700.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    image: 'https://images.pexels.com/photos/7969484/pexels-photo-7969484.jpeg?auto=compress&cs=tinysrgb&w=1400',
     chips: ['Interested', 'Mutual connect', 'Private chat'],
     className: 'storyConnect'
+  }
+];
+
+const howItWorks = [
+  { step: '01', title: 'Post it', text: 'Say what you need.', visual: 'Need a ride to IND Friday?' },
+  { step: '02', title: 'Campus sees it', text: 'Nearby students can respond.', visual: 'I can help after class.' },
+  { step: '03', title: 'Pick your match', text: 'Choose who works for you.', visual: 'Mutual connect ✓' },
+  { step: '04', title: 'Make it happen', text: 'Chat, meet, get it done.', visual: 'See you there 👋' }
+];
+
+const productPages = [
+  { label: 'Post a Request', note: 'Get help. Give help.', icon: '+', href: '/post', className: 'productPost' },
+  { label: 'Discover', note: 'See what’s happening.', icon: '⌕', href: '/discover', className: 'productDiscover' },
+  { label: 'Connections', note: 'Chat. Plan. Do more.', icon: '◌', href: '/connections', className: 'productConnections' },
+  { label: 'Safety Center', note: 'A safer campus for all.', icon: '◇', href: '/safety', className: 'productSafety' },
+  { label: 'Campus Circle', note: 'Requests, clubs, and more.', icon: '◎', href: '/campus', className: 'productCircle' }
+];
+
+const collegeStats = [
+  {
+    value: '16.4M',
+    label: 'undergraduates enrolled at U.S. degree-granting institutions in fall 2024',
+    source: 'NCES',
+    href: 'https://nces.ed.gov/programs/digest/d25/tables/dt25_303.70.asp'
+  },
+  {
+    value: '40%',
+    label: 'of full-time undergraduates were employed while enrolled in 2020',
+    source: 'NCES / CPS',
+    href: 'https://nces.ed.gov/programs/coe/indicator/ssa/college-student-employment'
+  },
+  {
+    value: '$27.8K',
+    label: 'average 2022–23 total cost at public 4-year schools for students living off campus, not with family',
+    source: 'NCES / IPEDS',
+    href: 'https://nces.ed.gov/programs/coe/indicator/cua/undergrad-costs'
   }
 ];
 
 function featureHref(featureKey: string, user: User | null) {
   const next = `/campus?deck=${encodeURIComponent(featureKey)}`;
   return user ? next : `/signup?next=${encodeURIComponent(next)}`;
+}
+
+function gatedHref(href: string, user: User | null) {
+  return user ? href : `/signup?next=${encodeURIComponent(href)}`;
 }
 
 export default function MarketingHome() {
@@ -126,7 +166,7 @@ export default function MarketingHome() {
 
         <div className="marketingHeroCopy">
           <p className="marketingKicker">ASPIRE 101 · {campus.short.toUpperCase()}</p>
-          <h1>What are you here<br />for <em>tonight?</em></h1>
+          <h1>What do you need<br /><em>on campus?</em></h1>
           <p>Pick one and start exploring.</p>
         </div>
 
@@ -188,11 +228,67 @@ export default function MarketingHome() {
             </article>
           ))}
         </div>
+      </section>
 
-        <div className="marketingStoryFooter">
-          <strong>Need something?</strong>
-          <span>There’s probably someone on campus for that.</span>
-          <a href={user ? '/campus' : '/signup'}>{user ? 'Open your campus →' : 'Join Aspire →'}</a>
+      <section className="marketingHow">
+        <div className="marketingExpandHead">
+          <p>HOW IT WORKS</p>
+          <h2>From request to <em>real life.</em></h2>
+          <span>Four steps. That’s it.</span>
+        </div>
+        <div className="marketingHowGrid">
+          {howItWorks.map((item) => (
+            <article key={item.step}>
+              <b>{item.step}</b>
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+              <div className="marketingHowVisual">{item.visual}</div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="marketingProducts">
+        <div className="marketingExpandHead">
+          <p>EXPLORE MORE ON ASPIRE</p>
+          <h2>Everything you need.<br /><em>One campus network.</em></h2>
+        </div>
+        <div className="marketingProductGrid">
+          {productPages.map((item) => (
+            <a key={item.label} className={`marketingProductCard ${item.className}`} href={gatedHref(item.href, user)}>
+              <i>{item.icon}</i>
+              <div><strong>{item.label}</strong><span>{item.note}</span></div>
+              <b>→</b>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section className="marketingSafetyStrip">
+        <div>
+          <span>◇</span>
+          <strong>A safer, stronger campus together.</strong>
+        </div>
+        <div><b>Verified students</b><small>Built around real campus communities.</small></div>
+        <div><b>Report, block, review</b><small>Control who you interact with.</small></div>
+        <div><b>Mutual connect</b><small>Both sides choose before private chat.</small></div>
+        <a href="/safety">Safety Center →</a>
+      </section>
+
+      <section className="marketingDataSection">
+        <div className="marketingExpandHead marketingDataHead">
+          <p>COLLEGE, IN REAL NUMBERS</p>
+          <h2>Campus life is <em>a lot.</em></h2>
+          <span>Official U.S. education data — not Aspire estimates.</span>
+        </div>
+        <div className="marketingDataGrid">
+          {collegeStats.map((stat) => (
+            <a key={stat.value} href={stat.href} target="_blank" rel="noreferrer" className="marketingDataCard">
+              <strong>{stat.value}</strong>
+              <p>{stat.label}</p>
+              <span>{stat.source} ↗</span>
+            </a>
+          ))}
         </div>
       </section>
 
