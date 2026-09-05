@@ -1,11 +1,17 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { aspireLogo } from './logo';
 
 type Mode = 'login' | 'signup';
+
+function safeNextPath() {
+  if (typeof window === 'undefined') return '/';
+  const next = new URLSearchParams(window.location.search).get('next');
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+}
 
 export default function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
@@ -16,6 +22,14 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
+  useEffect(() => {
+    if (mode !== 'login') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('confirmed') === '1') {
+      setMessage('Email confirmed. Log in and you’re ready to ask campus.');
+    }
+  }, [mode]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -23,8 +37,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
     try {
       const supabase = getSupabaseBrowserClient();
+      const nextPath = safeNextPath();
 
       if (mode === 'signup') {
+        const nextQuery = nextPath === '/' ? '' : `&next=${encodeURIComponent(nextPath)}`;
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -33,13 +49,13 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               display_name: name.trim(),
               school: school.trim()
             },
-            emailRedirectTo: `${window.location.origin}/login?confirmed=1`
+            emailRedirectTo: `${window.location.origin}/login?confirmed=1${nextQuery}`
           }
         });
         if (error) throw error;
 
         if (data.session) {
-          router.push('/');
+          router.push(nextPath);
           router.refresh();
         } else {
           setMessage('Check your email to confirm your account, then come back and log in.');
@@ -50,7 +66,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           password
         });
         if (error) throw error;
-        router.push('/');
+        router.push(nextPath);
         router.refresh();
       }
     } catch (error) {
@@ -61,6 +77,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   }
 
   const signup = mode === 'signup';
+  const switchHref = signup
+    ? `/login${typeof window !== 'undefined' && safeNextPath() !== '/' ? `?next=${encodeURIComponent(safeNextPath())}` : ''}`
+    : `/signup${typeof window !== 'undefined' && safeNextPath() !== '/' ? `?next=${encodeURIComponent(safeNextPath())}` : ''}`;
 
   return (
     <main className="authPage">
@@ -84,7 +103,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         <form className="authCard" onSubmit={submit}>
           <div className="authCardTop">
             <span>{signup ? 'CREATE ACCOUNT' : 'LOG IN'}</span>
-            <a href={signup ? '/login' : '/signup'}>{signup ? 'Already joined?' : 'New here?'}</a>
+            <a href={switchHref}>{signup ? 'Already joined?' : 'New here?'}</a>
           </div>
 
           {signup && (
@@ -116,7 +135,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
           {message && <p className="authMessage" role="status">{message}</p>}
 
-          <p className="authLegal">By continuing, you agree to Aspire 101's Terms and Privacy Policy.</p>
+          <p className="authLegal">By continuing, you agree to Aspire 101's <a href="/terms">Terms</a> and <a href="/privacy">Privacy Policy</a>.</p>
         </form>
       </section>
     </main>
