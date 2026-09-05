@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
+import { AppRole, fetchMyRole } from '../../lib/supabase/trust';
 import { aspireLogo } from '../logo';
 import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
+import SchoolVerificationCard from '../SchoolVerificationCard';
 
 type ProfileView = {
   name: string;
@@ -19,10 +21,11 @@ type ProfileView = {
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileView | null>(null);
+  const [role, setRole] = useState<AppRole>('member');
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       const user = data.user;
       if (!user) {
         router.replace('/login?next=%2Fprofile');
@@ -37,6 +40,7 @@ export default function ProfilePage() {
         phone: user.phone || '',
         phoneVerified: Boolean(user.phone_confirmed_at)
       });
+      setRole(await fetchMyRole().catch(() => 'member'));
     });
   }, [router]);
 
@@ -47,9 +51,9 @@ export default function ProfilePage() {
     router.refresh();
   }
 
-  if (!profile) {
-    return <AppLoader label="Opening your Aspire…" detail="Loading trust details" />;
-  }
+  if (!profile) return <AppLoader label="Opening your profile…" detail="Trust + campus" />;
+
+  const staff = role === 'moderator' || role === 'admin';
 
   return (
     <main className="profilePage">
@@ -58,30 +62,43 @@ export default function ProfilePage() {
         <section className="profileHero">
           <p className="eyebrow">YOUR ASPIRE</p>
           <h1>{profile.name}</h1>
-          <p>{profile.school}. Your trust details stay simple: verify what matters, then keep connecting.</p>
+          <p>{profile.school}. Verify the things that matter, then keep connecting.</p>
         </section>
 
         <section className="profileCards" aria-label="Account and trust status">
           <article className={`profileCard ${profile.emailVerified ? 'isVerified' : ''}`}>
-            <span>SCHOOL / EMAIL</span>
+            <span>EMAIL</span>
             <strong>{profile.emailVerified ? 'Verified ✓' : 'Not verified'}</strong>
             <p>{profile.email || 'No email on account'}</p>
           </article>
+
           <article className={`profileCard ${profile.phoneVerified ? 'isVerified' : ''}`}>
             <span>PHONE</span>
             <strong>{profile.phoneVerified ? 'Verified ✓' : 'Not added yet'}</strong>
             <p>{profile.phoneVerified ? profile.phone : 'Phone verification will be used for higher-trust actions such as rides and paid exchanges.'}</p>
           </article>
+
+          <SchoolVerificationCard school={profile.school} />
+
           <article className="profileCard">
             <span>COMMUNITY</span>
             <strong>{profile.school}</strong>
             <p>Your Community Circle is scoped to campus activity rather than exposing precise location.</p>
           </article>
+
           <article className="profileCard">
             <span>CONNECTIONS</span>
             <strong>Mutual by default</strong>
             <p>Private chat opens only after both sides choose the connection.</p>
           </article>
+
+          {staff && (
+            <a className="profileCard profileModeratorCard" href="/moderator">
+              <span>{role === 'admin' ? 'ADMIN' : 'MODERATOR'}</span>
+              <strong>Moderation tools →</strong>
+              <p>Review school IDs, safety reports, and requests.{role === 'admin' ? ' Admins can also add moderators.' : ''}</p>
+            </a>
+          )}
         </section>
 
         <button type="button" className="profileSignOut" onClick={signOut}>Sign out</button>
