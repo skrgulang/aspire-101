@@ -8,9 +8,9 @@ import { aspireLogo } from './logo';
 type Mode = 'login' | 'signup';
 
 function readSafeNextPath() {
-  if (typeof window === 'undefined') return '/';
+  if (typeof window === 'undefined') return '/campus';
   const next = new URLSearchParams(window.location.search).get('next');
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/campus';
 }
 
 export default function AuthForm({ mode }: { mode: Mode }) {
@@ -23,7 +23,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState('');
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
-  const [nextPath, setNextPath] = useState('/');
+  const [nextPath, setNextPath] = useState('/campus');
 
   useEffect(() => {
     const safeNext = readSafeNextPath();
@@ -47,7 +47,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       const supabase = getSupabaseBrowserClient();
 
       if (mode === 'signup') {
-        const nextQuery = nextPath === '/' ? '' : `&next=${encodeURIComponent(nextPath)}`;
+        const nextQuery = `&next=${encodeURIComponent(nextPath)}`;
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
@@ -95,7 +95,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         type: 'signup',
         email: email.trim(),
         options: {
-          emailRedirectTo: `${window.location.origin}/login?confirmed=1`
+          emailRedirectTo: `${window.location.origin}/login?confirmed=1&next=${encodeURIComponent('/campus')}`
         }
       });
       if (error) throw error;
@@ -108,7 +108,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   }
 
   const signup = mode === 'signup';
-  const nextQuery = nextPath === '/' ? '' : `?next=${encodeURIComponent(nextPath)}`;
+  const nextQuery = nextPath === '/campus' ? '' : `?next=${encodeURIComponent(nextPath)}`;
   const switchHref = signup ? `/login${nextQuery}` : `/signup${nextQuery}`;
   const recoveryHref = `/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ''}`;
 
