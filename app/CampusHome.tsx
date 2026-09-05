@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { AspireRequest, fetchOpenRequests } from '../lib/supabase/requests';
+import { fetchActiveUniversities, University } from '../lib/supabase/universities';
 import { aspireLogo } from './logo';
 import AppDock from './AppDock';
 import AppLoader from './AppLoader';
@@ -17,23 +18,6 @@ type CampusDeck = {
   match: (request: AspireRequest) => boolean;
 };
 
-type CampusOption = {
-  key: string;
-  school: string;
-  aliases: string[];
-  image: string;
-};
-
-const campuses: CampusOption[] = [
-  { key: 'purdue', school: 'Purdue University', aliases: ['purdue'], image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Purdue%20EngineeringMall.jpg?width=1600' },
-  { key: 'berkeley', school: 'UC Berkeley', aliases: ['berkeley', 'uc berkeley', 'cal'], image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sather%20gate%20berkeley.jpg?width=1600' },
-  { key: 'ucla', school: 'UCLA', aliases: ['ucla'], image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Royce%20Hall.jpg?width=1600' },
-  { key: 'rutgers', school: 'Rutgers University', aliases: ['rutgers'], image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Queens%20Campus%20of%20Rutgers%20University%202026f.jpg?width=1600' },
-  { key: 'uiuc', school: 'UIUC', aliases: ['uiuc', 'illinois urbana', 'university of illinois'], image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Altgeld%20Hall.jpg?width=1600' },
-  { key: 'osu', school: 'The Ohio State University', aliases: ['ohio state', 'osu'], image: 'https://commons.wikimedia.org/wiki/Special:FilePath/University%20Hall%20%28Ohio%20State%20University%29.jpg?width=1600' },
-  { key: 'umich', school: 'University of Michigan', aliases: ['michigan', 'umich', 'u-m'], image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Law%20Quadrangle%2C%20University%20of%20Michigan%2C%20University%20Avenue%20and%20State%20Street%2C%20Ann%20Arbor%2C%20MI%20-%2054381553310.jpg?width=1600' }
-];
-
 const decks: CampusDeck[] = [
   { key: 'rides', label: 'Rides', short: 'rides + pickups', query: 'Get me there', glyph: '↗', match: (r) => /ride|transport|airport|chicago|indy|pickup|errand/i.test(`${r.category} ${r.title}`) },
   { key: 'study', label: 'Study', short: 'classmates + tutoring', query: 'Study / class', glyph: '⌑', match: (r) => /study|class|tutor|math|calc|econ|exam/i.test(`${r.category} ${r.title}`) },
@@ -43,16 +27,19 @@ const decks: CampusDeck[] = [
   { key: 'market', label: 'Market', short: 'buy + sell nearby', query: 'Buy & sell', glyph: '$', match: (r) => r.kind === 'buy_sell' || /market|sell|buy|fridge|lamp/i.test(`${r.category} ${r.title}`) }
 ];
 
-function resolveCampus(rawSchool: string) {
-  const normalized = rawSchool.toLowerCase().trim();
-  return campuses.find((campus) => campus.aliases.some((alias) => normalized.includes(alias))) ?? campuses[0];
+const campusImageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1600';
+
+function normalizeCampus(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function sameCampus(request: AspireRequest, school: string) {
-  if (!request.campus) return true;
-  const a = request.campus.toLowerCase();
-  const b = school.toLowerCase();
-  return a.includes(b) || b.includes(a) || resolveCampus(a).key === resolveCampus(b).key;
+function sameCampus(request: AspireRequest, campus: University) {
+  if (!request.campus) return false;
+  const requestCampus = normalizeCampus(request.campus);
+  const campusName = normalizeCampus(campus.name);
+  const campusShort = normalizeCampus(campus.short_name);
+  const campusSlug = normalizeCampus(campus.slug);
+  return requestCampus === campusName || requestCampus === campusShort || requestCampus === campusSlug || requestCampus.includes(campusShort) || campusName.includes(requestCampus);
 }
 
 function relativeTime(value: string) {
@@ -76,13 +63,16 @@ export default function CampusHome() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
-  const [campusKey, setCampusKey] = useState('purdue');
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [homeCampusId, setHomeCampusId] = useState<string | null>(null);
+  const [activeCampusId, setActiveCampusId] = useState<string | null>(null);
+  const [pendingCampusId, setPendingCampusId] = useState<string | null>(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [requests, setRequests] = useState<AspireRequest[]>([]);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let alive = true;
-    const startedAt = Date.now();
 
     supabase.auth.getUser().then(async ({ data }) => {
       if (!alive) return;
@@ -91,43 +81,70 @@ export default function CampusHome() {
         return;
       }
 
-      const metadata = data.user.user_metadata ?? {};
-      const rawName = typeof metadata.display_name === 'string' ? metadata.display_name : '';
-      const rawSchool = typeof metadata.school === 'string' ? metadata.school : '';
-      const resolved = resolveCampus(rawSchool || 'Purdue');
-      setName(rawName.trim());
-      setCampusKey(resolved.key);
-
       try {
-        const open = await fetchOpenRequests(60);
-        if (alive) setRequests(open);
+        const [profileResult, campusList, open] = await Promise.all([
+          supabase.from('profiles').select('display_name,name,full_name,home_campus_id,school').eq('id', data.user.id).maybeSingle(),
+          fetchActiveUniversities(),
+          fetchOpenRequests(60)
+        ]);
+        if (!alive) return;
+
+        const metadata = data.user.user_metadata ?? {};
+        const profileRow = profileResult.data;
+        const rawName = profileRow?.display_name || profileRow?.full_name || profileRow?.name || (typeof metadata.display_name === 'string' ? metadata.display_name : '');
+        const homeId = typeof profileRow?.home_campus_id === 'string' ? profileRow.home_campus_id : null;
+
+        setName((rawName || '').trim());
+        setUniversities(campusList);
+        setHomeCampusId(homeId);
+        setActiveCampusId(homeId);
+        setRequests(open);
       } catch {
         if (alive) setRequests([]);
       } finally {
-        const remaining = Math.max(0, 650 - (Date.now() - startedAt));
-        window.setTimeout(() => {
-          if (alive) setLoading(false);
-        }, remaining);
+        if (alive) setLoading(false);
       }
     }).catch(() => {
-      const remaining = Math.max(0, 650 - (Date.now() - startedAt));
-      window.setTimeout(() => {
-        if (alive) setLoading(false);
-      }, remaining);
+      if (alive) setLoading(false);
     });
 
     return () => { alive = false; };
   }, [router]);
 
-  const selectedCampus = useMemo(() => campuses.find((item) => item.key === campusKey) ?? campuses[0], [campusKey]);
+  const homeCampus = useMemo(() => universities.find((item) => item.id === homeCampusId) ?? null, [universities, homeCampusId]);
+  const selectedCampus = useMemo(() => universities.find((item) => item.id === activeCampusId) ?? null, [universities, activeCampusId]);
+  const pendingCampus = useMemo(() => universities.find((item) => item.id === pendingCampusId) ?? null, [universities, pendingCampusId]);
   const firstName = useMemo(() => name.split(/\s+/).filter(Boolean)[0] || '', [name]);
-  const campusRequests = useMemo(() => requests.filter((request) => sameCampus(request, selectedCampus.school)), [requests, selectedCampus.school]);
+  const visiting = Boolean(selectedCampus && homeCampus && selectedCampus.id !== homeCampus.id);
+  const campusRequests = useMemo(() => selectedCampus ? requests.filter((request) => sameCampus(request, selectedCampus)) : [], [requests, selectedCampus]);
   const radarRequests = campusRequests.slice(0, 6);
 
   const sectionData = useMemo(() => decks.map((deck) => {
     const matches = campusRequests.filter(deck.match);
     return { deck, count: matches.length, sample: matches[0] };
   }), [campusRequests]);
+
+  function chooseCampus(nextId: string) {
+    if (nextId === activeCampusId) return;
+    if (nextId === homeCampusId) {
+      setActiveCampusId(nextId);
+      setPendingCampusId(null);
+      return;
+    }
+    const key = `aspire-campus-confirmed:${nextId}`;
+    if (typeof window !== 'undefined' && window.sessionStorage.getItem(key) === '1') {
+      setActiveCampusId(nextId);
+      return;
+    }
+    setPendingCampusId(nextId);
+  }
+
+  function confirmCampusSwitch() {
+    if (!pendingCampusId) return;
+    if (typeof window !== 'undefined') window.sessionStorage.setItem(`aspire-campus-confirmed:${pendingCampusId}`, '1');
+    setActiveCampusId(pendingCampusId);
+    setPendingCampusId(null);
+  }
 
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
@@ -136,14 +153,27 @@ export default function CampusHome() {
     router.refresh();
   }
 
-  if (loading) {
-    return <AppLoader label="Finding your circle…" detail="Scanning your campus" />;
+  if (loading) return <AppLoader label="Finding your circle…" detail="Loading your home campus" />;
+
+  if (!selectedCampus || !homeCampus) {
+    return (
+      <main className="campusHome communityHome campusUnknownState">
+        <section className="campusUnknownCard">
+          <img src={aspireLogo} alt="" />
+          <span>CAMPUS IDENTITY</span>
+          <h1>We couldn’t resolve your home campus.</h1>
+          <p>New Aspire accounts use a supported university email. Existing beta accounts may need their campus identity updated.</p>
+          <a className="button buttonGold" href="/profile">Open profile →</a>
+        </section>
+        <AppDock active="home" />
+      </main>
+    );
   }
 
   return (
     <main className="campusHome communityHome">
       <div className="campusBackdrop communityBackdrop" aria-hidden="true">
-        <img key={selectedCampus.image} src={selectedCampus.image} alt="" />
+        <img key={selectedCampus.id} src={selectedCampus.cover_image || campusImageFallback} alt="" />
         <span />
       </div>
 
@@ -153,22 +183,36 @@ export default function CampusHome() {
           <span>Aspire 101</span>
         </a>
 
-        <label className="communityCampusPicker">
-          <span aria-hidden="true">●</span>
-          <select value={campusKey} onChange={(event) => setCampusKey(event.target.value)} aria-label="Choose campus">
-            {campuses.map((campus) => <option key={campus.key} value={campus.key}>{campus.school}</option>)}
-          </select>
-          <b aria-hidden="true">⌄</b>
-        </label>
+        <div className="communityCampusIdentity">
+          <label className="communityCampusPicker">
+            <span aria-hidden="true">●</span>
+            <select value={activeCampusId || ''} onChange={(event) => chooseCampus(event.target.value)} aria-label="Choose campus to browse">
+              {universities.map((campus) => <option key={campus.id} value={campus.id}>{campus.name}</option>)}
+            </select>
+            <b aria-hidden="true">⌄</b>
+          </label>
+          <span className={`campusIdentityTag ${visiting ? 'isVisiting' : ''}`}>{visiting ? 'VISITING' : 'HOME CAMPUS'}</span>
+          {visiting && <button className="returnHomeCampus" type="button" onClick={() => setActiveCampusId(homeCampus.id)}>Return to {homeCampus.short_name}</button>}
+        </div>
 
-        <button type="button" onClick={signOut} className="communityAvatar" aria-label="Sign out">{firstName ? firstName[0].toUpperCase() : 'A'}</button>
+        <div className="communityProfileMenuWrap">
+          <button type="button" onClick={() => setProfileMenuOpen((value) => !value)} className="communityAvatar" aria-label="Open profile menu" aria-expanded={profileMenuOpen}>{firstName ? firstName[0].toUpperCase() : 'A'}</button>
+          {profileMenuOpen && (
+            <div className="communityProfileMenu">
+              <strong>{name || 'Aspire student'}</strong>
+              <span>{homeCampus.name} · verified campus</span>
+              <a href="/profile">View profile</a>
+              <button type="button" onClick={signOut}>Log out</button>
+            </div>
+          )}
+        </div>
       </header>
 
       <section className="communityHero">
         <div className="communityIntro">
-          <p className="communityEyebrow">COMMUNITY CIRCLE · {selectedCampus.school.toUpperCase()}</p>
+          <p className="communityEyebrow">COMMUNITY CIRCLE · {selectedCampus.short_name.toUpperCase()} · {visiting ? 'VISITING' : 'HOME'}</p>
           <h1>Find your<br /><em>circle.</em></h1>
-          <p className="communityLead">See what students on your campus are asking for, building, studying, and doing right now.</p>
+          <p className="communityLead">See what students around {selectedCampus.short_name} are asking for, building, studying, and doing right now.</p>
 
           <div className="communityQuickFilters" aria-label="Explore sections">
             <a className="active" href="/discover">All</a>
@@ -186,19 +230,19 @@ export default function CampusHome() {
               return (
                 <a key={request.id} href={`/discover?category=${encodeURIComponent(deck.query)}`} className="communityNowItem">
                   <i className={`topic-${deck.key}`}>{deck.glyph}</i>
-                  <span><strong>{compactTitle(request.title, 46)}</strong><small>{deck.label} · {relativeTime(request.created_at)} · same campus</small></span>
+                  <span><strong>{compactTitle(request.title, 46)}</strong><small>{deck.label} · {relativeTime(request.created_at)} · {selectedCampus.short_name}</small></span>
                   <b>→</b>
                 </a>
               );
             })}
-            {!campusRequests.length && <a className="communityNowEmpty" href="/post"><strong>Your circle starts with one post.</strong><span>Ask campus for something →</span></a>}
+            {!campusRequests.length && <a className="communityNowEmpty" href="/post"><strong>Your circle is quiet right now.</strong><span>Start something on {selectedCampus.short_name} →</span></a>}
           </div>
         </div>
 
         <div className="communityRadarWrap" aria-label="Community Circle campus activity radar">
           <div className="radarHeader">
-            <div><strong>Community Circle</strong><span>Scanning campus activity…</span></div>
-            <div className="radarCount"><b>{campusRequests.length}</b><span>open now</span></div>
+            <div><strong>Community Circle</strong><span>Scanning {selectedCampus.short_name}…</span></div>
+            <div className="radarCount"><b>{campusRequests.length}</b><span>open around campus</span></div>
           </div>
 
           <div className="communityRadar">
@@ -214,21 +258,14 @@ export default function CampusHome() {
             {radarRequests.map((request, index) => {
               const deck = deckForRequest(request);
               return (
-                <a
-                  key={request.id}
-                  href={`/discover?category=${encodeURIComponent(deck.query)}`}
-                  className={`radarBlip radarBlip-${index + 1}`}
-                  title={request.title}
-                >
+                <a key={request.id} href={`/discover?category=${encodeURIComponent(deck.query)}`} className={`radarBlip radarBlip-${index + 1}`} title={request.title}>
                   <i>{deck.glyph}</i>
                   <span><strong>{deck.label}</strong><small>{compactTitle(request.title, 30)}</small></span>
                 </a>
               );
             })}
 
-            {!radarRequests.length && (
-              <a className="radarStart" href="/post"><strong>Quiet for now.</strong><span>Post something and light up the circle →</span></a>
-            )}
+            {!radarRequests.length && <a className="radarStart" href="/post"><strong>Your circle is quiet right now.</strong><span>Try another section or start something →</span></a>}
           </div>
 
           <p className="radarPrivacy">Campus activity only — no precise location is shown.</p>
@@ -251,6 +288,17 @@ export default function CampusHome() {
           ))}
         </div>
       </section>
+
+      {pendingCampus && (
+        <div className="campusSwitchOverlay" role="dialog" aria-modal="true" aria-labelledby="campus-switch-title">
+          <div className="campusSwitchModal">
+            <span>BROWSE ANOTHER CAMPUS</span>
+            <h2 id="campus-switch-title">Browse {pendingCampus.short_name}?</h2>
+            <p>You’re verified at {homeCampus.name}. Posts, activity, and discovery shown here will temporarily be based on {pendingCampus.name}. Your Aspire identity will stay tied to {homeCampus.short_name}.</p>
+            <div><button type="button" onClick={() => setPendingCampusId(null)}>Stay at {homeCampus.short_name}</button><button type="button" className="button buttonGold" onClick={confirmCampusSwitch}>Browse {pendingCampus.short_name}</button></div>
+          </div>
+        </div>
+      )}
 
       <AppDock active="home" />
     </main>
