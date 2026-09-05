@@ -15,6 +15,7 @@ import './trust-simple.css';
 import './auth.css';
 import './post.css';
 import './campus-picker.css';
+import './campus-home.css';
 import './safety-ui.css';
 import './connections.css';
 import type { Metadata } from 'next';
