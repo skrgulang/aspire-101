@@ -15,7 +15,7 @@ export type AspireRequest = {
   title: string;
   details: string | null;
   campus: string | null;
-  campus_id: string | null;
+  campus_id?: string | null;
   city: string | null;
   latitude: number | null;
   longitude: number | null;
