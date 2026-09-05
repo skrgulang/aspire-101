@@ -15,6 +15,7 @@ export type AspireRequest = {
   title: string;
   details: string | null;
   campus: string | null;
+  campus_id: string | null;
   city: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -28,10 +29,7 @@ export type AspireRequest = {
 
 export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'title'> & {
   details?: string;
-  campus?: string;
-  city?: string;
-  latitude?: number;
-  longitude?: number;
+  campusId: string;
   amount_cents?: number;
   currency?: string;
   payment_method?: AspireRequest['payment_method'];
@@ -58,7 +56,7 @@ export async function createRequest(input: CreateRequestInput) {
 
   const { data: allowed, error: accessError } = await supabase.rpc('can_post_request');
   if (accessError) throw accessError;
-  if (!allowed) throw new Error('Verify your school ID in Profile before posting.');
+  if (!allowed) throw new Error('Verify your school identity in Profile before posting.');
 
   const { data, error } = await supabase
     .from('requests')
@@ -68,10 +66,9 @@ export async function createRequest(input: CreateRequestInput) {
       category: input.category,
       title: input.title.trim(),
       details: input.details?.trim() || null,
-      campus: input.campus || null,
-      city: input.city || null,
-      latitude: input.latitude ?? null,
-      longitude: input.longitude ?? null,
+      campus_id: input.campusId,
+      latitude: null,
+      longitude: null,
       amount_cents: input.amount_cents ?? null,
       currency: input.currency || 'USD',
       payment_method: input.payment_method || 'none'
