@@ -2,8 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient, type User } from '@supabase/supabase-js';
 
 const stripeApiBase = 'https://api.stripe.com';
-// Accounts v2 is preview-only. Keep this aligned with the current Connect marketplace guide.
-const stripeV2PreviewVersion = '2026-05-27.preview';
+// Accounts v2 is preview-only. Current Stripe MCP/OpenAPI schema is 2026-08-26.preview.
+const stripeV2PreviewVersion = '2026-08-26.preview';
 
 export function requireBearerToken(request: Request) {
   const header = request.headers.get('authorization') || '';
