@@ -62,11 +62,14 @@ function relativeTime(value: string) {
   return `${Math.floor(hours / 24)}d`;
 }
 
+function compactTitle(title: string, limit = 40) {
+  return title.length <= limit ? title : `${title.slice(0, limit - 1).trim()}…`;
+}
+
 export default function CampusHome() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
-  const [school, setSchool] = useState('Purdue University');
   const [campusKey, setCampusKey] = useState('purdue');
   const [requests, setRequests] = useState<AspireRequest[]>([]);
 
@@ -86,12 +89,11 @@ export default function CampusHome() {
       const rawSchool = typeof metadata.school === 'string' ? metadata.school : '';
       const resolved = resolveCampus(rawSchool || 'Purdue');
       setName(rawName.trim());
-      setSchool(rawSchool.trim() || resolved.school);
       setCampusKey(resolved.key);
       setLoading(false);
 
       try {
-        const open = await fetchOpenRequests(40);
+        const open = await fetchOpenRequests(60);
         if (alive) setRequests(open);
       } catch {
         if (alive) setRequests([]);
@@ -105,6 +107,13 @@ export default function CampusHome() {
   const firstName = useMemo(() => name.split(/\s+/).filter(Boolean)[0] || '', [name]);
   const campusRequests = useMemo(() => requests.filter((request) => sameCampus(request, selectedCampus.school)), [requests, selectedCampus.school]);
   const recent = campusRequests.slice(0, 4);
+  const liveThreads = campusRequests.slice(0, 2);
+
+  const sortedDecks = useMemo(() => {
+    return decks
+      .map((deck, originalIndex) => ({ deck, count: campusRequests.filter(deck.match).length, originalIndex }))
+      .sort((a, b) => b.count - a.count || a.originalIndex - b.originalIndex);
+  }, [campusRequests]);
 
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
@@ -148,33 +157,54 @@ export default function CampusHome() {
       <section className="campusWelcome">
         <div>
           <p>{firstName ? `HEY ${firstName.toUpperCase()} · ` : ''}{selectedCampus.school.toUpperCase()}</p>
-          <h1>Your campus.<br /><em>One place.</em></h1>
+          <h1>Your campus.<br /><em>One circle.</em></h1>
         </div>
-        <div className="campusWelcomeNote" aria-hidden="true">PICK A CIRCLE<br />SEE WHAT&apos;S UP ↘</div>
+        <div className="campusWelcomeNote" aria-hidden="true">PICK A TOPIC<br />SEE WHO&apos;S AROUND ↘</div>
       </section>
 
-      <section className="campusCircleSection" aria-label="Explore your campus">
-        <div className="campusCircleGlow" aria-hidden="true" />
-        <div className="campusOrbit" aria-hidden="true" />
+      <section className="campusCircleSection campusCircleV2" aria-label="Explore your campus circle">
+        <div className="campusCircleMeta"><span>LIVE CAMPUS</span><b>{campusRequests.length}</b><small>open requests</small></div>
+        <div className="campusCircleSortNote">AUTO-SORTED BY<br />CAMPUS ACTIVITY ✦</div>
 
-        <a className="campusCircleCenter" href="/discover">
+        <div className="campusCircleGlow" aria-hidden="true" />
+        <div className="campusOrbit campusOrbitV2" aria-hidden="true"><span /><i /></div>
+
+        <a className="campusCircleCenter campusCircleCenterV2" href="/discover">
+          <span className="campusCirclePulse" aria-hidden="true" />
           <span className="campusCircleLogo"><img src={aspireLogo} alt="" /></span>
+          <small>CAMPUS CIRCLE</small>
           <strong>Discover</strong>
-          <small>{campusRequests.length ? `${campusRequests.length} open now` : 'see campus'}</small>
+          <p>{campusRequests.length ? `${campusRequests.length} things happening now` : 'start the first thing here'}</p>
           <b>→</b>
         </a>
 
-        {decks.map((deck, index) => {
-          const count = campusRequests.filter(deck.match).length;
-          return (
-            <a key={deck.key} href={deck.href} className={`campusOrbitNode node-${index + 1}`}>
-              <i>{deck.glyph}</i>
-              <span><strong>{deck.label}</strong><small>{count ? `${count} open` : deck.short}</small></span>
-            </a>
-          );
-        })}
+        {sortedDecks.map(({ deck, count }, index) => (
+          <a
+            key={deck.key}
+            href={deck.href}
+            className={`campusOrbitNode campusOrbitNodeV2 node-${index + 1} topic-${deck.key} ${index === 0 && count > 0 ? 'isHot' : ''}`}
+          >
+            <i>{deck.glyph}</i>
+            <span>
+              <em>{index === 0 && count > 0 ? 'ACTIVE NOW' : 'EXPLORE'}</em>
+              <strong>{deck.label}</strong>
+              <small>{count ? `${count} open · ${deck.short}` : deck.short}</small>
+            </span>
+          </a>
+        ))}
 
-        <a className="campusPostNote" href="/post"><small>NEED SOMETHING?</small><strong>Post it ↗</strong></a>
+        {liveThreads.map((request, index) => (
+          <a key={request.id} href="/discover" className={`campusLiveThread thread-${index + 1}`}>
+            <span>LIVE · {relativeTime(request.created_at)}</span>
+            <strong>{compactTitle(request.title)}</strong>
+          </a>
+        ))}
+
+        <a className="campusPostNote campusPostNoteV2" href="/post"><small>NEED SOMETHING?</small><strong>Post it ↗</strong></a>
+      </section>
+
+      <section className="campusCirclePromise" aria-label="How the circle works">
+        <span>Campus-scoped</span><i>•</i><span>Real requests</span><i>•</i><span>Both sides choose</span><i>•</i><span>Chat after a match</span>
       </section>
 
       <section className="campusNow">
