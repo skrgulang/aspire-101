@@ -1,0 +1,273 @@
+/* Motion and flexible collage layer for the public Aspire homepage. */
+
+[data-reveal] {
+  opacity: 0;
+  filter: blur(10px);
+  transform: translate3d(0, 46px, 0) scale(.985);
+  transition:
+    opacity .8s cubic-bezier(.2,.7,.2,1),
+    transform .9s cubic-bezier(.16,1,.3,1),
+    filter .8s ease;
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: transform, opacity, filter;
+}
+[data-reveal="left"] { transform: translate3d(-58px, 28px, 0) rotate(-1.2deg) scale(.985); }
+[data-reveal="right"] { transform: translate3d(58px, 28px, 0) rotate(1.2deg) scale(.985); }
+[data-reveal="pop"] { transform: translate3d(0, 34px, 0) scale(.94) rotate(.5deg); }
+[data-reveal].is-visible {
+  opacity: 1;
+  filter: blur(0);
+  transform: translate3d(0,0,0) scale(1) rotate(0deg);
+}
+.revealDelay0 { --reveal-delay: 0ms; }
+.revealDelay1 { --reveal-delay: 90ms; }
+.revealDelay2 { --reveal-delay: 180ms; }
+.revealDelay3 { --reveal-delay: 270ms; }
+.revealDelay4 { --reveal-delay: 360ms; }
+.revealDelay5 { --reveal-delay: 450ms; }
+
+.marketingNav {
+  animation: marketingNavDrop .65s cubic-bezier(.16,1,.3,1) both;
+}
+.marketingIntroCopy {
+  animation: marketingCopyIn .85s .08s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes marketingNavDrop {
+  from { opacity: 0; transform: translateY(-18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes marketingCopyIn {
+  from { opacity: 0; transform: translateY(28px); filter: blur(8px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* The top deck should feel like a living strip, not five cloned cards. */
+.marketingFeatureRail {
+  align-items: stretch;
+  perspective: 1200px;
+}
+.marketingFeatureCard:nth-child(1) { min-height: 385px; }
+.marketingFeatureCard:nth-child(2) { min-height: 350px; margin-top: 18px; }
+.marketingFeatureCard:nth-child(3) { min-height: 390px; margin-top: -8px; }
+.marketingFeatureCard:nth-child(4) { min-height: 348px; margin-top: 20px; }
+.marketingFeatureCard:nth-child(5) { min-height: 374px; margin-top: 4px; }
+.marketingFeatureCard > img { object-position: center; }
+.marketingFeatureCard:nth-child(1) > img { object-position: center 48%; }
+.marketingFeatureCard:nth-child(2) > img { object-position: center 42%; }
+.marketingFeatureCard:nth-child(4) > img { object-position: center 38%; }
+.marketingFeatureCard:nth-child(5) > img { object-position: center 35%; }
+
+/* Flexible story collage: one cinematic card and two smaller snapshots. */
+.marketingStoryCollage {
+  grid-template-columns: minmax(0, 1.24fr) minmax(320px, .76fr);
+  grid-template-rows: minmax(250px, 1fr) minmax(250px, 1fr);
+  gap: 18px 22px;
+  align-items: stretch;
+  overflow: visible;
+}
+.marketingStoryCollage .storyAsk {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  min-height: 570px;
+  transform: rotate(-.7deg);
+}
+.marketingStoryCollage .storyDiscover {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 275px;
+  transform: translateX(-18px) rotate(1deg);
+}
+.marketingStoryCollage .storyConnect {
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 275px;
+  transform: translate(22px,-10px) rotate(-1.1deg);
+}
+.marketingStoryCollage .storyDiscover .marketingStoryCopy,
+.marketingStoryCollage .storyConnect .marketingStoryCopy { bottom: 68px; }
+.marketingStoryCollage .storyDiscover .marketingStoryCopy h3,
+.marketingStoryCollage .storyConnect .marketingStoryCopy h3 { font-size: clamp(30px, 3vw, 48px); }
+
+/* How it works should feel like a path unfolding as you scroll. */
+.marketingHowFlow {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+  min-height: 420px;
+  position: relative;
+}
+.marketingHowFlow::before {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 7%;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,194,28,.45), rgba(255,255,255,.14), rgba(255,194,28,.45), transparent);
+  transform: rotate(-2deg);
+  pointer-events: none;
+}
+.marketingHowFlow article {
+  min-height: 260px;
+  z-index: 1;
+  backdrop-filter: blur(8px);
+}
+.marketingHowFlow article:nth-child(1) { grid-column: 1 / 4; margin-top: 12px; transform: rotate(-1deg); }
+.marketingHowFlow article:nth-child(2) { grid-column: 4 / 7; margin-top: 92px; transform: rotate(.8deg); }
+.marketingHowFlow article:nth-child(3) { grid-column: 7 / 10; margin-top: 28px; transform: rotate(-.7deg); }
+.marketingHowFlow article:nth-child(4) { grid-column: 10 / 13; margin-top: 112px; transform: rotate(1deg); }
+.marketingHowFlow article:hover { transform: translateY(-8px) rotate(0deg); }
+
+/* Product cards enter at slightly different heights so this feels like browsing, not a spreadsheet. */
+.marketingProductGrid { align-items: start; }
+.marketingProductCard:nth-child(2) { margin-top: 30px; }
+.marketingProductCard:nth-child(4) { margin-top: 24px; }
+.marketingProductCard:nth-child(5) { margin-top: -8px; }
+
+/* Ditto-style data collage, using only sourced public stats. */
+.marketingDataCollage {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+  min-height: 430px;
+  position: relative;
+}
+.marketingDataCollage::after {
+  content: 'REAL STUDENT LIFE → REAL EVERYDAY NEEDS';
+  position: absolute;
+  right: 4%;
+  bottom: 14px;
+  color: rgba(255,194,28,.48);
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  transform: rotate(-3deg);
+  pointer-events: none;
+}
+.marketingDataCollage .marketingDataCard:nth-child(1) {
+  grid-column: 1 / 6;
+  min-height: 300px;
+  transform: rotate(-1.2deg);
+}
+.marketingDataCollage .marketingDataCard:nth-child(2) {
+  grid-column: 5 / 9;
+  margin-top: 88px;
+  min-height: 265px;
+  transform: rotate(1.5deg);
+  background: linear-gradient(160deg, rgba(255,194,28,.13), rgba(255,255,255,.02));
+}
+.marketingDataCollage .marketingDataCard:nth-child(3) {
+  grid-column: 8 / 13;
+  margin-top: 22px;
+  min-height: 315px;
+  transform: rotate(-.6deg);
+}
+.marketingDataCollage .marketingDataCard:hover { transform: translateY(-8px) rotate(0deg); }
+.marketingDataCollage .marketingDataCard:nth-child(2)::after {
+  content: 'BALANCING IT ALL';
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  color: #18120a;
+  background: var(--gold);
+  padding: 10px 12px;
+  border-radius: 8px 8px 14px 8px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 800;
+  transform: rotate(5deg);
+}
+
+.marketingSafetyStrip { position: relative; overflow: hidden; }
+.marketingSafetyStrip::after {
+  content: 'REAL PEOPLE. SAME CAMPUS. SAFER TOGETHER. ♡';
+  position: absolute;
+  right: 4vw;
+  bottom: 4px;
+  color: rgba(255,194,28,.18);
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: 11px;
+  transform: rotate(-2deg);
+  pointer-events: none;
+}
+
+/* Images keep a warm student-life treatment while preserving skin tones. */
+.marketingFeatureCard > img,
+.marketingStoryCard > img {
+  filter: saturate(.95) contrast(1.02) brightness(.82);
+}
+.marketingFeatureCard:hover > img,
+.marketingStoryCard:hover > img {
+  filter: saturate(1.05) contrast(1.03) brightness(.9);
+}
+
+@media (max-width: 1050px) {
+  .marketingStoryCollage {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+  }
+  .marketingStoryCollage .storyAsk {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-height: 430px;
+  }
+  .marketingStoryCollage .storyDiscover,
+  .marketingStoryCollage .storyConnect {
+    grid-row: 2;
+    min-height: 330px;
+    transform: none;
+  }
+  .marketingStoryCollage .storyDiscover { grid-column: 1; }
+  .marketingStoryCollage .storyConnect { grid-column: 2; }
+
+  .marketingHowFlow { grid-template-columns: 1fr 1fr; min-height: auto; }
+  .marketingHowFlow::before { display: none; }
+  .marketingHowFlow article:nth-child(n) { grid-column: auto; margin-top: 0; transform: none; }
+
+  .marketingDataCollage { grid-template-columns: 1fr 1fr; min-height: auto; }
+  .marketingDataCollage .marketingDataCard:nth-child(1),
+  .marketingDataCollage .marketingDataCard:nth-child(2),
+  .marketingDataCollage .marketingDataCard:nth-child(3) {
+    grid-column: auto;
+    margin-top: 0;
+    transform: none;
+  }
+  .marketingDataCollage .marketingDataCard:nth-child(1) { grid-column: 1 / -1; }
+  .marketingDataCollage::after { display: none; }
+}
+
+@media (max-width: 760px) {
+  [data-reveal],
+  [data-reveal="left"],
+  [data-reveal="right"],
+  [data-reveal="pop"] { transform: translateY(28px) scale(.985); filter: blur(6px); }
+  [data-reveal].is-visible { transform: none; filter: blur(0); }
+
+  .marketingFeatureCard:nth-child(n) { min-height: 320px; margin-top: 0; }
+  .marketingStoryCollage { grid-template-columns: 1fr; }
+  .marketingStoryCollage .storyAsk,
+  .marketingStoryCollage .storyDiscover,
+  .marketingStoryCollage .storyConnect {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 380px;
+    transform: none;
+  }
+  .marketingHowFlow,
+  .marketingDataCollage { grid-template-columns: 1fr; }
+  .marketingDataCollage .marketingDataCard:nth-child(n) { grid-column: 1; min-height: 230px; }
+  .marketingProductCard:nth-child(n) { margin-top: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    transition: none;
+  }
+  .marketingNav,
+  .marketingIntroCopy { animation: none; }
+}
