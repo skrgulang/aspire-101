@@ -8,6 +8,7 @@ import WorkWithAspire from './WorkWithAspire';
 import FAQ from './FAQ';
 import TrustLoop from './TrustLoop';
 import GlobalJourney from './GlobalJourney';
+import NavAuth from './NavAuth';
 
 const categories = ['Anything', 'Study', 'Ride', 'Buy & Sell', 'Projects', 'Campus'];
 
@@ -40,10 +41,7 @@ export default function Home() {
           <a href="#how">How it works</a>
           <a href="#ambassadors">Ambassadors</a>
         </nav>
-        <div className="navActions">
-          <a className="textLink" href="/login">Log in</a>
-          <a className="button buttonGold buttonSmall" href="/signup">Join Aspire <span>↗</span></a>
-        </div>
+        <NavAuth />
       </header>
 
       <section id="top" className="hero shell">
@@ -55,7 +53,8 @@ export default function Home() {
           <h1>Need something?<br /><span>Ask campus.</span></h1>
           <p className="heroCopy">Post what you need. Students nearby can respond. You choose who to connect with.</p>
           <div className="heroCta">
-            <a className="button buttonGold" href="#nearby">Browse requests <span>↓</span></a>
+            <a className="button buttonGold" href="/post">Post a request <span>↗</span></a>
+            <a className="quietLink" href="#nearby">See what's happening ↓</a>
           </div>
         </div>
 
@@ -113,7 +112,7 @@ export default function Home() {
             </div>
             <div className="matchBottom">
               <div><strong>5</strong><span>possible responses</span></div>
-              <a href="/login">Log in to publish ↗</a>
+              <a href="/post">Post this request ↗</a>
             </div>
           </article>
 
