@@ -1,0 +1,133 @@
+.appLoader {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 28px;
+  padding: 28px;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255,194,28,.09), transparent 24rem),
+    #090907;
+  color: #f5efe6;
+}
+
+.appLoader::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .18;
+  background-image: radial-gradient(rgba(255,255,255,.12) .55px, transparent .55px);
+  background-size: 22px 22px;
+  pointer-events: none;
+}
+
+.appLoaderRadar {
+  width: min(320px, 72vw);
+  aspect-ratio: 1;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,194,28,.24);
+  border-radius: 50%;
+  background: rgba(8,8,7,.8);
+  box-shadow: 0 0 90px rgba(255,194,28,.07), inset 0 0 70px rgba(255,194,28,.035);
+}
+
+.appLoaderRing {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  border: 1px solid rgba(255,194,28,.14);
+  border-radius: 50%;
+}
+.appLoaderRing.ringOne { width: 72%; height: 72%; }
+.appLoaderRing.ringTwo { width: 46%; height: 46%; }
+.appLoaderRing.ringThree { width: 20%; height: 20%; }
+
+.appLoaderRadar::before,
+.appLoaderRadar::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  background: rgba(255,194,28,.09);
+}
+.appLoaderRadar::before { left: 7%; right: 7%; top: 50%; height: 1px; }
+.appLoaderRadar::after { top: 7%; bottom: 7%; left: 50%; width: 1px; }
+
+.appLoaderSweep {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 50%;
+  background: conic-gradient(from 8deg, transparent 0 316deg, rgba(255,194,28,.02) 321deg, rgba(255,194,28,.24) 352deg, rgba(255,224,118,.82) 359deg, transparent 360deg);
+  animation: aspireLoaderSweep 2.7s linear infinite;
+}
+.appLoaderSweep::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 43%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255,210,65,.95), transparent);
+  box-shadow: 0 0 14px rgba(255,194,28,.7);
+  transform-origin: 0 50%;
+}
+
+.appLoaderCenter {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 5;
+  width: 58px;
+  height: 58px;
+  transform: translate(-50%,-50%);
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,194,28,.28);
+  border-radius: 18px;
+  background: rgba(10,9,7,.88);
+  box-shadow: 0 0 0 7px rgba(255,194,28,.04), 0 0 36px rgba(255,194,28,.22);
+  animation: aspireLoaderCenter 2s ease-in-out infinite;
+}
+.appLoaderCenter img { width: 40px; height: 40px; border-radius: 11px; object-fit: cover; }
+
+.appLoaderDot {
+  position: absolute;
+  z-index: 4;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 5px rgba(255,194,28,.06), 0 0 20px rgba(255,194,28,.5);
+  animation: aspireLoaderPing 2.4s ease-in-out infinite;
+}
+.appLoaderDot.dotOne { left: 22%; top: 29%; animation-delay: -.8s; }
+.appLoaderDot.dotTwo { right: 18%; top: 42%; animation-delay: -1.5s; }
+.appLoaderDot.dotThree { left: 36%; bottom: 18%; animation-delay: -.3s; }
+
+.appLoaderCopy { position: relative; z-index: 4; display: grid; justify-items: center; text-align: center; }
+.appLoaderCopy > span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .22em; }
+.appLoaderCopy > strong { margin-top: 8px; font-size: clamp(24px, 4vw, 34px); letter-spacing: -.045em; }
+.appLoaderCopy > small { margin-top: 8px; display: flex; align-items: center; gap: 7px; color: #7f786d; font-size: 10px; }
+.appLoaderCopy > small i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 12px rgba(255,194,28,.55); animation: aspireLoaderStatus 1.35s ease-in-out infinite; }
+
+@keyframes aspireLoaderSweep { to { transform: rotate(360deg); } }
+@keyframes aspireLoaderCenter { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(1.045); } }
+@keyframes aspireLoaderPing { 0%,100% { opacity: .3; transform: scale(.72); } 45% { opacity: 1; transform: scale(1); } }
+@keyframes aspireLoaderStatus { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+
+@media (max-width: 640px) {
+  .appLoader { gap: 22px; }
+  .appLoaderRadar { width: min(280px, 76vw); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appLoaderSweep,
+  .appLoaderCenter,
+  .appLoaderDot,
+  .appLoaderCopy > small i { animation: none; }
+  .appLoaderSweep { transform: rotate(32deg); }
+}
