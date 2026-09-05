@@ -6,98 +6,21 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { aspireLogo } from './logo';
 
 const campuses = [
-  {
-    key: 'purdue',
-    school: 'Purdue University',
-    short: 'Purdue',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Purdue%20EngineeringMall.jpg?width=1600',
-    note: 'Boiler up ♡'
-  },
-  {
-    key: 'berkeley',
-    school: 'UC Berkeley',
-    short: 'UC Berkeley',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sather%20gate%20berkeley.jpg?width=1600',
-    note: 'Rep your campus ♡'
-  },
-  {
-    key: 'ucla',
-    school: 'UCLA',
-    short: 'UCLA',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Royce%20Hall.jpg?width=1600',
-    note: 'Ambassadors wanted'
-  },
-  {
-    key: 'rutgers',
-    school: 'Rutgers University',
-    short: 'Rutgers',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Queens%20Campus%20of%20Rutgers%20University%202026f.jpg?width=1600',
-    note: 'Apply here ♡'
-  },
-  {
-    key: 'uiuc',
-    school: 'UIUC',
-    short: 'UIUC',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Altgeld%20Hall.jpg?width=1600',
-    note: 'Need ambassadors'
-  },
-  {
-    key: 'osu',
-    school: 'The Ohio State University',
-    short: 'OSU',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/University%20Hall%20%28Ohio%20State%20University%29.jpg?width=1600',
-    note: 'Student reps wanted'
-  },
-  {
-    key: 'umich',
-    school: 'University of Michigan',
-    short: 'UMich',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Law%20Quadrangle%2C%20University%20of%20Michigan%2C%20University%20Avenue%20and%20State%20Street%2C%20Ann%20Arbor%2C%20MI%20-%2054381553310.jpg?width=1600',
-    note: 'Join the team ♡'
-  }
+  { key: 'purdue', school: 'Purdue University', short: 'Purdue', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Purdue%20EngineeringMall.jpg?width=1600', note: 'Boiler up ♡' },
+  { key: 'berkeley', school: 'UC Berkeley', short: 'UC Berkeley', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sather%20gate%20berkeley.jpg?width=1600', note: 'Rep your campus ♡' },
+  { key: 'ucla', school: 'UCLA', short: 'UCLA', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Royce%20Hall.jpg?width=1600', note: 'Ambassadors wanted' },
+  { key: 'rutgers', school: 'Rutgers University', short: 'Rutgers', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Queens%20Campus%20of%20Rutgers%20University%202026f.jpg?width=1600', note: 'Apply here ♡' },
+  { key: 'uiuc', school: 'UIUC', short: 'UIUC', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Altgeld%20Hall.jpg?width=1600', note: 'Need ambassadors' },
+  { key: 'osu', school: 'The Ohio State University', short: 'OSU', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/University%20Hall%20%28Ohio%20State%20University%29.jpg?width=1600', note: 'Student reps wanted' },
+  { key: 'umich', school: 'University of Michigan', short: 'UMich', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Law%20Quadrangle%2C%20University%20of%20Michigan%2C%20University%20Avenue%20and%20State%20Street%2C%20Ann%20Arbor%2C%20MI%20-%2054381553310.jpg?width=1600', note: 'Join the team ♡' }
 ];
 
 const features = [
-  {
-    key: 'rides',
-    label: 'Rides',
-    note: 'airport rides + pickups',
-    icon: '↗',
-    image: 'https://images.pexels.com/photos/7683887/pexels-photo-7683887.jpeg?auto=compress&cs=tinysrgb&w=1000',
-    doodle: 'GOOD RIDES\nGOOD PEOPLE'
-  },
-  {
-    key: 'study',
-    label: 'Study',
-    note: 'find a study buddy',
-    icon: '⌑',
-    image: 'https://images.pexels.com/photos/7683700/pexels-photo-7683700.jpeg?auto=compress&cs=tinysrgb&w=1000',
-    doodle: 'BETTER GRADES\nTOGETHER'
-  },
-  {
-    key: 'gaming',
-    label: 'Gaming',
-    note: 'duos + teammates',
-    icon: '◉',
-    image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1000&q=82',
-    doodle: 'GOOD GAMES\nBETTER PEOPLE'
-  },
-  {
-    key: 'projects',
-    label: 'Projects',
-    note: 'build together',
-    icon: '✦',
-    image: 'https://images.pexels.com/photos/7972544/pexels-photo-7972544.jpeg?auto=compress&cs=tinysrgb&w=1000',
-    doodle: 'IDEAS → BUILD\n→ LAUNCH'
-  },
-  {
-    key: 'people',
-    label: 'People',
-    note: 'friends + campus life',
-    icon: '+',
-    image: 'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=1000',
-    doodle: 'SAME CAMPUS\nDIFFERENT STORIES ♡'
-  }
+  { key: 'rides', label: 'Rides', note: 'airport rides + pickups', icon: '↗', image: 'https://images.pexels.com/photos/7683887/pexels-photo-7683887.jpeg?auto=compress&cs=tinysrgb&w=1000', doodle: 'GOOD RIDES\nGOOD PEOPLE' },
+  { key: 'study', label: 'Study', note: 'find a study buddy', icon: '⌑', image: 'https://images.pexels.com/photos/7683700/pexels-photo-7683700.jpeg?auto=compress&cs=tinysrgb&w=1000', doodle: 'BETTER GRADES\nTOGETHER' },
+  { key: 'gaming', label: 'Gaming', note: 'duos + teammates', icon: '◉', image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1000&q=82', doodle: 'GOOD GAMES\nBETTER PEOPLE' },
+  { key: 'projects', label: 'Projects', note: 'build together', icon: '✦', image: 'https://images.pexels.com/photos/7972544/pexels-photo-7972544.jpeg?auto=compress&cs=tinysrgb&w=1000', doodle: 'IDEAS → BUILD\n→ LAUNCH' },
+  { key: 'people', label: 'People', note: 'friends + campus life', icon: '+', image: 'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=1000', doodle: 'SAME CAMPUS\nDIFFERENT STORIES ♡' }
 ];
 
 const recent = [
@@ -106,6 +29,33 @@ const recent = [
   { label: 'Valorant duo?', meta: '23 min ago', icon: '◉' },
   { label: 'Looking for project teammates', meta: '1 hour ago', icon: '✦' },
   { label: 'New to campus — meet people?', meta: '2 hours ago', icon: '+' }
+];
+
+const featureStories = [
+  {
+    step: '01',
+    title: 'Ask campus.',
+    line: 'Post what you need.',
+    image: 'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    chips: ['Ride to IND?', 'Valorant duo?', 'Move a desk?', 'Study tonight?'],
+    className: 'storyAsk'
+  },
+  {
+    step: '02',
+    title: 'Find your people.',
+    line: 'Browse by what you’re actually here for.',
+    image: 'https://images.pexels.com/photos/7972544/pexels-photo-7972544.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    chips: ['Study', 'Gaming', 'Projects', 'People'],
+    className: 'storyDiscover'
+  },
+  {
+    step: '03',
+    title: 'Connect when it fits.',
+    line: 'Both sides choose. Then chat opens.',
+    image: 'https://images.pexels.com/photos/7683700/pexels-photo-7683700.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    chips: ['Interested', 'Mutual connect', 'Private chat'],
+    className: 'storyConnect'
+  }
 ];
 
 function featureHref(featureKey: string, user: User | null) {
@@ -161,6 +111,7 @@ export default function MarketingHome() {
           </label>
 
           <nav className="marketingNavRight" aria-label="Main navigation">
+            <a href="#features">What is Aspire?</a>
             <a href="#campuses">For campuses</a>
             {authReady && user ? (
               <a className="marketingJoin" href="/campus">Open campus →</a>
@@ -174,7 +125,7 @@ export default function MarketingHome() {
         </header>
 
         <div className="marketingHeroCopy">
-          <p className="marketingKicker">ASPire 101 · {campus.short.toUpperCase()}</p>
+          <p className="marketingKicker">ASPIRE 101 · {campus.short.toUpperCase()}</p>
           <h1>What are you here<br />for <em>tonight?</em></h1>
           <p>Pick one and start exploring.</p>
         </div>
@@ -212,6 +163,37 @@ export default function MarketingHome() {
             ))}
           </div>
         </section>
+      </section>
+
+      <section id="features" className="marketingStorySection">
+        <div className="marketingStoryHead">
+          <p>WHAT ASPIRE DOES</p>
+          <h2>One campus.<br /><em>A lot going on.</em></h2>
+          <span>Ask. Discover. Connect.</span>
+        </div>
+
+        <div className="marketingStoryGrid">
+          {featureStories.map((story) => (
+            <article className={`marketingStoryCard ${story.className}`} key={story.step}>
+              <img src={story.image} alt="" />
+              <span className="marketingStoryShade" />
+              <div className="marketingStoryStep">{story.step}</div>
+              <div className="marketingStoryCopy">
+                <h3>{story.title}</h3>
+                <p>{story.line}</p>
+              </div>
+              <div className="marketingStoryChips" aria-hidden="true">
+                {story.chips.map((chip) => <span key={chip}>{chip}</span>)}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="marketingStoryFooter">
+          <strong>Need something?</strong>
+          <span>There’s probably someone on campus for that.</span>
+          <a href={user ? '/campus' : '/signup'}>{user ? 'Open your campus →' : 'Join Aspire →'}</a>
+        </div>
       </section>
 
       <section id="campuses" className="marketingCampuses">
