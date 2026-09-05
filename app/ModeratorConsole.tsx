@@ -105,8 +105,7 @@ export default function ModeratorConsole() {
     } finally { setBusy(''); }
   }
 
-  async function changeModerator(event: FormEvent<HTMLFormElement>, enabled: boolean) {
-    event.preventDefault();
+  async function changeModerator(enabled: boolean) {
     if (!teamEmail.trim()) return;
     setBusy('team');
     try {
@@ -116,6 +115,11 @@ export default function ModeratorConsole() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not change moderator access.');
     } finally { setBusy(''); }
+  }
+
+  function grantModerator(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void changeModerator(true);
   }
 
   if (loading) return <AppLoader label="Opening moderation…" detail="Trust + safety queue" />;
@@ -175,7 +179,7 @@ export default function ModeratorConsole() {
               {requests.map((request) => (
                 <article className="moderatorRow" key={request.id}>
                   <div className="moderatorRowMain"><span>{request.category.toUpperCase()} · {request.kind.replace('_', ' ').toUpperCase()}</span><strong>{request.title}</strong><small>{request.campus || 'Campus'} · {when(request.created_at)} · {request.status}</small></div>
-                  <div className="moderatorRowActions"><a href={`/discover`} target="_blank">Open</a><button type="button" className="moderatorReject" onClick={() => removeRequest(request)} disabled={busy === `request-${request.id}`}>Remove</button></div>
+                  <div className="moderatorRowActions"><a href="/discover" target="_blank">Open</a><button type="button" className="moderatorReject" onClick={() => removeRequest(request)} disabled={busy === `request-${request.id}`}>Remove</button></div>
                 </article>
               ))}
             </div>
@@ -185,9 +189,9 @@ export default function ModeratorConsole() {
         {tab === 'team' && role === 'admin' && (
           <section className="moderatorPanel moderatorTeamPanel">
             <div className="moderatorPanelHead"><div><span>ADMIN ONLY</span><h2>Moderator access</h2></div><p>Only give this role to people you trust with private school-ID submissions and safety reports.</p></div>
-            <form className="moderatorTeamForm" onSubmit={(event) => changeModerator(event, true)}>
+            <form className="moderatorTeamForm" onSubmit={grantModerator}>
               <label><span>Aspire account email</span><input type="email" value={teamEmail} onChange={(event) => setTeamEmail(event.target.value)} placeholder="moderator@school.edu" required /></label>
-              <div><button className="button buttonGold" type="submit" disabled={busy === 'team'}>Grant moderator</button><button className="moderatorReject" type="button" onClick={(event) => changeModerator(event as unknown as FormEvent<HTMLFormElement>, false)} disabled={busy === 'team' || !teamEmail.trim()}>Remove moderator</button></div>
+              <div><button className="button buttonGold" type="submit" disabled={busy === 'team'}>Grant moderator</button><button className="moderatorReject" type="button" onClick={() => void changeModerator(false)} disabled={busy === 'team' || !teamEmail.trim()}>Remove moderator</button></div>
             </form>
           </section>
         )}
