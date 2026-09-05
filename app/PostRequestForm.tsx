@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { createRequest, RequestKind } from '../lib/supabase/requests';
 import { acknowledgeSafety } from '../lib/supabase/safety';
+import { fetchActiveUniversities, University } from '../lib/supabase/universities';
 
 type CategoryOption = {
   label: string;
@@ -25,31 +26,6 @@ const categories: CategoryOption[] = [
   { label: 'Something else', value: 'Other', icon: '…', prompt: 'Ask campus anything useful.', examples: ['Where do people actually study late?', 'Anyone want to ski Saturday?'], defaultKind: 'community' }
 ];
 
-const campusOptions = [
-  'Purdue University',
-  'UC Berkeley',
-  'UCLA',
-  'UC Davis',
-  'UC Irvine',
-  'UC San Diego',
-  'USC',
-  'Rutgers University',
-  'University of Illinois Urbana-Champaign',
-  'The Ohio State University',
-  'University of Michigan',
-  'Indiana University Bloomington',
-  'Northwestern University',
-  'Penn State University',
-  'University of Wisconsin–Madison',
-  'New York University',
-  'Columbia University',
-  'Boston University',
-  'Northeastern University',
-  'UT Austin',
-  'Georgia Tech',
-  'Arizona State University'
-];
-
 const kinds: { value: RequestKind; label: string; helper: string }[] = [
   { value: 'community', label: 'Community', helper: 'No money expected' },
   { value: 'paid_help', label: 'Paid help', helper: 'Compensation involved' },
@@ -57,46 +33,6 @@ const kinds: { value: RequestKind; label: string; helper: string }[] = [
   { value: 'buy_sell', label: 'Buy & sell', helper: 'An item changes hands' },
   { value: 'collaboration', label: 'Collab', helper: 'Build or do it together' }
 ];
-
-function normalizeSchool(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-function matchCampus(value: string) {
-  const normalized = normalizeSchool(value);
-  if (!normalized) return null;
-
-  const aliases: Record<string, string> = {
-    purdue: 'Purdue University',
-    berkeley: 'UC Berkeley',
-    ucberkeley: 'UC Berkeley',
-    ucla: 'UCLA',
-    ucd: 'UC Davis',
-    ucdavis: 'UC Davis',
-    uci: 'UC Irvine',
-    ucirvine: 'UC Irvine',
-    ucsd: 'UC San Diego',
-    ucsandiego: 'UC San Diego',
-    rutgers: 'Rutgers University',
-    uiuc: 'University of Illinois Urbana-Champaign',
-    osu: 'The Ohio State University',
-    ohiostate: 'The Ohio State University',
-    umich: 'University of Michigan',
-    michigan: 'University of Michigan',
-    iub: 'Indiana University Bloomington',
-    indiana: 'Indiana University Bloomington',
-    uwmadison: 'University of Wisconsin–Madison',
-    nyu: 'New York University',
-    gatech: 'Georgia Tech',
-    asu: 'Arizona State University'
-  };
-
-  if (aliases[normalized]) return aliases[normalized];
-  return campusOptions.find((item) => {
-    const option = normalizeSchool(item);
-    return option === normalized || option.includes(normalized) || normalized.includes(option);
-  }) ?? null;
-}
 
 function safetyContext(category: string, kind: RequestKind) {
   if (category === 'Ride') return {
@@ -111,9 +47,9 @@ function safetyContext(category: string, kind: RequestKind) {
     title: 'Exchanging an item?',
     note: 'Meet in a sensible place, inspect the item before paying, and remember Aspire cannot verify cash or payments made outside the platform.'
   };
-  if (kind === 'paid_help') return {
+  if (kind === 'paid_help' || kind === 'split_cost') return {
     title: 'Money involved?',
-    note: 'Agree on the job, amount, timing, and what counts as complete before anyone starts. Avoid changing the deal after work begins.'
+    note: 'Agree on the amount, timing, scope, and what counts as complete before anything starts. Pay with Aspire is only released after both people mark the connection complete.'
   };
   if (kind === 'collaboration') return {
     title: 'Building together?',
@@ -128,45 +64,54 @@ function safetyContext(category: string, kind: RequestKind) {
 export default function PostRequestForm() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [homeCampusId, setHomeCampusId] = useState('');
+  const [campusId, setCampusId] = useState('');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
-  const [campus, setCampus] = useState('');
-  const [customCampus, setCustomCampus] = useState('');
   const [category, setCategory] = useState('Ride');
   const [kind, setKind] = useState<RequestKind>('split_cost');
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'none' | 'in_person'>('none');
+  const [paymentMethod, setPaymentMethod] = useState<'none' | 'in_person' | 'aspire'>('none');
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
-  const [posted, setPosted] = useState<{ id: string; title: string } | null>(null);
+  const [posted, setPosted] = useState<{ id: string; title: string; campus: string } | null>(null);
 
   const selectedCategory = categories.find((item) => item.value === category) ?? categories[0];
   const context = safetyContext(category, kind);
   const moneyInvolved = useMemo(() => kind === 'paid_help' || kind === 'buy_sell' || kind === 'split_cost', [kind]);
-  const selectedCampus = campus === '__other__' ? customCampus.trim() : campus;
+  const selectedCampus = useMemo(() => universities.find((item) => item.id === campusId) ?? null, [universities, campusId]);
+  const homeCampus = useMemo(() => universities.find((item) => item.id === homeCampusId) ?? null, [universities, homeCampusId]);
+  const visiting = Boolean(selectedCampus && homeCampus && selectedCampus.id !== homeCampus.id);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let active = true;
 
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!active) return;
       if (!data.user) {
         router.replace('/login?next=/post');
         return;
       }
-      const school = data.user.user_metadata?.school;
-      if (typeof school === 'string' && school.trim()) {
-        const matched = matchCampus(school.trim());
-        if (matched) {
-          setCampus(matched);
-        } else {
-          setCampus('__other__');
-          setCustomCampus(school.trim());
-        }
+
+      try {
+        const [{ data: profile }, campusList] = await Promise.all([
+          supabase.from('profiles').select('home_campus_id').eq('id', data.user.id).maybeSingle(),
+          fetchActiveUniversities()
+        ]);
+        if (!active) return;
+        const homeId = typeof profile?.home_campus_id === 'string' ? profile.home_campus_id : '';
+        setUniversities(campusList);
+        setHomeCampusId(homeId);
+        setCampusId(homeId);
+        if (!homeId) setError('We could not resolve your verified home campus. Open Profile before posting.');
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Could not load your campus identity.');
+      } finally {
+        if (active) setCheckingAuth(false);
       }
-      setCheckingAuth(false);
     });
 
     return () => { active = false; };
@@ -181,25 +126,26 @@ export default function PostRequestForm() {
     }
   }
 
+  function chooseKind(next: RequestKind) {
+    setKind(next);
+    if (next === 'community' || next === 'collaboration') {
+      setAmount('');
+      setPaymentMethod('none');
+    }
+  }
+
   function openConfirmation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    if (!title.trim()) {
-      setError('Tell campus what you need first.');
-      return;
-    }
-    if (!selectedCampus) {
-      setError('Choose the campus where you want this request to appear.');
-      return;
-    }
-    if (kind === 'paid_help' && (!amount || Number(amount) <= 0)) {
-      setError('Add the amount you are offering for paid help.');
-      return;
-    }
+    if (!title.trim()) return setError('Tell campus what you need first.');
+    if (!selectedCampus) return setError('Choose a supported campus for this request.');
+    if (kind === 'paid_help' && (!amount || Number(amount) <= 0)) return setError('Add the amount you are offering for paid help.');
+    if (paymentMethod === 'aspire' && (!amount || Number(amount) <= 0)) return setError('Add a positive amount before choosing Pay with Aspire.');
     setConfirming(true);
   }
 
   async function publish() {
+    if (!selectedCampus) return;
     setPublishing(true);
     setError('');
     try {
@@ -209,12 +155,12 @@ export default function PostRequestForm() {
         category,
         title,
         details,
-        campus: selectedCampus,
+        campusId: selectedCampus.id,
         amount_cents: amountCents,
         payment_method: moneyInvolved ? paymentMethod : 'none'
       });
       await acknowledgeSafety(`${category}:${kind}`, request.id).catch(() => undefined);
-      setPosted({ id: request.id, title: request.title });
+      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name });
       setConfirming(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not publish this request. Try again.');
@@ -224,9 +170,7 @@ export default function PostRequestForm() {
     }
   }
 
-  if (checkingAuth) {
-    return <div className="postLoading"><span /><p>Checking your Aspire account…</p></div>;
-  }
+  if (checkingAuth) return <div className="postLoading"><span /><p>Loading your campus identity…</p></div>;
 
   if (posted) {
     return (
@@ -236,14 +180,12 @@ export default function PostRequestForm() {
         <article>
           <span>{selectedCategory.label.toUpperCase()}</span>
           <strong>{posted.title}</strong>
-          <small>{selectedCampus} · #{posted.id.slice(0, 8)} · open now</small>
+          <small>{posted.campus} · #{posted.id.slice(0, 8)} · open now</small>
         </article>
         <p className="postSuccessNote">Students can respond. You still choose who — if anyone — you connect with.</p>
         <div className="postSuccessActions">
           <a className="button buttonGold" href="/discover">Discover requests <span>↗</span></a>
-          <button className="quietPostButton" type="button" onClick={() => {
-            setPosted(null); setTitle(''); setDetails(''); setAmount('');
-          }}>Post another</button>
+          <button className="quietPostButton" type="button" onClick={() => { setPosted(null); setTitle(''); setDetails(''); setAmount(''); }}>Post another</button>
         </div>
       </section>
     );
@@ -253,13 +195,10 @@ export default function PostRequestForm() {
     <>
       <form className="postForm" onSubmit={openConfirmation}>
         <div className="postFormHeading">
-          <div className="postModeSwitch">
-            <a className="active" href="/post">I need something</a>
-            <a href="/discover">I can help</a>
-          </div>
+          <div className="postModeSwitch"><a className="active" href="/post">I need something</a><a href="/discover">I can help</a></div>
           <p className="eyebrow">ASK CAMPUS</p>
           <h1>What do you need?</h1>
-          <p>Start with the kind of need. Aspire keeps the rest simple.</p>
+          <p>Start with the need. Campus identity and trust stay attached automatically.</p>
         </div>
 
         <div className="postCategoryPicker" aria-label="Choose a request category">
@@ -270,10 +209,7 @@ export default function PostRequestForm() {
           ))}
         </div>
 
-        <div className="postQuickStarts">
-          <span>TRY ONE</span>
-          {selectedCategory.examples.map((example) => <button type="button" key={example} onClick={() => setTitle(example)}>{example} ↗</button>)}
-        </div>
+        <div className="postQuickStarts"><span>TRY ONE</span>{selectedCategory.examples.map((example) => <button type="button" key={example} onClick={() => setTitle(example)}>{example} ↗</button>)}</div>
 
         <label className="postField postFieldLarge postComposerField">
           <span>{selectedCategory.prompt}</span>
@@ -285,27 +221,20 @@ export default function PostRequestForm() {
           <label className="postField postCampusField">
             <span>Campus</span>
             <div className="campusSelectWrap">
-              <select value={campus} onChange={(e) => setCampus(e.target.value)} required>
-                <option value="" disabled>Choose your campus</option>
-                {campusOptions.map((school) => <option key={school} value={school}>{school}</option>)}
-                <option value="__other__">Other campus…</option>
+              <select value={campusId} onChange={(e) => setCampusId(e.target.value)} required disabled={!universities.length}>
+                {!universities.length && <option value="">No supported campus found</option>}
+                {universities.map((campus) => <option key={campus.id} value={campus.id}>{campus.name}</option>)}
               </select>
               <i aria-hidden="true">⌄</i>
             </div>
-            {campus === '__other__' && (
-              <input className="campusOtherInput" value={customCampus} onChange={(e) => setCustomCampus(e.target.value)} placeholder="Type your school name" required />
-            )}
-            <small>Your request will be shown in this campus feed.</small>
+            <small>{visiting ? `VISITING · Your verified home campus remains ${homeCampus?.name}.` : 'HOME CAMPUS · Your verified university identity stays unchanged.'}</small>
           </label>
 
           <fieldset className="postKinds">
             <legend>Exchange</legend>
             <div className="postKindGrid">
               {kinds.map((item) => (
-                <button type="button" key={item.value} className={kind === item.value ? 'postKind active' : 'postKind'} onClick={() => {
-                  setKind(item.value);
-                  if (item.value === 'community' || item.value === 'collaboration') { setAmount(''); setPaymentMethod('none'); }
-                }}>
+                <button type="button" key={item.value} className={kind === item.value ? 'postKind active' : 'postKind'} onClick={() => chooseKind(item.value)}>
                   <strong>{item.label}</strong><span>{item.helper}</span>
                 </button>
               ))}
@@ -321,50 +250,40 @@ export default function PostRequestForm() {
             </label>
             <label className="postField">
               <span>Payment plan</span>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'none' | 'in_person')}>
+              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'none' | 'in_person' | 'aspire')}>
                 <option value="none">Agree after you connect</option>
+                <option value="aspire">Pay with Aspire</option>
                 <option value="in_person">Pay in person</option>
               </select>
-              <small>Platform checkout is not live yet. Off-platform payments are not verified by Aspire.</small>
+              <small>{paymentMethod === 'aspire' ? 'After a mutual connection, Stripe secures the agreed amount. Release happens after both people mark complete.' : 'Off-platform payments are not processed or protected as Aspire payments.'}</small>
             </label>
           </div>
         )}
 
         <label className="postField postDetailsField">
           <span>Anything else? <em>optional</em></span>
-          <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} placeholder="Timing, pickup details, what to bring, or anything that helps someone decide." />
+          <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} placeholder="Timing, approximate area, what to bring, or anything that helps someone decide. Share exact addresses only after connecting." />
         </label>
 
-        <div className="postContextCard">
-          <div><span>SAFETY FOR THIS REQUEST</span><strong>{context.title}</strong></div>
-          <p>{context.note}</p>
-          <a href="/safety">Safety center ↗</a>
-        </div>
-
+        <div className="postContextCard"><div><span>SAFETY FOR THIS REQUEST</span><strong>{context.title}</strong></div><p>{context.note}</p><a href="/safety">Safety center ↗</a></div>
         {error && <p className="postError" role="alert">{error}</p>}
 
-        <div className="postSubmitRow">
-          <p>Posting makes this request visible. It never automatically commits you to a person, payment, ride, purchase, or meetup.</p>
-          <button className="button buttonGold" type="submit">Review + post <span>→</span></button>
-        </div>
+        <div className="postSubmitRow"><p>Posting makes this request visible on the selected campus. It never automatically commits you to a person, payment, ride, purchase, or meetup.</p><button className="button buttonGold" type="submit">Review + post <span>→</span></button></div>
       </form>
 
-      {confirming && (
+      {confirming && selectedCampus && (
         <div className="publishOverlay" role="dialog" aria-modal="true" aria-labelledby="publish-title">
           <div className="publishModal publishModalContext">
             <span className="publishKicker">BEFORE YOU POST · {selectedCategory.label.toUpperCase()}</span>
             <h2 id="publish-title">{context.title}</h2>
             <p>{context.note}</p>
             <div className="publishRules">
-              <span><b>01</b> You choose who to connect with. A response is not an agreement.</span>
-              <span><b>02</b> Confirm timing, location, scope, and money before anything starts.</span>
-              <span><b>03</b> Use Report or Block for scams, harassment, unsafe conduct, or misuse.</span>
+              <span><b>01</b> Posting to {selectedCampus.short_name}. {visiting ? `Your identity remains ${homeCampus?.short_name}.` : 'This is your home campus.'}</span>
+              <span><b>02</b> You choose who to connect with. A response is not an agreement.</span>
+              <span><b>03</b> {paymentMethod === 'aspire' ? 'Pay with Aspire starts only after mutual confirmation; Stripe confirms payment status.' : 'Confirm timing, location, scope, and money before anything starts.'}</span>
             </div>
             <p className="publishFinePrint">Aspire facilitates the connection and can review platform activity and reports. Aspire cannot observe or verify every offline interaction. Follow the <a href="/guidelines" target="_blank">Community Guidelines ↗</a> and <a href="/safety" target="_blank">Safety Center ↗</a>.</p>
-            <div className="publishActions">
-              <button className="quietPostButton" type="button" onClick={() => setConfirming(false)} disabled={publishing}>Go back</button>
-              <button className="button buttonGold" type="button" onClick={publish} disabled={publishing}>{publishing ? 'Publishing…' : 'I understand — post it'}</button>
-            </div>
+            <div className="publishActions"><button className="quietPostButton" type="button" onClick={() => setConfirming(false)} disabled={publishing}>Go back</button><button className="button buttonGold" type="button" onClick={publish} disabled={publishing}>{publishing ? 'Publishing…' : 'I understand — post it'}</button></div>
           </div>
         </div>
       )}
