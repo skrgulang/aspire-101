@@ -1,4 +1,4 @@
-import PostRequestForm from '../PostRequestForm';
+import PostAccessGate from '../PostAccessGate';
 import AppDock from '../AppDock';
 
 export default function PostPage() {
@@ -36,7 +36,7 @@ export default function PostPage() {
         </aside>
 
         <div className="postPanel">
-          <PostRequestForm />
+          <PostAccessGate />
         </div>
       </section>
       <AppDock active="post" />
