@@ -20,7 +20,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState(false);
   const [message, setMessage] = useState('');
+  const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [nextPath, setNextPath] = useState('/');
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     event.preventDefault();
     setBusy(true);
     setMessage('');
+    setPendingConfirmation(false);
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -62,7 +65,8 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           router.push(nextPath);
           router.refresh();
         } else {
-          setMessage('Check your email to confirm your account, then come back and log in.');
+          setPendingConfirmation(true);
+          setMessage('If this is a new account, check your inbox and spam folder. If you have used this email on Aspire before, log in or reset your password instead.');
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -80,9 +84,33 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     }
   }
 
+  async function resendConfirmation() {
+    if (!email.trim()) return;
+    setResending(true);
+    setMessage('');
+
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/login?confirmed=1`
+        }
+      });
+      if (error) throw error;
+      setMessage('Confirmation email requested. Check your inbox and spam folder. If the address already belongs to a confirmed Aspire account, use Log in or Forgot password instead.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not resend the confirmation email.');
+    } finally {
+      setResending(false);
+    }
+  }
+
   const signup = mode === 'signup';
   const nextQuery = nextPath === '/' ? '' : `?next=${encodeURIComponent(nextPath)}`;
   const switchHref = signup ? `/login${nextQuery}` : `/signup${nextQuery}`;
+  const recoveryHref = `/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ''}`;
 
   return (
     <main className="authPage">
@@ -133,9 +161,25 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} autoComplete={signup ? 'new-password' : 'current-password'} required />
           </label>
 
+          {!signup && (
+            <div className="authUtilityRow">
+              <span>Having trouble signing in?</span>
+              <a href={recoveryHref}>Forgot password?</a>
+            </div>
+          )}
+
           <button className="button buttonGold authSubmit" type="submit" disabled={busy}>
             {busy ? 'One second…' : signup ? 'Create account →' : 'Log in →'}
           </button>
+
+          {pendingConfirmation && (
+            <div className="authEmailActions">
+              <button type="button" onClick={resendConfirmation} disabled={resending}>
+                {resending ? 'Sending…' : 'Resend confirmation'}
+              </button>
+              <a href={recoveryHref}>I already had an account</a>
+            </div>
+          )}
 
           {!signup && (
             <div className="authCreateAccount">
