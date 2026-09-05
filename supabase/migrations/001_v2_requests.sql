@@ -50,6 +50,12 @@ create index if not exists requests_status_created_idx on public.requests(status
 create index if not exists requests_campus_idx on public.requests(campus);
 create index if not exists responses_request_idx on public.request_responses(request_id, created_at desc);
 
+-- Explicit API privileges. RLS below still decides which rows each role can use.
+grant select on public.requests to anon, authenticated;
+grant insert, update, delete on public.requests to authenticated;
+grant select, insert, update on public.request_responses to authenticated;
+grant select, insert, update on public.connections to authenticated;
+
 alter table public.requests enable row level security;
 alter table public.request_responses enable row level security;
 alter table public.connections enable row level security;
