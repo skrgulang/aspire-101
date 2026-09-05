@@ -76,13 +76,17 @@ const productPages = [
   { label: 'Campus Circle', note: 'Your campus in one place.', icon: '◎', href: '/campus', className: 'productCircle' }
 ];
 
-function featureHref(featureKey: string, user: User | null) {
-  const next = `/campus?deck=${encodeURIComponent(featureKey)}`;
-  return user ? next : `/signup?next=${encodeURIComponent(next)}`;
+function signupHref(campusSchool: string) {
+  return `/signup?next=${encodeURIComponent('/campus')}&campus=${encodeURIComponent(campusSchool)}`;
 }
 
-function gatedHref(href: string, user: User | null) {
-  return user ? href : `/signup?next=${encodeURIComponent(href)}`;
+function featureHref(featureKey: string, user: User | null, campusSchool: string) {
+  const next = `/campus?deck=${encodeURIComponent(featureKey)}`;
+  return user ? next : signupHref(campusSchool);
+}
+
+function gatedHref(href: string, user: User | null, campusSchool: string) {
+  return user ? href : signupHref(campusSchool);
 }
 
 export default function MarketingHome() {
@@ -130,6 +134,7 @@ export default function MarketingHome() {
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
     if (event.currentTarget.src !== imageFallback) event.currentTarget.src = imageFallback;
   };
+  const joinHref = signupHref(campus.school);
 
   return (
     <main className="marketingHome">
@@ -158,11 +163,11 @@ export default function MarketingHome() {
             <a href="#why-aspire">Why Aspire?</a>
             <a href="#campuses">For campuses</a>
             {authReady && user ? (
-              <a className="marketingJoin" href="/campus">Open campus →</a>
+              <a className="marketingJoin" href="/campus">Open Community Circle →</a>
             ) : (
               <>
-                <a href="/login">Log in</a>
-                <a className="marketingJoin" href="/signup">Join Aspire →</a>
+                <a href="/login?next=%2Fcampus">Sign in</a>
+                <a className="marketingJoin" href={joinHref}>Join Aspire →</a>
               </>
             )}
           </nav>
@@ -182,7 +187,7 @@ export default function MarketingHome() {
 
         <section className="marketingFeatureRail" aria-label="Explore Aspire features">
           {features.map((feature, index) => (
-            <a className={`marketingFeatureCard revealDelay${index}`} data-reveal="pop" href={featureHref(feature.key, user)} key={feature.key}>
+            <a className={`marketingFeatureCard revealDelay${index}`} data-reveal="pop" href={featureHref(feature.key, user, campus.school)} key={feature.key}>
               <img src={feature.image} alt={`${feature.label} on campus`} onError={handleImageError} />
               <span className="marketingFeatureShade" />
               <span className="marketingFeatureDoodle">{feature.doodle.split('\n').map((line) => <span key={line}>{line}</span>)}</span>
@@ -198,10 +203,10 @@ export default function MarketingHome() {
         </section>
 
         <section className="marketingRecent" data-reveal="up" aria-label="Recent campus activity">
-          <div className="marketingRecentHead"><span>RECENT REQUESTS NEAR YOU</span><a href={user ? '/discover' : '/signup?next=%2Fdiscover'}>See more →</a></div>
+          <div className="marketingRecentHead"><span>RECENT REQUESTS NEAR YOU</span><a href={user ? '/discover' : joinHref}>See more →</a></div>
           <div className="marketingRecentRail">
             {recent.map((item) => (
-              <a href={user ? '/discover' : '/signup?next=%2Fdiscover'} key={item.label}>
+              <a href={user ? '/discover' : joinHref} key={item.label}>
                 <i>{item.icon}</i><span><strong>{item.label}</strong><small>{item.meta}</small></span>
               </a>
             ))}
@@ -259,7 +264,7 @@ export default function MarketingHome() {
         </div>
         <div className="marketingProductGrid">
           {productPages.map((item, index) => (
-            <a key={item.label} data-reveal="pop" className={`marketingProductCard ${item.className} revealDelay${index}`} href={gatedHref(item.href, user)}>
+            <a key={item.label} data-reveal="pop" className={`marketingProductCard ${item.className} revealDelay${index}`} href={gatedHref(item.href, user, campus.school)}>
               <i>{item.icon}</i>
               <div><strong>{item.label}</strong><span>{item.note}</span></div>
               <b>→</b>
