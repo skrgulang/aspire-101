@@ -56,6 +56,10 @@ export async function createRequest(input: CreateRequestInput) {
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in to post a request.');
 
+  const { data: allowed, error: accessError } = await supabase.rpc('can_post_request');
+  if (accessError) throw accessError;
+  if (!allowed) throw new Error('Verify your school ID in Profile before posting.');
+
   const { data, error } = await supabase
     .from('requests')
     .insert({
