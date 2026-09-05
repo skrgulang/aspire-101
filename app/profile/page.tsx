@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
-import { AppRole, fetchMyRole } from '../../lib/supabase/trust';
+import { fetchMyRole } from '../../lib/supabase/trust';
+import type { AppRole } from '../../lib/supabase/trust';
 import { aspireLogo } from '../logo';
 import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
