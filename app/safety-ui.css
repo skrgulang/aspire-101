@@ -1,0 +1,206 @@
+.discoverCardTopActions { display: inline-flex; align-items: center; gap: 10px; }
+.discoverCardTopActions button {
+  width: 29px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 50%;
+  background: rgba(255,255,255,.025);
+  color: #8a8275;
+  cursor: pointer;
+  letter-spacing: .05em;
+}
+.discoverCardTopActions button:hover { color: #fff; border-color: rgba(255,194,28,.28); }
+
+.discoverSafetyOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(3,3,2,.78);
+  backdrop-filter: blur(14px);
+}
+.discoverSafetySheet {
+  width: min(540px, 100%);
+  position: relative;
+  padding: 28px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 27px;
+  background: #11100c;
+  box-shadow: 0 40px 120px rgba(0,0,0,.55);
+}
+.discoverSafetyClose {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 50%;
+  background: transparent;
+  color: #8a8276;
+  cursor: pointer;
+}
+.discoverSafetySheet h2 { margin: 11px 0; font-size: 39px; line-height: 1; letter-spacing: -.055em; }
+.discoverSafetySheet > p:not(.eyebrow) { color: #958d80; font-size: 12px; line-height: 1.65; }
+.discoverSafetySheet label { display: grid; gap: 8px; margin-top: 17px; }
+.discoverSafetySheet label > span { color: #9d9588; font-size: 9px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase; }
+.discoverSafetySheet label em { font-style: normal; opacity: .55; }
+.discoverSafetySheet select,
+.discoverSafetySheet textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px;
+  outline: none;
+  background: #090806;
+  color: #f7f3e8;
+  font: inherit;
+}
+.discoverSafetyActions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; }
+.discoverBlock {
+  min-height: 48px;
+  border: 1px solid rgba(255,116,86,.25);
+  border-radius: 14px;
+  background: rgba(255,116,86,.06);
+  color: #efb1a2;
+  font-weight: 850;
+  cursor: pointer;
+}
+.discoverSafetySheet > small { display: block; margin-top: 15px; color: #686157; font-size: 9px; line-height: 1.5; }
+
+.safetyPage {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(255,194,28,.12), transparent 24rem),
+    radial-gradient(circle at 8% 70%, rgba(60,104,255,.055), transparent 28rem),
+    #080705;
+}
+.safetyNav {
+  min-height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.safetyNavLinks { display: flex; gap: 22px; align-items: center; }
+.safetyNavLinks a { color: #928a7d; font-size: 11px; font-weight: 750; }
+.safetyNavLinks a:hover { color: #fff; }
+
+.safetyHero {
+  display: grid;
+  grid-template-columns: 1.25fr .75fr;
+  gap: 70px;
+  align-items: end;
+  padding: 90px 0 70px;
+}
+.safetyHero h1 { margin: 17px 0 0; font-size: clamp(72px, 9vw, 132px); line-height: .84; letter-spacing: -.075em; }
+.safetyHero h1 span { color: var(--gold); font-family: var(--font-display), Georgia, serif; font-style: italic; font-weight: 600; letter-spacing: -.035em; }
+.safetyHeroSide { padding-bottom: 9px; }
+.safetyHeroSide p { color: #aaa294; font-size: 16px; line-height: 1.7; }
+.safetyEmergency {
+  margin-top: 23px;
+  padding: 15px 16px;
+  border: 1px solid rgba(255,114,80,.20);
+  border-radius: 15px;
+  background: rgba(255,114,80,.05);
+  color: #c5afa6;
+  font-size: 10px;
+  line-height: 1.55;
+}
+.safetyEmergency strong { color: #fff; }
+
+.safetyPrinciples {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-block: 1px solid rgba(255,255,255,.08);
+}
+.safetyPrinciples article { padding: 27px 24px; border-right: 1px solid rgba(255,255,255,.07); }
+.safetyPrinciples article:last-child { border-right: 0; }
+.safetyPrinciples span { color: var(--gold); font-size: 9px; font-weight: 900; }
+.safetyPrinciples strong { display: block; margin-top: 12px; font-size: 16px; }
+.safetyPrinciples p { color: #7d7569; font-size: 10px; line-height: 1.55; }
+
+.safetySection { padding: 94px 0; }
+.safetySectionHead { display: grid; grid-template-columns: .75fr 1.25fr; gap: 60px; align-items: end; margin-bottom: 34px; }
+.safetySectionHead h2 { margin: 0; font-size: clamp(48px, 6vw, 82px); line-height: .9; letter-spacing: -.065em; }
+.safetySectionHead > p { max-width: 660px; margin: 0; color: #968e81; line-height: 1.7; }
+
+.safetyScenarioGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.safetyScenario {
+  min-height: 265px;
+  padding: 24px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 23px;
+  background: linear-gradient(155deg, rgba(255,255,255,.028), rgba(255,255,255,.01));
+}
+.safetyScenario i { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 12px; background: rgba(255,194,28,.09); color: var(--gold); font-style: normal; font-weight: 900; }
+.safetyScenario h3 { margin: 26px 0 10px; font-size: 24px; letter-spacing: -.035em; }
+.safetyScenario p { margin: 0; color: #8b8376; font-size: 11px; line-height: 1.65; }
+.safetyScenario ul { padding-left: 17px; color: #8b8376; font-size: 10px; line-height: 1.65; }
+.safetyScenarioGold { background: var(--gold); color: #171209; }
+.safetyScenarioGold i { background: #171209; color: var(--gold); }
+.safetyScenarioGold p, .safetyScenarioGold ul { color: rgba(23,18,9,.70); }
+
+.safetyFlow {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 24px;
+  overflow: hidden;
+}
+.safetyFlow article { min-height: 205px; padding: 22px; border-right: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.015); }
+.safetyFlow article:last-child { border-right: 0; }
+.safetyFlow b { color: var(--gold); font-size: 9px; }
+.safetyFlow h3 { margin: 37px 0 9px; font-size: 18px; }
+.safetyFlow p { color: #7e766a; font-size: 10px; line-height: 1.55; }
+
+.safetyControlGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
+.safetyControlCard { padding: 25px; border-radius: 22px; border: 1px solid rgba(255,255,255,.08); background: #0d0c09; }
+.safetyControlCard span { color: #6f685d; font-size: 8px; font-weight: 900; letter-spacing: .13em; }
+.safetyControlCard h3 { margin: 12px 0 10px; font-size: 27px; letter-spacing: -.04em; }
+.safetyControlCard p { color: #8c8478; font-size: 11px; line-height: 1.65; }
+.safetyControlCard a { display: inline-block; margin-top: 12px; color: var(--gold); font-size: 10px; font-weight: 800; }
+
+.safetyLegalStrip {
+  margin-bottom: 90px;
+  padding: 27px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 30px;
+  align-items: center;
+  border: 1px solid rgba(255,194,28,.16);
+  border-radius: 23px;
+  background: linear-gradient(90deg, rgba(255,194,28,.07), rgba(255,255,255,.012));
+}
+.safetyLegalStrip h3 { margin: 0; font-size: 28px; letter-spacing: -.04em; }
+.safetyLegalStrip p { margin: 7px 0 0; color: #8c8477; font-size: 11px; line-height: 1.55; }
+.safetyLegalStrip nav { display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
+.safetyLegalStrip a { padding: 10px 12px; border: 1px solid rgba(255,255,255,.09); border-radius: 999px; color: #b6aea1; font-size: 9px; font-weight: 800; }
+.safetyLegalStrip a:hover { border-color: rgba(255,194,28,.25); color: var(--gold); }
+
+@media (max-width: 900px) {
+  .safetyHero, .safetySectionHead { grid-template-columns: 1fr; gap: 28px; }
+  .safetyPrinciples { grid-template-columns: repeat(2, 1fr); }
+  .safetyPrinciples article:nth-child(2) { border-right: 0; }
+  .safetyPrinciples article:nth-child(-n+2) { border-bottom: 1px solid rgba(255,255,255,.07); }
+  .safetyScenarioGrid { grid-template-columns: 1fr 1fr; }
+  .safetyFlow { grid-template-columns: 1fr; }
+  .safetyFlow article { min-height: auto; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .safetyFlow article:last-child { border-bottom: 0; }
+}
+
+@media (max-width: 620px) {
+  .discoverSafetyActions { grid-template-columns: 1fr; }
+  .safetyNavLinks a:not(:last-child) { display: none; }
+  .safetyHero { padding-top: 58px; }
+  .safetyHero h1 { font-size: clamp(66px, 20vw, 92px); }
+  .safetyPrinciples, .safetyScenarioGrid, .safetyControlGrid { grid-template-columns: 1fr; }
+  .safetyPrinciples article { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+  .safetyPrinciples article:last-child { border-bottom: 0; }
+  .safetyLegalStrip { grid-template-columns: 1fr; }
+  .safetyLegalStrip nav { justify-content: flex-start; }
+}
