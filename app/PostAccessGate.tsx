@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { fetchMySchoolVerification, SchoolVerification } from '../lib/supabase/trust';
-import AppLoader from './AppLoader';
 import PostRequestForm from './PostRequestForm';
 
 export default function PostAccessGate() {
@@ -33,7 +32,15 @@ export default function PostAccessGate() {
     return () => { alive = false; };
   }, [router]);
 
-  if (loading) return <AppLoader label="Checking your trust pass…" detail="School verification" />;
+  if (loading) {
+    return (
+      <div className="postGateLoading" aria-live="polite" aria-busy="true">
+        <div className="postGateLoadingRadar" aria-hidden="true"><span /><i /></div>
+        <strong>Checking your trust pass…</strong>
+        <small>School verification</small>
+      </div>
+    );
+  }
 
   if (verification?.status !== 'verified') {
     const pending = verification?.status === 'pending';
