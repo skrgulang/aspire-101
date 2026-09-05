@@ -13,8 +13,10 @@ const categories: Category[] = [
   { label: 'Get me there', match: (r) => /ride|transport|airport|chicago|indy/i.test(`${r.category} ${r.title}`) },
   { label: 'Pick this up', match: (r) => /pickup|errand|target|costco|order|food|package/i.test(`${r.category} ${r.title}`) },
   { label: 'Give me a hand', match: (r) => /moving|help|desk|chair|carry|furniture/i.test(`${r.category} ${r.title}`) },
-  { label: 'Study / class', match: (r) => /study|class|tutor|math|calc|econ/i.test(`${r.category} ${r.title}`) },
-  { label: 'Build something', match: (r) => /project|collab|designer|hackathon|build/i.test(`${r.category} ${r.title}`) },
+  { label: 'Study / class', match: (r) => /study|class|tutor|math|calc|econ|homework|exam/i.test(`${r.category} ${r.title}`) },
+  { label: 'Gaming / duos', match: (r) => /gaming|game|valorant|league|fortnite|duo|ranked|queue|cs2|overwatch|minecraft/i.test(`${r.category} ${r.title}`) },
+  { label: 'Build something', match: (r) => /project|collab|designer|hackathon|build|startup|code|developer/i.test(`${r.category} ${r.title}`) },
+  { label: 'People / community', match: (r) => /community|people|friend|group|club|ski|gym|workout|hang|campus life|meet/i.test(`${r.category} ${r.title}`) },
   { label: 'Buy & sell', match: (r) => r.kind === 'buy_sell' || /market|sell|buy|fridge|lamp/i.test(`${r.category} ${r.title}`) }
 ];
 
@@ -23,7 +25,9 @@ const demoRequests: DeckItem[] = [
   { id: 'demo-pickup', poster_id: 'demo', kind: 'paid_help', category: 'Pickup / errand', title: 'Can someone pick up my Target order before 8?', details: 'Small order, already paid for. I am near campus.', campus: 'Purdue University', city: 'West Lafayette', latitude: null, longitude: null, amount_cents: 1200, currency: 'USD', payment_method: 'in_person', status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), demo: true },
   { id: 'demo-move', poster_id: 'demo', kind: 'paid_help', category: 'Moving / help', title: 'Need help moving a desk across campus tomorrow', details: 'About 20 minutes. Desk is already disassembled.', campus: 'UC Berkeley', city: 'Berkeley', latitude: null, longitude: null, amount_cents: 2500, currency: 'USD', payment_method: 'in_person', status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), demo: true },
   { id: 'demo-study', poster_id: 'demo', kind: 'community', category: 'Study', title: 'Anyone in Math 55 want to study tonight?', details: 'Library around 7. Mostly proof practice.', campus: 'UC Berkeley', city: 'Berkeley', latitude: null, longitude: null, amount_cents: null, currency: 'USD', payment_method: 'none', status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), demo: true },
-  { id: 'demo-build', poster_id: 'demo', kind: 'collaboration', category: 'Project / collab', title: 'Need a designer for a weekend AI project', details: 'Hackathon-style build. Looking for someone who wants to ship fast.', campus: 'Purdue University', city: 'West Lafayette', latitude: null, longitude: null, amount_cents: null, currency: 'USD', payment_method: 'none', status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), demo: true }
+  { id: 'demo-gaming', poster_id: 'demo', kind: 'community', category: 'Gaming / duos', title: 'Valorant duo tonight? Gold–Plat, chill games', details: 'Looking for someone from campus to queue around 9.', campus: 'Purdue University', city: 'West Lafayette', latitude: null, longitude: null, amount_cents: null, currency: 'USD', payment_method: 'none', status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), demo: true },
+  { id: 'demo-build', poster_id: 'demo', kind: 'collaboration', category: 'Project / collab', title: 'Need a designer for a weekend AI project', details: 'Hackathon-style build. Looking for someone who wants to ship fast.', campus: 'Purdue University', city: 'West Lafayette', latitude: null, longitude: null, amount_cents: null, currency: 'USD', payment_method: 'none', status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), demo: true },
+  { id: 'demo-people', poster_id: 'demo', kind: 'community', category: 'People / community', title: 'Anyone want to ski this Saturday?', details: 'Trying to get a small campus group together.', campus: 'UC Berkeley', city: 'Berkeley', latitude: null, longitude: null, amount_cents: null, currency: 'USD', payment_method: 'none', status: 'open', created_at: new Date().toISOString(), updated_at: new Date().toISOString(), demo: true }
 ];
 
 const kindLabel: Record<DeckItem['kind'], string> = { community: 'COMMUNITY', paid_help: 'PAID HELP', split_cost: 'SPLIT COST', buy_sell: 'BUY & SELL', collaboration: 'COLLAB' };
@@ -54,6 +58,9 @@ export default function DiscoverRequests() {
   const [reportDetails, setReportDetails] = useState('');
 
   useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('category');
+    if (requested && categories.some((item) => item.label === requested)) setCategory(requested);
+
     Promise.all([fetchOpenRequests(40), fetchBlockedUserIds().catch(() => [])]).then(([data, blocked]) => {
       setBlockedIds(blocked);
       const visible = data.filter((request) => !blocked.includes(request.poster_id));
@@ -131,10 +138,10 @@ export default function DiscoverRequests() {
       <div className="discoverTopline">
         <div>
           <p className="eyebrow">DISCOVER CAMPUS</p>
-          <h1>Find something<br /><span>you can help with.</span></h1>
-          <p>Browse needs one at a time. Skip what is not for you. Respond when it is.</p>
+          <h1>Pick a vibe.<br /><span>See who&apos;s around.</span></h1>
+          <p>Requests, study partners, gaming duos, projects, and campus plans — one deck at a time.</p>
         </div>
-        <div className="discoverModeLinks"><a href="/post">I need something</a><a className="active" href="/discover">I can help</a></div>
+        <div className="discoverModeLinks"><a href="/campus">Decks</a><a href="/post">Post</a></div>
       </div>
 
       <div className="discoverCategories" aria-label="Request categories">
@@ -143,9 +150,9 @@ export default function DiscoverRequests() {
 
       <div className="discoverStage">
         <aside className="discoverSideRail">
-          <span>LIVE CAMPUS NEEDS</span><strong>{filtered.length || 0}</strong>
-          <small>{usingDemo ? 'example requests while your campus feed fills up' : 'open requests in this view'}</small>
-          <div className="discoverSafetyMini"><b>Mutual connect</b><p>Responding does not automatically open chat or commit either person.</p></div>
+          <span>ON CAMPUS</span><strong>{filtered.length || 0}</strong>
+          <small>{usingDemo ? 'examples while your campus fills up' : 'open posts in this deck'}</small>
+          <div className="discoverSafetyMini"><b>Mutual connect</b><p>Nothing opens automatically. Both people choose.</p></div>
         </aside>
 
         <div className="requestDeck" aria-live="polite">
@@ -161,17 +168,17 @@ export default function DiscoverRequests() {
               <p>{current.details || 'Open the request to see the details after you connect.'}</p>
               <div className="discoverMeta"><span>◎ {current.campus || 'Campus nearby'}</span><span>◷ {new Date(current.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div>
               <div className="discoverOffer"><small>CONTEXT</small><strong>{priceLabel(current)}</strong></div>
-              <div className="discoverCardFooter"><button type="button" className="discoverSkip" onClick={next}>Skip</button><button type="button" className="discoverHelp" onClick={help} disabled={busy}>{busy ? 'One second…' : 'I can help →'}</button></div>
+              <div className="discoverCardFooter"><button type="button" className="discoverSkip" onClick={next}>Skip</button><button type="button" className="discoverHelp" onClick={help} disabled={busy}>{busy ? 'One second…' : current.kind === 'community' ? 'I’m in →' : 'I can help →'}</button></div>
               {message && <div className="discoverMessage">{message}</div>}
             </article>
-          ) : <div className="discoverEmpty"><strong>No requests in this category yet.</strong><p>Try another category or post something your campus can respond to.</p></div>}
+          ) : <div className="discoverEmpty"><strong>Nothing in this deck yet.</strong><p>Try another category or be the first to post.</p><a href="/post">Post something →</a></div>}
           <div className="deckGhost ghostOne" aria-hidden="true" /><div className="deckGhost ghostTwo" aria-hidden="true" />
         </div>
 
         <aside className="discoverHow">
-          <span>HOW IT WORKS</span>
-          <div><b>01</b><p>Browse a request.</p></div><div><b>02</b><p>Respond if you can help.</p></div><div><b>03</b><p>Both sides agree before private chat opens.</p></div>
-          <a href="/safety">Safety center ↗</a>
+          <span>SIMPLE</span>
+          <div><b>01</b><p>See a post.</p></div><div><b>02</b><p>Interested? Tap in.</p></div><div><b>03</b><p>Connect if both sides agree.</p></div>
+          <a href="/safety">Safety ↗</a>
         </aside>
       </div>
 
