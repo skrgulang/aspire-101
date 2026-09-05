@@ -12,16 +12,15 @@ export default function DiscoverPage() {
   return (
     <main className="postPage discoverPage">
       <header className="postNav shell">
-        <a className="brand" href="/" aria-label="Aspire 101 home">
+        <a className="brand" href="/campus" aria-label="Aspire campus home">
           <img src={aspireLogo} alt="" style={logoStyle} />
           <span>Aspire 101</span>
         </a>
-        <nav className="postModeNav" aria-label="Request actions">
-          <a href="/post">Post</a>
+        <nav className="postModeNav" aria-label="Campus actions">
+          <a href="/campus">Decks</a>
           <a className="active" href="/discover">Discover</a>
-          <a href="/safety">Safety</a>
         </nav>
-        <a className="quietLink" href="/">Back to campus ↙</a>
+        <a className="quietLink" href="/post">+ Post</a>
       </header>
       <div className="postPageGlow" aria-hidden="true" />
       <div className="discoverShell shell">
