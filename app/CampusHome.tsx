@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { AspireRequest, fetchOpenRequests } from '../lib/supabase/requests';
 import { aspireLogo } from './logo';
+import AppDock from './AppDock';
 
 type CampusDeck = {
   key: string;
   label: string;
   short: string;
-  href: string;
+  query: string;
   glyph: string;
   match: (request: AspireRequest) => boolean;
 };
@@ -33,22 +34,13 @@ const campuses: CampusOption[] = [
 ];
 
 const decks: CampusDeck[] = [
-  { key: 'rides', label: 'Rides', short: 'rides + pickups', href: '/discover?category=Get%20me%20there', glyph: '↗', match: (r) => /ride|transport|airport|chicago|indy|pickup|errand/i.test(`${r.category} ${r.title}`) },
-  { key: 'study', label: 'Study', short: 'classmates + tutoring', href: '/discover?category=Study%20%2F%20class', glyph: '⌑', match: (r) => /study|class|tutor|math|calc|econ|exam/i.test(`${r.category} ${r.title}`) },
-  { key: 'gaming', label: 'Gaming', short: 'duos + teammates', href: '/discover?category=Gaming%20%2F%20duos', glyph: '◉', match: (r) => /gaming|game|valorant|league|fortnite|duo|queue|cs2/i.test(`${r.category} ${r.title}`) },
-  { key: 'projects', label: 'Projects', short: 'builders + collaborators', href: '/discover?category=Build%20something', glyph: '✦', match: (r) => /project|collab|designer|hackathon|build|startup|code/i.test(`${r.category} ${r.title}`) },
-  { key: 'people', label: 'People', short: 'friends + campus plans', href: '/discover?category=People%20%2F%20community', glyph: '+', match: (r) => /community|people|friend|group|club|ski|gym|hang|meet/i.test(`${r.category} ${r.title}`) },
-  { key: 'market', label: 'Market', short: 'buy + sell nearby', href: '/discover?category=Buy%20%26%20sell', glyph: '$', match: (r) => r.kind === 'buy_sell' || /market|sell|buy|fridge|lamp/i.test(`${r.category} ${r.title}`) }
+  { key: 'rides', label: 'Rides', short: 'rides + pickups', query: 'Get me there', glyph: '↗', match: (r) => /ride|transport|airport|chicago|indy|pickup|errand/i.test(`${r.category} ${r.title}`) },
+  { key: 'study', label: 'Study', short: 'classmates + tutoring', query: 'Study / class', glyph: '⌑', match: (r) => /study|class|tutor|math|calc|econ|exam/i.test(`${r.category} ${r.title}`) },
+  { key: 'gaming', label: 'Gaming', short: 'duos + teammates', query: 'Gaming / duos', glyph: '◉', match: (r) => /gaming|game|valorant|league|fortnite|duo|queue|cs2/i.test(`${r.category} ${r.title}`) },
+  { key: 'projects', label: 'Projects', short: 'builders + collaborators', query: 'Build something', glyph: '✦', match: (r) => /project|collab|designer|hackathon|build|startup|code/i.test(`${r.category} ${r.title}`) },
+  { key: 'people', label: 'People', short: 'friends + campus plans', query: 'People / community', glyph: '+', match: (r) => /community|people|friend|group|club|ski|gym|hang|meet/i.test(`${r.category} ${r.title}`) },
+  { key: 'market', label: 'Market', short: 'buy + sell nearby', query: 'Buy & sell', glyph: '$', match: (r) => r.kind === 'buy_sell' || /market|sell|buy|fridge|lamp/i.test(`${r.category} ${r.title}`) }
 ];
-
-const sectionNotes: Record<string, string> = {
-  rides: 'Airport · city trips · errands',
-  study: 'Classmates · tutoring · study groups',
-  gaming: 'Duos · squads · campus gamers',
-  projects: 'Hackathons · startups · collaborators',
-  people: 'Friends · plans · communities',
-  market: 'Buy · sell · borrow nearby'
-};
 
 function resolveCampus(rawSchool: string) {
   const normalized = rawSchool.toLowerCase().trim();
@@ -71,8 +63,12 @@ function relativeTime(value: string) {
   return `${Math.floor(hours / 24)}d`;
 }
 
-function compactTitle(title: string, limit = 40) {
+function compactTitle(title: string, limit = 38) {
   return title.length <= limit ? title : `${title.slice(0, limit - 1).trim()}…`;
+}
+
+function deckForRequest(request: AspireRequest) {
+  return decks.find((deck) => deck.match(request)) ?? decks[4];
 }
 
 export default function CampusHome() {
@@ -115,14 +111,12 @@ export default function CampusHome() {
   const selectedCampus = useMemo(() => campuses.find((item) => item.key === campusKey) ?? campuses[0], [campusKey]);
   const firstName = useMemo(() => name.split(/\s+/).filter(Boolean)[0] || '', [name]);
   const campusRequests = useMemo(() => requests.filter((request) => sameCampus(request, selectedCampus.school)), [requests, selectedCampus.school]);
-  const recent = campusRequests.slice(0, 4);
-  const liveThreads = campusRequests.slice(0, 2);
+  const radarRequests = campusRequests.slice(0, 6);
 
-  const sortedDecks = useMemo(() => {
-    return decks
-      .map((deck, originalIndex) => ({ deck, count: campusRequests.filter(deck.match).length, originalIndex }))
-      .sort((a, b) => b.count - a.count || a.originalIndex - b.originalIndex);
-  }, [campusRequests]);
+  const sectionData = useMemo(() => decks.map((deck) => {
+    const matches = campusRequests.filter(deck.match);
+    return { deck, count: matches.length, sample: matches[0] };
+  }), [campusRequests]);
 
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
@@ -136,142 +130,118 @@ export default function CampusHome() {
   }
 
   return (
-    <main className="campusHome">
-      <div className="campusBackdrop" aria-hidden="true">
+    <main className="campusHome communityHome">
+      <div className="campusBackdrop communityBackdrop" aria-hidden="true">
         <img key={selectedCampus.image} src={selectedCampus.image} alt="" />
         <span />
       </div>
 
-      <header className="campusHomeNav">
-        <a className="campusHomeBrand" href="/campus" aria-label="Aspire campus home">
+      <header className="communityTopbar">
+        <a className="communityBrand" href="/campus" aria-label="Aspire campus home">
           <img src={aspireLogo} alt="" />
           <span>Aspire 101</span>
         </a>
 
-        <label className="campusSwitcher">
-          <span>●</span>
+        <label className="communityCampusPicker">
+          <span aria-hidden="true">●</span>
           <select value={campusKey} onChange={(event) => setCampusKey(event.target.value)} aria-label="Choose campus">
             {campuses.map((campus) => <option key={campus.key} value={campus.key}>{campus.school}</option>)}
           </select>
-          <b>⌄</b>
+          <b aria-hidden="true">⌄</b>
         </label>
 
-        <div className="campusHomeActions">
-          <a href="/connections" className="campusIconLink" aria-label="Connections">◎</a>
-          <a href="/post" className="campusPost">+ Post</a>
-          <button type="button" onClick={signOut} className="campusAvatar" aria-label="Sign out">{firstName ? firstName[0].toUpperCase() : 'A'}</button>
-        </div>
+        <button type="button" onClick={signOut} className="communityAvatar" aria-label="Sign out">{firstName ? firstName[0].toUpperCase() : 'A'}</button>
       </header>
 
-      <section className="campusWelcome">
-        <div>
-          <p>{firstName ? `HEY ${firstName.toUpperCase()} · ` : ''}{selectedCampus.school.toUpperCase()}</p>
-          <h1>Your campus.<br /><em>One circle.</em></h1>
-        </div>
-        <div className="campusWelcomeNote" aria-hidden="true">PICK A TOPIC<br />SEE WHO&apos;S AROUND ↘</div>
-      </section>
+      <section className="communityHero">
+        <div className="communityIntro">
+          <p className="communityEyebrow">COMMUNITY CIRCLE · {selectedCampus.school.toUpperCase()}</p>
+          <h1>Find your<br /><em>circle.</em></h1>
+          <p className="communityLead">See what students on your campus are asking for, building, studying, and doing right now.</p>
 
-      <section className="campusCircleSection campusCircleV2" aria-label="Explore your campus circle">
-        <div className="campusCircleMeta"><span>LIVE CAMPUS</span><b>{campusRequests.length}</b><small>open requests</small></div>
-        <div className="campusCircleSortNote">AUTO-SORTED BY<br />CAMPUS ACTIVITY ✦</div>
-
-        <div className="campusCircleGlow" aria-hidden="true" />
-        <div className="campusOrbit campusOrbitV2" aria-hidden="true"><span /><i /></div>
-
-        <a className="campusCircleCenter campusCircleCenterV2" href="/discover">
-          <span className="campusCirclePulse" aria-hidden="true" />
-          <span className="campusCircleLogo"><img src={aspireLogo} alt="" /></span>
-          <small>CAMPUS CIRCLE</small>
-          <strong>Discover</strong>
-          <p>{campusRequests.length ? `${campusRequests.length} things happening now` : 'start the first thing here'}</p>
-          <b>→</b>
-        </a>
-
-        {sortedDecks.map(({ deck, count }, index) => (
-          <a
-            key={deck.key}
-            href={deck.href}
-            className={`campusOrbitNode campusOrbitNodeV2 node-${index + 1} topic-${deck.key} ${index === 0 && count > 0 ? 'isHot' : ''}`}
-          >
-            <i>{deck.glyph}</i>
-            <span>
-              <em>{index === 0 && count > 0 ? 'ACTIVE NOW' : 'EXPLORE'}</em>
-              <strong>{deck.label}</strong>
-              <small>{count ? `${count} open · ${deck.short}` : deck.short}</small>
-            </span>
-          </a>
-        ))}
-
-        {liveThreads.map((request, index) => (
-          <a key={request.id} href="/discover" className={`campusLiveThread thread-${index + 1}`}>
-            <span>LIVE · {relativeTime(request.created_at)}</span>
-            <strong>{compactTitle(request.title)}</strong>
-          </a>
-        ))}
-
-        <a className="campusPostNote campusPostNoteV2" href="/post"><small>NEED SOMETHING?</small><strong>Post it ↗</strong></a>
-      </section>
-
-      <section className="campusCirclePromise" aria-label="How the circle works">
-        <span>Campus-scoped</span><i>•</i><span>Real requests</span><i>•</i><span>Both sides choose</span><i>•</i><span>Chat after a match</span>
-      </section>
-
-      <section className="campusSections" aria-label="Choose a campus section">
-        <div className="campusSectionsHead">
-          <div>
-            <p>GO DEEPER</p>
-            <h2>Pick a section.</h2>
+          <div className="communityQuickFilters" aria-label="Explore sections">
+            <a className="active" href="/discover">All</a>
+            {decks.map((deck) => <a key={deck.key} href={`/discover?category=${encodeURIComponent(deck.query)}`}>{deck.label}</a>)}
           </div>
-          <span>Circle first. Then choose where you want to go.</span>
-        </div>
 
-        <div className="campusSectionsGrid">
-          {decks.map((deck, index) => {
-            const matching = campusRequests.filter(deck.match);
-            const preview = matching[0];
-            return (
-              <a key={deck.key} href={deck.href} className={`campusSectionCard section-${deck.key} ${index < 2 ? 'featured' : ''}`}>
-                <div className="campusSectionTop"><i>{deck.glyph}</i><b>{matching.length ? `${matching.length} LIVE` : 'EXPLORE'}</b></div>
-                <div className="campusSectionCopy">
-                  <small>{sectionNotes[deck.key]}</small>
-                  <strong>{deck.label}</strong>
-                  <p>{preview ? compactTitle(preview.title, 58) : deck.short}</p>
-                </div>
-                <span className="campusSectionArrow">→</span>
-              </a>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="campusNow">
-        <div className="campusNowHead">
-          <div><p>RIGHT NOW</p><h2>What&apos;s happening on campus?</h2></div>
-          <a href="/discover">See all →</a>
-        </div>
-
-        {recent.length ? (
-          <div className="campusNowRail">
-            {recent.map((request) => (
-              <a key={request.id} href="/discover" className="campusNowCard">
-                <span>{request.category || 'REQUEST'}</span>
-                <strong>{request.title}</strong>
-                <small>{relativeTime(request.created_at)} · {request.kind === 'paid_help' && request.amount_cents ? `$${Math.round(request.amount_cents / 100)}` : request.kind === 'split_cost' ? 'split cost' : 'campus'}</small>
-              </a>
-            ))}
+          <div className="communityNowHead">
+            <strong>Right now on campus</strong>
+            <a href="/discover">See all →</a>
           </div>
-        ) : (
-          <a className="campusQuiet" href="/post"><span>Campus is quiet here.</span><strong>Be the first to post something →</strong></a>
-        )}
+
+          <div className="communityNowList">
+            {campusRequests.slice(0, 3).map((request) => {
+              const deck = deckForRequest(request);
+              return (
+                <a key={request.id} href={`/discover?category=${encodeURIComponent(deck.query)}`} className="communityNowItem">
+                  <i className={`topic-${deck.key}`}>{deck.glyph}</i>
+                  <span><strong>{compactTitle(request.title, 46)}</strong><small>{deck.label} · {relativeTime(request.created_at)} · same campus</small></span>
+                  <b>→</b>
+                </a>
+              );
+            })}
+            {!campusRequests.length && <a className="communityNowEmpty" href="/post"><strong>Your circle starts with one post.</strong><span>Ask campus for something →</span></a>}
+          </div>
+        </div>
+
+        <div className="communityRadarWrap" aria-label="Community Circle campus activity radar">
+          <div className="radarHeader">
+            <div><strong>Community Circle</strong><span>Scanning campus activity…</span></div>
+            <div className="radarCount"><b>{campusRequests.length}</b><span>open now</span></div>
+          </div>
+
+          <div className="communityRadar">
+            <div className="radarSweep" aria-hidden="true" />
+            <div className="radarCross radarCrossX" aria-hidden="true" />
+            <div className="radarCross radarCrossY" aria-hidden="true" />
+            <div className="radarCenter" aria-hidden="true"><span /></div>
+            <span className="radarDirection radarN">N</span>
+            <span className="radarDirection radarE">E</span>
+            <span className="radarDirection radarS">S</span>
+            <span className="radarDirection radarW">W</span>
+
+            {radarRequests.map((request, index) => {
+              const deck = deckForRequest(request);
+              return (
+                <a
+                  key={request.id}
+                  href={`/discover?category=${encodeURIComponent(deck.query)}`}
+                  className={`radarBlip radarBlip-${index + 1}`}
+                  title={request.title}
+                >
+                  <i>{deck.glyph}</i>
+                  <span><strong>{deck.label}</strong><small>{compactTitle(request.title, 30)}</small></span>
+                </a>
+              );
+            })}
+
+            {!radarRequests.length && (
+              <a className="radarStart" href="/post"><strong>Quiet for now.</strong><span>Post something and light up the circle →</span></a>
+            )}
+          </div>
+
+          <p className="radarPrivacy">Campus activity only — no precise location is shown.</p>
+        </div>
       </section>
 
-      <nav className="campusDock" aria-label="Aspire app navigation">
-        <a className="active" href="/campus"><i>◎</i><span>Home</span></a>
-        <a href="/discover"><i>⌕</i><span>Discover</span></a>
-        <a className="campusDockPost" href="/post"><i>+</i><span>Post</span></a>
-        <a href="/connections"><i>◌</i><span>Connections</span></a>
-        <a href="/profile"><i>○</i><span>Profile</span></a>
-      </nav>
+      <section className="communitySections">
+        <div className="communitySectionsHead"><div><p>EXPLORE BY SECTION</p><h2>Pick what you need.</h2></div><span>One campus. Different reasons to connect.</span></div>
+        <div className="communitySectionGrid">
+          {sectionData.map(({ deck, count, sample }) => (
+            <a key={deck.key} href={`/discover?category=${encodeURIComponent(deck.query)}`} className={`communitySectionCard section-${deck.key}`}>
+              <div className="sectionIcon">{deck.glyph}</div>
+              <div className="sectionCopy">
+                <span>{count ? `${count} OPEN` : 'EXPLORE'}</span>
+                <h3>{deck.label}</h3>
+                <p>{sample ? compactTitle(sample.title, 48) : deck.short}</p>
+              </div>
+              <b>→</b>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <AppDock active="home" />
     </main>
   );
 }
