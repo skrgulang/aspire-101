@@ -5,6 +5,8 @@ import type { User } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { aspireLogo } from './logo';
 
+const imageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200';
+
 const campuses = [
   { key: 'purdue', school: 'Purdue University', short: 'Purdue', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Purdue%20EngineeringMall.jpg?width=1600', note: 'Boiler up ♡' },
   { key: 'berkeley', school: 'UC Berkeley', short: 'UC Berkeley', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sather%20gate%20berkeley.jpg?width=1600', note: 'Rep your campus ♡' },
@@ -16,11 +18,11 @@ const campuses = [
 ];
 
 const features = [
-  { key: 'rides', label: 'Rides', note: 'airport rides + pickups', icon: '↗', image: 'https://images.pexels.com/photos/7510863/pexels-photo-7510863.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'GOOD RIDES\nGOOD PEOPLE' },
-  { key: 'study', label: 'Study', note: 'find a study buddy', icon: '⌑', image: 'https://images.pexels.com/photos/6146973/pexels-photo-6146973.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'BETTER GRADES\nTOGETHER' },
+  { key: 'rides', label: 'Rides', note: 'airport rides + pickups', icon: '↗', image: 'https://images.pexels.com/photos/977383/pexels-photo-977383.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'GOOD RIDES\nGOOD PEOPLE' },
+  { key: 'study', label: 'Study', note: 'find a study buddy', icon: '⌑', image: 'https://images.pexels.com/photos/6147369/pexels-photo-6147369.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'BETTER GRADES\nTOGETHER' },
   { key: 'gaming', label: 'Gaming', note: 'duos + teammates', icon: '◉', image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=84', doodle: 'GOOD GAMES\nBETTER PEOPLE' },
-  { key: 'projects', label: 'Projects', note: 'build together', icon: '✦', image: 'https://images.pexels.com/photos/6145955/pexels-photo-6145955.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'IDEAS → BUILD\n→ LAUNCH' },
-  { key: 'people', label: 'People', note: 'friends + campus life', icon: '+', image: 'https://images.pexels.com/photos/8198540/pexels-photo-8198540.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'SAME CAMPUS\nDIFFERENT STORIES ♡' }
+  { key: 'projects', label: 'Projects', note: 'build together', icon: '✦', image: 'https://images.pexels.com/photos/5965518/pexels-photo-5965518.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'IDEAS → BUILD\n→ LAUNCH' },
+  { key: 'people', label: 'People', note: 'friends + campus life', icon: '+', image: 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'SAME CAMPUS\nDIFFERENT STORIES ♡' }
 ];
 
 const recent = [
@@ -36,60 +38,60 @@ const featureStories = [
     step: '01',
     title: 'Ask campus.',
     line: 'Post what you need.',
-    image: 'https://images.pexels.com/photos/6139799/pexels-photo-6139799.jpeg?auto=compress&cs=tinysrgb&w=1400',
-    chips: ['Ride to IND?', 'Valorant duo?', 'Move a desk?', 'Study tonight?'],
+    image: 'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    chips: ['Ride to IND?', 'Move a desk?', 'Study tonight?'],
     className: 'storyAsk'
   },
   {
     step: '02',
     title: 'Find your people.',
-    line: 'Browse by what you’re actually here for.',
-    image: 'https://images.pexels.com/photos/7683401/pexels-photo-7683401.jpeg?auto=compress&cs=tinysrgb&w=1400',
-    chips: ['Study', 'Gaming', 'Projects', 'People'],
+    line: 'Browse the campus around you.',
+    image: 'https://images.pexels.com/photos/7972533/pexels-photo-7972533.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    chips: ['Same class', 'Same game', 'Same vibe'],
     className: 'storyDiscover'
   },
   {
     step: '03',
     title: 'Connect when it fits.',
     line: 'Both sides choose. Then chat opens.',
-    image: 'https://images.pexels.com/photos/7969484/pexels-photo-7969484.jpeg?auto=compress&cs=tinysrgb&w=1400',
-    chips: ['Interested', 'Mutual connect', 'Private chat'],
+    image: 'https://images.pexels.com/photos/5965683/pexels-photo-5965683.jpeg?auto=compress&cs=tinysrgb&w=1400',
+    chips: ['Interested', 'Mutual connect', 'Chat'],
     className: 'storyConnect'
   }
 ];
 
 const howItWorks = [
   { step: '01', title: 'Post it', text: 'Say what you need.', visual: 'Need a ride to IND Friday?' },
-  { step: '02', title: 'Campus sees it', text: 'Nearby students can respond.', visual: 'I can help after class.' },
-  { step: '03', title: 'Pick your match', text: 'Choose who works for you.', visual: 'Mutual connect ✓' },
+  { step: '02', title: 'Campus sees it', text: 'Nearby students respond.', visual: 'I can help after class.' },
+  { step: '03', title: 'Pick who fits', text: 'You choose. They confirm.', visual: 'Mutual connect ✓' },
   { step: '04', title: 'Make it happen', text: 'Chat, meet, get it done.', visual: 'See you there 👋' }
 ];
 
 const productPages = [
-  { label: 'Post a Request', note: 'Get help. Give help.', icon: '+', href: '/post', className: 'productPost' },
+  { label: 'Post a Request', note: 'Ask campus.', icon: '+', href: '/post', className: 'productPost' },
   { label: 'Discover', note: 'See what’s happening.', icon: '⌕', href: '/discover', className: 'productDiscover' },
   { label: 'Connections', note: 'Chat. Plan. Do more.', icon: '◌', href: '/connections', className: 'productConnections' },
-  { label: 'Safety Center', note: 'A safer campus for all.', icon: '◇', href: '/safety', className: 'productSafety' },
-  { label: 'Campus Circle', note: 'Requests, clubs, and more.', icon: '◎', href: '/campus', className: 'productCircle' }
+  { label: 'Safety Center', note: 'Tools when you need them.', icon: '◇', href: '/safety', className: 'productSafety' },
+  { label: 'Campus Circle', note: 'Your campus in one place.', icon: '◎', href: '/campus', className: 'productCircle' }
 ];
 
 const collegeStats = [
   {
     value: '16.4M',
     label: 'undergraduates enrolled at U.S. degree-granting institutions in fall 2024',
-    source: 'NCES',
+    source: 'NCES · 2024',
     href: 'https://nces.ed.gov/programs/digest/d25/tables/dt25_303.70.asp'
   },
   {
-    value: '40%',
-    label: 'of full-time undergraduates were employed while enrolled in 2020',
-    source: 'NCES / CPS',
-    href: 'https://nces.ed.gov/programs/coe/indicator/ssa/college-student-employment'
+    value: '42.4%',
+    label: 'of full-time college students ages 16–24 participated in the labor force in October 2022',
+    source: 'U.S. BLS · 2022',
+    href: 'https://www.bls.gov/opub/ted/2023/labor-force-participation-rates-of-college-students-differ-by-enrollment-status-and-type-of-college.htm'
   },
   {
     value: '$27.8K',
     label: 'average 2022–23 total cost at public 4-year schools for students living off campus, not with family',
-    source: 'NCES / IPEDS',
+    source: 'NCES / IPEDS · 2022–23',
     href: 'https://nces.ed.gov/programs/coe/indicator/cua/undergrad-costs'
   }
 ];
@@ -126,13 +128,34 @@ export default function MarketingHome() {
     };
   }, []);
 
+  useEffect(() => {
+    const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
+    if (!('IntersectionObserver' in window)) {
+      nodes.forEach((node) => node.classList.add('is-visible'));
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -7% 0px' });
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, []);
+
   const campus = useMemo(() => campuses.find((item) => item.key === campusKey) ?? campuses[0], [campusKey]);
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    if (event.currentTarget.src !== imageFallback) event.currentTarget.src = imageFallback;
+  };
 
   return (
     <main className="marketingHome">
       <section className="marketingHero">
         <div className="marketingHeroMedia" aria-hidden="true">
-          <img key={campus.image} src={campus.image} alt="" />
+          <img key={campus.image} src={campus.image} alt="" onError={handleImageError} />
           <div />
         </div>
 
@@ -164,7 +187,7 @@ export default function MarketingHome() {
           </nav>
         </header>
 
-        <div className="marketingHeroCopy">
+        <div className="marketingHeroCopy marketingIntroCopy">
           <p className="marketingKicker">ASPIRE 101 · {campus.short.toUpperCase()}</p>
           <h1>What do you need<br /><em>on campus?</em></h1>
           <p>Pick one and start exploring.</p>
@@ -178,8 +201,8 @@ export default function MarketingHome() {
 
         <section className="marketingFeatureRail" aria-label="Explore Aspire features">
           {features.map((feature, index) => (
-            <a className="marketingFeatureCard" href={featureHref(feature.key, user)} key={feature.key}>
-              <img src={feature.image} alt="" />
+            <a className={`marketingFeatureCard revealDelay${index}`} data-reveal="pop" href={featureHref(feature.key, user)} key={feature.key}>
+              <img src={feature.image} alt={`${feature.label} on campus`} onError={handleImageError} />
               <span className="marketingFeatureShade" />
               <span className="marketingFeatureDoodle">{feature.doodle.split('\n').map((line) => <span key={line}>{line}</span>)}</span>
               <span className="marketingFeatureInfo">
@@ -193,7 +216,7 @@ export default function MarketingHome() {
           ))}
         </section>
 
-        <section className="marketingRecent" aria-label="Recent campus activity">
+        <section className="marketingRecent" data-reveal="up" aria-label="Recent campus activity">
           <div className="marketingRecentHead"><span>RECENT REQUESTS NEAR YOU</span><a href={user ? '/discover' : '/signup?next=%2Fdiscover'}>See more →</a></div>
           <div className="marketingRecentRail">
             {recent.map((item) => (
@@ -206,16 +229,16 @@ export default function MarketingHome() {
       </section>
 
       <section id="features" className="marketingStorySection">
-        <div className="marketingStoryHead">
+        <div className="marketingStoryHead" data-reveal="left">
           <p>WHAT ASPIRE DOES</p>
           <h2>One campus.<br /><em>A lot going on.</em></h2>
           <span>Ask. Discover. Connect.</span>
         </div>
 
-        <div className="marketingStoryGrid">
-          {featureStories.map((story) => (
-            <article className={`marketingStoryCard ${story.className}`} key={story.step}>
-              <img src={story.image} alt="" />
+        <div className="marketingStoryGrid marketingStoryCollage">
+          {featureStories.map((story, index) => (
+            <article className={`marketingStoryCard ${story.className} revealDelay${index + 1}`} data-reveal={index === 0 ? 'left' : 'right'} key={story.step}>
+              <img src={story.image} alt="College students using Aspire together" onError={handleImageError} />
               <span className="marketingStoryShade" />
               <div className="marketingStoryStep">{story.step}</div>
               <div className="marketingStoryCopy">
@@ -231,14 +254,14 @@ export default function MarketingHome() {
       </section>
 
       <section className="marketingHow">
-        <div className="marketingExpandHead">
+        <div className="marketingExpandHead" data-reveal="left">
           <p>HOW IT WORKS</p>
           <h2>From request to <em>real life.</em></h2>
-          <span>Four steps. That’s it.</span>
+          <span>Simple. Fast. Human.</span>
         </div>
-        <div className="marketingHowGrid">
-          {howItWorks.map((item) => (
-            <article key={item.step}>
+        <div className="marketingHowGrid marketingHowFlow">
+          {howItWorks.map((item, index) => (
+            <article data-reveal={index % 2 === 0 ? 'left' : 'right'} className={`revealDelay${index}`} key={item.step}>
               <b>{item.step}</b>
               <h3>{item.title}</h3>
               <p>{item.text}</p>
@@ -249,13 +272,13 @@ export default function MarketingHome() {
       </section>
 
       <section className="marketingProducts">
-        <div className="marketingExpandHead">
+        <div className="marketingExpandHead" data-reveal="up">
           <p>EXPLORE MORE ON ASPIRE</p>
           <h2>Everything you need.<br /><em>One campus network.</em></h2>
         </div>
         <div className="marketingProductGrid">
-          {productPages.map((item) => (
-            <a key={item.label} className={`marketingProductCard ${item.className}`} href={gatedHref(item.href, user)}>
+          {productPages.map((item, index) => (
+            <a key={item.label} data-reveal="pop" className={`marketingProductCard ${item.className} revealDelay${index}`} href={gatedHref(item.href, user)}>
               <i>{item.icon}</i>
               <div><strong>{item.label}</strong><span>{item.note}</span></div>
               <b>→</b>
@@ -264,26 +287,26 @@ export default function MarketingHome() {
         </div>
       </section>
 
-      <section className="marketingSafetyStrip">
+      <section className="marketingSafetyStrip" data-reveal="up">
         <div>
           <span>◇</span>
           <strong>A safer, stronger campus together.</strong>
         </div>
         <div><b>Verified students</b><small>Built around real campus communities.</small></div>
-        <div><b>Report, block, review</b><small>Control who you interact with.</small></div>
-        <div><b>Mutual connect</b><small>Both sides choose before private chat.</small></div>
-        <a href="/safety">Safety Center →</a>
+        <div><b>Report + block</b><small>Control who you interact with.</small></div>
+        <div><b>Mutual connect</b><small>Both sides choose first.</small></div>
+        <a href="/safety">Safety center →</a>
       </section>
 
       <section className="marketingDataSection">
-        <div className="marketingExpandHead marketingDataHead">
+        <div className="marketingExpandHead marketingDataHead" data-reveal="left">
           <p>COLLEGE, IN REAL NUMBERS</p>
-          <h2>Campus life is <em>a lot.</em></h2>
-          <span>Official U.S. education data — not Aspire estimates.</span>
+          <h2>Real student life.<br /><em>Real everyday logistics.</em></h2>
+          <span>Official U.S. data.</span>
         </div>
-        <div className="marketingDataGrid">
-          {collegeStats.map((stat) => (
-            <a key={stat.value} href={stat.href} target="_blank" rel="noreferrer" className="marketingDataCard">
+        <div className="marketingDataGrid marketingDataCollage">
+          {collegeStats.map((stat, index) => (
+            <a className={`marketingDataCard revealDelay${index + 1}`} data-reveal={index === 1 ? 'pop' : index === 0 ? 'left' : 'right'} href={stat.href} target="_blank" rel="noreferrer" key={stat.value}>
               <strong>{stat.value}</strong>
               <p>{stat.label}</p>
               <span>{stat.source} ↗</span>
@@ -293,15 +316,15 @@ export default function MarketingHome() {
       </section>
 
       <section id="campuses" className="marketingCampuses">
-        <div className="marketingCampusesHead">
+        <div className="marketingCampusesHead" data-reveal="left">
           <div><p>STUDENT-LED, CAMPUS BY CAMPUS</p><h2>Bring Aspire to <em>your campus.</em></h2></div>
           <a href="/ambassadors">Become an ambassador →</a>
         </div>
 
         <div className="marketingCampusRail">
           {campuses.map((item, index) => (
-            <article className="marketingCampusCard" key={item.key}>
-              <img src={item.image} alt={`${item.short} campus`} />
+            <article className={`marketingCampusCard revealDelay${index % 5}`} data-reveal="pop" key={item.key}>
+              <img src={item.image} alt={`${item.short} campus`} onError={handleImageError} />
               <span className="marketingCampusShade" />
               <strong>{item.short}</strong>
               <a className={`campusSticky sticky-${index % 4}`} href="/ambassadors">{item.note}</a>
