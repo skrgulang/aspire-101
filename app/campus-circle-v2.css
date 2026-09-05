@@ -2,10 +2,24 @@
   min-height: 100vh;
   padding: 18px max(18px, 4vw) 132px;
   overflow: hidden;
+  isolation: isolate;
   background: #090907;
 }
 
-.communityBackdrop { height: 780px; }
+/* The legacy campus shell makes every direct child relative. Force the hero image
+   back out of document flow so it cannot push the whole app below the fold. */
+.communityHome > .communityBackdrop {
+  position: absolute !important;
+  inset: 0 0 auto 0 !important;
+  z-index: 0 !important;
+  height: 780px;
+}
+.communityHome > .communityTopbar,
+.communityHome > .communityHero,
+.communityHome > .communitySections {
+  position: relative;
+  z-index: 3;
+}
 .communityBackdrop img {
   filter: saturate(.72) contrast(1.08) brightness(.50);
   opacity: .55;
