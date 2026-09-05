@@ -68,6 +68,8 @@
 }
 .authCardTop { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 24px; align-items: center; }
 .authCardTop > span:first-child { color: var(--gold); font-size: 9px; font-weight: 900; letter-spacing: .15em; }
+.authCardTop a { color: #9d9587; font-size: 11px; font-weight: 700; }
+.authCardTop a:hover { color: var(--paper); }
 .authCardHint { color: #746d61; font-size: 10px; font-weight: 650; }
 .authCard label { display: grid; gap: 8px; margin-top: 16px; }
 .authCard label > span { color: #aaa294; font-size: 11px; font-weight: 750; }
@@ -83,8 +85,44 @@
 }
 .authCard input:focus { border-color: rgba(255,194,28,.50); box-shadow: 0 0 0 3px rgba(255,194,28,.06); }
 .authFieldNote { margin: 8px 0 0; color: #756e62; font-size: 10px; line-height: 1.55; }
+.authUtilityRow {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: #6f685d;
+  font-size: 10px;
+}
+.authUtilityRow a { color: #a59c8f; font-weight: 800; }
+.authUtilityRow a:hover { color: var(--gold); }
 .authSubmit { width: 100%; margin-top: 22px; }
 .authSubmit:disabled { opacity: .65; cursor: wait; }
+.authEmailActions {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.authEmailActions button,
+.authEmailActions a {
+  min-height: 38px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 999px;
+  background: rgba(255,255,255,.025);
+  color: #9d9587;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.authEmailActions button:hover,
+.authEmailActions a:hover { color: var(--paper); border-color: rgba(255,194,28,.22); }
+.authEmailActions button:disabled { opacity: .55; cursor: wait; }
 .authCreateAccount {
   margin-top: 14px;
   padding: 14px 16px;
@@ -117,4 +155,5 @@
   .authCard { padding: 22px; border-radius: 22px; }
   .authMiniRequests { margin-top: 32px; }
   .authCreateAccount { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .authUtilityRow { align-items: flex-start; flex-direction: column; gap: 5px; }
 }
