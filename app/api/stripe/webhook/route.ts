@@ -16,9 +16,15 @@ function objectId(value: unknown) {
 
 export async function POST(request: Request) {
   const rawBody = await request.text();
+  let verified = false;
+  let parsedEvent: StripeEvent | null = null;
+
   try {
     verifyStripeWebhookSignature(rawBody, request.headers.get('stripe-signature'));
+    verified = true;
     const event = JSON.parse(rawBody) as StripeEvent;
+    parsedEvent = event;
+
     if (!event?.id || !event?.type || !event?.data?.object) {
       return NextResponse.json({ error: 'Invalid Stripe event.' }, { status: 400 });
     }
@@ -47,7 +53,7 @@ export async function POST(request: Request) {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
         await supabase.from('connection_payments').update({
-          status: object.payment_status === 'paid' ? 'processing' : 'processing',
+          status: 'processing',
           stripe_checkout_session_id: object.id || null,
           stripe_payment_intent_id: objectId(object.payment_intent),
           updated_at: new Date().toISOString()
@@ -116,20 +122,20 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    try {
-      const parsed = JSON.parse(rawBody) as Partial<StripeEvent>;
-      if (parsed?.id) {
+    // Only a payload with a valid Stripe signature is allowed to create/update event records.
+    if (verified && parsedEvent?.id) {
+      try {
         const supabase = getSupabaseServiceClient();
         await supabase.from('stripe_webhook_events').upsert({
-          event_id: parsed.id,
-          event_type: parsed.type || 'unknown',
-          livemode: Boolean(parsed.livemode),
+          event_id: parsedEvent.id,
+          event_type: parsedEvent.type || 'unknown',
+          livemode: Boolean(parsedEvent.livemode),
           status: 'failed',
           processing_error: error instanceof Error ? error.message.slice(0, 500) : 'Unknown webhook error'
         }, { onConflict: 'event_id' });
+      } catch {
+        // Avoid masking the original processing error.
       }
-    } catch {
-      // Signature or parsing failures intentionally do not persist untrusted payload details.
     }
     const resolved = apiError(error);
     return NextResponse.json(resolved.body, { status: resolved.status });
