@@ -32,16 +32,28 @@ export default function ProfilePage() {
         router.replace('/login?next=%2Fprofile');
         return;
       }
+
+      const [{ data: profileRow }, nextRole] = await Promise.all([
+        supabase.from('profiles').select('display_name,name,full_name,school,email,home_campus_id').eq('id', user.id).maybeSingle(),
+        fetchMyRole().catch(() => 'member' as AppRole)
+      ]);
       const metadata = user.user_metadata ?? {};
+      const backendName = profileRow?.display_name || profileRow?.full_name || profileRow?.name;
+      const backendSchool = profileRow?.school;
+
       setProfile({
-        name: typeof metadata.display_name === 'string' && metadata.display_name.trim() ? metadata.display_name.trim() : user.email?.split('@')[0] || 'Aspire student',
-        email: user.email || '',
-        school: typeof metadata.school === 'string' && metadata.school.trim() ? metadata.school.trim() : 'Your campus',
+        name: typeof backendName === 'string' && backendName.trim()
+          ? backendName.trim()
+          : typeof metadata.display_name === 'string' && metadata.display_name.trim()
+            ? metadata.display_name.trim()
+            : user.email?.split('@')[0] || 'Aspire student',
+        email: user.email || profileRow?.email || '',
+        school: typeof backendSchool === 'string' && backendSchool.trim() ? backendSchool.trim() : 'Unsupported / unknown campus',
         emailVerified: Boolean(user.email_confirmed_at),
         phone: user.phone || '',
         phoneVerified: Boolean(user.phone_confirmed_at)
       });
-      setRole(await fetchMyRole().catch(() => 'member'));
+      setRole(nextRole);
     });
   }, [router]);
 
@@ -63,15 +75,18 @@ export default function ProfilePage() {
         <section className="profileHero">
           <p className="eyebrow">YOUR ASPIRE</p>
           <h1>{profile.name}</h1>
-          <p>{profile.school}. Verify the things that matter, then keep connecting.</p>
+          <p>{profile.school}. Your home campus comes from your university identity, not a dropdown.</p>
         </section>
 
         <section className="profileCards" aria-label="Account and trust status">
           <article className={`profileCard ${profile.emailVerified ? 'isVerified' : ''}`}>
-            <span>EMAIL</span>
-            <strong>{profile.emailVerified ? 'Verified ✓' : 'Not verified'}</strong>
+            <span>ACCOUNT EMAIL</span>
+            <strong>{profile.emailVerified ? 'Confirmed ✓' : 'Not confirmed'}</strong>
             <p>{profile.email || 'No email on account'}</p>
+            <small>Email confirmation and school verification are separate trust states.</small>
           </article>
+
+          <SchoolVerificationCard school={profile.school} />
 
           <article className={`profileCard ${profile.phoneVerified ? 'isVerified' : ''}`}>
             <span>PHONE</span>
@@ -79,12 +94,10 @@ export default function ProfilePage() {
             <p>{profile.phoneVerified ? profile.phone : 'Phone verification will be used for higher-trust actions such as rides and paid exchanges.'}</p>
           </article>
 
-          <SchoolVerificationCard school={profile.school} />
-
           <article className="profileCard">
-            <span>COMMUNITY</span>
+            <span>HOME CAMPUS</span>
             <strong>{profile.school}</strong>
-            <p>Your Community Circle is scoped to campus activity rather than exposing precise location.</p>
+            <p>Browsing another campus later will not change the school tied to your Aspire identity.</p>
           </article>
 
           <article className="profileCard">
@@ -97,7 +110,7 @@ export default function ProfilePage() {
             <a className="profileCard profileModeratorCard" href="/moderator">
               <span>{role === 'admin' ? 'ADMIN' : 'MODERATOR'}</span>
               <strong>Moderation tools →</strong>
-              <p>Review school IDs, safety reports, and requests.{role === 'admin' ? ' Admins can also add moderators.' : ''}</p>
+              <p>Review legacy school IDs, safety reports, and requests.{role === 'admin' ? ' Admins can also add moderators.' : ''}</p>
             </a>
           )}
         </section>
