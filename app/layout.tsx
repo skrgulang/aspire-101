@@ -19,6 +19,7 @@ import './campus-picker.css';
 import './campus-home.css';
 import './campus-circle-v2.css';
 import './campus-sections.css';
+import './campus-identity.css';
 import './marketing-home.css';
 import './marketing-story.css';
 import './marketing-vibe.css';
