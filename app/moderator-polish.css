@@ -1,0 +1,40 @@
+/* Cloudora Labs / Aspire 101 trust & safety operations */
+.moderatorPagePolished { padding-top: 30px; }
+.moderatorTopPolished { align-items: center; }
+.moderatorTopPolished > div { max-width: 820px; }
+.moderatorTitleRow { display: flex; align-items: center; gap: 12px; margin-top: 7px; }
+.moderatorTitleRow h1 { margin: 0; font-size: clamp(46px, 5.4vw, 72px); }
+.moderatorTitleRow b { padding: 6px 9px; border: 1px solid rgba(255,194,28,.18); border-radius: 999px; color: #d8c16f; background: rgba(255,194,28,.05); font-size: 7px; letter-spacing: .12em; }
+
+.moderatorOverview { margin-top: 18px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+.moderatorOverview article { min-height: 104px; padding: 16px; border: 1px solid rgba(255,255,255,.075); border-radius: 19px; background: rgba(255,255,255,.018); }
+.moderatorOverview article > span { color: #676157; font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.moderatorOverview article > strong { display: block; margin-top: 10px; font-size: 28px; line-height: 1; letter-spacing: -.04em; }
+.moderatorOverview article > small { display: block; margin-top: 7px; color: #686157; font-size: 8px; }
+.moderatorOverview article.attention { border-color: rgba(255,194,28,.18); background: rgba(255,194,28,.035); }
+.moderatorOverview article.attention > strong { color: var(--gold); }
+.moderatorOverview article.role { background: linear-gradient(145deg, rgba(255,194,28,.045), rgba(255,255,255,.015)); }
+.moderatorOverview article.role > strong { font-size: 20px; color: #e7decf; }
+
+.moderatorPagePolished .moderatorTabs { margin-top: 18px; }
+.moderatorPagePolished .moderatorPanel { margin-top: 12px; padding: 20px; }
+.moderatorPagePolished .moderatorPanelHead { align-items: center; }
+.moderatorPagePolished .moderatorPanelHead h2 { font-size: 30px; }
+.moderatorPagePolished .moderatorEmpty { min-height: 180px; display: grid; place-items: center; align-content: center; gap: 7px; }
+.moderatorEmpty i { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid rgba(255,194,28,.14); border-radius: 50%; color: #b59f54; background: rgba(255,194,28,.03); font-style: normal; }
+.moderatorEmpty strong { color: #a1988b; font-size: 13px; }
+.moderatorEmpty span { color: #655f56; font-size: 9px; }
+.moderatorPagePolished .moderatorRow { min-height: 82px; padding: 12px 13px; }
+.moderatorPagePolished .moderatorRowMain > strong { font-size: 14px; }
+.moderatorOperator { margin: 18px 0 0; color: #514c44; font-size: 8px; text-align: center; }
+
+@media (max-width: 820px) {
+  .moderatorOverview { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 560px) {
+  .moderatorPagePolished { padding: 20px 14px 130px; }
+  .moderatorTitleRow { align-items: flex-start; flex-direction: column; }
+  .moderatorOverview { grid-template-columns: 1fr 1fr; }
+  .moderatorOverview article { min-height: 92px; padding: 13px; }
+}
