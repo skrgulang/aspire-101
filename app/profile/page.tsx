@@ -10,6 +10,7 @@ import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
 import SchoolVerificationCard from '../SchoolVerificationCard';
 import PhoneVerificationCard from '../PhoneVerificationCard';
+import PaymentConnectRow from '../PaymentConnectRow';
 
 type ProfileView = {
   name: string;
@@ -17,7 +18,6 @@ type ProfileView = {
   school: string;
   emailVerified: boolean;
   schoolVerified: boolean;
-  schoolVerificationMethod: string;
   phone: string;
   phoneVerified: boolean;
 };
@@ -56,7 +56,6 @@ export default function ProfilePage() {
         school: typeof backendSchool === 'string' && backendSchool.trim() ? backendSchool.trim() : 'Unsupported / unknown campus',
         emailVerified: Boolean(user.email_confirmed_at),
         schoolVerified: schoolVerification?.status === 'verified',
-        schoolVerificationMethod: schoolVerification?.verification_method || '',
         phone: user.phone || '',
         phoneVerified: Boolean(user.phone_confirmed_at)
       });
@@ -121,9 +120,7 @@ export default function ProfilePage() {
               <a className="profileMenuRow" href="/connections">
                 <i>♧</i><div><strong>Connections</strong><span>Mutual connections and messages</span></div><b>→</b>
               </a>
-              <div className="profileMenuRow muted" aria-disabled="true">
-                <i>$</i><div><strong>Payments & earnings</strong><span>Stripe Connect comes next</span></div><b>SOON</b>
-              </div>
+              <PaymentConnectRow phoneVerified={profile.phoneVerified} schoolVerified={profile.schoolVerified} />
               <a className="profileMenuRow" href="/safety">
                 <i>◇</i><div><strong>Safety & privacy</strong><span>Reporting, blocking, and privacy</span></div><b>→</b>
               </a>
