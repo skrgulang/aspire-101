@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { aspireLogo } from './logo';
+import AppLoader from './AppLoader';
 
 type Mode = 'login' | 'signup';
 
@@ -36,6 +37,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [entering, setEntering] = useState(false);
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState('');
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
@@ -45,11 +47,22 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     const safeNext = readSafeNextPath();
     setNextPath(safeNext);
 
-    if (mode === 'login') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('confirmed') === '1') {
-        setMessage('Email confirmed. You’re ready to enter campus.');
+    const params = new URLSearchParams(window.location.search);
+    if (mode === 'signup') {
+      const campusFromHome = params.get('campus');
+      if (campusFromHome) {
+        const matched = authCampuses.find((campus) => campus.value.toLowerCase() === campusFromHome.toLowerCase());
+        if (matched) {
+          setSchool(matched.value);
+        } else {
+          setSchool('Other');
+          setOtherSchool(campusFromHome);
+        }
       }
+    }
+
+    if (mode === 'login' && params.get('confirmed') === '1') {
+      setMessage('Email confirmed. You’re ready to enter campus.');
     }
   }, [mode]);
 
@@ -60,6 +73,14 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   );
 
   const finalSchool = school === 'Other' ? otherSchool.trim() : school;
+
+  function enterCircle(path: string) {
+    setEntering(true);
+    window.setTimeout(() => {
+      router.push(path);
+      router.refresh();
+    }, 320);
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,8 +108,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         if (error) throw error;
 
         if (data.session) {
-          router.push(nextPath);
-          router.refresh();
+          enterCircle(nextPath);
         } else {
           setPendingConfirmation(true);
           setMessage('Check your inbox and spam folder to confirm your account.');
@@ -99,8 +119,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           password
         });
         if (error) throw error;
-        router.push(nextPath);
-        router.refresh();
+        enterCircle(nextPath);
       }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Something went wrong. Try again.');
@@ -140,6 +159,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     if (event.currentTarget.src !== imageFallback) event.currentTarget.src = imageFallback;
   };
 
+  if (entering) {
+    return <AppLoader label="Entering your circle…" detail="Opening Community Circle" />;
+  }
+
   return (
     <main className={`authPage ${signup ? 'authSignup' : 'authLogin'}`}>
       <header className="authTopbar">
@@ -147,7 +170,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           <img src={aspireLogo} alt="" />
           <span>Aspire 101</span>
         </a>
-        <a className="authBack" href="/">Back to campus ↗</a>
+        <a className="authBack" href="/">Back to home ↗</a>
       </header>
 
       <section className="authShell">
@@ -183,10 +206,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         <form className="authCard" onSubmit={submit}>
           <div className="authCardTop">
             <div>
-              <span>{signup ? 'JOIN ASPIRE' : 'LOG IN'}</span>
+              <span>{signup ? 'JOIN ASPIRE' : 'SIGN IN'}</span>
               <h2>{signup ? 'Enter your campus.' : 'Good to see you.'}</h2>
             </div>
-            <a href={switchHref}>{signup ? 'Log in' : 'Sign up'} ↗</a>
+            <a href={switchHref}>{signup ? 'Sign in' : 'Sign up'} ↗</a>
           </div>
 
           {signup && (
@@ -231,7 +254,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           )}
 
           <button className="button buttonGold authSubmit" type="submit" disabled={busy}>
-            {busy ? 'One second…' : signup ? 'Join your campus →' : 'Enter campus →'}
+            {busy ? 'One second…' : signup ? 'Join your campus →' : 'Enter Community Circle →'}
           </button>
 
           {pendingConfirmation && (
