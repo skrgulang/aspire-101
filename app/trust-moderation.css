@@ -1,0 +1,125 @@
+/* School verification + moderation surfaces */
+
+.profileSchoolIdCard {
+  grid-column: 1 / -1;
+  min-height: 190px;
+  border-color: rgba(255,194,28,.16);
+  background:
+    radial-gradient(circle at 86% 20%, rgba(255,194,28,.08), transparent 18rem),
+    rgba(255,255,255,.024);
+}
+.profileSchoolIdCard.isPending { border-color: rgba(255,194,28,.24); }
+.profileSchoolIdCard.isRejected { border-color: rgba(255,105,105,.24); }
+.profileSchoolIdCard > small { display:block; margin-top:10px; color:#756f65; font-size:10px; }
+.schoolIdForm { margin-top:18px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:end; }
+.schoolIdForm label { display:grid; gap:7px; }
+.schoolIdForm label > span { color:#8d8579; font-size:9px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+.schoolIdForm input {
+  width:100%; min-height:48px; padding:0 14px;
+  border:1px solid rgba(255,255,255,.11); border-radius:15px;
+  background:rgba(8,8,7,.72); color:#f7f1e7; outline:none;
+}
+.schoolIdForm input:focus { border-color:rgba(255,194,28,.48); box-shadow:0 0 0 3px rgba(255,194,28,.06); }
+.schoolIdMessage { margin:12px 0 0 !important; color:#d2c5aa !important; font-size:10px !important; }
+.profileModeratorCard { color:inherit; border-color:rgba(255,194,28,.22); background:rgba(255,194,28,.035); }
+.profileModeratorCard:hover { border-color:rgba(255,194,28,.42); transform:translateY(-2px); }
+
+.postVerificationGate {
+  min-height:620px;
+  padding:48px clamp(22px,5vw,56px);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  border:1px solid rgba(255,194,28,.15);
+  border-radius:30px;
+  background:
+    radial-gradient(circle at 72% 28%, rgba(255,194,28,.11), transparent 22rem),
+    rgba(9,9,7,.86);
+  box-shadow:0 30px 90px rgba(0,0,0,.34);
+}
+.verificationGateBadge { color:var(--gold); font-size:8px; font-weight:900; letter-spacing:.2em; }
+.verificationGateRadar {
+  width:112px; height:112px; margin:20px 0 24px; position:relative;
+  border:1px solid rgba(255,194,28,.22); border-radius:50%;
+  background:radial-gradient(circle, transparent 0 28%, rgba(255,194,28,.14) 29% 30%, transparent 31% 56%, rgba(255,194,28,.10) 57% 58%, transparent 59%);
+  overflow:hidden;
+}
+.verificationGateRadar span {
+  position:absolute; inset:0; border-radius:50%;
+  background:conic-gradient(from 10deg, transparent 0 310deg, rgba(255,194,28,.03) 320deg, rgba(255,194,28,.48) 356deg, transparent 360deg);
+  animation:verificationSweep 3.2s linear infinite;
+}
+.verificationGateRadar i {
+  position:absolute; left:50%; top:50%; width:12px; height:12px; transform:translate(-50%,-50%);
+  border-radius:50%; background:var(--gold); box-shadow:0 0 24px rgba(255,194,28,.6);
+}
+.postVerificationGate h1 { margin:0; max-width:650px; font-size:clamp(46px,5.5vw,74px); line-height:.92; letter-spacing:-.06em; }
+.postVerificationGate > p { max-width:650px; margin:18px 0 0; color:#9a9285; font-size:14px; line-height:1.65; }
+.verificationGateSteps { margin-top:28px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.verificationGateSteps span { min-height:70px; padding:13px; display:flex; align-items:center; gap:9px; border:1px solid rgba(255,255,255,.08); border-radius:16px; color:#7f786d; background:rgba(255,255,255,.018); font-size:10px; font-weight:780; }
+.verificationGateSteps span b { color:#565048; font-size:8px; }
+.verificationGateSteps span.done,.verificationGateSteps span.current { border-color:rgba(255,194,28,.22); color:#eee5d7; }
+.verificationGateSteps span.current b,.verificationGateSteps span.done b { color:var(--gold); }
+.verificationGateNote { margin-top:14px; padding:14px 16px; border:1px solid rgba(255,110,110,.18); border-radius:16px; background:rgba(255,80,80,.035); }
+.verificationGateNote span { color:#d98d8d; font-size:8px; font-weight:900; letter-spacing:.14em; }
+.verificationGateNote p { margin:6px 0 0; color:#bba7a7; font-size:11px; }
+.verificationGateActions { margin-top:24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.verificationGateActions > a:not(.button) { color:#8f877b; font-size:10px; font-weight:800; }
+
+.postGateLoading { min-height:500px; display:grid; place-items:center; align-content:center; gap:10px; text-align:center; }
+.postGateLoadingRadar { width:92px; height:92px; margin-bottom:10px; position:relative; overflow:hidden; border:1px solid rgba(255,194,28,.22); border-radius:50%; background:radial-gradient(circle, transparent 0 30%, rgba(255,194,28,.12) 31% 32%, transparent 33% 60%, rgba(255,194,28,.08) 61% 62%, transparent 63%); }
+.postGateLoadingRadar span { position:absolute; inset:0; border-radius:50%; background:conic-gradient(transparent 0 315deg, rgba(255,194,28,.45) 355deg, transparent 360deg); animation:verificationSweep 2.4s linear infinite; }
+.postGateLoadingRadar i { position:absolute; left:50%; top:50%; width:10px; height:10px; border-radius:50%; background:var(--gold); transform:translate(-50%,-50%); box-shadow:0 0 18px rgba(255,194,28,.55); }
+.postGateLoading strong { font-size:18px; }
+.postGateLoading small { color:#756e64; font-size:9px; }
+
+body:has(.moderatorPage) { background:#090907; }
+body:has(.moderatorPage) .siteFooter { display:none; }
+.moderatorPage { min-height:100vh; padding:44px max(18px,5vw) 130px; color:var(--paper); background:radial-gradient(circle at 80% 8%, rgba(255,194,28,.07), transparent 28rem), #090907; }
+.moderatorShell { width:min(1180px,100%); margin:0 auto; }
+.moderatorTop { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; padding-bottom:26px; border-bottom:1px solid rgba(255,255,255,.08); }
+.moderatorTop span { color:var(--gold); font-size:8px; font-weight:900; letter-spacing:.18em; }
+.moderatorTop h1 { margin:8px 0 8px; font-size:clamp(50px,6vw,82px); line-height:.9; letter-spacing:-.065em; }
+.moderatorTop p { max-width:620px; margin:0; color:#8e867a; font-size:13px; line-height:1.55; }
+.moderatorTop > a { color:#b0a798; font-size:10px; font-weight:800; white-space:nowrap; }
+.moderatorTabs { margin-top:22px; display:flex; gap:7px; overflow-x:auto; }
+.moderatorTabs button { min-height:40px; padding:0 14px; display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.09); border-radius:999px; background:rgba(255,255,255,.018); color:#817a70; font:inherit; font-size:10px; font-weight:800; cursor:pointer; }
+.moderatorTabs button.active { border-color:rgba(255,194,28,.28); background:rgba(255,194,28,.08); color:#f1d476; }
+.moderatorTabs b { min-width:20px; height:20px; padding:0 5px; display:grid; place-items:center; border-radius:999px; background:rgba(255,255,255,.06); font-size:8px; }
+.moderatorNotice { margin-top:14px; padding:12px 14px; border:1px solid rgba(255,194,28,.16); border-radius:14px; background:rgba(255,194,28,.035); color:#c8b98f; font-size:10px; }
+.moderatorPanel { margin-top:18px; padding:22px; border:1px solid rgba(255,255,255,.08); border-radius:26px; background:rgba(255,255,255,.018); }
+.moderatorPanelHead { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; padding-bottom:18px; }
+.moderatorPanelHead span { color:var(--gold); font-size:8px; font-weight:900; letter-spacing:.16em; }
+.moderatorPanelHead h2 { margin:6px 0 0; font-size:34px; letter-spacing:-.04em; }
+.moderatorPanelHead > p { max-width:440px; margin:0; color:#7d766b; font-size:10px; line-height:1.5; }
+.moderatorList { display:grid; gap:8px; }
+.moderatorRow { min-height:96px; padding:14px 15px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:18px; align-items:center; border:1px solid rgba(255,255,255,.075); border-radius:18px; background:rgba(8,8,7,.5); }
+.moderatorRowMain { min-width:0; display:grid; gap:4px; }
+.moderatorRowMain > span { color:#8b8378; font-size:8px; font-weight:900; letter-spacing:.1em; }
+.moderatorRowMain > strong { font-size:16px; line-height:1.3; overflow-wrap:anywhere; }
+.moderatorRowMain > small { color:#625d55; font-size:8px; }
+.moderatorRowActions { display:flex; align-items:center; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+.moderatorRowActions button,.moderatorRowActions a,.moderatorReject { min-height:36px; padding:0 12px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.10); border-radius:12px; background:transparent; color:#a59d91; font:inherit; font-size:9px; font-weight:800; cursor:pointer; }
+.moderatorRowActions .button { color:#171109; border-color:var(--gold); }
+.moderatorReject { border-color:rgba(255,105,105,.17) !important; color:#c99191 !important; background:rgba(255,90,90,.025) !important; }
+.moderatorEmpty { padding:44px 18px; border:1px dashed rgba(255,255,255,.08); border-radius:18px; text-align:center; color:#6f695f; font-size:11px; }
+.moderatorTeamForm { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; align-items:end; }
+.moderatorTeamForm label { display:grid; gap:7px; }
+.moderatorTeamForm label span { color:#898175; font-size:9px; font-weight:800; }
+.moderatorTeamForm input { min-height:48px; padding:0 14px; border:1px solid rgba(255,255,255,.10); border-radius:14px; background:#0a0a08; color:#f2ece2; outline:none; }
+.moderatorTeamForm > div { display:flex; gap:8px; }
+
+@keyframes verificationSweep { to { transform:rotate(360deg); } }
+
+@media (max-width:760px) {
+  .schoolIdForm,.moderatorTeamForm { grid-template-columns:1fr; }
+  .verificationGateSteps { grid-template-columns:1fr; }
+  .postVerificationGate { min-height:520px; padding:30px 20px; }
+  .moderatorTop,.moderatorPanelHead { align-items:flex-start; flex-direction:column; }
+  .moderatorRow { grid-template-columns:1fr; }
+  .moderatorRowActions { justify-content:flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verificationGateRadar span,.postGateLoadingRadar span { animation:none; transform:rotate(32deg); }
+}
