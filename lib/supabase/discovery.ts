@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from './client';
 import type { AspireRequest } from './requests';
+import { fetchRequestMedia, RequestMedia } from './requestMedia';
 
 export type DiscoverCategory =
   | 'Anything'
@@ -16,6 +17,7 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
   campus_id: string;
   latitude: null;
   longitude: null;
+  media: RequestMedia[];
 };
 
 export async function fetchDiscoverRequests(input: {
@@ -31,12 +33,26 @@ export async function fetchDiscoverRequests(input: {
     p_category: input.category || 'Anything',
     p_limit: input.limit ?? 40
   });
-
   if (error) throw error;
 
-  return (data ?? []).map((row: Omit<DiscoverRequest, 'latitude' | 'longitude'>) => ({
+  const rows = (data ?? []) as Omit<DiscoverRequest, 'latitude' | 'longitude' | 'media'>[];
+  let media: RequestMedia[] = [];
+  try {
+    media = await fetchRequestMedia(rows.map((row) => row.id));
+  } catch {
+    // The feed must remain usable if media is temporarily unavailable.
+  }
+  const byRequest = new Map<string, RequestMedia[]>();
+  media.forEach((item) => {
+    const list = byRequest.get(item.request_id) ?? [];
+    list.push(item);
+    byRequest.set(item.request_id, list);
+  });
+
+  return rows.map((row) => ({
     ...row,
     latitude: null,
-    longitude: null
+    longitude: null,
+    media: byRequest.get(row.id) ?? []
   })) as DiscoverRequest[];
 }
