@@ -10,6 +10,7 @@ export type RequestKind =
 export type MarketIntent = 'sell' | 'wanted';
 export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair' | 'for_parts';
 export type FulfillmentMethod = 'campus_pickup' | 'shipping';
+export type RequestModerationStatus = 'pending' | 'approved' | 'rejected' | 'blocked';
 
 export type AspireRequest = {
   id: string;
@@ -31,6 +32,12 @@ export type AspireRequest = {
   price_negotiable?: boolean;
   fulfillment_method?: FulfillmentMethod | null;
   quantity?: number;
+  moderation_status?: RequestModerationStatus;
+  moderation_flags?: string[];
+  moderation_version?: string;
+  moderated_by?: string | null;
+  moderated_at?: string | null;
+  moderation_reason?: string | null;
   status: 'open' | 'matched' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
   created_at: string;
   updated_at: string;
@@ -49,12 +56,24 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
   quantity?: number;
 };
 
+function friendlyPolicyError(error: { message?: string; details?: string; hint?: string }, fallback: string) {
+  const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+  if (/CONTENT_POLICY_BLOCKED/i.test(detail)) {
+    return new Error('This post contains language that is not allowed on Aspire. Edit it before submitting.');
+  }
+  if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) {
+    return new Error('That message contains language that is not allowed on Aspire.');
+  }
+  return new Error(error.message || fallback);
+}
+
 export async function fetchOpenRequests(limit = 24) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('requests')
     .select('*')
     .eq('status', 'open')
+    .eq('moderation_status', 'approved')
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -96,7 +115,7 @@ export async function createRequest(input: CreateRequestInput) {
     .select('*')
     .single();
 
-  if (error) throw error;
+  if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
   return data as AspireRequest;
 }
 
@@ -116,6 +135,6 @@ export async function respondToRequest(requestId: string, message?: string) {
     .select('*')
     .single();
 
-  if (error) throw error;
+  if (error) throw friendlyPolicyError(error, 'Could not send your response.');
   return data;
 }
