@@ -1,0 +1,247 @@
+.unreadPill,
+.chatButton > b,
+.circleActions .button > b {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #151109;
+  color: var(--gold);
+  font-size: 8px;
+  line-height: 1;
+}
+
+.connectionsTabs .unreadPill {
+  margin-left: 6px;
+  background: var(--gold);
+  color: #151109;
+}
+
+.connectionCard.hasUnread {
+  border-color: rgba(255,194,28,.26);
+  box-shadow: inset 3px 0 0 rgba(255,194,28,.82);
+}
+
+.connectionAftercare {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.circleChoiceRow,
+.reviewRow {
+  padding: 15px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  gap: 18px;
+  align-items: start;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 16px;
+  background: rgba(255,255,255,.018);
+}
+
+.circleChoiceRow strong,
+.reviewRow strong {
+  font-size: 11px;
+}
+
+.circleChoiceRow p,
+.reviewRow p {
+  max-width: 560px;
+  margin: 5px 0 0;
+  color: #756e63;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.circleChoiceActions,
+.reviewChoiceButtons,
+.reviewTagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.circleChoiceActions button,
+.reviewChoiceButtons button,
+.reviewTagList button,
+.saveReviewButton {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  background: rgba(255,255,255,.02);
+  color: #a29a8d;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.circleChoiceActions button.selected,
+.reviewChoiceButtons button.selected,
+.reviewTagList button.selected {
+  border-color: rgba(255,194,28,.34);
+  background: rgba(255,194,28,.11);
+  color: var(--gold);
+}
+
+.circleChoiceActions button.muted.selected {
+  border-color: rgba(255,255,255,.09);
+  background: rgba(255,255,255,.045);
+  color: #aaa295;
+}
+
+.reviewDraft {
+  width: min(430px, 44vw);
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.reviewTagList {
+  justify-content: flex-end;
+}
+
+.saveReviewButton {
+  border-color: transparent;
+  background: var(--gold);
+  color: #171209;
+}
+
+.saveReviewButton:disabled,
+.circleChoiceActions button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.savedReview {
+  min-width: 130px;
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+}
+
+.savedReview b {
+  color: var(--gold);
+  font-size: 12px;
+}
+
+.savedReview span {
+  max-width: 300px;
+  color: #7f776c;
+  font-size: 8px;
+  text-align: right;
+}
+
+.circleList {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.circleCard {
+  padding: 22px;
+  display: grid;
+  grid-template-columns: 54px minmax(0,1fr) auto;
+  gap: 16px;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(255,194,28,.07), transparent 18rem),
+    linear-gradient(145deg, rgba(255,255,255,.026), rgba(255,255,255,.008));
+}
+
+.circleAvatar {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 17px;
+  background: var(--gold);
+  color: #151109;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.circleCopy span {
+  color: var(--gold);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.circleCopy h2 {
+  margin: 5px 0 5px;
+  font-size: 25px;
+  letter-spacing: -.045em;
+}
+
+.circleCopy p {
+  margin: 0;
+  color: #81796e;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.circleActions {
+  min-width: 150px;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.circleActions .button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.circleActions > a {
+  color: #777064;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.connectionChat header span::after {
+  content: '  •';
+  color: #6ee29d;
+}
+
+.connectionChat header span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+@media (max-width: 760px) {
+  .circleChoiceRow,
+  .reviewRow,
+  .circleCard {
+    grid-template-columns: 1fr;
+  }
+
+  .circleChoiceActions,
+  .reviewDraft {
+    width: 100%;
+    justify-items: start;
+  }
+
+  .reviewTagList {
+    justify-content: flex-start;
+  }
+
+  .savedReview,
+  .circleActions {
+    justify-items: start;
+  }
+
+  .circleAvatar {
+    width: 46px;
+    height: 46px;
+  }
+}
