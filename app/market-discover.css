@@ -1,0 +1,16 @@
+.discoverV2Card.marketCard{position:relative;border-color:rgba(255,194,28,.22);background:linear-gradient(120deg,rgba(255,194,28,.055),transparent 34%),rgba(255,255,255,.02)}
+.discoverV2Card.marketCard::after{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--gold);opacity:.85;border-radius:22px 0 0 22px;pointer-events:none}
+.discoverV2Card.marketWanted{border-color:rgba(238,232,218,.15);background:linear-gradient(120deg,rgba(238,232,218,.04),transparent 34%),rgba(255,255,255,.02)}
+.discoverV2Card.marketWanted::after{background:#ece3d0;opacity:.6}
+.discoverV2CardTop b.marketForSaleBadge,.discoverV2CardTop b.marketWantedBadge{padding:6px 10px;font-size:8px;letter-spacing:.14em}
+.discoverV2CardTop b.marketForSaleBadge{background:var(--gold);color:#15110a}
+.discoverV2CardTop b.marketWantedBadge{border:1px solid rgba(238,232,218,.22);background:rgba(238,232,218,.08);color:#eee6d7}
+.discoverMarketFacts{margin-top:17px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.discoverMarketFacts>span{min-height:64px;padding:11px 12px;display:grid;align-content:center;gap:4px;border:1px solid rgba(255,255,255,.075);border-radius:14px;background:rgba(0,0,0,.16)}
+.discoverMarketFacts small{color:#726b60;font-size:7px;font-weight:900;letter-spacing:.13em}
+.discoverMarketFacts strong{color:#e9e2d7;font-size:11px;line-height:1.2}
+.discoverMarketFacts .discoverMarketPrice{border-color:rgba(255,194,28,.2);background:rgba(255,194,28,.055)}
+.discoverMarketFacts .discoverMarketPrice small,.discoverMarketFacts .discoverMarketPrice strong{color:var(--gold)}
+.discoverV2Meta .marketProtectionMini{border-color:rgba(255,194,28,.14);color:#b89431;background:rgba(255,194,28,.03)}
+.discoverV2Media b{white-space:nowrap}
+@media(max-width:760px){.discoverMarketFacts{grid-template-columns:1fr 1fr}.discoverMarketFacts>span{min-height:58px}.discoverV2Card.marketCard::after{border-radius:19px 0 0 19px}}
