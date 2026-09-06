@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 import { fetchMyRole } from '../../lib/supabase/trust';
@@ -81,7 +81,7 @@ export default function ProfilePage() {
   if (!profile) return <AppLoader label="Opening your profile…" detail="Trust + campus" />;
 
   const staff = role === 'moderator' || role === 'admin';
-  const initials = useMemo(() => profile.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'A', [profile.name]);
+  const initials = profile.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'A';
 
   return (
     <main className="profilePage profilePagePolished">
