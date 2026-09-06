@@ -52,6 +52,25 @@ body:has(.profilePage) .siteFooter {
 .appDock a.active { color: #f7f2e7; background: rgba(255,255,255,.055); }
 .appDock a i { font-style: normal; font-size: 19px; line-height: 1; }
 .appDock a span { font-size: 9px; font-weight: 800; letter-spacing: -.01em; }
+.appDockIconWrap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  min-height: 22px;
+}
+.appDockNotificationDot {
+  position: absolute;
+  top: -4px;
+  right: -7px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #0a0a08;
+  border-radius: 999px;
+  background: #ff453a;
+  box-shadow: 0 0 0 1px rgba(255,69,58,.18), 0 2px 8px rgba(255,69,58,.42);
+}
+.appDock a.active .appDockNotificationDot { border-color: #171714; }
 
 .appDock .appDockPost {
   color: #181109;
@@ -200,6 +219,7 @@ body:has(.profilePage) .siteFooter {
   .appDock a { min-height: 48px; border-radius: 17px; }
   .appDock a i { font-size: 17px; }
   .appDock a span { font-size: 8px; }
+  .appDockNotificationDot { top: -3px; right: -6px; width: 8px; height: 8px; }
   .discoverPage .discoverShell,
   .connectionsPage .connectionsShell,
   .postPage .postShell { padding-top: 28px; }
