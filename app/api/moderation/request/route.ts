@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 
 const moderationModel = 'omni-moderation-latest';
 const signedImageSeconds = 10 * 60;
+const aiImageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 type ModerationResult = {
   flagged?: boolean;
@@ -172,19 +173,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
     }
 
-    await supabase.from('requests').update({
+    const { error: scanStateError } = await supabase.from('requests').update({
       ai_moderation_status: 'scanning',
       ai_summary: 'Aspire Safety Intelligence is checking this submission.'
     }).eq('id', requestId);
+    if (scanStateError) throw scanStateError;
 
     const { data: mediaRows, error: mediaError } = await supabase
       .from('request_media')
-      .select('storage_path')
+      .select('storage_path,mime_type')
       .eq('request_id', requestId)
       .order('sort_order');
     if (mediaError) throw mediaError;
 
-    const paths = (mediaRows ?? []).map((row) => row.storage_path).filter(Boolean).slice(0, 5);
+    const paths = (mediaRows ?? [])
+      .filter((row) => aiImageMimeTypes.has(String(row.mime_type || '').toLowerCase()))
+      .map((row) => row.storage_path)
+      .filter(Boolean)
+      .slice(0, 5);
     let imageUrls: string[] = [];
     if (paths.length) {
       const { data: signedRows, error: signedError } = await supabase.storage
@@ -244,15 +250,19 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'UNKNOWN';
     if (requestId) {
-      await supabase.from('requests').update({
-        ai_moderation_status: 'error',
-        ai_risk_level: 'unknown',
-        ai_risk_score: null,
-        ai_recommended_action: 'review',
-        ai_summary: message.startsWith('MISSING_ENV:OPENAI_API_KEY')
-          ? 'AI safety scan is not connected yet. Human review is still required.'
-          : 'AI safety scan could not finish. Human review is still required.'
-      }).eq('id', requestId).catch(() => undefined);
+      try {
+        await supabase.from('requests').update({
+          ai_moderation_status: 'error',
+          ai_risk_level: 'unknown',
+          ai_risk_score: null,
+          ai_recommended_action: 'review',
+          ai_summary: message.startsWith('MISSING_ENV:OPENAI_API_KEY')
+            ? 'AI safety scan is not connected yet. Human review is still required.'
+            : 'AI safety scan could not finish. Human review is still required.'
+        }).eq('id', requestId);
+      } catch {
+        // The post is already pending and hidden. A failed status write must not expose it.
+      }
     }
 
     if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to continue.' }, { status: 401 });
