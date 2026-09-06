@@ -3,21 +3,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { fetchActiveUniversities, University } from '../lib/supabase/universities';
 import { aspireLogo } from './logo';
+import CampusPicker from './CampusPicker';
 import MarketingExtras from './MarketingExtras';
 import MarketingProductLife from './MarketingProductLife';
 
 const imageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
-const campuses = [
-  { key: 'purdue', school: 'Purdue University', short: 'Purdue', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Purdue%20EngineeringMall.jpg?width=1600', note: 'Boiler up ♡' },
-  { key: 'berkeley', school: 'UC Berkeley', short: 'UC Berkeley', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Sather%20gate%20berkeley.jpg?width=1600', note: 'Rep your campus ♡' },
-  { key: 'ucla', school: 'UCLA', short: 'UCLA', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Royce%20Hall.jpg?width=1600', note: 'Ambassadors wanted' },
-  { key: 'rutgers', school: 'Rutgers University', short: 'Rutgers', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Queens%20Campus%20of%20Rutgers%20University%202026f.jpg?width=1600', note: 'Apply here ♡' },
-  { key: 'uiuc', school: 'UIUC', short: 'UIUC', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Altgeld%20Hall.jpg?width=1600', note: 'Need ambassadors' },
-  { key: 'osu', school: 'The Ohio State University', short: 'OSU', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/University%20Hall%20%28Ohio%20State%20University%29.jpg?width=1600', note: 'Student reps wanted' },
-  { key: 'umich', school: 'University of Michigan', short: 'UMich', image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Law%20Quadrangle%2C%20University%20of%20Michigan%2C%20University%20Avenue%20and%20State%20Street%2C%20Ann%20Arbor%2C%20MI%20-%2054381553310.jpg?width=1600', note: 'Join the team ♡' }
-];
+const campusVisualFallbacks: Record<string, string> = {
+  purdue: 'https://commons.wikimedia.org/wiki/Special:FilePath/Purdue%20EngineeringMall.jpg?width=1600',
+  'uc-berkeley': 'https://commons.wikimedia.org/wiki/Special:FilePath/Sather%20gate%20berkeley.jpg?width=1600',
+  ucla: 'https://commons.wikimedia.org/wiki/Special:FilePath/Royce%20Hall.jpg?width=1600',
+  rutgers: 'https://commons.wikimedia.org/wiki/Special:FilePath/Queens%20Campus%20of%20Rutgers%20University%202026f.jpg?width=1600',
+  uiuc: 'https://commons.wikimedia.org/wiki/Special:FilePath/Altgeld%20Hall.jpg?width=1600',
+  'ohio-state': 'https://commons.wikimedia.org/wiki/Special:FilePath/University%20Hall%20%28Ohio%20State%20University%29.jpg?width=1600'
+};
 
 const features = [
   { key: 'rides', label: 'Rides', note: 'airport rides + pickups', icon: '↗', image: 'https://images.pexels.com/photos/977383/pexels-photo-977383.jpeg?auto=compress&cs=tinysrgb&w=1200', doodle: 'GOOD RIDES\nGOOD PEOPLE' },
@@ -90,14 +91,31 @@ function gatedHref(href: string, user: User | null, campusSchool: string) {
   return user ? href : signupHref(campusSchool);
 }
 
+function campusImage(campus: University | null) {
+  if (!campus) return imageFallback;
+  return campus.cover_image || campusVisualFallbacks[campus.slug] || imageFallback;
+}
+
 export default function MarketingHome() {
-  const [campusKey, setCampusKey] = useState('purdue');
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [campusId, setCampusId] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     let alive = true;
+
+    fetchActiveUniversities().then((items) => {
+      if (!alive) return;
+      setUniversities(items);
+      const saved = window.localStorage.getItem('aspire-explore-campus');
+      const initial = items.find((item) => item.id === saved)
+        || items.find((item) => item.slug === 'purdue')
+        || items[0];
+      if (initial) setCampusId(initial.id);
+    }).catch(() => undefined);
+
     supabase.auth.getUser().then(({ data }) => {
       if (!alive) return;
       setUser(data.user ?? null);
@@ -112,6 +130,10 @@ export default function MarketingHome() {
       listener.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (campusId) window.localStorage.setItem('aspire-explore-campus', campusId);
+  }, [campusId]);
 
   useEffect(() => {
     const nodes = Array.from(document.querySelectorAll<HTMLElement>('[data-reveal]'));
@@ -129,19 +151,28 @@ export default function MarketingHome() {
     }, { threshold: 0.12, rootMargin: '0px 0px -7% 0px' });
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, []);
+  }, [universities]);
 
-  const campus = useMemo(() => campuses.find((item) => item.key === campusKey) ?? campuses[0], [campusKey]);
+  const campus = useMemo(() => universities.find((item) => item.id === campusId) ?? universities[0] ?? null, [universities, campusId]);
+  const featuredCampuses = useMemo(() => {
+    const preferred = ['purdue','uc-berkeley','ucla','stanford','uiuc','umich','nyu','boston-university','usc','ut-austin','georgia-tech','northwestern'];
+    const ordered = preferred.map((slug) => universities.find((item) => item.slug === slug)).filter(Boolean) as University[];
+    const extras = universities.filter((item) => !preferred.includes(item.slug));
+    return [...ordered, ...extras].slice(0, 18);
+  }, [universities]);
+
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
     if (event.currentTarget.src !== imageFallback) event.currentTarget.src = imageFallback;
   };
-  const joinHref = signupHref(campus.school);
+  const campusName = campus?.name ?? 'your campus';
+  const campusShort = campus?.short_name ?? 'Campus';
+  const joinHref = signupHref(campusName);
 
   return (
     <main className="marketingHome">
       <section className="marketingHero">
         <div className="marketingHeroMedia" aria-hidden="true">
-          <img key={campus.image} src={campus.image} alt="" onError={handleImageError} />
+          <img key={campus?.id || 'fallback'} src={campusImage(campus)} alt="" onError={handleImageError} />
           <div />
         </div>
 
@@ -151,13 +182,14 @@ export default function MarketingHome() {
             <strong>Aspire 101</strong>
           </a>
 
-          <label className="marketingCampusSelect">
-            <span aria-hidden="true">●</span>
-            <select value={campusKey} onChange={(event) => setCampusKey(event.target.value)} aria-label="Choose campus">
-              {campuses.map((item) => <option key={item.key} value={item.key}>{item.school}</option>)}
-            </select>
-            <b aria-hidden="true">⌄</b>
-          </label>
+          <CampusPicker
+            className="marketingCampusPicker"
+            compact
+            universities={universities}
+            value={campus?.id ?? ''}
+            onChange={setCampusId}
+            maxNearbyMiles={250}
+          />
 
           <nav className="marketingNavRight" aria-label="Main navigation">
             <a href="#features">What is Aspire?</a>
@@ -175,7 +207,7 @@ export default function MarketingHome() {
         </header>
 
         <div className="marketingHeroCopy marketingIntroCopy">
-          <p className="marketingKicker">ASPIRE 101 · {campus.short.toUpperCase()}</p>
+          <p className="marketingKicker">ASPIRE 101 · {campusShort.toUpperCase()}</p>
           <h1>What do you need<br /><em>on campus?</em></h1>
           <p>Pick one and start exploring.</p>
         </div>
@@ -188,7 +220,7 @@ export default function MarketingHome() {
 
         <section className="marketingFeatureRail" aria-label="Explore Aspire features">
           {features.map((feature, index) => (
-            <a className={`marketingFeatureCard revealDelay${index}`} data-reveal="pop" href={featureHref(feature.key, user, campus.school)} key={feature.key}>
+            <a className={`marketingFeatureCard revealDelay${index}`} data-reveal="pop" href={featureHref(feature.key, user, campusName)} key={feature.key}>
               <img src={feature.image} alt={`${feature.label} on campus`} onError={handleImageError} />
               <span className="marketingFeatureShade" />
               <span className="marketingFeatureDoodle">{feature.doodle.split('\n').map((line) => <span key={line}>{line}</span>)}</span>
@@ -266,7 +298,7 @@ export default function MarketingHome() {
         </div>
         <div className="marketingProductGrid">
           {productPages.map((item, index) => (
-            <a key={item.label} data-reveal="pop" className={`marketingProductCard ${item.className} revealDelay${index}`} href={gatedHref(item.href, user, campus.school)}>
+            <a key={item.label} data-reveal="pop" className={`marketingProductCard ${item.className} revealDelay${index}`} href={gatedHref(item.href, user, campusName)}>
               <i>{item.icon}</i>
               <div><strong>{item.label}</strong><span>{item.note}</span></div>
               <b>→</b>
@@ -279,19 +311,25 @@ export default function MarketingHome() {
 
       <section id="campuses" className="marketingCampuses">
         <div className="marketingCampusesHead" data-reveal="left">
-          <div><p>STUDENT-LED, CAMPUS BY CAMPUS</p><h2>Bring Aspire to <em>your campus.</em></h2></div>
-          <a href="/ambassadors">Become an ambassador →</a>
+          <div><p>A GROWING CAMPUS NETWORK</p><h2>Explore nearby. <em>Stay verified at home.</em></h2></div>
+          <a href="/ambassadors">Bring Aspire to your campus →</a>
         </div>
 
         <div className="marketingCampusRail">
-          {campuses.map((item, index) => (
-            <article className={`marketingCampusCard revealDelay${index % 5}`} data-reveal="pop" key={item.key}>
-              <img src={item.image} alt={`${item.short} campus`} onError={handleImageError} />
+          {featuredCampuses.map((item, index) => (
+            <article className={`marketingCampusCard revealDelay${index % 5}`} data-reveal="pop" key={item.id}>
+              <img src={campusImage(item)} alt={`${item.short_name} campus`} onError={handleImageError} />
               <span className="marketingCampusShade" />
-              <strong>{item.short}</strong>
-              <a className={`campusSticky sticky-${index % 4}`} href="/ambassadors">{item.note}</a>
+              <strong>{item.short_name}</strong>
+              <button className={`campusSticky sticky-${index % 4}`} type="button" onClick={() => { setCampusId(item.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                {item.launch_status === 'live' ? 'Explore live campus ↗' : 'Explore campus ↗'}
+              </button>
             </article>
           ))}
+        </div>
+        <div className="campusNetworkFoot" data-reveal="up">
+          <span>{universities.length || '70+'}+ supported campus identities</span>
+          <p>Your verified home campus stays attached to your profile even when you explore or post while visiting another school.</p>
         </div>
       </section>
     </main>
