@@ -60,20 +60,21 @@ export async function POST(request: Request) {
     }
     if (!chargeId) throw new Error('STRIPE:Payment charge is not ready for transfer yet.');
 
-    const providerAmount = Number(payment.provider_amount_cents || 0);
-    if (!Number.isInteger(providerAmount) || providerAmount <= 0) {
+    const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+    if (!Number.isInteger(providerNet) || providerNet <= 0) {
       return NextResponse.json({ error: 'No provider payout is due for this payment.' }, { status: 409 });
     }
 
     const transfer = await stripeFormRequest<StripeTransfer>('/v1/transfers', {
-      amount: providerAmount,
+      amount: providerNet,
       currency: String(payment.currency || 'USD').toLowerCase(),
       destination: payoutAccount.stripe_account_id,
       transfer_group: payment.transfer_group,
       source_transaction: chargeId,
       'metadata[aspire_payment_id]': payment.id,
       'metadata[connection_id]': connection.id,
-      'metadata[request_id]': payment.request_id
+      'metadata[request_id]': payment.request_id,
+      'metadata[fee_policy_version]': payment.fee_policy_version || 'legacy_v0'
     }, { idempotencyKey: `aspire_release_${payment.id}` });
 
     const now = new Date().toISOString();
@@ -91,7 +92,12 @@ export async function POST(request: Request) {
       supabase.from('requests').update({ status: 'completed', updated_at: now }).eq('id', connection.request_id)
     ]);
 
-    return NextResponse.json({ status: 'released', transferId: transfer.id });
+    return NextResponse.json({
+      status: 'released',
+      transferId: transfer.id,
+      providerNetCents: providerNet,
+      feePolicyVersion: payment.fee_policy_version || 'legacy_v0'
+    });
   } catch (error) {
     const resolved = apiError(error);
     return NextResponse.json(resolved.body, { status: resolved.status });
