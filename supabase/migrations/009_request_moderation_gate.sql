@@ -178,7 +178,7 @@ set search_path = public
 as $$
 declare
   clean_query text := nullif(trim(coalesce(p_query, '')), '');
-  clean_category text := coalesce(nullif(trim(p_category, ''), ''), 'Anything');
+  clean_category text := coalesce(nullif(trim(p_category), ''), 'Anything');
   safe_limit integer := greatest(1, least(coalesce(p_limit, 40), 80));
 begin
   if auth.uid() is null then raise exception 'Sign in required'; end if;
