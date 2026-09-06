@@ -46,6 +46,7 @@ import './ecosystem-v2.css';
 import './discover-ecosystem.css';
 import './ecosystem-polish.css';
 import './walker-fix.css';
+import './updates.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
