@@ -45,6 +45,7 @@ import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
+import MarketingProductLife from './MarketingProductLife';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','700'], variable: '--font-display' });
@@ -54,11 +55,82 @@ export const metadata: Metadata = {
   description: 'A college request network that helps students find support, make connections, and feel more at home on campus.'
 };
 
+const authLayoutPolish = `
+  @media (min-width: 1001px) {
+    .authPage .authShell {
+      width: min(1120px, calc(100% - 64px)) !important;
+      min-height: 700px !important;
+      grid-template-columns: minmax(0, 640px) minmax(360px, 420px) !important;
+      justify-content: center !important;
+      gap: 36px !important;
+      align-items: center !important;
+    }
+    .authPage .authVisual {
+      width: 100% !important;
+      max-width: 640px !important;
+      min-height: 610px !important;
+      overflow: hidden !important;
+      border-radius: 30px !important;
+    }
+    .authPage .authVisualHeadline {
+      max-width: 550px !important;
+      padding: 28px 24px 0 !important;
+    }
+    .authPage .authVisualHeadline h1 {
+      max-width: 550px !important;
+      font-size: clamp(50px, 5vw, 76px) !important;
+      line-height: .92 !important;
+    }
+    .authPage .authCampusPhoto {
+      width: 50% !important;
+      right: 5% !important;
+      bottom: 5% !important;
+    }
+    .authPage .authPeoplePhoto {
+      width: 32% !important;
+      left: 7% !important;
+      bottom: 9% !important;
+    }
+    .authPage .authDoodle {
+      left: 10% !important;
+      top: 43% !important;
+      font-size: 14px !important;
+    }
+    .authPage .authRequestBits {
+      right: 7% !important;
+      top: 38% !important;
+    }
+    .authPage .authStickerSchool {
+      right: 3% !important;
+      bottom: 31% !important;
+      font-size: 14px !important;
+    }
+    .authPage .authStickerAsk {
+      left: 31% !important;
+      bottom: 2% !important;
+      font-size: 14px !important;
+    }
+    .authPage .authCard {
+      width: 100% !important;
+      max-width: 420px !important;
+      justify-self: end !important;
+      padding: 26px !important;
+      border-radius: 26px !important;
+    }
+    .authPage .authCardTop h2 { font-size: 28px !important; }
+    .authPage .authCard input,
+    .authPage .authCard select,
+    .authPage .authSubmit { min-height: 50px !important; }
+  }
+`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className={`${inter.variable} ${display.variable}`}>
+        <style>{authLayoutPolish}</style>
         {children}
+        <MarketingProductLife />
         <SiteFooter />
         <CookieBanner />
       </body>
