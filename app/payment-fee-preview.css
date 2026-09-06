@@ -1,0 +1,22 @@
+.paymentFeePreview {
+  margin-top: -4px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255,194,28,.14);
+  border-radius: 18px;
+  background: linear-gradient(180deg,rgba(255,194,28,.045),rgba(255,255,255,.012));
+}
+.paymentFeePreview.muted { color: #736d64; font-size: 10px; }
+.paymentFeePreview.warning { border-color: rgba(255,155,90,.22); background: rgba(255,155,90,.035); }
+.paymentFeePreviewHead { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.paymentFeePreviewHead span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .14em; }
+.paymentFeePreviewHead small { color: #665f56; font-size: 7px; }
+.paymentFeePreview > div:not(.paymentFeePreviewHead) { display: flex; justify-content: space-between; gap: 18px; padding: 5px 0; color: #8c8478; font-size: 10px; }
+.paymentFeePreview > div strong { color: #e1d8ca; }
+.paymentFeePreview > div.total { margin-top: 5px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.06); font-weight: 800; }
+.paymentFeePreview > div.total strong { color: var(--gold); font-size: 16px; }
+.paymentFeePreview p { margin: 9px 0 0; color: #6f685f; font-size: 8px; line-height: 1.55; }
+.paymentFeePreview.warning p { color: #bca17f; }
+
+@media (max-width: 760px) {
+  .paymentFeePreview { padding: 14px; border-radius: 16px; }
+}
