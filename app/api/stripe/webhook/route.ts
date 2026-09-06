@@ -49,6 +49,34 @@ export async function POST(request: Request) {
 
     const object = event.data.object;
 
+    if (event.type.startsWith('identity.verification_session.')) {
+      const aspireUserId = typeof object.metadata?.aspire_user_id === 'string' ? object.metadata.aspire_user_id : null;
+      const sessionId = typeof object.id === 'string' ? object.id : null;
+      const identityStatus = event.type === 'identity.verification_session.verified'
+        ? 'verified'
+        : event.type === 'identity.verification_session.requires_input'
+          ? 'requires_input'
+          : event.type === 'identity.verification_session.canceled'
+            ? 'failed'
+            : 'pending';
+      const identityPatch = {
+        status: identityStatus,
+        provider: 'stripe_identity',
+        provider_session_id: sessionId,
+        verified_at: identityStatus === 'verified' ? new Date().toISOString() : null,
+        last_error: identityStatus === 'requires_input' || identityStatus === 'failed'
+          ? String(object.last_error?.reason || object.last_error?.code || 'Verification needs attention.').slice(0, 300)
+          : null,
+        updated_at: new Date().toISOString()
+      };
+
+      if (aspireUserId) {
+        await supabase.from('identity_verifications').upsert({ user_id: aspireUserId, ...identityPatch }, { onConflict: 'user_id' });
+      } else if (sessionId) {
+        await supabase.from('identity_verifications').update(identityPatch).eq('provider_session_id', sessionId);
+      }
+    }
+
     if (event.type === 'checkout.session.completed') {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
@@ -57,9 +85,7 @@ export async function POST(request: Request) {
           stripe_checkout_session_id: object.id || null,
           stripe_payment_intent_id: objectId(object.payment_intent),
           updated_at: new Date().toISOString()
-        })
-          .eq('id', paymentId)
-          .in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
+        }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
       }
     }
 
@@ -70,9 +96,7 @@ export async function POST(request: Request) {
           status: 'failed',
           failure_reason: 'Stripe reported that the asynchronous payment failed.',
           updated_at: new Date().toISOString()
-        })
-          .eq('id', paymentId)
-          .in('status', ['checkout_created', 'processing']);
+        }).eq('id', paymentId).in('status', ['checkout_created', 'processing']);
       }
     }
 
@@ -101,9 +125,7 @@ export async function POST(request: Request) {
           failure_reason: null,
           paid_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        })
-          .eq('id', paymentId)
-          .in('status', ['not_started', 'checkout_created', 'processing', 'failed', 'secured']);
+        }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'processing', 'failed', 'secured']);
       }
     }
 
@@ -115,9 +137,7 @@ export async function POST(request: Request) {
           stripe_payment_intent_id: object.id || null,
           failure_reason: object.last_payment_error?.message || 'Stripe reported that the payment failed.',
           updated_at: new Date().toISOString()
-        })
-          .eq('id', paymentId)
-          .in('status', ['not_started', 'checkout_created', 'processing', 'failed']);
+        }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'processing', 'failed']);
       }
     }
 
@@ -148,7 +168,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    // Only a payload with a valid Stripe signature is allowed to create/update event records.
     if (verified && parsedEvent?.id) {
       try {
         const supabase = getSupabaseServiceClient();
