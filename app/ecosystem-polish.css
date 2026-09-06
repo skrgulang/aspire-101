@@ -1,0 +1,574 @@
+/* Final visual pass for Aspire's ecosystem pages.
+   This file intentionally loads last so it can resolve older marketing/auth CSS collisions. */
+
+/* -------------------------------------------------------------------------- */
+/* HOMEPAGE NAV + CAMPUS PICKER                                               */
+/* -------------------------------------------------------------------------- */
+.marketingHome .marketingNav {
+  grid-template-columns: auto 232px minmax(0, 1fr);
+  gap: 24px;
+  min-height: 84px;
+}
+
+.marketingCampusPicker,
+.marketingCampusPicker.campusPickerV2.isCompact {
+  width: 232px;
+  min-width: 0;
+}
+
+.marketingCampusPicker .campusPickerTrigger {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 13px;
+  border-color: rgba(255,194,28,.24);
+  background: rgba(10,9,7,.68);
+}
+
+.marketingCampusPicker .campusPickerTrigger strong {
+  font-size: 12px;
+}
+
+.marketingCampusPicker .campusPickerPopover {
+  left: 0 !important;
+  transform: none !important;
+  width: min(390px, calc(100vw - 32px));
+  max-height: min(500px, 72vh);
+  padding: 14px;
+  border-radius: 20px;
+}
+
+.marketingCampusPicker .campusPickerSearch,
+.marketingCampusPicker .campusLocationButton {
+  border-radius: 13px;
+}
+
+.marketingCampusPicker .campusPickerNearby button,
+.marketingCampusPicker .campusPickerResults button {
+  padding: 11px 10px;
+}
+
+.marketingCampusPicker .campusPickerNearby button strong,
+.marketingCampusPicker .campusPickerResults button strong {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* -------------------------------------------------------------------------- */
+/* WHY ASPIRE — cleaner editorial comparison                                  */
+/* -------------------------------------------------------------------------- */
+.marketingWhyRefined {
+  padding: clamp(72px, 7vw, 108px) max(22px, 4.6vw) 142px !important;
+}
+
+.marketingWhyRefined .whyIntro {
+  max-width: 980px;
+}
+
+.marketingWhyRefined .whyIntroTop {
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.marketingWhyRefined .whyIntroTop .whySticker {
+  flex: 0 0 auto;
+  padding: 9px 13px;
+  border: 1px solid rgba(255,194,28,.24);
+  border-radius: 999px;
+  background: rgba(255,194,28,.10);
+  color: #f6cb50;
+  font-family: var(--font-inter), sans-serif;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: .10em;
+}
+
+.marketingWhyRefined .whyIntro h2 {
+  max-width: 900px;
+}
+
+.marketingWhyRefined .whyCompareRefined {
+  width: min(1280px, 100%);
+  margin: 54px auto 0;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: 24px;
+}
+
+.marketingWhyRefined .whyCompareRefined .whyOld,
+.marketingWhyRefined .whyCompareRefined .whyAspireCard {
+  min-height: 430px !important;
+  padding: 28px;
+  border-radius: 26px;
+}
+
+.marketingWhyRefined .whyAspireCard::after {
+  display: none !important;
+}
+
+.marketingWhyRefined .whyPanelHead {
+  min-height: 22px;
+  margin-bottom: 18px;
+}
+
+.marketingWhyRefined .whyOld > strong {
+  max-width: 470px;
+  font-size: clamp(31px, 2.7vw, 44px);
+}
+
+.marketingWhyRefined .whyOld > p {
+  max-width: 430px;
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.marketingWhyRefined .whyCompareRefined .whyMess {
+  min-height: 202px;
+  margin-top: 20px;
+}
+
+.marketingWhyRefined .whyCompareRefined .whyMess span {
+  padding: 9px 12px !important;
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.075) !important;
+  color: rgba(255,255,255,.52) !important;
+  font-size: 10px !important;
+}
+
+.marketingWhyRefined .whyScribble {
+  left: 28px;
+  bottom: 18px;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow {
+  min-height: 78px;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow i {
+  width: 42px;
+  height: 42px;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow > span {
+  display: grid !important;
+  grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr);
+  grid-template-rows: auto auto;
+  gap: 4px 22px !important;
+  align-items: center;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow del {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-self: center;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow b {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow small {
+  grid-column: 2 !important;
+  grid-row: 2;
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+.marketingWhyRefined .whyIdentityStamp {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+
+/* Restore the ORIGINAL larger backpack student the user liked. */
+.marketingWhyRefined .whyWalkerLane {
+  position: absolute;
+  z-index: 1;
+  left: max(22px, 4.6vw);
+  right: max(22px, 4.6vw);
+  bottom: 13px;
+  height: 118px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.marketingWhyRefined .whyWalkPath {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  height: 2px;
+  border: 0;
+  opacity: .5;
+  background: repeating-linear-gradient(90deg, rgba(255,194,28,.74) 0 7px, transparent 7px 16px);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+
+.marketingWhyRefined .whyWalkLabel {
+  position: absolute;
+  right: 0;
+  left: auto;
+  top: auto;
+  bottom: 0;
+  color: rgba(255,194,28,.5);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: .06em;
+}
+
+.marketingWhyRefined .whyWalker {
+  position: absolute;
+  left: -74px;
+  bottom: 21px;
+  width: 70px;
+  height: 102px;
+  color: #ffc21c;
+  opacity: .9;
+  filter: drop-shadow(0 0 18px rgba(255,194,28,.34));
+  animation: aspireOriginalCampusWalk 13s linear infinite;
+}
+
+.marketingWhyRefined .whyWalker svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+  animation: none !important;
+}
+
+.marketingWhyRefined .whyWalker circle,
+.marketingWhyRefined .whyWalker rect,
+.marketingWhyRefined .whyWalker path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.marketingWhyRefined .whyWalker circle {
+  fill: none;
+}
+
+.marketingWhyRefined .whyWalkDot {
+  display: none;
+}
+
+@keyframes aspireOriginalCampusWalk {
+  0% { transform: translate3d(0,0,0) rotate(-1deg); }
+  12% { transform: translate3d(14vw,-3px,0) rotate(1deg); }
+  24% { transform: translate3d(28vw,1px,0) rotate(-1deg); }
+  36% { transform: translate3d(42vw,-3px,0) rotate(1deg); }
+  48% { transform: translate3d(56vw,1px,0) rotate(-1deg); }
+  60% { transform: translate3d(70vw,-3px,0) rotate(1deg); }
+  72% { transform: translate3d(84vw,1px,0) rotate(-1deg); }
+  84% { transform: translate3d(98vw,-3px,0) rotate(1deg); }
+  100% { transform: translate3d(118vw,0,0) rotate(-1deg); }
+}
+
+/* -------------------------------------------------------------------------- */
+/* SAFETY — four ecosystem concepts, but not four cramped skinny columns      */
+/* -------------------------------------------------------------------------- */
+.safetyObjectsEcosystem {
+  width: min(1040px, 100%) !important;
+  margin-top: 46px !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 16px !important;
+}
+
+.safetyObjectsEcosystem .safetyObject {
+  min-height: 184px !important;
+  display: grid !important;
+  grid-template-columns: 78px minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  gap: 5px 18px;
+  align-items: start !important;
+  text-align: left !important;
+  padding: 22px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 24px;
+  background: rgba(10,9,7,.66);
+  box-shadow: 0 22px 60px rgba(0,0,0,.18);
+  backdrop-filter: blur(14px);
+  transform: none !important;
+}
+
+.safetyObjectsEcosystem .safetyObject > :first-child {
+  grid-column: 1;
+  grid-row: 1 / 4;
+  width: 68px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  padding: 0 !important;
+  border-width: 1px !important;
+  border-radius: 20px !important;
+  font-size: 24px !important;
+  transform: none !important;
+}
+
+.safetyObjectsEcosystem .safetyPolaroid {
+  border: 1px solid rgba(255,194,28,.36) !important;
+  background: rgba(255,194,28,.07) !important;
+  color: #f4cd55 !important;
+  font-size: 12px !important;
+  font-weight: 900;
+}
+
+.safetyObjectsEcosystem .safetyObject small {
+  grid-column: 2;
+  margin: 2px 0 0 !important;
+  font-size: 8px;
+}
+
+.safetyObjectsEcosystem .safetyObject strong {
+  grid-column: 2;
+  margin: 1px 0 0 !important;
+  font-size: 21px;
+}
+
+.safetyObjectsEcosystem .safetyObject > span {
+  grid-column: 2;
+  margin: 3px 0 0 !important;
+  max-width: 360px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.safetyIdentity {
+  transform: none !important;
+}
+
+/* -------------------------------------------------------------------------- */
+/* AUTH — one source of truth, calmer desktop composition                     */
+/* -------------------------------------------------------------------------- */
+@media (min-width: 1001px) {
+  .authPage {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .authPage .authShell {
+    width: min(1160px, calc(100% - 48px));
+    min-height: 680px;
+    margin-top: 24px;
+    grid-template-columns: minmax(0, 1fr) minmax(380px, 410px);
+    gap: 48px;
+    align-items: center;
+  }
+
+  .authPage .authVisual {
+    width: 100%;
+    max-width: 650px;
+    min-height: 600px;
+    overflow: hidden;
+    border-radius: 30px;
+  }
+
+  .authPage .authVisualHeadline {
+    max-width: 570px;
+    padding: 28px 24px 0;
+  }
+
+  .authPage .authVisualHeadline h1 {
+    max-width: 570px;
+    font-size: clamp(52px, 4.8vw, 78px);
+    line-height: .92;
+  }
+
+  .authPage .authCampusPhoto {
+    width: 50%;
+    right: 5%;
+    bottom: 5%;
+  }
+
+  .authPage .authPeoplePhoto {
+    width: 31%;
+    left: 6%;
+    bottom: 9%;
+  }
+
+  .authPage .authDoodle {
+    left: 8%;
+    top: 45%;
+    font-size: 13px;
+  }
+
+  .authPage .authRequestBits {
+    right: 7%;
+    top: 39%;
+  }
+
+  .authPage .authStickerSchool {
+    right: 3%;
+    bottom: 31%;
+    font-size: 13px;
+  }
+
+  .authPage .authStickerAsk {
+    left: 30%;
+    bottom: 2%;
+    font-size: 13px;
+  }
+
+  .authPage .authCard {
+    width: 100%;
+    max-width: 410px;
+    justify-self: end;
+    padding: 26px;
+    border-radius: 26px;
+  }
+
+  .authPage .authCardTop h2 {
+    font-size: 28px;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* RESPONSIVE                                                                  */
+/* -------------------------------------------------------------------------- */
+@media (max-width: 1180px) and (min-width: 901px) {
+  .marketingHome .marketingNav {
+    grid-template-columns: auto 214px minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .marketingCampusPicker,
+  .marketingCampusPicker.campusPickerV2.isCompact {
+    width: 214px;
+  }
+
+  .marketingNavRight {
+    gap: 12px;
+  }
+
+  .marketingNavRight a:nth-child(2),
+  .marketingNavRight a:nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .marketingHome .marketingNav {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 10px 16px;
+    padding: 10px 0 12px;
+  }
+
+  .marketingCampusPicker,
+  .marketingCampusPicker.campusPickerV2.isCompact {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: min(100%, 340px);
+  }
+
+  .marketingNavRight {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .marketingNavRight > a:not(.marketingJoin):not([href^='/login']) {
+    display: none;
+  }
+
+  .marketingWhyRefined .whyCompareRefined {
+    grid-template-columns: 1fr;
+  }
+
+  .marketingWhyRefined .whyAspireCard .whyRow > span {
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .marketingCampusPicker .campusPickerPopover {
+    position: fixed;
+    left: 14px !important;
+    right: 14px !important;
+    top: 72px !important;
+    width: auto;
+    max-height: calc(100vh - 92px);
+    transform: none !important;
+  }
+
+  .marketingWhyRefined {
+    padding-bottom: 64px !important;
+  }
+
+  .marketingWhyRefined .whyIntroTop {
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .marketingWhyRefined .whyCompareRefined {
+    margin-top: 34px;
+    gap: 14px;
+  }
+
+  .marketingWhyRefined .whyCompareRefined .whyOld,
+  .marketingWhyRefined .whyCompareRefined .whyAspireCard {
+    min-height: unset !important;
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .marketingWhyRefined .whyAspireCard .whyRow > span {
+    grid-template-columns: 1fr !important;
+    gap: 3px !important;
+  }
+
+  .marketingWhyRefined .whyAspireCard .whyRow del,
+  .marketingWhyRefined .whyAspireCard .whyRow b,
+  .marketingWhyRefined .whyAspireCard .whyRow small {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
+
+  .marketingWhyRefined .whyIdentityStamp {
+    grid-template-columns: 1fr auto;
+  }
+
+  .marketingWhyRefined .whyIdentityStamp small {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+
+  .marketingWhyRefined .whyWalkerLane {
+    display: none;
+  }
+
+  .safetyObjectsEcosystem {
+    grid-template-columns: 1fr !important;
+  }
+
+  .safetyObjectsEcosystem .safetyObject {
+    grid-template-columns: 64px minmax(0, 1fr);
+    min-height: 160px !important;
+    padding: 18px;
+  }
+
+  .safetyObjectsEcosystem .safetyObject > :first-child {
+    width: 56px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketingWhyRefined .whyWalker {
+    animation: none !important;
+    left: 72% !important;
+    opacity: .42 !important;
+  }
+}
