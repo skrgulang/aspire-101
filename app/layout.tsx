@@ -45,7 +45,6 @@ import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
-import MarketingProductLife from './MarketingProductLife';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','700'], variable: '--font-display' });
@@ -130,7 +129,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${inter.variable} ${display.variable}`}>
         <style>{authLayoutPolish}</style>
         {children}
-        <MarketingProductLife />
         <SiteFooter />
         <CookieBanner />
       </body>
