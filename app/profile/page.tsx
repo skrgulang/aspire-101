@@ -10,7 +10,10 @@ import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
 import SchoolVerificationCard from '../SchoolVerificationCard';
 import PhoneVerificationCard from '../PhoneVerificationCard';
+import IdentityVerificationCard from '../IdentityVerificationCard';
+import MfaSecurityCard from '../MfaSecurityCard';
 import PaymentConnectRow from '../PaymentConnectRow';
+import ProfileAvatar from '../ProfileAvatar';
 
 type ProfileView = {
   name: string;
@@ -20,6 +23,8 @@ type ProfileView = {
   schoolVerified: boolean;
   phone: string;
   phoneVerified: boolean;
+  idVerified: boolean;
+  avatarUrl: string;
 };
 
 export default function ProfilePage() {
@@ -36,9 +41,10 @@ export default function ProfilePage() {
         return;
       }
 
-      const [{ data: profileRow }, { data: schoolVerification }, nextRole] = await Promise.all([
-        supabase.from('profiles').select('display_name,name,full_name,school,email,home_campus_id').eq('id', user.id).maybeSingle(),
+      const [{ data: profileRow }, { data: schoolVerification }, { data: identityVerification }, nextRole] = await Promise.all([
+        supabase.from('profiles').select('display_name,name,full_name,school,email,home_campus_id,avatar_url,image_url').eq('id', user.id).maybeSingle(),
         supabase.from('school_verifications').select('status,verification_method,school_email').eq('user_id', user.id).maybeSingle(),
+        supabase.from('identity_verifications').select('status').eq('user_id', user.id).maybeSingle(),
         fetchMyRole().catch(() => 'member' as AppRole)
       ]);
 
@@ -57,7 +63,9 @@ export default function ProfilePage() {
         emailVerified: Boolean(user.email_confirmed_at),
         schoolVerified: schoolVerification?.status === 'verified',
         phone: user.phone || '',
-        phoneVerified: Boolean(user.phone_confirmed_at)
+        phoneVerified: Boolean(user.phone_confirmed_at),
+        idVerified: identityVerification?.status === 'verified',
+        avatarUrl: profileRow?.avatar_url || profileRow?.image_url || ''
       });
       setRole(nextRole);
     });
@@ -84,15 +92,16 @@ export default function ProfilePage() {
         </header>
 
         <section className="profileHero profileHeroPolished">
-          <div className="profileAvatar" aria-hidden="true">{initials}</div>
+          <ProfileAvatar initialUrl={profile.avatarUrl} initials={initials} name={profile.name} />
           <div className="profileHeroCopy">
             <div className="profileHeroMeta"><span>YOUR ASPIRE</span>{role !== 'member' && <b>{role.toUpperCase()}</b>}</div>
             <h1>{profile.name}</h1>
             <p>{profile.school}</p>
             <div className="profileTrustChips" aria-label="Trust status">
-              <span className={profile.schoolVerified ? 'verified' : ''}>{profile.schoolVerified ? '✓ Verified student' : 'School verification needed'}</span>
+              <span className={profile.schoolVerified ? 'verified' : ''}>{profile.schoolVerified ? '✓ Campus Verified' : 'Campus verification needed'}</span>
+              <span className={profile.idVerified ? 'verified' : ''}>{profile.idVerified ? '✓ ID Verified' : 'ID verification optional'}</span>
+              <span className={profile.phoneVerified ? 'verified' : ''}>{profile.phoneVerified ? '✓ Phone Verified' : 'Phone optional'}</span>
               <span className={profile.emailVerified ? 'verified' : ''}>{profile.emailVerified ? '✓ Email confirmed' : 'Email not confirmed'}</span>
-              <span className={profile.phoneVerified ? 'verified' : ''}>{profile.phoneVerified ? '✓ Phone verified' : 'Phone optional'}</span>
             </div>
           </div>
         </section>
@@ -101,11 +110,13 @@ export default function ProfilePage() {
           <div className="profileTrustPanel">
             <div className="profileSectionHeading">
               <div><span>TRUST PASSPORT</span><h2>Verify what matters.</h2></div>
-              <p>School, phone, and payment identity stay separate. Aspire only shows the trust signals that are actually verified.</p>
+              <p>Campus identity, government ID, phone, account security, and payment readiness stay separate so people can see what is actually verified.</p>
             </div>
 
-            <div className="profileTrustCards">
+            <div className="profileTrustCards profileTrustCardsExpanded">
               <SchoolVerificationCard school={profile.school} />
+              <IdentityVerificationCard />
+              <MfaSecurityCard />
               <PhoneVerificationCard initialPhone={profile.phone} initiallyVerified={profile.phoneVerified} />
             </div>
           </div>
@@ -122,7 +133,7 @@ export default function ProfilePage() {
               </a>
               <PaymentConnectRow phoneVerified={profile.phoneVerified} schoolVerified={profile.schoolVerified} />
               <a className="profileMenuRow" href="/safety">
-                <i>◇</i><div><strong>Safety & privacy</strong><span>Reporting, blocking, and privacy</span></div><b>→</b>
+                <i>◇</i><div><strong>Safety & privacy</strong><span>Reporting, blocking, verification, and privacy</span></div><b>→</b>
               </a>
               {staff && (
                 <a className="profileMenuRow moderator" href="/moderator">
