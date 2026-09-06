@@ -56,7 +56,7 @@ export default function CampusPicker({
         .filter((campus) => [campus.name, campus.short_name, campus.city, campus.state]
           .filter(Boolean)
           .some((part) => String(part).toLowerCase().includes(q)))
-        .slice(0, compact ? 12 : 30);
+        .slice(0, compact ? 8 : 30);
     }
 
     const selectedCampus = universities.find((item) => item.id === value) ?? null;
@@ -71,7 +71,7 @@ export default function CampusPicker({
       if (aLive !== bLive) return aLive ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
-    return ranked.slice(0, compact ? 7 : 30);
+    return ranked.slice(0, compact ? 4 : 30);
   }, [universities, query, compact, value]);
 
   function choose(id: string) {
@@ -91,7 +91,7 @@ export default function CampusPicker({
       async (position) => {
         try {
           const result = await findNearbyUniversities(position.coords.latitude, position.coords.longitude, {
-            limit: 8,
+            limit: compact ? 5 : 8,
             maxMiles: maxNearbyMiles
           });
           setNearby(result);
@@ -126,12 +126,12 @@ export default function CampusPicker({
         <div className="campusPickerPopover" role="dialog" aria-label="Choose a campus">
           <div className="campusPickerSearch">
             <span aria-hidden="true">⌕</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search school, city, or state" autoFocus />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search campus" autoFocus />
           </div>
 
           <button className="campusLocationButton" type="button" onClick={useLocation} disabled={locating}>
             <span>◎</span>
-            <div><strong>{locating ? 'Finding nearby campuses…' : 'Use my location'}</strong><small>Only when you choose to share it</small></div>
+            <div><strong>{locating ? 'Finding campuses…' : 'Nearby campuses'}</strong><small>Use my location</small></div>
             <b>→</b>
           </button>
           {locationMessage && <p className="campusLocationMessage">{locationMessage}</p>}
@@ -139,7 +139,7 @@ export default function CampusPicker({
           {nearby.length > 0 && (
             <section className="campusPickerNearby">
               <span>NEAR YOU</span>
-              {nearby.slice(0, 6).map((campus) => (
+              {nearby.slice(0, compact ? 3 : 6).map((campus) => (
                 <button type="button" key={campus.id} onClick={() => choose(campus.id)} className={campus.id === value ? 'active' : ''}>
                   <div><strong>{campus.name}</strong><small>{campus.city}{campus.state ? `, ${campus.state}` : ''}</small></div>
                   <b>{campus.distance_miles < 10 ? campus.distance_miles.toFixed(1) : Math.round(campus.distance_miles)} mi</b>
@@ -149,7 +149,7 @@ export default function CampusPicker({
           )}
 
           <section className="campusPickerResults">
-            <span>{query ? 'SEARCH RESULTS' : 'SUGGESTED CAMPUSES'}</span>
+            <span>{query ? 'RESULTS' : compact ? 'SUGGESTED' : 'EXPLORE CAMPUSES'}</span>
             {filtered.map((campus) => (
               <button type="button" key={campus.id} onClick={() => choose(campus.id)} className={campus.id === value ? 'active' : ''}>
                 <div>
@@ -160,6 +160,7 @@ export default function CampusPicker({
               </button>
             ))}
             {!filtered.length && <p className="campusPickerEmpty">That campus is not in Aspire yet.</p>}
+            {compact && !query && <p className="campusPickerHint">Search to see all supported campuses.</p>}
           </section>
         </div>
       )}
