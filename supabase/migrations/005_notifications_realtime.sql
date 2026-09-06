@@ -58,7 +58,10 @@ using (
     select 1 from public.connections c
     where c.id::text=split_part(realtime.topic(),':',2)
       and (auth.uid()=c.requester_id or auth.uid()=c.responder_id)
-      and c.status in ('confirmed','active','completed')
+      and (
+        c.status in ('confirmed','active')
+        or (c.status='completed' and public.can_message_connection(c.id))
+      )
   )
 );
 
