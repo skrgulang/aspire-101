@@ -17,6 +17,7 @@ import {
   setModeratorByEmail
 } from '../lib/supabase/trust';
 import type { AspireRequest } from '../lib/supabase/requests';
+import { fetchRequestMedia, RequestMedia } from '../lib/supabase/requestMedia';
 import AppDock from './AppDock';
 import AppLoader from './AppLoader';
 
@@ -35,10 +36,11 @@ export default function ModeratorConsole() {
   const router = useRouter();
   const [role, setRole] = useState<AppRole>('member');
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>('ids');
+  const [tab, setTab] = useState<Tab>('requests');
   const [verifications, setVerifications] = useState<SchoolVerification[]>([]);
   const [reports, setReports] = useState<SafetyReportForModeration[]>([]);
   const [requests, setRequests] = useState<AspireRequest[]>([]);
+  const [requestMedia, setRequestMedia] = useState<RequestMedia[]>([]);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState('');
   const [teamEmail, setTeamEmail] = useState('');
@@ -58,9 +60,11 @@ export default function ModeratorConsole() {
         fetchSafetyReportsForModeration(),
         fetchRequestsForModeration()
       ]);
+      const media = await fetchRequestMedia(activeRequests.map((request) => request.id)).catch(() => [] as RequestMedia[]);
       setVerifications(ids);
       setReports(safety);
       setRequests(activeRequests);
+      setRequestMedia(media);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load moderation tools.');
     } finally {
@@ -74,6 +78,15 @@ export default function ModeratorConsole() {
   const openReports = useMemo(() => reports.filter((item) => item.status === 'submitted' || item.status === 'reviewing'), [reports]);
   const pendingRequests = useMemo(() => requests.filter((request) => request.moderation_status === 'pending'), [requests]);
   const activeRequests = useMemo(() => requests.filter((request) => ['open', 'matched', 'in_progress'].includes(request.status)), [requests]);
+  const mediaMap = useMemo(() => {
+    const map = new Map<string, RequestMedia[]>();
+    requestMedia.forEach((media) => {
+      const current = map.get(media.request_id) ?? [];
+      current.push(media);
+      map.set(media.request_id, current);
+    });
+    return map;
+  }, [requestMedia]);
 
   async function decideId(item: SchoolVerification, decision: 'verified' | 'rejected') {
     const note = decision === 'rejected' ? window.prompt('Short note for the student:', 'School ID could not be confirmed.') ?? '' : '';
@@ -153,7 +166,7 @@ export default function ModeratorConsole() {
           <div>
             <span>CLOUDORA LABS, INC. · ASPIRE 101</span>
             <div className="moderatorTitleRow"><h1>Trust &amp; Safety</h1><b>{role.toUpperCase()}</b></div>
-            <p>New posts do not enter Discover until they pass the review gate. Automated policy checks block obvious abusive language first; human reviewers handle the remaining context.</p>
+            <p>New posts do not enter Discover until they pass the review gate. Automated policy checks block obvious abusive language first; human reviewers handle text, images, and context.</p>
           </div>
           <a href="/profile">Back to profile →</a>
         </header>
@@ -176,7 +189,7 @@ export default function ModeratorConsole() {
 
         {tab === 'requests' && (
           <section className="moderatorPanel">
-            <div className="moderatorPanelHead"><div><span>CONTENT REVIEW GATE</span><h2>Posts</h2></div><p>Pending posts are visible to their author and moderators, but not to the campus Discover feed. Approve only content that is appropriate, lawful, and consistent with Aspire rules.</p></div>
+            <div className="moderatorPanelHead"><div><span>CONTENT REVIEW GATE</span><h2>Posts</h2></div><p>Pending posts and their photos are visible to the author and Trust &amp; Safety reviewers, but not to the campus Discover feed. Review the whole listing before approving it.</p></div>
             <div className="moderatorList">
               {!activeRequests.length && <div className="moderatorEmpty"><i>✓</i><strong>Post queue is clear.</strong><span>New submissions will appear here before they can go public.</span></div>}
               {activeRequests
@@ -185,12 +198,14 @@ export default function ModeratorConsole() {
                 .map((request) => {
                   const pending = request.moderation_status === 'pending';
                   const flags = request.moderation_flags ?? [];
+                  const photos = mediaMap.get(request.id) ?? [];
                   return (
-                    <article className={`moderatorRow ${pending ? 'attention' : ''}`} key={request.id}>
+                    <article className={`moderatorRow moderatorContentRow ${pending ? 'attention' : ''}`} key={request.id}>
                       <div className="moderatorRowMain">
                         <span>{moderationLabel(request)} · {request.category.toUpperCase()} · {request.kind.replace('_', ' ').toUpperCase()}</span>
                         <strong>{request.title}</strong>
                         {request.details && <p>{request.details}</p>}
+                        {photos.length > 0 && <div className="moderatorMediaStrip" aria-label={`${photos.length} submitted photo${photos.length === 1 ? '' : 's'}`}>{photos.map((photo, index) => photo.public_url ? <a href={photo.public_url} target="_blank" rel="noreferrer" key={photo.id}><img src={photo.public_url} alt={`Submitted request photo ${index + 1}`} /></a> : null)}</div>}
                         <small>{request.campus || 'Campus'} · {when(request.created_at)} · {request.status}{flags.length ? ` · AUTO FLAGS: ${flags.join(', ')}` : ''}</small>
                       </div>
                       <div className="moderatorRowActions">
