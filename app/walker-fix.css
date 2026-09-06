@@ -1,0 +1,80 @@
+/* Isolated final override for the Why Aspire campus walker.
+   Kept separate so older motion/reduced-motion rules cannot accidentally freeze it. */
+
+.marketingWhyRefined .whyWalkerLane {
+  z-index: 4 !important;
+  height: 126px !important;
+  bottom: 6px !important;
+  overflow: hidden !important;
+}
+
+.marketingWhyRefined .whyWalkPath {
+  bottom: 24px !important;
+  opacity: .62 !important;
+}
+
+.marketingWhyRefined .whyWalker {
+  left: -92px !important;
+  bottom: 20px !important;
+  width: 76px !important;
+  height: 110px !important;
+  opacity: 1 !important;
+  color: #ffc21c !important;
+  will-change: transform;
+  animation: aspireCampusWalkerGuaranteed 11.5s linear infinite !important;
+  animation-play-state: running !important;
+  filter: drop-shadow(0 0 16px rgba(255,194,28,.28)) !important;
+}
+
+.marketingWhyRefined .whyWalker svg {
+  animation: aspireCampusWalkerBob .56s ease-in-out infinite alternate !important;
+  transform-origin: 50% 82%;
+}
+
+/* Give the figure an actual walking gait instead of sliding rigidly. */
+.marketingWhyRefined .whyWalker path:nth-of-type(2),
+.marketingWhyRefined .whyWalker path:nth-of-type(5) {
+  transform-box: view-box;
+  transform-origin: 38px 42px;
+  animation: aspireCampusLimbForward .58s ease-in-out infinite alternate !important;
+}
+
+.marketingWhyRefined .whyWalker path:nth-of-type(3),
+.marketingWhyRefined .whyWalker path:nth-of-type(4) {
+  transform-box: view-box;
+  transform-origin: 38px 42px;
+  animation: aspireCampusLimbBack .58s ease-in-out infinite alternate !important;
+}
+
+.marketingWhyRefined .whyWalker rect {
+  fill: rgba(255,194,28,.12) !important;
+}
+
+@keyframes aspireCampusWalkerGuaranteed {
+  0%   { transform: translate3d(0,0,0); }
+  25%  { transform: translate3d(28vw,-1px,0); }
+  50%  { transform: translate3d(56vw,0,0); }
+  75%  { transform: translate3d(84vw,-1px,0); }
+  100% { transform: translate3d(calc(100vw + 150px),0,0); }
+}
+
+@keyframes aspireCampusWalkerBob {
+  from { transform: translateY(0) rotate(-1deg); }
+  to   { transform: translateY(-4px) rotate(1deg); }
+}
+
+@keyframes aspireCampusLimbForward {
+  from { transform: rotate(-5deg); }
+  to   { transform: rotate(8deg); }
+}
+
+@keyframes aspireCampusLimbBack {
+  from { transform: rotate(7deg); }
+  to   { transform: rotate(-7deg); }
+}
+
+@media (max-width: 700px) {
+  .marketingWhyRefined .whyWalkerLane {
+    display: none !important;
+  }
+}
