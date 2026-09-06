@@ -57,7 +57,9 @@ export async function POST(request: Request) {
           stripe_checkout_session_id: object.id || null,
           stripe_payment_intent_id: objectId(object.payment_intent),
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).not('status', 'in', '(released,refunded)');
+        })
+          .eq('id', paymentId)
+          .in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
       }
     }
 
@@ -68,13 +70,30 @@ export async function POST(request: Request) {
           status: 'failed',
           failure_reason: 'Stripe reported that the asynchronous payment failed.',
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).not('status', 'in', '(released,refunded)');
+        })
+          .eq('id', paymentId)
+          .in('status', ['checkout_created', 'processing']);
       }
     }
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
+        const { data: payment } = await supabase
+          .from('connection_payments')
+          .select('id,status,customer_total_cents,gross_amount_cents,currency')
+          .eq('id', paymentId)
+          .maybeSingle();
+
+        if (!payment) throw new Error('STRIPE:Aspire payment record was not found for the completed PaymentIntent.');
+        const expectedAmount = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
+        const receivedAmount = Number(object.amount_received ?? object.amount ?? 0);
+        const expectedCurrency = String(payment.currency || 'USD').toLowerCase();
+        const receivedCurrency = String(object.currency || '').toLowerCase();
+        if (expectedAmount <= 0 || receivedAmount !== expectedAmount || receivedCurrency !== expectedCurrency) {
+          throw new Error('STRIPE:Stripe payment amount or currency did not match the Aspire fee snapshot.');
+        }
+
         await supabase.from('connection_payments').update({
           status: 'secured',
           stripe_payment_intent_id: object.id || null,
@@ -82,7 +101,9 @@ export async function POST(request: Request) {
           failure_reason: null,
           paid_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).not('status', 'in', '(released,refunded)');
+        })
+          .eq('id', paymentId)
+          .in('status', ['not_started', 'checkout_created', 'processing', 'failed', 'secured']);
       }
     }
 
@@ -94,16 +115,21 @@ export async function POST(request: Request) {
           stripe_payment_intent_id: object.id || null,
           failure_reason: object.last_payment_error?.message || 'Stripe reported that the payment failed.',
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).not('status', 'in', '(released,refunded)');
+        })
+          .eq('id', paymentId)
+          .in('status', ['not_started', 'checkout_created', 'processing', 'failed']);
       }
     }
 
-    if (event.type === 'charge.dispute.created' && object.id) {
-      await supabase.from('connection_payments').update({
-        status: 'disputed',
-        disputed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('stripe_charge_id', object.id).neq('status', 'refunded');
+    if (event.type === 'charge.dispute.created') {
+      const chargeId = objectId(object.charge);
+      if (chargeId) {
+        await supabase.from('connection_payments').update({
+          status: 'disputed',
+          disputed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }).eq('stripe_charge_id', chargeId).neq('status', 'refunded');
+      }
     }
 
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {
