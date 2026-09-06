@@ -9,11 +9,11 @@ export default function SiteFooter() {
             <img src={aspireLogo} alt="" />
             <span>Aspire 101</span>
           </a>
-          <h3>Stay close to<br /><span>what&apos;s happening.</span></h3>
-          <p>New request features, campus launches, product updates, and the occasional useful thing worth knowing.</p>
-          <form className="footerSignup" action="/signup" method="get">
-            <input name="email" type="email" placeholder="you@school.edu" aria-label="School email" />
-            <button type="submit" aria-label="Join Aspire updates">→</button>
+          <h3>Stay close to<br /><span>what&apos;s next.</span></h3>
+          <p>Desktop, mobile, campus launches, and meaningful product updates — without turning your inbox into another feed.</p>
+          <form className="footerSignup" action="/updates" method="get">
+            <input name="email" type="email" placeholder="you@example.com" aria-label="Email for Aspire updates" />
+            <button type="submit" aria-label="Join Aspire product updates">→</button>
           </form>
           <div className="footerSocials" aria-label="Aspire 101 social links">
             <a className="socialButton" href="https://www.instagram.com/aspire.101/" target="_blank" rel="noreferrer" aria-label="Aspire 101 on Instagram">
@@ -32,9 +32,9 @@ export default function SiteFooter() {
           <h4>Explore</h4>
           <nav>
             <a href="/discover">Discover requests</a>
-            <a href="/#nearby">Near you</a>
-            <a href="/#features">Campus stories</a>
-            <a href="/#how">How it works</a>
+            <a href="/#features">What Aspire does</a>
+            <a href="/#why-aspire">Why Aspire</a>
+            <a href="/#campuses">Campus network</a>
             <a href="/signup">Get started</a>
           </nav>
         </section>
@@ -42,12 +42,13 @@ export default function SiteFooter() {
         <section className="footerColumn">
           <h4>Company</h4>
           <nav>
-            <a href="/#home">About Aspire</a>
+            <a href="/updates">Product updates</a>
             <a href="/#work-with-us">Work with Aspire</a>
             <a href="/safety">Safety Center</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
             <a href="/guidelines">Community Guidelines</a>
+            <a href="mailto:business@aspires101.com">Business inquiries ↗</a>
           </nav>
         </section>
 
@@ -57,12 +58,13 @@ export default function SiteFooter() {
             <a href="https://discord.com/invite/sfKv7k9Sbt" target="_blank" rel="noreferrer">Discord ↗</a>
             <a href="https://www.instagram.com/aspire.101/" target="_blank" rel="noreferrer">Instagram ↗</a>
             <a href="https://www.linkedin.com/company/108901932/" target="_blank" rel="noreferrer">LinkedIn ↗</a>
+            <a href="mailto:business@aspires101.com">business@aspires101.com ↗</a>
           </nav>
         </section>
       </div>
 
       <div className="footerBottom shell">
-        <p>© 2026 Aspire 101</p>
+        <p>© 2026 Cloudora Labs, Inc. · Aspire 101 is a product of Cloudora Labs.</p>
         <div className="footerLegal">
           <a href="/safety">Safety</a>
           <a href="/privacy">Privacy Policy</a>
