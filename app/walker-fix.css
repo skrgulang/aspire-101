@@ -1,168 +1,184 @@
-/* Final stability pass for the campus picker + Why Aspire campus walker. */
+/* Final compact campus menu + dedicated campus motion band. */
 
 /* -------------------------------------------------------------------------- */
-/* COMPACT CAMPUS PICKER — small, intentional, internally scrollable          */
+/* NAV CAMPUS PICKER                                                          */
 /* -------------------------------------------------------------------------- */
 .marketingCampusPicker,
 .marketingCampusPicker.campusPickerV2.isCompact {
-  width: 232px !important;
+  width: 220px !important;
   min-width: 0 !important;
 }
 
 .marketingCampusPicker .campusPickerTrigger {
   width: 100% !important;
-  min-height: 44px !important;
-  padding: 8px 13px !important;
+  min-height: 42px !important;
+  padding: 7px 12px !important;
   border-radius: 999px !important;
 }
 
 .marketingCampusPicker .campusPickerPopover {
-  top: calc(100% + 12px) !important;
+  top: calc(100% + 10px) !important;
   left: 0 !important;
   transform: none !important;
-  width: 360px !important;
-  max-width: calc(100vw - 28px) !important;
-  max-height: none !important;
+  width: 300px !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: 318px !important;
   overflow: hidden !important;
-  padding: 12px !important;
-  border: 1px solid rgba(255,194,28,.30) !important;
-  border-radius: 18px !important;
-  background: #0d0c0a !important;
-  box-shadow: 0 24px 64px rgba(0,0,0,.58) !important;
+  padding: 10px !important;
+  border: 1px solid rgba(255,194,28,.28) !important;
+  border-radius: 16px !important;
+  background: rgba(12,11,9,.985) !important;
+  box-shadow: 0 18px 52px rgba(0,0,0,.55) !important;
   backdrop-filter: blur(18px) !important;
 }
 
 .marketingCampusPicker .campusPickerSearch {
-  min-height: 48px !important;
-  padding: 9px 11px !important;
-  border-radius: 12px !important;
+  min-height: 40px !important;
+  padding: 7px 10px !important;
+  border-radius: 11px !important;
 }
 
 .marketingCampusPicker .campusPickerSearch input {
-  font-size: 14px !important;
+  font-size: 12px !important;
   line-height: 1.2 !important;
 }
 
 .marketingCampusPicker .campusLocationButton {
-  min-height: 60px !important;
-  margin-top: 9px !important;
-  padding: 10px !important;
-  border-radius: 12px !important;
+  min-height: 44px !important;
+  margin-top: 7px !important;
+  padding: 7px 9px !important;
+  border-radius: 11px !important;
 }
 
 .marketingCampusPicker .campusLocationButton > span {
-  width: 32px !important;
-  height: 32px !important;
-  flex: 0 0 32px !important;
-}
-
-.marketingCampusPicker .campusLocationButton strong {
+  width: 28px !important;
+  height: 28px !important;
+  flex: 0 0 28px !important;
   font-size: 12px !important;
 }
 
+.marketingCampusPicker .campusLocationButton strong {
+  font-size: 10px !important;
+}
+
 .marketingCampusPicker .campusLocationButton small {
-  font-size: 9px !important;
+  font-size: 8px !important;
 }
 
 .marketingCampusPicker .campusPickerNearby,
 .marketingCampusPicker .campusPickerResults {
-  gap: 3px !important;
-  margin-top: 10px !important;
+  gap: 2px !important;
+  margin-top: 7px !important;
+}
+
+.marketingCampusPicker .campusPickerNearby > span,
+.marketingCampusPicker .campusPickerResults > span {
+  padding: 0 4px 2px !important;
+  font-size: 7px !important;
+  letter-spacing: .12em !important;
 }
 
 .marketingCampusPicker .campusPickerResults {
-  max-height: 220px !important;
+  max-height: 150px !important;
   overflow-y: auto !important;
   overscroll-behavior: contain;
-  padding-right: 3px;
+  padding-right: 2px;
 }
 
 .marketingCampusPicker .campusPickerNearby button,
 .marketingCampusPicker .campusPickerResults button {
-  min-height: 48px !important;
-  padding: 8px 9px !important;
-  border-radius: 10px !important;
+  min-height: 36px !important;
+  padding: 6px 7px !important;
+  border-radius: 9px !important;
 }
 
 .marketingCampusPicker .campusPickerNearby button strong,
 .marketingCampusPicker .campusPickerResults button strong {
-  font-size: 11px !important;
-  line-height: 1.2 !important;
+  font-size: 9px !important;
+  line-height: 1.15 !important;
 }
 
 .marketingCampusPicker .campusPickerNearby button small,
 .marketingCampusPicker .campusPickerResults button small {
-  font-size: 9px !important;
+  font-size: 7px !important;
 }
 
 .marketingCampusPicker .campusPickerNearby button > b,
 .marketingCampusPicker .campusPickerResults button > b {
-  font-size: 8px !important;
+  font-size: 7px !important;
+}
+
+.marketingCampusPicker .campusPickerHint {
+  margin: 5px 4px 1px !important;
+  color: rgba(255,255,255,.36) !important;
+  font-size: 7px !important;
+  line-height: 1.3 !important;
 }
 
 /* -------------------------------------------------------------------------- */
-/* WHY ASPIRE WALKER — normal document flow so it cannot be clipped/hidden    */
+/* CAMPUS MOTION BAND — outside Why Aspire, so it cannot be clipped           */
 /* -------------------------------------------------------------------------- */
-.marketingWhyRefined {
-  padding-bottom: 46px !important;
+.campusMotionBand {
+  position: relative;
+  width: 100%;
+  height: 128px;
+  overflow: hidden;
+  border-top: 1px solid rgba(255,255,255,.045);
+  border-bottom: 1px solid rgba(255,255,255,.055);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,194,28,.045), transparent 32rem),
+    #090806;
+  pointer-events: none;
 }
 
-.marketingWhyRefined .whyWalkerLane {
-  position: relative !important;
-  z-index: 6 !important;
-  left: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  width: 100% !important;
-  height: 126px !important;
-  margin: 28px 0 0 !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
+.campusMotionPath {
+  position: absolute;
+  left: 4.6vw;
+  right: 4.6vw;
+  bottom: 26px;
+  height: 2px;
+  opacity: .7;
+  background: repeating-linear-gradient(90deg, rgba(255,194,28,.74) 0 7px, transparent 7px 16px);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
 }
 
-.marketingWhyRefined .whyWalkPath {
-  position: absolute !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 24px !important;
-  height: 2px !important;
-  opacity: .66 !important;
-  background: repeating-linear-gradient(90deg, rgba(255,194,28,.72) 0 7px, transparent 7px 16px) !important;
+.campusMotionLabel {
+  position: absolute;
+  left: 4.6vw;
+  top: 18px;
+  color: rgba(255,194,28,.5);
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: .06em;
 }
 
-.marketingWhyRefined .whyWalkLabel {
-  position: absolute !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  color: rgba(255,194,28,.56) !important;
-}
-
-.marketingWhyRefined .whyWalker {
-  position: absolute !important;
-  left: -86px !important;
-  bottom: 20px !important;
-  width: 78px !important;
-  height: 112px !important;
-  opacity: 1 !important;
-  color: #ffc21c !important;
+.campusMotionWalker {
+  position: absolute;
+  left: -88px;
+  bottom: 22px;
+  width: 76px;
+  height: 108px;
+  color: #ffc21c;
+  opacity: 1;
+  filter: drop-shadow(0 0 16px rgba(255,194,28,.3));
   will-change: transform;
-  animation: aspireCampusWalkerGuaranteed 12s linear infinite !important;
-  animation-play-state: running !important;
-  filter: drop-shadow(0 0 16px rgba(255,194,28,.30)) !important;
+  animation: campusMotionTravel 12s linear infinite !important;
 }
 
-.marketingWhyRefined .whyWalker svg {
-  width: 100% !important;
-  height: 100% !important;
-  display: block !important;
-  overflow: visible !important;
-  animation: aspireCampusWalkerBob .56s ease-in-out infinite alternate !important;
+.campusMotionWalker svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
   transform-origin: 50% 82%;
+  animation: campusMotionBob .55s ease-in-out infinite alternate !important;
 }
 
-.marketingWhyRefined .whyWalker circle,
-.marketingWhyRefined .whyWalker rect,
-.marketingWhyRefined .whyWalker path {
+.campusMotionWalker circle,
+.campusMotionWalker rect,
+.campusMotionWalker path {
   fill: none;
   stroke: currentColor;
   stroke-width: 3.2;
@@ -170,66 +186,64 @@
   stroke-linejoin: round;
 }
 
-.marketingWhyRefined .whyWalker path:nth-of-type(2),
-.marketingWhyRefined .whyWalker path:nth-of-type(5) {
+.campusMotionWalker rect {
+  fill: rgba(255,194,28,.12);
+}
+
+.campusMotionWalker path:nth-of-type(2),
+.campusMotionWalker path:nth-of-type(5) {
   transform-box: view-box;
   transform-origin: 38px 42px;
-  animation: aspireCampusLimbForward .58s ease-in-out infinite alternate !important;
+  animation: campusMotionLimbForward .58s ease-in-out infinite alternate !important;
 }
 
-.marketingWhyRefined .whyWalker path:nth-of-type(3),
-.marketingWhyRefined .whyWalker path:nth-of-type(4) {
+.campusMotionWalker path:nth-of-type(3),
+.campusMotionWalker path:nth-of-type(4) {
   transform-box: view-box;
   transform-origin: 38px 42px;
-  animation: aspireCampusLimbBack .58s ease-in-out infinite alternate !important;
+  animation: campusMotionLimbBack .58s ease-in-out infinite alternate !important;
 }
 
-.marketingWhyRefined .whyWalker rect {
-  fill: rgba(255,194,28,.12) !important;
+@keyframes campusMotionTravel {
+  0% { transform: translate3d(0,0,0); }
+  20% { transform: translate3d(22vw,-1px,0); }
+  40% { transform: translate3d(44vw,0,0); }
+  60% { transform: translate3d(66vw,-1px,0); }
+  80% { transform: translate3d(88vw,0,0); }
+  100% { transform: translate3d(calc(100vw + 180px),-1px,0); }
 }
 
-@keyframes aspireCampusWalkerGuaranteed {
-  0%   { transform: translate3d(0,0,0); }
-  20%  { transform: translate3d(22vw,-1px,0); }
-  40%  { transform: translate3d(44vw,0,0); }
-  60%  { transform: translate3d(66vw,-1px,0); }
-  80%  { transform: translate3d(88vw,0,0); }
-  100% { transform: translate3d(calc(100vw + 170px),-1px,0); }
-}
-
-@keyframes aspireCampusWalkerBob {
+@keyframes campusMotionBob {
   from { transform: translateY(0) rotate(-1deg); }
-  to   { transform: translateY(-4px) rotate(1deg); }
+  to { transform: translateY(-4px) rotate(1deg); }
 }
 
-@keyframes aspireCampusLimbForward {
+@keyframes campusMotionLimbForward {
   from { transform: rotate(-5deg); }
-  to   { transform: rotate(8deg); }
+  to { transform: rotate(8deg); }
 }
 
-@keyframes aspireCampusLimbBack {
+@keyframes campusMotionLimbBack {
   from { transform: rotate(7deg); }
-  to   { transform: rotate(-7deg); }
+  to { transform: rotate(-7deg); }
 }
+
+/* Old nested walker is no longer used. */
+.marketingWhyRefined .whyWalkerLane { display: none !important; }
 
 @media (max-width: 900px) {
   .marketingCampusPicker,
   .marketingCampusPicker.campusPickerV2.isCompact {
-    width: 100% !important;
+    width: min(220px, 100%) !important;
   }
 
   .marketingCampusPicker .campusPickerPopover {
-    width: min(360px, calc(100vw - 28px)) !important;
+    width: min(300px, calc(100vw - 24px)) !important;
   }
 }
 
 @media (max-width: 520px) {
-  .marketingWhyRefined .whyWalkerLane {
-    height: 96px !important;
-  }
-
-  .marketingWhyRefined .whyWalker {
-    width: 62px !important;
-    height: 90px !important;
-  }
+  .campusMotionBand { height: 102px; }
+  .campusMotionWalker { width: 60px; height: 86px; }
+  .campusMotionLabel { font-size: 9px; }
 }
