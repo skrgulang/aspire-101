@@ -5,6 +5,7 @@ import type { User } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { aspireLogo } from './logo';
 import MarketingExtras from './MarketingExtras';
+import MarketingProductLife from './MarketingProductLife';
 
 const imageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
@@ -258,6 +259,7 @@ export default function MarketingHome() {
       </section>
 
       <section className="marketingProducts">
+        <MarketingProductLife />
         <div className="marketingExpandHead" data-reveal="up">
           <p>EXPLORE MORE ON ASPIRE</p>
           <h2>Everything you need.<br /><em>One campus network.</em></h2>
