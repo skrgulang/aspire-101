@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { runRequestAiSafety } from './trust';
 
 export type RequestMedia = {
   id: string;
@@ -75,6 +76,9 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
     created.push({ ...(row as RequestMedia), public_url: signed?.signedUrl });
   }
 
+  // Text is scanned when the request is created. Run again now so the final
+  // assessment includes every uploaded image before a moderator approves it.
+  await runRequestAiSafety(requestId).catch(() => undefined);
   return created;
 }
 
