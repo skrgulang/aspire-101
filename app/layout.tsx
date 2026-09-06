@@ -46,13 +46,19 @@ import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
+import { aspireLogo } from './logo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','700'], variable: '--font-display' });
 
 export const metadata: Metadata = {
   title: 'Aspire 101 — Ask campus. Feel at home.',
-  description: 'A college request network that helps students find support, make connections, and feel more at home on campus.'
+  description: 'A college request network that helps students find support, make connections, and feel more at home on campus.',
+  icons: {
+    icon: aspireLogo,
+    shortcut: aspireLogo,
+    apple: aspireLogo
+  }
 };
 
 const authLayoutPolish = `
