@@ -21,6 +21,14 @@ export type ConnectionPayment = {
   gross_amount_cents: number;
   platform_fee_cents: number;
   provider_amount_cents: number;
+  base_amount_cents: number | null;
+  requester_fee_cents: number | null;
+  provider_fee_cents: number | null;
+  tip_amount_cents: number;
+  tip_fee_cents: number;
+  customer_total_cents: number | null;
+  provider_net_cents: number | null;
+  fee_policy_version: string | null;
   status: ConnectionPaymentStatus;
   paid_at: string | null;
   released_at: string | null;
@@ -28,6 +36,27 @@ export type ConnectionPayment = {
   disputed_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type AspireFeeQuote = {
+  connectionId: string;
+  requestId: string;
+  title: string;
+  currency: string;
+  paymentMethod: 'none' | 'in_person' | 'aspire';
+  feePolicyVersion: string;
+  baseAmountCents: number;
+  requesterFeeCents: number;
+  providerFeeCents: number;
+  tipAmountCents: number;
+  customerTotalCents: number;
+  providerNetCents: number;
+  platformFeeRevenueCents: number;
+  minimumPaidOrderCents: number;
+  standardPayoutCadence: string;
+  requester: { percentBps: number; fixedCents: number; minCents: number; maxCents: number };
+  provider: { percentBps: number };
+  tips: { platformPercentBps: number };
 };
 
 export type CompletionConfirmation = {
@@ -50,7 +79,7 @@ export async function fetchConnectionPayments(connectionIds: string[]) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('connection_payments')
-    .select('id,connection_id,request_id,payer_id,payee_id,currency,gross_amount_cents,platform_fee_cents,provider_amount_cents,status,paid_at,released_at,refunded_at,disputed_at,created_at,updated_at')
+    .select('id,connection_id,request_id,payer_id,payee_id,currency,gross_amount_cents,platform_fee_cents,provider_amount_cents,base_amount_cents,requester_fee_cents,provider_fee_cents,tip_amount_cents,tip_fee_cents,customer_total_cents,provider_net_cents,fee_policy_version,status,paid_at,released_at,refunded_at,disputed_at,created_at,updated_at')
     .in('connection_id', connectionIds);
   if (error) throw error;
   return (data ?? []) as ConnectionPayment[];
@@ -65,6 +94,19 @@ export async function fetchCompletionConfirmations(connectionIds: string[]) {
     .in('connection_id', connectionIds);
   if (error) throw error;
   return (data ?? []) as CompletionConfirmation[];
+}
+
+export async function fetchAspireFeeQuote(connectionId: string) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/stripe/payment/quote', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ connectionId }),
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'Could not calculate Aspire fees.');
+  return payload as AspireFeeQuote;
 }
 
 export async function confirmConnectionCompletion(connectionId: string) {
@@ -93,7 +135,17 @@ export async function createAspireCheckout(connectionId: string) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload?.error || 'Could not start Aspire payment.');
-  return payload as { url: string; status: string; amountCents: number; platformFeeCents: number; providerAmountCents: number };
+  return payload as {
+    url: string;
+    status: string;
+    feePolicyVersion: string;
+    baseAmountCents: number;
+    requesterFeeCents: number;
+    customerTotalCents: number;
+    providerFeeCents: number;
+    providerNetCents: number;
+    tipAmountCents: number;
+  };
 }
 
 export async function releaseAspirePayment(connectionId: string) {
@@ -109,5 +161,5 @@ export async function releaseAspirePayment(connectionId: string) {
     error.code = payload?.code;
     throw error;
   }
-  return payload as { status: 'released'; transferId: string };
+  return payload as { status: 'released'; transferId: string; providerNetCents: number; feePolicyVersion: string };
 }
