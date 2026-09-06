@@ -15,7 +15,7 @@ const items: { key: AppDockTab; label: string; href: string; icon: string }[] = 
 ];
 
 export default function AppDock({ active }: { active: AppDockTab }) {
-  const [unread, setUnread] = useState(0);
+  const [hasUnread, setHasUnread] = useState(false);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -27,22 +27,22 @@ export default function AppDock({ active }: { active: AppDockTab }) {
         const { data } = await supabase.auth.getUser();
         const user = data.user;
         if (!user || !mounted) {
-          if (mounted) setUnread(0);
+          if (mounted) setHasUnread(false);
           return;
         }
 
         const notifications = await fetchNotifications(40);
         if (!mounted) return;
-        setUnread(notifications.filter((item) => !item.read_at).length);
+        setHasUnread(notifications.some((item) => !item.read_at));
 
         if (!unsubscribe) {
           unsubscribe = subscribeToNotifications(user.id, (notification) => {
             if (!mounted || notification.read_at) return;
-            setUnread((current) => current + 1);
+            setHasUnread(true);
           });
         }
       } catch {
-        if (mounted) setUnread(0);
+        if (mounted) setHasUnread(false);
       }
     }
 
@@ -60,14 +60,14 @@ export default function AppDock({ active }: { active: AppDockTab }) {
   return (
     <nav className="appDock" aria-label="Aspire app navigation">
       {items.map((item) => {
-        const hasConnectionAlert = item.key === 'connections' && unread > 0;
+        const hasConnectionAlert = item.key === 'connections' && hasUnread;
         return (
           <a
             key={item.key}
             href={item.href}
             className={`${item.key === active ? 'active' : ''} ${item.key === 'post' ? 'appDockPost' : ''}`.trim()}
             aria-current={item.key === active ? 'page' : undefined}
-            aria-label={hasConnectionAlert ? `Connections, ${unread} unread notification${unread === 1 ? '' : 's'}` : undefined}
+            aria-label={hasConnectionAlert ? 'Connections, unread activity' : undefined}
           >
             <span className="appDockIconWrap">
               <i aria-hidden="true">{item.icon}</i>
