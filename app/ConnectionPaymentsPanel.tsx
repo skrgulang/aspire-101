@@ -7,12 +7,13 @@ import type { AspireRequest } from '../lib/supabase/requests';
 import {
   confirmConnectionCompletion,
   createAspireCheckout,
+  fetchAspireFeeQuote,
   fetchCompletionConfirmations,
   fetchConnectionPayments,
   releaseAspirePayment,
   setConnectionPaymentMethod
 } from '../lib/supabase/payments';
-import type { CompletionConfirmation, ConnectionPayment } from '../lib/supabase/payments';
+import type { AspireFeeQuote, CompletionConfirmation, ConnectionPayment } from '../lib/supabase/payments';
 
 type PaymentWorkspace = {
   userId: string;
@@ -21,6 +22,7 @@ type PaymentWorkspace = {
   profiles: PublicProfile[];
   payments: ConnectionPayment[];
   completions: CompletionConfirmation[];
+  quotes: AspireFeeQuote[];
 };
 
 function money(cents: number | null | undefined, currency = 'USD') {
@@ -44,7 +46,7 @@ const paymentCopy: Record<string, { label: string; detail: string }> = {
 };
 
 export default function ConnectionPaymentsPanel() {
-  const [data, setData] = useState<PaymentWorkspace>({ userId: '', connections: [], requests: [], profiles: [], payments: [], completions: [] });
+  const [data, setData] = useState<PaymentWorkspace>({ userId: '', connections: [], requests: [], profiles: [], payments: [], completions: [], quotes: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
@@ -54,11 +56,17 @@ export default function ConnectionPaymentsPanel() {
     try {
       const base = await fetchMyConnections();
       const ids = base.connections.map((connection) => connection.id);
-      const [payments, completions] = await Promise.all([
+      const requestById = new Map(base.requests.map((request) => [request.id, request]));
+      const quoteConnections = base.connections.filter((connection) => {
+        const request = requestById.get(connection.request_id);
+        return request && ['paid_help', 'split_cost', 'buy_sell'].includes(request.kind) && Number(connection.agreed_amount_cents ?? request.amount_cents ?? 0) > 0;
+      });
+      const [payments, completions, quoteResults] = await Promise.all([
         fetchConnectionPayments(ids),
-        fetchCompletionConfirmations(ids)
+        fetchCompletionConfirmations(ids),
+        Promise.all(quoteConnections.map((connection) => fetchAspireFeeQuote(connection.id).catch(() => null)))
       ]);
-      setData({ ...base, payments, completions });
+      setData({ ...base, payments, completions, quotes: quoteResults.filter(Boolean) as AspireFeeQuote[] });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load payment activity.');
     } finally {
@@ -84,6 +92,7 @@ export default function ConnectionPaymentsPanel() {
   const requestMap = useMemo(() => new Map(data.requests.map((request) => [request.id, request])), [data.requests]);
   const profileMap = useMemo(() => new Map(data.profiles.map((profile) => [profile.id, profile])), [data.profiles]);
   const paymentMap = useMemo(() => new Map(data.payments.map((payment) => [payment.connection_id, payment])), [data.payments]);
+  const quoteMap = useMemo(() => new Map(data.quotes.map((quote) => [quote.connectionId, quote])), [data.quotes]);
   const completionMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
     data.completions.forEach((item) => {
@@ -169,6 +178,7 @@ export default function ConnectionPaymentsPanel() {
         {paidConnections.map((connection) => {
           const request = requestMap.get(connection.request_id)!;
           const payment = paymentMap.get(connection.id);
+          const quote = quoteMap.get(connection.id);
           const completionIds = completionMap.get(connection.id) ?? new Set<string>();
           const otherId = data.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
           const other = profileMap.get(otherId);
@@ -182,15 +192,41 @@ export default function ConnectionPaymentsPanel() {
           const secured = payment?.status === 'secured';
           const released = payment?.status === 'released';
           const agreedAmount = connection.agreed_amount_cents ?? request.amount_cents;
+          const baseAmount = payment?.base_amount_cents ?? quote?.baseAmountCents ?? agreedAmount;
+          const requesterFee = payment?.requester_fee_cents ?? quote?.requesterFeeCents;
+          const providerFee = payment?.provider_fee_cents ?? quote?.providerFeeCents;
+          const customerTotal = payment?.customer_total_cents ?? quote?.customerTotalCents;
+          const providerNet = payment?.provider_net_cents ?? quote?.providerNetCents;
+          const minimumOrder = quote?.minimumPaidOrderCents ?? payment?.base_amount_cents && 0;
+          const belowMinimum = quote ? quote.baseAmountCents < quote.minimumPaidOrderCents : false;
 
           return (
             <article className={`connectionPaymentCard state-${payment?.status || (payWithAspire ? 'not_started' : 'off_platform')}`} key={connection.id}>
               <div className="connectionPaymentTop">
                 <div><span>{request.category.toUpperCase()} · {payWithAspire ? 'PAY WITH ASPIRE' : 'OFF-PLATFORM PAYMENT'}</span><h3>{request.title}</h3></div>
-                <strong>{money(agreedAmount, request.currency)}</strong>
+                <strong>{money(baseAmount, request.currency)}</strong>
               </div>
 
-              <div className="connectionPaymentPerson"><i>{profileName(other).slice(0, 1).toUpperCase()}</i><span><strong>{profileName(other)}</strong><small>{isRequester ? 'Receiving money' : 'Requester'}</small></span></div>
+              <div className="connectionPaymentPerson"><i>{profileName(other).slice(0, 1).toUpperCase()}</i><span><strong>{profileName(other)}</strong><small>{isRequester ? 'Provider' : 'Requester'}</small></span></div>
+
+              {payWithAspire && requesterFee != null && providerFee != null && customerTotal != null && providerNet != null && (
+                <div className="paymentFeeBreakdown">
+                  {isRequester ? (
+                    <>
+                      <div><span>Service</span><strong>{money(baseAmount, request.currency)}</strong></div>
+                      <div><span>Aspire 101 Service Fee</span><strong>{money(requesterFee, request.currency)}</strong></div>
+                      <div className="total"><span>Total</span><strong>{money(customerTotal, request.currency)}</strong></div>
+                    </>
+                  ) : (
+                    <>
+                      <div><span>Job amount</span><strong>{money(baseAmount, request.currency)}</strong></div>
+                      <div><span>Aspire 101 Platform Fee</span><strong>−{money(providerFee, request.currency)}</strong></div>
+                      <div className="total"><span>You earn</span><strong>{money(providerNet, request.currency)}</strong></div>
+                    </>
+                  )}
+                  <small>{payment?.fee_policy_version || quote?.feePolicyVersion} · Tips carry 0% Aspire platform commission in this beta.</small>
+                </div>
+              )}
 
               {!payWithAspire ? (
                 <>
@@ -207,8 +243,12 @@ export default function ConnectionPaymentsPanel() {
               ) : (
                 <>
                   <div className={`connectionPaymentState ${payment?.status || 'notStarted'}`}>
-                    <b>{paymentState?.label || 'Payment not secured yet'}</b>
-                    <p>{paymentState?.detail || (isRequester ? 'Secure the agreed amount through Stripe after both sides confirm the connection.' : 'The requester secures the agreed amount. Finish payout setup in Profile before they pay.')}</p>
+                    <b>{paymentState?.label || (belowMinimum ? 'Below Aspire payment minimum' : 'Payment not secured yet')}</b>
+                    <p>{paymentState?.detail || (belowMinimum
+                      ? `This beta requires at least ${money(minimumOrder || 0, request.currency)} before Pay with Aspire can be used.`
+                      : isRequester
+                        ? 'Stripe charges the service amount plus the requester service fee. The provider receives the service amount minus their platform fee after completion.'
+                        : 'The requester secures the total through Stripe. Your net earnings are transferred to your connected account only after both sides mark the connection complete.')}</p>
                   </div>
 
                   <div className="paymentProgress" aria-label="Payment progress">
@@ -219,9 +259,9 @@ export default function ConnectionPaymentsPanel() {
                   </div>
 
                   <div className="connectionPaymentActions">
-                    {isRequester && canWork && (!payment || ['failed','checkout_created'].includes(payment.status)) && (
+                    {isRequester && canWork && !belowMinimum && (!payment || ['failed','checkout_created'].includes(payment.status)) && (
                       <button type="button" className="button buttonGold" onClick={() => startCheckout(connection.id)} disabled={busy === `pay-${connection.id}`}>
-                        {busy === `pay-${connection.id}` ? 'Opening Stripe…' : payment?.status === 'checkout_created' ? 'Continue payment →' : 'Secure payment →'}
+                        {busy === `pay-${connection.id}` ? 'Opening Stripe…' : payment?.status === 'checkout_created' ? `Continue payment · ${money(customerTotal, request.currency)} →` : `Secure ${money(customerTotal, request.currency)} →`}
                       </button>
                     )}
                     {isResponder && canWork && !payment && <a href="/profile">Set up payouts →</a>}
