@@ -67,16 +67,22 @@ export default function MarketingExtras() {
         </div>
 
         <div className="whyWalkerLane" aria-hidden="true">
-          <span className="whyWalkLabel">CAMPUS, IN MOTION →</span>
           <span className="whyWalkPath" />
+          <span className="whyWalkLabel">CAMPUS, IN MOTION →</span>
           <div className="whyWalker">
-            <svg viewBox="0 0 80 110" role="img">
-              <circle cx="42" cy="17" r="10" />
-              <path d="M41 29c-3 11-4 22-2 34m1-27 19 17m-20-12-18 16m18 6-15 31m16-31 20 29" />
-              <path className="whyWalkerBag" d="M54 45c9 3 12 9 10 20l-15 1-2-19z" />
+            <svg viewBox="0 0 72 104" fill="none" aria-hidden="true">
+              <g stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="40" cy="14" r="8" />
+                <path d="M38 24c-5 12-7 24-4 36l5 16" />
+                <path d="M35 38 19 53" />
+                <path d="M36 38 54 48" />
+                <path d="m39 76-15 21" />
+                <path d="m40 76 17 19" />
+                <path d="M28 31c-6 7-7 18-2 29" opacity=".72" />
+                <rect x="16" y="35" width="12" height="26" rx="4" opacity=".55" />
+              </g>
             </svg>
           </div>
-          <span className="whyWalkDot dot1" /><span className="whyWalkDot dot2" /><span className="whyWalkDot dot3" />
         </div>
       </section>
 
