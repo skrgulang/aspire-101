@@ -1,25 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
-
 const photos = [
-  'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=640',
-  'https://images.pexels.com/photos/7972533/pexels-photo-7972533.jpeg?auto=compress&cs=tinysrgb&w=640',
-  'https://images.pexels.com/photos/5965683/pexels-photo-5965683.jpeg?auto=compress&cs=tinysrgb&w=640',
-  'https://images.pexels.com/photos/6147369/pexels-photo-6147369.jpeg?auto=compress&cs=tinysrgb&w=640'
+  'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=760',
+  'https://images.pexels.com/photos/7972533/pexels-photo-7972533.jpeg?auto=compress&cs=tinysrgb&w=760',
+  'https://images.pexels.com/photos/5965683/pexels-photo-5965683.jpeg?auto=compress&cs=tinysrgb&w=760',
+  'https://images.pexels.com/photos/6147369/pexels-photo-6147369.jpeg?auto=compress&cs=tinysrgb&w=760'
 ];
 
 export default function MarketingProductLife() {
-  const [target, setTarget] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    setTarget(document.querySelector<HTMLElement>('.marketingProducts'));
-  }, []);
-
-  if (!target) return null;
-
-  return createPortal(
+  return (
     <>
       <div className="aspireProductLife" aria-hidden="true">
         <div className="aspirePhotoCloud">
@@ -56,7 +45,7 @@ export default function MarketingProductLife() {
           position: relative !important;
           isolation: isolate;
           overflow: hidden !important;
-          padding-bottom: 170px !important;
+          padding-bottom: 178px !important;
         }
         .marketingProducts::before,
         .marketingProducts::after,
@@ -70,58 +59,61 @@ export default function MarketingProductLife() {
           position: relative;
           z-index: 3;
         }
-        .marketingProductGrid { margin-top: 38px !important; }
+        .marketingProductGrid { margin-top: 42px !important; }
         .aspireProductLife {
           position: absolute;
           inset: 0;
-          z-index: 2;
+          z-index: 4;
           pointer-events: none;
           overflow: hidden;
         }
         .aspirePhotoCloud {
           position: absolute;
-          top: 58px;
-          right: max(30px, 4.6vw);
-          width: min(560px, 37vw);
-          height: 220px;
+          top: 54px;
+          right: max(34px, 4.6vw);
+          width: min(570px, 38vw);
+          height: 236px;
         }
         .aspireFloatPhoto {
           position: absolute;
           margin: 0;
           overflow: hidden;
-          border: 1px solid rgba(255,255,255,.18);
+          border: 1px solid rgba(255,255,255,.22);
           border-radius: 18px;
-          box-shadow: 0 22px 46px rgba(0,0,0,.42);
+          box-shadow: 0 24px 54px rgba(0,0,0,.48);
           background: #15120e;
-          animation: aspireRealPhotoFloat 7s ease-in-out infinite;
+          animation: aspireRealPhotoFloat 6.8s ease-in-out infinite;
         }
         .aspireFloatPhoto img {
           width: 100%;
           height: 100%;
           display: block;
           object-fit: cover;
-          filter: saturate(.92) contrast(1.03) brightness(.86);
+          filter: saturate(.95) contrast(1.05) brightness(.9);
         }
-        .aspireFloatPhoto1 { width: 150px; height: 104px; left: 4px; top: 62px; transform: rotate(-7deg); animation-delay: -1.2s; }
-        .aspireFloatPhoto2 { width: 166px; height: 114px; left: 128px; top: 12px; transform: rotate(4deg); animation-delay: -3.2s; }
-        .aspireFloatPhoto3 { width: 142px; height: 98px; left: 272px; top: 78px; transform: rotate(-3deg); animation-delay: -5s; }
-        .aspireFloatPhoto4 { width: 132px; height: 92px; right: 0; top: 26px; transform: rotate(7deg); animation-delay: -2.1s; }
+        .aspireFloatPhoto1 { width: 172px; height: 118px; left: 0; top: 78px; transform: rotate(-7deg); animation-delay: -1.2s; }
+        .aspireFloatPhoto2 { width: 188px; height: 128px; left: 138px; top: 4px; transform: rotate(4deg); animation-delay: -3.2s; }
+        .aspireFloatPhoto3 { width: 160px; height: 110px; left: 300px; top: 94px; transform: rotate(-3deg); animation-delay: -5s; }
+        .aspireFloatPhoto4 { width: 144px; height: 100px; right: 0; top: 34px; transform: rotate(7deg); animation-delay: -2.1s; }
         .aspirePhotoNote {
           position: absolute;
-          right: 16px;
-          bottom: 4px;
-          color: rgba(255,194,28,.55);
+          right: 18px;
+          bottom: 2px;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: rgba(255,194,28,.12);
+          color: rgba(255,194,28,.82);
           font-family: var(--font-display), Georgia, serif;
           font-style: italic;
-          font-size: 11px;
-          letter-spacing: .06em;
+          font-size: 12px;
+          letter-spacing: .05em;
         }
         .aspireWalkTrack {
           position: absolute;
           left: max(28px, 4.6vw);
           right: max(28px, 4.6vw);
-          bottom: 24px;
-          height: 118px;
+          bottom: 18px;
+          height: 122px;
         }
         .aspireWalkLine {
           position: absolute;
@@ -129,18 +121,18 @@ export default function MarketingProductLife() {
           right: 0;
           bottom: 24px;
           height: 2px;
-          opacity: .48;
-          background: repeating-linear-gradient(90deg, rgba(255,194,28,.75) 0 6px, transparent 6px 15px);
-          mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+          opacity: .55;
+          background: repeating-linear-gradient(90deg, rgba(255,194,28,.78) 0 7px, transparent 7px 16px);
+          mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
         }
         .aspireWalker {
           position: absolute;
-          left: -70px;
-          bottom: 22px;
-          width: 64px;
-          height: 94px;
+          left: -74px;
+          bottom: 21px;
+          width: 70px;
+          height: 102px;
           color: #ffc21c;
-          filter: drop-shadow(0 0 14px rgba(255,194,28,.28));
+          filter: drop-shadow(0 0 18px rgba(255,194,28,.35));
           animation: aspireRealCampusWalk 13s linear infinite;
         }
         .aspireWalker svg { width: 100%; height: 100%; display: block; }
@@ -148,15 +140,15 @@ export default function MarketingProductLife() {
           position: absolute;
           right: 0;
           bottom: 0;
-          color: rgba(255,194,28,.46);
+          color: rgba(255,194,28,.56);
           font-family: var(--font-display), Georgia, serif;
           font-style: italic;
-          font-size: 12px;
+          font-size: 13px;
           letter-spacing: .06em;
         }
         @keyframes aspireRealPhotoFloat {
           0%,100% { translate: 0 0; }
-          45% { translate: 0 -7px; }
+          45% { translate: 0 -8px; }
           72% { translate: -2px -2px; }
         }
         @keyframes aspireRealCampusWalk {
@@ -170,33 +162,26 @@ export default function MarketingProductLife() {
           84% { transform: translate3d(98vw,-3px,0) rotate(1deg); }
           100% { transform: translate3d(118vw,0,0) rotate(-1deg); }
         }
-        @media (max-width: 1050px) {
-          .aspirePhotoCloud { width: 370px; height: 180px; top: 72px; right: 26px; opacity: .86; }
-          .aspireFloatPhoto1 { width: 112px; height: 78px; }
-          .aspireFloatPhoto2 { width: 124px; height: 86px; left: 98px; }
-          .aspireFloatPhoto3 { width: 108px; height: 74px; left: 205px; }
-          .aspireFloatPhoto4 { width: 98px; height: 70px; }
+        @media (max-width: 1220px) {
+          .aspirePhotoCloud { width: 410px; height: 190px; top: 66px; right: 28px; }
+          .aspireFloatPhoto1 { width: 126px; height: 86px; top: 68px; }
+          .aspireFloatPhoto2 { width: 138px; height: 94px; left: 104px; }
+          .aspireFloatPhoto3 { width: 118px; height: 82px; left: 226px; top: 78px; }
+          .aspireFloatPhoto4 { width: 106px; height: 76px; }
         }
-        @media (max-width: 820px) {
-          .marketingProducts { padding-bottom: 98px !important; }
+        @media (max-width: 900px) {
+          .marketingProducts { padding-bottom: 108px !important; }
           .marketingProductGrid { margin-top: 18px !important; }
           .aspirePhotoCloud {
-            position: relative;
-            top: auto;
-            right: auto;
-            width: min(100% - 32px, 430px);
-            height: 160px;
-            margin: 150px 16px 0 auto;
+            display: none;
           }
           .aspireWalkTrack { display: none; }
-          .aspireFloatPhoto4 { display: none; }
         }
         @media (prefers-reduced-motion: reduce) {
           .aspireFloatPhoto,
           .aspireWalker { animation: none; }
         }
       `}</style>
-    </>,
-    target
+    </>
   );
 }
