@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AspireNotification,
   fetchNotifications,
@@ -64,7 +65,7 @@ export default function NotificationCenter({
 
   const unread = useMemo(() => items.filter((item) => !item.read_at).length, [items]);
 
-  async function read(item: AspireNotification) {
+  function read(item: AspireNotification) {
     if (!item.read_at) {
       setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read_at: new Date().toISOString() } : entry));
       void markNotificationRead(item.id).catch(() => undefined);
@@ -82,24 +83,14 @@ export default function NotificationCenter({
     onShowConnections();
   }
 
-  async function readAll() {
+  function readAll() {
     const now = new Date().toISOString();
     setItems((current) => current.map((item) => item.read_at ? item : { ...item, read_at: now }));
     void markAllNotificationsRead().catch(() => undefined);
   }
 
-  return (
-    <>
-      <button
-        type="button"
-        className="notificationToggle"
-        onClick={() => setOpen(true)}
-        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
-      >
-        Alerts {unread > 0 && <b className="unreadPill">{unread > 99 ? '99+' : unread}</b>}
-      </button>
-
-      {open && (
+  const drawer = open && typeof document !== 'undefined'
+    ? createPortal(
         <div className="notificationOverlay" role="presentation" onMouseDown={() => setOpen(false)}>
           <aside className="notificationPanel" role="dialog" aria-modal="true" aria-label="Notifications" onMouseDown={(event) => event.stopPropagation()}>
             <header>
@@ -122,8 +113,22 @@ export default function NotificationCenter({
               ))}
             </div>
           </aside>
-        </div>
-      )}
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <>
+      <button
+        type="button"
+        className="notificationToggle"
+        onClick={() => setOpen(true)}
+        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+      >
+        Alerts {unread > 0 && <b className="unreadPill">{unread > 99 ? '99+' : unread}</b>}
+      </button>
+      {drawer}
     </>
   );
 }
