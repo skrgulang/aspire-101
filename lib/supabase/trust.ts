@@ -150,7 +150,7 @@ export async function reviewSafetyReport(reportId: string, status: 'reviewing' |
   if (error) throw error;
 }
 
-export async function fetchRequestsForModeration(limit = 40) {
+export async function fetchRequestsForModeration(limit = 80) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('requests')
@@ -160,6 +160,16 @@ export async function fetchRequestsForModeration(limit = 40) {
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as AspireRequest[];
+}
+
+export async function reviewRequestModeration(requestId: string, decision: 'approved' | 'rejected', note?: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.rpc('moderator_review_request', {
+    p_request_id: requestId,
+    p_decision: decision,
+    p_note: note?.trim() || null
+  });
+  if (error) throw error;
 }
 
 export async function removeRequestAsModerator(requestId: string, reason: string) {
