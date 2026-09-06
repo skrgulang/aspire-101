@@ -7,6 +7,10 @@ export type RequestKind =
   | 'buy_sell'
   | 'collaboration';
 
+export type MarketIntent = 'sell' | 'wanted';
+export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair' | 'for_parts';
+export type FulfillmentMethod = 'campus_pickup' | 'shipping';
+
 export type AspireRequest = {
   id: string;
   poster_id: string;
@@ -22,6 +26,11 @@ export type AspireRequest = {
   amount_cents: number | null;
   currency: string;
   payment_method: 'aspire' | 'in_person' | 'none';
+  market_intent?: MarketIntent | null;
+  item_condition?: ItemCondition | null;
+  price_negotiable?: boolean;
+  fulfillment_method?: FulfillmentMethod | null;
+  quantity?: number;
   status: 'open' | 'matched' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
   created_at: string;
   updated_at: string;
@@ -33,6 +42,11 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
   amount_cents?: number;
   currency?: string;
   payment_method?: AspireRequest['payment_method'];
+  market_intent?: MarketIntent;
+  item_condition?: ItemCondition;
+  price_negotiable?: boolean;
+  fulfillment_method?: FulfillmentMethod;
+  quantity?: number;
 };
 
 export async function fetchOpenRequests(limit = 24) {
@@ -58,6 +72,7 @@ export async function createRequest(input: CreateRequestInput) {
   if (accessError) throw accessError;
   if (!allowed) throw new Error('Verify your school identity in Profile before posting.');
 
+  const isMarket = input.kind === 'buy_sell';
   const { data, error } = await supabase
     .from('requests')
     .insert({
@@ -71,7 +86,12 @@ export async function createRequest(input: CreateRequestInput) {
       longitude: null,
       amount_cents: input.amount_cents ?? null,
       currency: input.currency || 'USD',
-      payment_method: input.payment_method || 'none'
+      payment_method: input.payment_method || 'none',
+      market_intent: isMarket ? input.market_intent || 'sell' : null,
+      item_condition: isMarket && input.market_intent !== 'wanted' ? input.item_condition || 'good' : null,
+      price_negotiable: isMarket ? Boolean(input.price_negotiable) : false,
+      fulfillment_method: isMarket ? input.fulfillment_method || 'campus_pickup' : null,
+      quantity: isMarket ? Math.max(1, Math.min(99, input.quantity || 1)) : 1
     })
     .select('*')
     .single();
