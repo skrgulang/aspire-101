@@ -12,6 +12,7 @@ import {
   reviewRequestModeration,
   reviewSafetyReport,
   reviewSchoolVerification,
+  runRequestAiSafety,
   SafetyReportForModeration,
   SchoolVerification,
   setModeratorByEmail
@@ -30,6 +31,14 @@ function when(value: string) {
 function moderationLabel(request: AspireRequest) {
   const state = request.moderation_status || 'approved';
   return state.toUpperCase();
+}
+
+function riskLabel(request: AspireRequest) {
+  const level = request.ai_risk_level || 'unknown';
+  if (request.ai_moderation_status === 'scanning') return 'SCANNING';
+  if (request.ai_moderation_status === 'error') return 'AI UNAVAILABLE';
+  if (level === 'unknown') return 'NOT SCANNED';
+  return `${level.toUpperCase()} · ${request.ai_risk_score ?? 0}/100`;
 }
 
 export default function ModeratorConsole() {
@@ -77,6 +86,7 @@ export default function ModeratorConsole() {
   const pendingIds = useMemo(() => verifications.filter((item) => item.status === 'pending'), [verifications]);
   const openReports = useMemo(() => reports.filter((item) => item.status === 'submitted' || item.status === 'reviewing'), [reports]);
   const pendingRequests = useMemo(() => requests.filter((request) => request.moderation_status === 'pending'), [requests]);
+  const highRiskRequests = useMemo(() => pendingRequests.filter((request) => request.ai_risk_level === 'high' || request.ai_risk_level === 'critical'), [pendingRequests]);
   const activeRequests = useMemo(() => requests.filter((request) => ['open', 'matched', 'in_progress'].includes(request.status)), [requests]);
   const mediaMap = useMemo(() => {
     const map = new Map<string, RequestMedia[]>();
@@ -113,7 +123,23 @@ export default function ModeratorConsole() {
     } finally { setBusy(''); }
   }
 
+  async function scanRequest(request: AspireRequest) {
+    setBusy(`ai-${request.id}`);
+    try {
+      const result = await runRequestAiSafety(request.id);
+      setNotice(`Safety Intelligence: ${result.riskLevel.toUpperCase()} risk · ${result.riskScore}/100 · ${result.recommendedAction}.`);
+      await reload();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not run the AI safety scan. Human review is still available.');
+      await reload();
+    } finally { setBusy(''); }
+  }
+
   async function decideRequest(request: AspireRequest, decision: 'approved' | 'rejected') {
+    if (decision === 'approved' && (request.ai_risk_level === 'high' || request.ai_risk_level === 'critical')) {
+      const override = window.confirm(`Aspire Safety Intelligence marked this ${request.ai_risk_level.toUpperCase()} risk (${request.ai_risk_score ?? 0}/100). Approve anyway?`);
+      if (!override) return;
+    }
     const defaultNote = decision === 'rejected' ? 'Does not meet Aspire Community Guidelines.' : '';
     const note = decision === 'rejected' ? window.prompt('Why are you rejecting this post?', defaultNote) ?? '' : '';
     if (decision === 'rejected' && !note.trim()) return;
@@ -166,13 +192,13 @@ export default function ModeratorConsole() {
           <div>
             <span>CLOUDORA LABS, INC. · ASPIRE 101</span>
             <div className="moderatorTitleRow"><h1>Trust &amp; Safety</h1><b>{role.toUpperCase()}</b></div>
-            <p>New posts do not enter Discover until they pass the review gate. Automated policy checks block obvious abusive language first; human reviewers handle text, images, and context.</p>
+            <p>Every post stays private until a reviewer approves it. Aspire Safety Intelligence adds multimodal AI risk scoring, platform-specific scam signals, and a human override trail — it never silently publishes content.</p>
           </div>
           <a href="/profile">Back to profile →</a>
         </header>
 
         <section className="moderatorOverview" aria-label="Moderation overview">
-          <article className={pendingRequests.length ? 'attention' : ''}><span>PENDING POSTS</span><strong>{pendingRequests.length}</strong><small>Not public yet</small></article>
+          <article className={pendingRequests.length ? 'attention' : ''}><span>PENDING POSTS</span><strong>{pendingRequests.length}</strong><small>{highRiskRequests.length ? `${highRiskRequests.length} high / critical AI risk` : 'Not public yet'}</small></article>
           <article><span>PENDING IDS</span><strong>{pendingIds.length}</strong><small>Manual exceptions</small></article>
           <article className={openReports.length ? 'attention' : ''}><span>OPEN REPORTS</span><strong>{openReports.length}</strong><small>Need review</small></article>
           <article className="role"><span>YOUR ACCESS</span><strong>{role === 'admin' ? 'Admin' : 'Moderator'}</strong><small>{role === 'admin' ? 'Can manage moderators' : 'Review access only'}</small></article>
@@ -189,26 +215,40 @@ export default function ModeratorConsole() {
 
         {tab === 'requests' && (
           <section className="moderatorPanel">
-            <div className="moderatorPanelHead"><div><span>CONTENT REVIEW GATE</span><h2>Posts</h2></div><p>Pending posts and their photos are visible to the author and Trust &amp; Safety reviewers, but not to the campus Discover feed. Review the whole listing before approving it.</p></div>
+            <div className="moderatorPanelHead"><div><span>ASPIRE SAFETY INTELLIGENCE</span><h2>Posts</h2></div><p>AI scores text and submitted images, then Aspire-specific rules look for off-platform payment, credentials, prohibited goods, and scam-evasion signals. Humans still make the publication decision.</p></div>
             <div className="moderatorList">
               {!activeRequests.length && <div className="moderatorEmpty"><i>✓</i><strong>Post queue is clear.</strong><span>New submissions will appear here before they can go public.</span></div>}
               {activeRequests
                 .slice()
-                .sort((a, b) => Number(b.moderation_status === 'pending') - Number(a.moderation_status === 'pending'))
+                .sort((a, b) => {
+                  const priority = (item: AspireRequest) => item.ai_risk_level === 'critical' ? 4 : item.ai_risk_level === 'high' ? 3 : item.ai_risk_level === 'medium' ? 2 : item.moderation_status === 'pending' ? 1 : 0;
+                  return priority(b) - priority(a);
+                })
                 .map((request) => {
                   const pending = request.moderation_status === 'pending';
-                  const flags = request.moderation_flags ?? [];
+                  const ruleFlags = request.moderation_flags ?? [];
+                  const aiFlags = request.ai_policy_flags ?? [];
                   const photos = mediaMap.get(request.id) ?? [];
+                  const risk = request.ai_risk_level || 'unknown';
                   return (
-                    <article className={`moderatorRow moderatorContentRow ${pending ? 'attention' : ''}`} key={request.id}>
+                    <article className={`moderatorRow moderatorContentRow ${pending ? 'attention' : ''} risk-${risk}`} key={request.id}>
                       <div className="moderatorRowMain">
-                        <span>{moderationLabel(request)} · {request.category.toUpperCase()} · {request.kind.replace('_', ' ').toUpperCase()}</span>
+                        <div className="moderatorContentMeta">
+                          <span>{moderationLabel(request)} · {request.category.toUpperCase()} · {request.kind.replace('_', ' ').toUpperCase()}</span>
+                          <b className={`aiRiskBadge risk-${risk}`}>{riskLabel(request)}</b>
+                        </div>
                         <strong>{request.title}</strong>
                         {request.details && <p>{request.details}</p>}
                         {photos.length > 0 && <div className="moderatorMediaStrip" aria-label={`${photos.length} submitted photo${photos.length === 1 ? '' : 's'}`}>{photos.map((photo, index) => photo.public_url ? <a href={photo.public_url} target="_blank" rel="noreferrer" key={photo.id}><img src={photo.public_url} alt={`Submitted request photo ${index + 1}`} /></a> : null)}</div>}
-                        <small>{request.campus || 'Campus'} · {when(request.created_at)} · {request.status}{flags.length ? ` · AUTO FLAGS: ${flags.join(', ')}` : ''}</small>
+                        <div className="aiSafetyPanel">
+                          <div><span>AI RECOMMENDATION</span><strong>{(request.ai_recommended_action || 'review').toUpperCase()}</strong></div>
+                          <p>{request.ai_summary || 'No AI assessment yet. Run Safety Intelligence or continue with human review.'}</p>
+                          {(aiFlags.length > 0 || ruleFlags.length > 0) && <small>Signals: {[...new Set([...aiFlags, ...ruleFlags])].join(' · ')}</small>}
+                        </div>
+                        <small>{request.campus || 'Campus'} · {when(request.created_at)} · {request.status}{request.ai_last_scanned_at ? ` · AI scanned ${when(request.ai_last_scanned_at)}` : ''}</small>
                       </div>
-                      <div className="moderatorRowActions">
+                      <div className="moderatorRowActions moderatorAiActions">
+                        <button type="button" onClick={() => scanRequest(request)} disabled={busy === `ai-${request.id}`}>{busy === `ai-${request.id}` ? 'Scanning…' : request.ai_moderation_status === 'complete' ? 'Rescan AI' : 'Run AI scan'}</button>
                         {pending ? <>
                           <button type="button" className="moderatorReject" onClick={() => decideRequest(request, 'rejected')} disabled={busy === `moderate-${request.id}`}>Reject</button>
                           <button type="button" className="button buttonGold" onClick={() => decideRequest(request, 'approved')} disabled={busy === `moderate-${request.id}`}>{busy === `moderate-${request.id}` ? 'Saving…' : 'Approve ✓'}</button>
