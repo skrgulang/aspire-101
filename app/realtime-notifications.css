@@ -1,0 +1,41 @@
+.connectionsTabs .notificationToggle { margin-left: auto; gap: 7px; }
+.connectionsTabs .notificationToggle + a { margin-left: 0; }
+.unreadPill { min-width: 18px; height: 18px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 999px; background: var(--gold); color: #151109; font-size: 8px; line-height: 1; }
+
+.notificationOverlay { position: fixed; inset: 0; z-index: 150; display: flex; justify-content: flex-end; background: rgba(3,3,2,.62); backdrop-filter: blur(10px); }
+.notificationPanel { width: min(440px, 100%); height: 100%; display: grid; grid-template-rows: auto 1fr; border-left: 1px solid rgba(255,255,255,.09); background: #0d0c09; box-shadow: -30px 0 90px rgba(0,0,0,.45); }
+.notificationPanel > header { padding: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.notificationPanel > header span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .13em; }
+.notificationPanel > header h2 { margin: 5px 0 0; font-size: 28px; letter-spacing: -.04em; }
+.notificationHeaderActions { display: flex; align-items: center; gap: 8px; }
+.notificationHeaderActions button { min-height: 34px; padding: 0 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: transparent; color: #9b9387; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
+.notificationHeaderActions .notificationClose { width: 34px; padding: 0; border-radius: 50%; font-size: 18px; }
+.notificationList { overflow-y: auto; padding: 10px; }
+.notificationItem { width: 100%; padding: 14px 12px; display: grid; grid-template-columns: 34px 1fr 8px; gap: 11px; align-items: start; border: 0; border-bottom: 1px solid rgba(255,255,255,.055); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.notificationItem:hover { background: rgba(255,255,255,.025); }
+.notificationItem.unread { background: rgba(255,194,28,.035); }
+.notificationItem > i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: rgba(255,194,28,.10); color: var(--gold); font-style: normal; font-weight: 900; }
+.notificationItem strong { display: block; font-size: 11px; }
+.notificationItem p { margin: 5px 0 0; color: #8a8276; font-size: 9px; line-height: 1.5; }
+.notificationItem span { display: block; margin-top: 7px; color: #5f594f; font-size: 8px; }
+.notificationItem > b { width: 7px; height: 7px; margin-top: 5px; border-radius: 50%; background: var(--gold); }
+.notificationEmpty { margin: 0; padding: 54px 24px; color: #746d62; text-align: center; font-size: 10px; line-height: 1.55; }
+.notificationEmpty strong { display: block; color: #e7e1d7; font-size: 18px; }
+.notificationEmpty p { margin-bottom: 0; }
+
+.connectionChat header .chatPresence { margin-top: 7px; display: inline-flex; align-items: center; gap: 6px; color: #746d61; font-size: 8px; font-weight: 750; }
+.connectionChat header .chatPresence i { width: 7px; height: 7px; border-radius: 50%; background: #514c43; box-shadow: 0 0 0 3px rgba(255,255,255,.025); }
+.connectionChat header .chatPresence.online { color: #82d8a7; }
+.connectionChat header .chatPresence.online i { background: #67d695; box-shadow: 0 0 0 3px rgba(103,214,149,.09), 0 0 14px rgba(103,214,149,.28); }
+.typingIndicator { width: fit-content; display: flex; align-items: center; gap: 4px; padding: 9px 11px; border: 1px solid rgba(255,255,255,.065); border-radius: 14px 14px 14px 4px; background: rgba(255,255,255,.02); color: #716a60; }
+.typingIndicator > i { width: 4px; height: 4px; border-radius: 50%; background: #8e8679; animation: aspireTyping 1s ease-in-out infinite; }
+.typingIndicator > i:nth-child(2) { animation-delay: .12s; }
+.typingIndicator > i:nth-child(3) { animation-delay: .24s; }
+.typingIndicator span { margin-left: 4px; font-size: 8px; }
+@keyframes aspireTyping { 0%, 70%, 100% { transform: translateY(0); opacity: .45; } 35% { transform: translateY(-3px); opacity: 1; } }
+
+@media (max-width: 560px) {
+  .connectionsTabs .notificationToggle { margin-left: 0; }
+  .connectionsTabs .notificationToggle + a { display: none; }
+  .notificationPanel { width: 100%; }
+}
