@@ -4,7 +4,7 @@ import {
   getAuthenticatedUser,
   getSupabaseServiceClient,
   stripeFormRequest
-} from '../../../../../../lib/server/aspireServer';
+} from '../../../../../lib/server/aspireServer';
 
 type StripeRefund = { id: string; status?: string | null };
 
