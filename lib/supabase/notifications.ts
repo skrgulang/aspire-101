@@ -16,6 +16,12 @@ export type AspireNotification = {
   created_at: string;
 };
 
+function notifyUnreadStateChanged() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('aspire-notifications-changed'));
+  }
+}
+
 export async function fetchNotifications(limit = 40) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
@@ -33,6 +39,7 @@ export async function markNotificationRead(notificationId: number) {
     p_notification_id: notificationId
   });
   if (error) throw error;
+  notifyUnreadStateChanged();
   return Boolean(data);
 }
 
@@ -40,6 +47,7 @@ export async function markAllNotificationsRead() {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('mark_all_notifications_read');
   if (error) throw error;
+  notifyUnreadStateChanged();
   return Number(data || 0);
 }
 
