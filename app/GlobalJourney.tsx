@@ -3,12 +3,10 @@
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 
 const chapters = [
-  ['nearby', 'EXPLORE'],
-  ['how', 'CONNECT'],
-  ['features', 'STORIES'],
-  ['home', 'TOGETHER'],
-  ['trust', 'TRUST'],
-  ['ambassadors', 'CAMPUS'],
+  ['features', 'EXPLORE'],
+  ['why-aspire', 'WHY ASPIRE'],
+  ['safety', 'TRUST'],
+  ['campuses', 'CAMPUS'],
   ['faq', 'Q&A']
 ] as const;
 
@@ -26,7 +24,7 @@ export default function GlobalJourney() {
 
     const update = () => {
       frame = 0;
-      const start = document.getElementById('nearby');
+      const start = document.getElementById('features');
       const end = document.getElementById('faq');
       if (!start || !end) return;
 
@@ -80,8 +78,7 @@ export default function GlobalJourney() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  const walkerStarted = chapter >= 1;
-  const firstFriend = chapter >= 2;
+  const firstFriend = chapter >= 1;
   const secondFriend = chapter >= 3;
 
   return (
@@ -105,7 +102,7 @@ export default function GlobalJourney() {
         />
       </svg>
 
-      <div className={walkerStarted ? 'globalWalker show' : 'globalWalker'} aria-hidden="true">
+      <div className={visible ? 'globalWalker show' : 'globalWalker'} aria-hidden="true">
         <span className="globalWalkerShadow" />
         <span className="globalWalkerHead" />
         <span className="globalWalkerBody" />
