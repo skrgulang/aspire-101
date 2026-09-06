@@ -14,6 +14,7 @@ export type RequestMedia = {
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 const maxFileSize = 8 * 1024 * 1024;
 const maxFiles = 5;
+const signedUrlSeconds = 60 * 60;
 
 function extensionFor(file: File) {
   const nameExt = file.name.split('.').pop()?.toLowerCase();
@@ -53,7 +54,6 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
       .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
     if (uploadError) throw uploadError;
 
-    const { data: publicData } = supabase.storage.from('request-media').getPublicUrl(path);
     const { data: row, error: rowError } = await supabase
       .from('request_media')
       .insert({
@@ -70,7 +70,9 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
       await supabase.storage.from('request-media').remove([path]).catch(() => undefined);
       throw rowError;
     }
-    created.push({ ...(row as RequestMedia), public_url: publicData.publicUrl });
+
+    const { data: signed } = await supabase.storage.from('request-media').createSignedUrl(path, signedUrlSeconds);
+    created.push({ ...(row as RequestMedia), public_url: signed?.signedUrl });
   }
 
   return created;
@@ -85,8 +87,17 @@ export async function fetchRequestMedia(requestIds: string[]) {
     .in('request_id', requestIds)
     .order('sort_order');
   if (error) throw error;
-  return (data ?? []).map((row) => {
-    const { data: publicData } = supabase.storage.from('request-media').getPublicUrl(row.storage_path);
-    return { ...row, public_url: publicData.publicUrl } as RequestMedia;
-  });
+
+  const rows = (data ?? []) as RequestMedia[];
+  if (!rows.length) return rows;
+
+  const { data: signed, error: signedError } = await supabase.storage
+    .from('request-media')
+    .createSignedUrls(rows.map((row) => row.storage_path), signedUrlSeconds);
+  if (signedError) throw signedError;
+
+  return rows.map((row, index) => ({
+    ...row,
+    public_url: signed?.[index]?.signedUrl
+  }));
 }
