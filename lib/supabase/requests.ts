@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { runRequestAiSafety } from './trust';
 
 export type RequestKind =
   | 'community'
@@ -126,6 +127,10 @@ export async function createRequest(input: CreateRequestInput) {
     .single();
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
+
+  // The request stays pending regardless of scan availability. Text is scanned now;
+  // requestMedia runs a second multimodal scan after any images finish uploading.
+  await runRequestAiSafety(data.id).catch(() => undefined);
   return data as AspireRequest;
 }
 
