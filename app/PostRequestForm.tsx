@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { createRequest, RequestKind } from '../lib/supabase/requests';
 import { acknowledgeSafety } from '../lib/supabase/safety';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
+import PaymentFeePreview from './PaymentFeePreview';
 
 type CategoryOption = {
   label: string;
@@ -243,21 +244,24 @@ export default function PostRequestForm() {
         </div>
 
         {moneyInvolved && (
-          <div className="postMoney postMoneyFresh">
-            <label className="postField">
-              <span>{kind === 'paid_help' ? 'What are you offering?' : 'Amount / share'}</span>
-              <div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" /></div>
-            </label>
-            <label className="postField">
-              <span>Payment plan</span>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'none' | 'in_person' | 'aspire')}>
-                <option value="none">Agree after you connect</option>
-                <option value="aspire">Pay with Aspire</option>
-                <option value="in_person">Pay in person</option>
-              </select>
-              <small>{paymentMethod === 'aspire' ? 'After a mutual connection, Stripe secures the agreed amount. Release happens after both people mark complete.' : 'Off-platform payments are not processed or protected as Aspire payments.'}</small>
-            </label>
-          </div>
+          <>
+            <div className="postMoney postMoneyFresh">
+              <label className="postField">
+                <span>{kind === 'paid_help' ? 'What are you offering?' : 'Amount / share'}</span>
+                <div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" /></div>
+              </label>
+              <label className="postField">
+                <span>Payment plan</span>
+                <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'none' | 'in_person' | 'aspire')}>
+                  <option value="none">Agree after you connect</option>
+                  <option value="aspire">Pay with Aspire</option>
+                  <option value="in_person">Pay in person</option>
+                </select>
+                <small>{paymentMethod === 'aspire' ? 'After a mutual connection, Stripe secures the agreed amount. Release happens after both people mark complete.' : 'Off-platform payments are not processed or protected as Aspire payments.'}</small>
+              </label>
+            </div>
+            {paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}
+          </>
         )}
 
         <label className="postField postDetailsField">
