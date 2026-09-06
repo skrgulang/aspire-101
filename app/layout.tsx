@@ -46,6 +46,7 @@ import './connection-payments.css';
 import './ecosystem-v2.css';
 import './discover-ecosystem.css';
 import './ecosystem-polish.css';
+import './market-discover.css';
 import './walker-fix.css';
 import './updates.css';
 import type { Metadata } from 'next';
