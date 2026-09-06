@@ -11,6 +11,9 @@ export type MarketIntent = 'sell' | 'wanted';
 export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair' | 'for_parts';
 export type FulfillmentMethod = 'campus_pickup' | 'shipping';
 export type RequestModerationStatus = 'pending' | 'approved' | 'rejected' | 'blocked';
+export type AiModerationStatus = 'not_scanned' | 'scanning' | 'complete' | 'error';
+export type AiRiskLevel = 'unknown' | 'low' | 'medium' | 'high' | 'critical';
+export type AiRecommendedAction = 'approve' | 'review' | 'block';
 
 export type AspireRequest = {
   id: string;
@@ -38,6 +41,13 @@ export type AspireRequest = {
   moderated_by?: string | null;
   moderated_at?: string | null;
   moderation_reason?: string | null;
+  ai_moderation_status?: AiModerationStatus;
+  ai_risk_level?: AiRiskLevel;
+  ai_risk_score?: number | null;
+  ai_recommended_action?: AiRecommendedAction;
+  ai_policy_flags?: string[];
+  ai_summary?: string | null;
+  ai_last_scanned_at?: string | null;
   status: 'open' | 'matched' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
   created_at: string;
   updated_at: string;
