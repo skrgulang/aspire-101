@@ -30,15 +30,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You are not part of this connection.' }, { status: 403 });
     }
 
-    const [{ data: payment }, { data: completions }] = await Promise.all([
+    const [{ data: payment }, { data: completions }, { data: marketOrder }, { data: openDispute }] = await Promise.all([
       supabase.from('connection_payments').select('*').eq('connection_id', connectionId).maybeSingle(),
-      supabase.from('connection_completion_confirmations').select('user_id').eq('connection_id', connectionId)
+      supabase.from('connection_completion_confirmations').select('user_id').eq('connection_id', connectionId),
+      supabase.from('market_orders').select('*').eq('connection_id', connectionId).maybeSingle(),
+      supabase.from('market_disputes').select('id,status,market_order_id').in('status', ['open', 'under_review'])
     ]);
 
     if (!payment || payment.status !== 'secured') throw new Error('PAYMENT_NOT_SECURED');
-    const completedIds = new Set((completions ?? []).map((row) => row.user_id as string));
-    if (!completedIds.has(connection.requester_id) || !completedIds.has(connection.responder_id)) {
-      throw new Error('COMPLETION_NOT_READY');
+
+    if (marketOrder) {
+      if (user.id !== marketOrder.buyer_id && user.id !== marketOrder.seller_id) {
+        return NextResponse.json({ error: 'You are not part of this marketplace order.' }, { status: 403 });
+      }
+      const disputeForOrder = (openDispute ?? []).some((row) => row.market_order_id === marketOrder.id);
+      if (disputeForOrder || marketOrder.status === 'disputed') {
+        return NextResponse.json({ error: 'Seller payout is paused while this order is under review.', code: 'MARKET_ORDER_DISPUTED' }, { status: 409 });
+      }
+      if (marketOrder.status !== 'release_ready' || !marketOrder.seller_handed_off_at || !marketOrder.buyer_received_at) {
+        return NextResponse.json({ error: 'Buyer receipt confirmation is required before the seller payout can be released.', code: 'MARKET_RECEIPT_NOT_CONFIRMED' }, { status: 409 });
+      }
+    } else {
+      const completedIds = new Set((completions ?? []).map((row) => row.user_id as string));
+      if (!completedIds.has(connection.requester_id) || !completedIds.has(connection.responder_id)) {
+        throw new Error('COMPLETION_NOT_READY');
+      }
     }
 
     const { data: payoutAccount } = await supabase
@@ -62,7 +78,7 @@ export async function POST(request: Request) {
 
     const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
     if (!Number.isInteger(providerNet) || providerNet <= 0) {
-      return NextResponse.json({ error: 'No provider payout is due for this payment.' }, { status: 409 });
+      return NextResponse.json({ error: 'No seller/provider payout is due for this payment.' }, { status: 409 });
     }
 
     const transfer = await stripeFormRequest<StripeTransfer>('/v1/transfers', {
@@ -74,6 +90,7 @@ export async function POST(request: Request) {
       'metadata[aspire_payment_id]': payment.id,
       'metadata[connection_id]': connection.id,
       'metadata[request_id]': payment.request_id,
+      'metadata[transaction_type]': marketOrder ? 'marketplace' : 'connection',
       'metadata[fee_policy_version]': payment.fee_policy_version || 'legacy_v0'
     }, { idempotencyKey: `aspire_release_${payment.id}` });
 
@@ -89,11 +106,13 @@ export async function POST(request: Request) {
 
     await Promise.all([
       supabase.from('connections').update({ status: 'completed', updated_at: now }).eq('id', connection.id),
-      supabase.from('requests').update({ status: 'completed', updated_at: now }).eq('id', connection.request_id)
+      supabase.from('requests').update({ status: 'completed', updated_at: now }).eq('id', connection.request_id),
+      marketOrder ? supabase.from('market_orders').update({ status: 'released', released_at: now, updated_at: now }).eq('id', marketOrder.id) : Promise.resolve()
     ]);
 
     return NextResponse.json({
       status: 'released',
+      transactionType: marketOrder ? 'marketplace' : 'connection',
       transferId: transfer.id,
       providerNetCents: providerNet,
       feePolicyVersion: payment.fee_policy_version || 'legacy_v0'
