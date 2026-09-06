@@ -40,6 +40,16 @@ export type SafetyReportForModeration = {
   reviewed_by: string | null;
 };
 
+export type RequestAiSafetyResult = {
+  ok: boolean;
+  requestId: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  riskScore: number;
+  recommendedAction: 'approve' | 'review' | 'block';
+  flags: string[];
+  imageCount: number;
+};
+
 export async function fetchMySchoolVerification() {
   const supabase = getSupabaseBrowserClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -160,6 +170,26 @@ export async function fetchRequestsForModeration(limit = 80) {
     .limit(limit);
   if (error) throw error;
   return (data ?? []) as AspireRequest[];
+}
+
+export async function runRequestAiSafety(requestId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sign in again to run the safety scan.');
+
+  const response = await fetch('/api/moderation/request', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ requestId })
+  });
+  const payload = await response.json().catch(() => ({})) as RequestAiSafetyResult & { error?: string; code?: string };
+  if (!response.ok) throw new Error(payload.error || 'Aspire Safety Intelligence could not finish the scan.');
+  return payload as RequestAiSafetyResult;
 }
 
 export async function reviewRequestModeration(requestId: string, decision: 'approved' | 'rejected', note?: string) {
