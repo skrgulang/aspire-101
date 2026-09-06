@@ -49,6 +49,7 @@ export default function NotificationCenter({
     setLoading(true);
     void fetchNotifications()
       .then((next) => { if (active) setItems(next); })
+      .catch(() => { if (active) setItems([]); })
       .finally(() => { if (active) setLoading(false); });
 
     const unsubscribe = subscribeToNotifications(userId, (notification) => {
