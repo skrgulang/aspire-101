@@ -197,7 +197,7 @@ export default function ConnectionPaymentsPanel() {
           const providerFee = payment?.provider_fee_cents ?? quote?.providerFeeCents;
           const customerTotal = payment?.customer_total_cents ?? quote?.customerTotalCents;
           const providerNet = payment?.provider_net_cents ?? quote?.providerNetCents;
-          const minimumOrder = quote?.minimumPaidOrderCents ?? payment?.base_amount_cents && 0;
+          const minimumOrder = quote?.minimumPaidOrderCents ?? 0;
           const belowMinimum = quote ? quote.baseAmountCents < quote.minimumPaidOrderCents : false;
 
           return (
@@ -245,7 +245,7 @@ export default function ConnectionPaymentsPanel() {
                   <div className={`connectionPaymentState ${payment?.status || 'notStarted'}`}>
                     <b>{paymentState?.label || (belowMinimum ? 'Below Aspire payment minimum' : 'Payment not secured yet')}</b>
                     <p>{paymentState?.detail || (belowMinimum
-                      ? `This beta requires at least ${money(minimumOrder || 0, request.currency)} before Pay with Aspire can be used.`
+                      ? `This beta requires at least ${money(minimumOrder, request.currency)} before Pay with Aspire can be used.`
                       : isRequester
                         ? 'Stripe charges the service amount plus the requester service fee. The provider receives the service amount minus their platform fee after completion.'
                         : 'The requester secures the total through Stripe. Your net earnings are transferred to your connected account only after both sides mark the connection complete.')}</p>
