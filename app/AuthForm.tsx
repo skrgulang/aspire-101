@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
-import { findNearestUniversity, NearestUniversity, resolveUniversityByEmail, University } from '../lib/supabase/universities';
+import { findNearbyUniversities, NearbyUniversity, resolveUniversityByEmail, University } from '../lib/supabase/universities';
 import { aspireLogo } from './logo';
 import AppLoader from './AppLoader';
 
@@ -37,8 +37,13 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [detectedCampus, setDetectedCampus] = useState<University | null>(null);
   const [checkingSchool, setCheckingSchool] = useState(false);
   const [schoolChecked, setSchoolChecked] = useState(false);
-  const [nearestCampus, setNearestCampus] = useState<NearestUniversity | null>(null);
-  const [locationRequested, setLocationRequested] = useState(false);
+  const [nearbyCampuses, setNearbyCampuses] = useState<NearbyUniversity[]>([]);
+  const [locating, setLocating] = useState(false);
+  const [locationMessage, setLocationMessage] = useState('');
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaBusy, setMfaBusy] = useState(false);
 
   useEffect(() => {
     const safeNext = readSafeNextPath();
@@ -68,22 +73,6 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         if (!active) return;
         setDetectedCampus(campus);
         setSchoolChecked(true);
-
-        if (campus && !locationRequested && 'geolocation' in navigator) {
-          setLocationRequested(true);
-          navigator.geolocation.getCurrentPosition(
-            async (position) => {
-              try {
-                const nearest = await findNearestUniversity(position.coords.latitude, position.coords.longitude);
-                if (active) setNearestCampus(nearest);
-              } catch {
-                // Location is a contextual suggestion only; signup must still work without it.
-              }
-            },
-            () => undefined,
-            { enableHighAccuracy: false, timeout: 6500, maximumAge: 300000 }
-          );
-        }
       } catch {
         if (active) {
           setDetectedCampus(null);
@@ -98,7 +87,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [email, signup, locationRequested]);
+  }, [email, signup]);
 
   function enterCircle(path: string) {
     setEntering(true);
@@ -106,6 +95,53 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       router.push(path);
       router.refresh();
     }, 320);
+  }
+
+  async function findCampusesNearMe() {
+    if (!('geolocation' in navigator)) {
+      setLocationMessage('Location is not available in this browser.');
+      return;
+    }
+    setLocating(true);
+    setLocationMessage('');
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const campuses = await findNearbyUniversities(position.coords.latitude, position.coords.longitude, { limit: 5, maxMiles: 250 });
+          setNearbyCampuses(campuses);
+          setLocationMessage(campuses.length ? 'Nearby campus context found.' : 'No supported campuses found nearby yet.');
+        } catch (error) {
+          setLocationMessage(error instanceof Error ? error.message : 'Could not find nearby campuses.');
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        setLocationMessage('Location was not shared. Your school email still determines your home campus.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  }
+
+  async function checkMfaBeforeEntering() {
+    const supabase = getSupabaseBrowserClient();
+    const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aalError) throw aalError;
+    if (aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2') {
+      const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+      if (factorsError) throw factorsError;
+      const available = [
+        ...(factors?.totp ?? []),
+        ...(factors?.phone ?? [])
+      ].find((factor) => factor.status === 'verified');
+      if (!available) throw new Error('Two-step verification is enabled, but no verified factor could be found.');
+      setMfaFactorId(available.id);
+      setMfaRequired(true);
+      setMessage('Enter your verification code to finish signing in.');
+      return true;
+    }
+    return false;
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -132,9 +168,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           email: cleanEmail,
           password,
           options: {
-            data: {
-              display_name: name.trim()
-            },
+            data: { display_name: name.trim() },
             emailRedirectTo: `${window.location.origin}/login?confirmed=1${nextQuery}`
           }
         });
@@ -147,12 +181,10 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           setMessage(`Check ${cleanEmail} to confirm your ${campus.short_name} account.`);
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password
-        });
+        const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
         if (error) throw error;
-        enterCircle(nextPath);
+        const needsMfa = await checkMfaBeforeEntering();
+        if (!needsMfa) enterCircle(nextPath);
       }
     } catch (error) {
       const text = error instanceof Error ? error.message : 'Something went wrong. Try again.';
@@ -164,19 +196,39 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     }
   }
 
+  async function verifyMfa(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (mfaCode.trim().length < 6 || !mfaFactorId) return;
+    setMfaBusy(true);
+    setMessage('');
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (challengeError) throw challengeError;
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challenge.id,
+        code: mfaCode.trim()
+      });
+      if (verifyError) throw verifyError;
+      enterCircle(nextPath);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'That verification code did not work.');
+    } finally {
+      setMfaBusy(false);
+    }
+  }
+
   async function resendConfirmation() {
     if (!email.trim()) return;
     setResending(true);
     setMessage('');
-
     try {
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email.trim().toLowerCase(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/login?confirmed=1&next=${encodeURIComponent('/campus')}`
-        }
+        options: { emailRedirectTo: `${window.location.origin}/login?confirmed=1&next=${encodeURIComponent('/campus')}` }
       });
       if (error) throw error;
       setMessage('Confirmation email sent. Check your inbox and spam folder.');
@@ -201,22 +253,17 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       ? 'This .edu campus is not supported yet.'
       : 'Aspire accounts require a university .edu email.'
     : '';
-  const nearSupportedCampus = nearestCampus && nearestCampus.distance_miles <= 50 ? nearestCampus : null;
-  const visitingCampus = nearSupportedCampus && detectedCampus && nearSupportedCampus.id !== detectedCampus.id ? nearSupportedCampus : null;
-  const visualCampusName = detectedCampus?.short_name ?? 'Your campus';
-  const visualCampusImage = detectedCampus?.cover_image || imageFallback;
+  const nearbyPrimary = nearbyCampuses[0] ?? null;
+  const visitingCampus = nearbyPrimary && detectedCampus && nearbyPrimary.id !== detectedCampus.id ? nearbyPrimary : null;
+  const visualCampusName = detectedCampus?.short_name ?? nearbyPrimary?.short_name ?? 'Your campus';
+  const visualCampusImage = detectedCampus?.cover_image || nearbyPrimary?.cover_image || imageFallback;
 
-  if (entering) {
-    return <AppLoader label="Entering your circle…" detail="Opening Community Circle" />;
-  }
+  if (entering) return <AppLoader label="Entering your circle…" detail="Opening Community Circle" />;
 
   return (
     <main className={`authPage ${signup ? 'authSignup' : 'authLogin'}`}>
       <header className="authTopbar">
-        <a className="authBrand" href="/" aria-label="Aspire 101 home">
-          <img src={aspireLogo} alt="" />
-          <span>Aspire 101</span>
-        </a>
+        <a className="authBrand" href="/" aria-label="Aspire 101 home"><img src={aspireLogo} alt="" /><span>Aspire 101</span></a>
         <a className="authBack" href="/">Back to home ↗</a>
       </header>
 
@@ -227,105 +274,79 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             <p className="eyebrow">{signup ? 'YOUR CAMPUS STARTS HERE' : 'WELCOME BACK'}</p>
             <h1>{signup ? <>Your school email.<br /><em>Your real campus.</em></> : <>Your campus<br /><em>is still moving.</em></>}</h1>
           </div>
-
           <figure className="authCampusPhoto">
             <img src={visualCampusImage} alt={`${visualCampusName} campus`} onError={handleImageError} />
-            <span className="authPhotoShade" />
-            <figcaption>{visualCampusName}</figcaption>
+            <span className="authPhotoShade" /><figcaption>{visualCampusName}</figcaption>
           </figure>
-
-          <figure className="authPeoplePhoto">
-            <img src={peopleImage} alt="College students together" onError={handleImageError} />
-            <span className="authPhotoShade" />
-          </figure>
-
+          <figure className="authPeoplePhoto"><img src={peopleImage} alt="College students together" onError={handleImageError} /><span className="authPhotoShade" /></figure>
           <div className="authSticker authStickerSchool">SAME CAMPUS.<br />REAL PEOPLE. ✓</div>
           <div className="authSticker authStickerAsk">JUST POST IT<br />ON ASPIRE ↗</div>
-          <div className="authDoodle" aria-hidden="true">school email in<br />campus circle opens ↗</div>
-
-          <div className="authRequestBits" aria-hidden="true">
-            <span>Ride to IND Friday?</span>
-            <span>Math 55 tonight?</span>
-            <span>Valorant duo?</span>
-          </div>
+          <div className="authDoodle" aria-hidden="true">home campus verified<br />nearby campus optional ↗</div>
+          <div className="authRequestBits" aria-hidden="true"><span>Ride to IND Friday?</span><span>Math 55 tonight?</span><span>Valorant duo?</span></div>
         </div>
 
-        <form className="authCard" onSubmit={submit}>
-          <div className="authCardTop">
-            <div>
-              <span>{signup ? 'JOIN ASPIRE' : 'SIGN IN'}</span>
-              <h2>{signup ? 'Find your campus.' : 'Good to see you.'}</h2>
+        {mfaRequired ? (
+          <form className="authCard authMfaCard" onSubmit={verifyMfa}>
+            <div className="authCardTop">
+              <div><span>SECOND STEP</span><h2>Verification code.</h2></div>
+              <button type="button" className="authMfaBack" onClick={() => { setMfaRequired(false); setMfaCode(''); }}>Back</button>
             </div>
-            <a href={switchHref}>{signup ? 'Sign in' : 'Sign up'} ↗</a>
-          </div>
-
-          {signup && (
+            <div className="authMfaSeal">02</div>
+            <p className="authMfaIntro">Your password was correct. Enter the code from your enrolled authenticator or phone factor to finish signing in.</p>
             <label>
-              <span>Name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required />
+              <span>6-digit code</span>
+              <input className="authMfaInput" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="000000" autoFocus />
             </label>
-          )}
-
-          <label>
-            <span>{signup ? 'University email' : 'Email'}</span>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={signup ? 'you@university.edu' : 'you@example.com'} autoComplete="email" required />
-          </label>
-
-          {signup && (
-            <div className={`authSchoolDetection ${detectedCampus ? 'isDetected' : schoolChecked ? 'isUnsupported' : ''}`} aria-live="polite">
-              {checkingSchool && <span className="authDetecting"><i /> Checking school…</span>}
-              {!checkingSchool && detectedCampus && (
-                <div className="authDetectedSchool">
-                  <span>SCHOOL DETECTED</span>
-                  <strong>{detectedCampus.name} ✓</strong>
-                  <small>{detectedCampus.city}{detectedCampus.state ? `, ${detectedCampus.state}` : ''} · confirmed after you verify this email</small>
-                </div>
-              )}
-              {!checkingSchool && schoolChecked && !detectedCampus && unsupportedMessage && (
-                <div className="authUnsupportedSchool"><span>NOT AVAILABLE</span><strong>{unsupportedMessage}</strong></div>
-              )}
-              {detectedCampus && nearSupportedCampus && !visitingCampus && (
-                <div className="authNearbyCampus">● You appear to be near {nearSupportedCampus.short_name}</div>
-              )}
-              {detectedCampus && visitingCampus && (
-                <div className="authNearbyCampus isVisiting">● You appear to be near {visitingCampus.short_name}. Your home campus will still be {detectedCampus.short_name}.</div>
-              )}
+            <button className="button buttonGold authSubmit" type="submit" disabled={mfaBusy || mfaCode.length < 6}>{mfaBusy ? 'Verifying…' : 'Verify + enter →'}</button>
+            {message && <p className="authMessage" role="status">{message}</p>}
+            <div className="authTrustRow"><span>Password ✓</span><span>Second factor</span><span>AAL2 security</span></div>
+          </form>
+        ) : (
+          <form className="authCard" onSubmit={submit}>
+            <div className="authCardTop">
+              <div><span>{signup ? 'JOIN ASPIRE' : 'SIGN IN'}</span><h2>{signup ? 'Find your campus.' : 'Good to see you.'}</h2></div>
+              <a href={switchHref}>{signup ? 'Sign in' : 'Sign up'} ↗</a>
             </div>
-          )}
 
-          <label>
-            <span>Password</span>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} autoComplete={signup ? 'new-password' : 'current-password'} required />
-          </label>
+            {signup && <label><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required /></label>}
+            <label><span>{signup ? 'University email' : 'Email'}</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={signup ? 'you@university.edu' : 'you@example.com'} autoComplete="email" required /></label>
 
-          {!signup && (
-            <div className="authUtilityRow">
-              <span>Can’t get in?</span>
-              <a href={recoveryHref}>Forgot password?</a>
-            </div>
-          )}
+            {signup && (
+              <div className={`authSchoolDetection ${detectedCampus ? 'isDetected' : schoolChecked ? 'isUnsupported' : ''}`} aria-live="polite">
+                {checkingSchool && <span className="authDetecting"><i /> Checking school…</span>}
+                {!checkingSchool && detectedCampus && (
+                  <div className="authDetectedSchool"><span>HOME CAMPUS DETECTED</span><strong>{detectedCampus.name} ✓</strong><small>{detectedCampus.city}{detectedCampus.state ? `, ${detectedCampus.state}` : ''} · confirmed after you verify this email</small></div>
+                )}
+                {!checkingSchool && schoolChecked && !detectedCampus && unsupportedMessage && <div className="authUnsupportedSchool"><span>NOT AVAILABLE</span><strong>{unsupportedMessage}</strong></div>}
 
-          <button className="button buttonGold authSubmit" type="submit" disabled={busy || (signup && checkingSchool)}>
-            {busy ? (signup ? 'Creating account…' : 'Signing in…') : signup ? 'Create school account →' : 'Enter Community Circle →'}
-          </button>
+                {detectedCampus && (
+                  <button className="authFindNearby" type="button" onClick={findCampusesNearMe} disabled={locating}>
+                    <span>◎</span><div><strong>{locating ? 'Finding nearby campuses…' : 'Find campuses near me'}</strong><small>Optional · your home campus never changes</small></div><b>→</b>
+                  </button>
+                )}
+                {locationMessage && <p className="authLocationMessage">{locationMessage}</p>}
+                {nearbyCampuses.length > 0 && (
+                  <div className="authNearbyList">
+                    {nearbyCampuses.slice(0, 3).map((campus) => (
+                      <div key={campus.id}><span>● {campus.short_name}</span><b>{campus.distance_miles < 10 ? campus.distance_miles.toFixed(1) : Math.round(campus.distance_miles)} mi</b></div>
+                    ))}
+                  </div>
+                )}
+                {detectedCampus && visitingCampus && <div className="authNearbyCampus isVisiting">VISITING CONTEXT · Near {visitingCampus.short_name}. Your verified home campus remains {detectedCampus.short_name}.</div>}
+              </div>
+            )}
 
-          {pendingConfirmation && (
-            <div className="authEmailActions">
-              <button type="button" onClick={resendConfirmation} disabled={resending}>
-                {resending ? 'Sending…' : 'Resend confirmation'}
-              </button>
-              <a href={recoveryHref}>I already had an account</a>
-            </div>
-          )}
+            <label><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} autoComplete={signup ? 'new-password' : 'current-password'} required /></label>
+            {!signup && <div className="authUtilityRow"><span>Two-step verification runs automatically if enabled.</span><a href={recoveryHref}>Forgot password?</a></div>}
 
-          {message && <p className="authMessage" role="status">{message}</p>}
+            <button className="button buttonGold authSubmit" type="submit" disabled={busy || (signup && checkingSchool)}>{busy ? (signup ? 'Creating account…' : 'Signing in…') : signup ? 'Create school account →' : 'Continue securely →'}</button>
 
-          <div className="authTrustRow" aria-label="Aspire trust features">
-            <span>School email required</span><span>Mutual connect</span><span>Report + block</span>
-          </div>
-
-          <p className="authLegal">By continuing, you agree to Aspire 101&apos;s <a href="/terms">Terms</a>, <a href="/guidelines">Guidelines</a>, and <a href="/privacy">Privacy Policy</a>.</p>
-        </form>
+            {pendingConfirmation && <div className="authEmailActions"><button type="button" onClick={resendConfirmation} disabled={resending}>{resending ? 'Sending…' : 'Resend confirmation'}</button><a href={recoveryHref}>I already had an account</a></div>}
+            {message && <p className="authMessage" role="status">{message}</p>}
+            <div className="authTrustRow" aria-label="Aspire trust features"><span>School email</span><span>Optional MFA</span><span>Report + block</span></div>
+            <p className="authLegal">By continuing, you agree to Aspire 101&apos;s <a href="/terms">Terms</a>, <a href="/guidelines">Guidelines</a>, and <a href="/privacy">Privacy Policy</a>.</p>
+          </form>
+        )}
       </section>
     </main>
   );
