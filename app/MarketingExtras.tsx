@@ -28,6 +28,29 @@ const whyRows = [
   { old: 'Context disappears', aspire: 'History builds trust', icon: '↗', note: 'Connections become your Circle' }
 ];
 
+function CampusWalkerBand() {
+  return (
+    <div className="campusMotionBand" aria-hidden="true">
+      <span className="campusMotionLabel">CAMPUS, IN MOTION →</span>
+      <span className="campusMotionPath" />
+      <div className="campusMotionWalker">
+        <svg viewBox="0 0 72 104" fill="none" aria-hidden="true">
+          <g stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="40" cy="14" r="8" />
+            <path d="M38 24c-5 12-7 24-4 36l5 16" />
+            <path d="M35 38 19 53" />
+            <path d="M36 38 54 48" />
+            <path d="m39 76-15 21" />
+            <path d="m40 76 17 19" />
+            <path d="M28 31c-6 7-7 18-2 29" opacity=".72" />
+            <rect x="16" y="35" width="12" height="26" rx="4" opacity=".55" />
+          </g>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 export default function MarketingExtras() {
   return (
     <>
@@ -65,26 +88,9 @@ export default function MarketingExtras() {
             <div className="whyIdentityStamp"><span>HOME CAMPUS</span><strong>VERIFIED ✓</strong><small>Location adds context. It never rewrites who you are.</small></div>
           </div>
         </div>
-
-        <div className="whyWalkerLane" aria-hidden="true">
-          <span className="whyWalkPath" />
-          <span className="whyWalkLabel">CAMPUS, IN MOTION →</span>
-          <div className="whyWalker">
-            <svg viewBox="0 0 72 104" fill="none" aria-hidden="true">
-              <g stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="40" cy="14" r="8" />
-                <path d="M38 24c-5 12-7 24-4 36l5 16" />
-                <path d="M35 38 19 53" />
-                <path d="M36 38 54 48" />
-                <path d="m39 76-15 21" />
-                <path d="m40 76 17 19" />
-                <path d="M28 31c-6 7-7 18-2 29" opacity=".72" />
-                <rect x="16" y="35" width="12" height="26" rx="4" opacity=".55" />
-              </g>
-            </svg>
-          </div>
-        </div>
       </section>
+
+      <CampusWalkerBand />
 
       <section className="marketingSafetyStage" id="safety">
         <div className="safetyBackdrop" aria-hidden="true" />
