@@ -47,6 +47,30 @@ function profileName(profile?: PublicProfile) {
   return profile?.display_name || profile?.full_name || profile?.name || 'Aspire student';
 }
 
+function safeAvatarUrl(profile?: PublicProfile) {
+  const raw = profile?.avatar_url?.trim();
+  const configuredOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  if (!raw || !configuredOrigin) return '';
+  try {
+    const avatar = new URL(raw);
+    const supabase = new URL(configuredOrigin);
+    const validPath = avatar.pathname.startsWith('/storage/v1/object/public/avatars/');
+    return avatar.origin === supabase.origin && validPath ? avatar.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function ProfileAvatarView({ profile, className }: { profile?: PublicProfile; className: string }) {
+  const url = safeAvatarUrl(profile);
+  const name = profileName(profile);
+  return (
+    <div className={`${className}${url ? ' hasPhoto' : ''}`} aria-hidden="true">
+      {url ? <img src={url} alt="" loading="lazy" referrerPolicy="no-referrer" /> : name.slice(0, 1).toUpperCase()}
+    </div>
+  );
+}
+
 function money(request?: AspireRequest) {
   if (!request) return '';
   if (request.kind === 'community') return 'Community help';
@@ -371,7 +395,7 @@ export default function ConnectionsHub() {
                     const profile = inboxProfiles.get(response.responder_id);
                     return (
                       <div className="responseRow" key={response.id}>
-                        <div className="responseAvatar">{profileName(profile).slice(0, 1).toUpperCase()}</div>
+                        <ProfileAvatarView profile={profile} className="responseAvatar" />
                         <div className="responseCopy">
                           <strong>{profileName(profile)}</strong>
                           <span>{profile?.school || 'Student'} · {response.status}</span>
@@ -419,7 +443,7 @@ export default function ConnectionsHub() {
                 </div>
                 <h2>{request?.title || 'Aspire connection'}</h2>
                 <div className="connectionPerson">
-                  <i>{profileName(other).slice(0, 1).toUpperCase()}</i>
+                  <ProfileAvatarView profile={other} className="connectionPersonAvatar" />
                   <div><strong>{profileName(other)}</strong><span>{other?.school || request?.campus || 'Campus'}</span></div>
                 </div>
                 <div className="connectionChecks">
@@ -508,7 +532,7 @@ export default function ConnectionsHub() {
             const unreadCount = unread[entry.connection_id] || 0;
             return (
               <article className="circleCard" key={entry.connection_id}>
-                <div className="circleAvatar">{profileName(other).slice(0, 1).toUpperCase()}</div>
+                <ProfileAvatarView profile={other} className="circleAvatar" />
                 <div className="circleCopy">
                   <span>MY CIRCLE · {other?.school || request?.campus || 'Campus'}</span>
                   <h2>{profileName(other)}</h2>
@@ -534,10 +558,13 @@ export default function ConnectionsHub() {
           <div className="connectionChatOverlay" role="dialog" aria-modal="true" aria-label="Private connection chat">
             <section className="connectionChat">
               <header>
-                <div>
-                  <span>{fromCircle ? 'MY CIRCLE · REAL-TIME CHAT' : 'PRIVATE CONNECTION · LIVE'}</span>
-                  <strong>{profileName(other)} · {request?.title || 'Aspire chat'}</strong>
-                  <small className={`chatPresence ${otherOnline ? 'online' : ''}`}><i />{otherOnline ? 'Online now' : 'Offline'}</small>
+                <div className="chatHeaderIdentity">
+                  <ProfileAvatarView profile={other} className="chatHeaderAvatar" />
+                  <div>
+                    <span>{fromCircle ? 'MY CIRCLE · REAL-TIME CHAT' : 'PRIVATE CONNECTION · LIVE'}</span>
+                    <strong>{profileName(other)} · {request?.title || 'Aspire chat'}</strong>
+                    <small className={`chatPresence ${otherOnline ? 'online' : ''}`}><i />{otherOnline ? 'Online now' : 'Offline'}</small>
+                  </div>
                 </div>
                 <button type="button" onClick={closeChat} aria-label="Close chat">×</button>
               </header>
@@ -548,12 +575,26 @@ export default function ConnectionsHub() {
                 {!messages.length && (
                   <div className="chatEmpty"><strong>You&apos;re connected.</strong><p>Start with the details that matter: where, when, what, and how much if money is involved.</p></div>
                 )}
-                {messages.map((message) => (
-                  <div key={message.id} className={message.sender_id === connectionData.userId ? 'chatBubble mine' : 'chatBubble'}>
-                    <p>{message.body}</p>
-                    <small>{new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</small>
-                  </div>
-                ))}
+                {messages.map((message) => {
+                  const mine = message.sender_id === connectionData.userId;
+                  if (mine) {
+                    return (
+                      <div key={message.id} className="chatBubble mine">
+                        <p>{message.body}</p>
+                        <small>{new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</small>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="chatMessageRow" key={message.id}>
+                      <ProfileAvatarView profile={other} className="chatMessageAvatar" />
+                      <div className="chatBubble">
+                        <p>{message.body}</p>
+                        <small>{new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</small>
+                      </div>
+                    </div>
+                  );
+                })}
                 {otherTyping && (
                   <div className="typingIndicator" aria-live="polite"><i /><i /><i /><span>{profileName(other)} is typing</span></div>
                 )}
