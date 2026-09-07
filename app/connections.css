@@ -32,7 +32,9 @@
 .status-matched, .status-in_progress { background: rgba(79,198,135,.09); color: #7fdaa8; }
 .responseList { display: grid; gap: 8px; margin-top: 20px; padding-top: 17px; border-top: 1px solid rgba(255,255,255,.07); }
 .responseRow { display: grid; grid-template-columns: 38px 1fr auto; gap: 12px; align-items: center; padding: 12px 13px; border: 1px solid rgba(255,255,255,.06); border-radius: 15px; background: rgba(255,255,255,.015); }
-.responseAvatar, .connectionPerson i { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: var(--gold); color: #151109; font-style: normal; font-weight: 900; }
+.responseAvatar, .connectionPersonAvatar { width: 38px; height: 38px; display: grid; place-items: center; overflow: hidden; border-radius: 12px; background: var(--gold); color: #151109; font-style: normal; font-weight: 900; }
+.responseAvatar img, .connectionPersonAvatar img, .circleAvatar img, .chatHeaderAvatar img, .chatMessageAvatar img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.responseAvatar.hasPhoto, .connectionPersonAvatar.hasPhoto, .circleAvatar.hasPhoto, .chatHeaderAvatar.hasPhoto, .chatMessageAvatar.hasPhoto { background: #17150f; color: transparent; }
 .responseCopy strong { display: block; font-size: 11px; }
 .responseCopy span { display: block; margin-top: 2px; color: #6f685d; font-size: 8px; }
 .responseCopy p { margin: 6px 0 0; color: #a49c8f; font-size: 10px; }
@@ -58,6 +60,8 @@
 .connectionsEmpty p { color: #777064; }
 .connectionsEmpty .button { margin-top: 10px; }
 
+.circleAvatar { width: 52px; height: 52px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(255,194,28,.2); border-radius: 17px; background: var(--gold); color: #151109; font-size: 17px; font-weight: 900; }
+
 .connectionsLoading { min-height: 70vh; display: grid; place-content: center; text-align: center; }
 .connectionsLoading span { width: 35px; height: 35px; justify-self: center; border: 2px solid rgba(255,255,255,.11); border-top-color: var(--gold); border-radius: 50%; animation: postSpin .8s linear infinite; }
 .connectionsLoading p { color: #766f64; font-size: 11px; }
@@ -65,16 +69,22 @@
 .connectionChatOverlay { position: fixed; inset: 0; z-index: 130; display: grid; place-items: center; padding: 22px; background: rgba(3,3,2,.78); backdrop-filter: blur(14px); }
 .connectionChat { width: min(680px, 100%); height: min(720px, 88vh); display: grid; grid-template-rows: auto auto 1fr auto; overflow: hidden; border: 1px solid rgba(255,255,255,.10); border-radius: 27px; background: #0e0d09; box-shadow: 0 40px 120px rgba(0,0,0,.58); }
 .connectionChat header { padding: 20px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,.07); }
+.chatHeaderIdentity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.chatHeaderIdentity > div:last-child { min-width: 0; }
+.chatHeaderAvatar { width: 44px; height: 44px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(255,194,28,.2); border-radius: 14px; background: var(--gold); color: #151109; font-size: 14px; font-weight: 900; }
 .connectionChat header span { display: block; color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .13em; }
 .connectionChat header strong { display: block; margin-top: 5px; font-size: 15px; }
-.connectionChat header button { width: 34px; height: 34px; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; background: transparent; color: #8c8477; cursor: pointer; }
+.connectionChat header button { width: 34px; height: 34px; flex: 0 0 auto; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; background: transparent; color: #8c8477; cursor: pointer; }
 .chatSafetyBar { padding: 11px 22px; border-bottom: 1px solid rgba(255,194,28,.10); background: rgba(255,194,28,.045); color: #887f70; font-size: 9px; line-height: 1.45; }
 .chatSafetyBar a { color: var(--gold); font-weight: 800; }
 .chatMessages { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
 .chatEmpty { margin: auto; max-width: 360px; text-align: center; }
 .chatEmpty strong { font-size: 22px; }
 .chatEmpty p { color: #756e63; font-size: 10px; line-height: 1.55; }
+.chatMessageRow { max-width: 82%; align-self: flex-start; display: flex; align-items: flex-end; gap: 8px; }
+.chatMessageAvatar { width: 28px; height: 28px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden; border-radius: 9px; background: var(--gold); color: #151109; font-size: 9px; font-weight: 900; }
 .chatBubble { max-width: 75%; align-self: flex-start; padding: 11px 13px; border: 1px solid rgba(255,255,255,.08); border-radius: 15px 15px 15px 4px; background: rgba(255,255,255,.025); }
+.chatMessageRow .chatBubble { max-width: none; align-self: auto; }
 .chatBubble.mine { align-self: flex-end; border-radius: 15px 15px 4px 15px; background: var(--gold); color: #151109; }
 .chatBubble p { margin: 0; font-size: 11px; line-height: 1.5; }
 .chatBubble small { display: block; margin-top: 5px; color: #6e675d; font-size: 7px; }
@@ -100,4 +110,6 @@
   .connectionChatOverlay { padding: 0; }
   .connectionChat { height: 100vh; border-radius: 0; }
   .chatBubble { max-width: 88%; }
+  .chatMessageRow { max-width: 92%; }
+  .chatHeaderAvatar { width: 40px; height: 40px; border-radius: 13px; }
 }
