@@ -122,6 +122,7 @@ export default function PaymentConnectRow({ phoneVerified, schoolVerified }: { p
       <div>
         <strong>{loading ? 'Checking payments…' : state.title}</strong>
         <span>{loading ? 'Syncing Stripe status' : state.detail}</span>
+        <a className="paymentMoneyLink" href="/money">View Aspire Money →</a>
         {message && <small className="paymentConnectMessage" role="status">{message}</small>}
       </div>
       <button type="button" onClick={openStripe} disabled={loading || busy}>
