@@ -25,6 +25,17 @@ export type SchoolVerification = {
 };
 
 export type AppRole = 'member' | 'moderator' | 'admin';
+export type EnforcementState = 'active' | 'restricted' | 'suspended';
+
+export type UserEnforcementState = {
+  user_id: string;
+  state: EnforcementState;
+  reason: string | null;
+  set_by: string | null;
+  set_at: string;
+  expires_at: string | null;
+  updated_at: string;
+};
 
 export type SafetyReportForModeration = {
   id: string;
@@ -58,13 +69,7 @@ export async function fetchMySchoolVerification() {
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in.');
-
-  const { data, error } = await supabase
-    .from('school_verifications')
-    .select('*')
-    .eq('user_id', authData.user.id)
-    .maybeSingle();
-
+  const { data, error } = await supabase.from('school_verifications').select('*').eq('user_id', authData.user.id).maybeSingle();
   if (error) throw error;
   return (data ?? null) as SchoolVerification | null;
 }
@@ -74,26 +79,19 @@ export async function submitSchoolVerification(school: string, studentId: string
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in.');
-
   const cleanSchool = school.trim();
   const cleanId = studentId.trim();
   if (cleanId.length < 3) throw new Error('Enter your school ID.');
-
-  const { data, error } = await supabase
-    .from('school_verifications')
-    .upsert({
-      user_id: authData.user.id,
-      school: cleanSchool,
-      student_id: cleanId,
-      status: 'pending',
-      verification_method: 'manual_id',
-      verification_provider: 'aspire',
-      provider_verification_id: null,
-      provider_status: 'pending_manual_review'
-    }, { onConflict: 'user_id' })
-    .select('*')
-    .single();
-
+  const { data, error } = await supabase.from('school_verifications').upsert({
+    user_id: authData.user.id,
+    school: cleanSchool,
+    student_id: cleanId,
+    status: 'pending',
+    verification_method: 'manual_id',
+    verification_provider: 'aspire',
+    provider_verification_id: null,
+    provider_status: 'pending_manual_review'
+  }, { onConflict: 'user_id' }).select('*').single();
   if (error) {
     if (error.code === '23505') throw new Error('That school ID is already connected to another Aspire account.');
     throw error;
@@ -113,7 +111,6 @@ export async function fetchMyRole(): Promise<AppRole> {
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!authData.user) return 'member';
-
   const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', authData.user.id).maybeSingle();
   if (error) throw error;
   return ((data?.role as AppRole | undefined) ?? 'member');
@@ -147,14 +144,28 @@ export async function reviewSafetyReport(reportId: string, status: 'reviewing' |
 
 export async function fetchRequestsForModeration(limit = 80) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('requests')
-    .select('*')
-    .in('status', ['open', 'matched', 'in_progress'])
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  const { data, error } = await supabase.from('requests').select('*').in('status', ['open', 'matched', 'in_progress']).order('created_at', { ascending: false }).limit(limit);
   if (error) throw error;
   return (data ?? []) as AspireRequest[];
+}
+
+export async function fetchEnforcementStates(userIds: string[]) {
+  if (!userIds.length) return [] as UserEnforcementState[];
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.from('user_enforcement_states').select('*').in('user_id', [...new Set(userIds)]);
+  if (error) throw error;
+  return (data ?? []) as UserEnforcementState[];
+}
+
+export async function setUserEnforcement(userId: string, state: EnforcementState, reason?: string, expiresAt?: string | null) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.rpc('moderator_set_user_enforcement', {
+    p_user_id: userId,
+    p_state: state,
+    p_reason: reason?.trim() || null,
+    p_expires_at: expiresAt || null
+  });
+  if (error) throw error;
 }
 
 export async function runRequestAiSafety(requestId: string) {
@@ -163,7 +174,6 @@ export async function runRequestAiSafety(requestId: string) {
   if (sessionError) throw sessionError;
   const token = sessionData.session?.access_token;
   if (!token) throw new Error('Sign in again to run the safety scan.');
-
   const response = await fetch('/api/moderation/request', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
