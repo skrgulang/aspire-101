@@ -3,6 +3,7 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  AspireAgentError,
   AspireAgentResponse,
   markAspireAgentOutcome,
   runAspireAgent,
@@ -14,6 +15,7 @@ const quickPrompts = [
   'Get to the airport tomorrow',
   'Find a study partner',
   'Sell something on campus',
+  'Buy something and get it delivered',
   'I need help moving',
   'Find a project teammate'
 ];
@@ -28,6 +30,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [agentUnavailable, setAgentUnavailable] = useState(false);
   const [result, setResult] = useState<AspireAgentResponse | null>(null);
 
   async function run(event?: FormEvent<HTMLFormElement>) {
@@ -36,11 +39,17 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
     if (clean.length < 3) return setError('Tell Aspire what you are trying to make happen.');
     setBusy(true);
     setError('');
+    setAgentUnavailable(false);
     try {
       const next = await runAspireAgent(clean, campusId);
       setResult(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Aspire Agent could not finish that plan.');
+      if (err instanceof AspireAgentError && err.code === 'AI_NOT_CONFIGURED') {
+        setAgentUnavailable(true);
+        setError('Aspire Agent is temporarily unavailable. You can still browse campus or create a request manually.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Aspire Agent could not finish that plan.');
+      }
     } finally {
       setBusy(false);
     }
@@ -50,6 +59,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
     setMessage(value);
     setResult(null);
     setError('');
+    setAgentUnavailable(false);
   }
 
   function openMatches() {
@@ -95,12 +105,19 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
 
       {!result && <div className="aspireAgentQuick"><span>TRY</span>{quickPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => usePrompt(prompt)}>{prompt}</button>)}</div>}
       {error && <p className="aspireAgentError" role="alert">{error}</p>}
+      {agentUnavailable && (
+        <div className="aspireAgentFallback" aria-label="Aspire Agent fallback actions">
+          <div><b>Keep moving without AI.</b><span>Your campus network still works while Aspire Agent is unavailable.</span></div>
+          <a href="/discover">Browse campus →</a>
+          <a href="/post">Create manually ↗</a>
+        </div>
+      )}
 
       {result && (
         <div className={`aspireAgentResult status-${result.status}`}>
           <div className="aspireAgentResultTop">
             <span><i>✦</i> ASPIRE UNDERSTOOD</span>
-            <button type="button" onClick={() => { setResult(null); setError(''); }}>Start over</button>
+            <button type="button" onClick={() => { setResult(null); setError(''); setAgentUnavailable(false); }}>Start over</button>
           </div>
           <p className="aspireAgentVoice">{result.assistantMessage}</p>
 
