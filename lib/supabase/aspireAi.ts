@@ -3,6 +3,8 @@ import type { ItemCondition, MarketIntent, RequestKind } from './requests';
 
 export type AspireAgentAction = 'join_existing' | 'create_request' | 'explore' | 'need_details';
 export type AspireAgentOutcome = 'planned' | 'opened_match' | 'drafted_post' | 'posted' | 'connected' | 'completed' | 'dismissed';
+export type AspireAgentMode = 'action' | 'platform_help' | 'account_help';
+export type AspireAgentLink = { label: string; href: string };
 
 export class AspireAgentError extends Error {
   code?: string;
@@ -47,12 +49,14 @@ export type AspireAgentMatch = {
 
 export type AspireAgentResponse = {
   ok: boolean;
+  mode?: AspireAgentMode;
   sessionId: string | null;
   status: 'ready' | 'needs_details' | 'blocked';
   assistantMessage: string;
   campus?: { id: string; name: string; shortName: string };
   plan: AspireAgentPlan | null;
   matches: AspireAgentMatch[];
+  links?: AspireAgentLink[];
 };
 
 export type AspireAgentDraftEnvelope = {
@@ -70,21 +74,41 @@ export type AspireAgentMatchEnvelope = {
 const draftKey = 'aspire-agent-draft';
 const matchKey = 'aspire-agent-matches';
 
-export async function runAspireAgent(message: string, campusId?: string | null) {
+function looksLikePlatformQuestion(message: string) {
+  const value = message.toLowerCase().trim();
+  const questionLanguage = /(^|\s)(what|how|why|where|when|can|could|does|do|is|are|will|should)(\s|$)|\?/i.test(value);
+  const platformSubject = /\b(aspire|aspire protected|protection|refund|payout|service fee|fees|marketplace rules|moderation|pending review|my circle|verification|verified|profile photo|profile picture|avatar|payment protection|seller payout|provider payout)\b/i.test(value);
+  const personalStatus = /\b(where|why|status|what).{0,35}\b(my )?(payment|payout|refund|post|money)\b/i.test(value);
+  const explicitPlatformHow = /\bhow does (aspire|protected|marketplace|delivery|refund|payout|moderation|verification)\b/i.test(value);
+  return personalStatus || explicitPlatformHow || (questionLanguage && platformSubject);
+}
+
+async function authToken() {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   const token = data.session?.access_token;
   if (!token) throw new AspireAgentError('Sign in again to use Aspire Agent.', 'AUTH_REQUIRED');
+  return token;
+}
 
-  const response = await fetch('/api/ai/agent', {
+export async function runAspireAgent(message: string, campusId?: string | null) {
+  const token = await authToken();
+  const trimmed = message.trim();
+  const platformQuestion = looksLikePlatformQuestion(trimmed);
+  const endpoint = platformQuestion ? '/api/ai/platform-help' : '/api/ai/agent';
+  const body = platformQuestion
+    ? { question: trimmed }
+    : { message: trimmed, campusId: campusId || undefined };
+
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: message.trim(), campusId: campusId || undefined })
+    body: JSON.stringify(body)
   });
   const payload = await response.json().catch(() => ({})) as AspireAgentResponse & { error?: string; code?: string };
   if (!response.ok) {
-    throw new AspireAgentError(payload.error || 'Aspire Agent could not finish that plan.', payload.code);
+    throw new AspireAgentError(payload.error || 'Aspire Agent could not finish that request.', payload.code);
   }
   return payload as AspireAgentResponse;
 }
