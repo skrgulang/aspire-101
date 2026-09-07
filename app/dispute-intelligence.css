@@ -1,0 +1,35 @@
+.disputeAiLauncher { position: fixed; z-index: 49; right: 22px; bottom: 24px; min-height: 42px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid rgba(255,194,28,.18); border-radius: 14px; background: rgba(12,12,10,.94); color: #c6b263; box-shadow: 0 14px 45px rgba(0,0,0,.35); font-size: 8px; font-weight: 900; cursor: pointer; }
+.disputeAiLauncher i { font-style: normal; color: var(--gold); }
+.disputeAiLauncher b { min-width: 19px; height: 19px; display: grid; place-items: center; border-radius: 999px; background: var(--gold); color: #151207; font-size: 7px; }
+.disputeAiOverlay { position: fixed; z-index: 110; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.74); backdrop-filter: blur(12px); }
+.disputeAiModal { position: relative; width: min(900px,100%); max-height: 88vh; overflow-y: auto; padding: 23px; border: 1px solid rgba(255,255,255,.08); border-radius: 27px; background: #0a0a08; box-shadow: 0 32px 110px rgba(0,0,0,.6); }
+.disputeAiClose { position: absolute; right: 15px; top: 15px; width: 31px; height: 31px; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; background: rgba(255,255,255,.02); color: #81786d; font-size: 17px; cursor: pointer; }
+.disputeAiModal header { max-width: 700px; }
+.disputeAiModal header > span { color: #baa55d; font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.disputeAiModal header h2 { margin: 6px 0 4px; color: #eee8df; font-size: 31px; letter-spacing: -.04em; }
+.disputeAiModal header p { margin: 0; color: #81796f; font-size: 9px; line-height: 1.5; }
+.disputeAiControls { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin-top: 16px; }
+.disputeAiControls label { display: grid; gap: 5px; }
+.disputeAiControls label span { color: #665f56; font-size: 7px; font-weight: 900; letter-spacing: .1em; }
+.disputeAiControls select { min-height: 39px; padding: 0 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 11px; background: #0d0d0a; color: #b9b0a4; font-size: 9px; }
+.disputeAiCaseMeta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.disputeAiCaseMeta span { min-height: 27px; display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid rgba(255,255,255,.07); border-radius: 9px; color: #91887d; font-size: 8px; text-transform: capitalize; }
+.disputeAiCaseMeta b { color: #625b53; font-size: 6px; letter-spacing: .08em; }
+.disputeAiError { color: #d28c8c; font-size: 8px; }
+.disputeAiEmpty { min-height: 160px; display: grid; place-items: center; align-content: center; gap: 8px; color: #82796e; }
+.disputeAiEmpty b { width: 35px; height: 35px; display: grid; place-items: center; border: 1px solid rgba(255,194,28,.15); border-radius: 50%; color: #b29e57; }
+.disputeAiEmpty strong { font-size: 10px; }
+.disputeAiBrief { margin-top: 15px; padding: 15px; border: 1px solid rgba(255,194,28,.1); border-radius: 16px; background: rgba(255,194,28,.018); }
+.disputeAiBriefHead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.disputeAiBriefHead span { color: #b8a35a; font-size: 7px; font-weight: 900; letter-spacing: .1em; }
+.disputeAiBriefHead b { color: #827865; font-size: 7px; }
+.disputeAiBrief > p { margin: 8px 0 0; color: #aaa196; font-size: 9px; line-height: 1.55; }
+.disputeAiColumns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.disputeAiColumns article,.disputeAiList { display: grid; gap: 4px; padding: 10px; border: 1px solid rgba(255,255,255,.07); border-radius: 11px; background: rgba(0,0,0,.16); }
+.disputeAiColumns strong,.disputeAiList strong { color: #a89355; font-size: 7px; letter-spacing: .04em; }
+.disputeAiColumns span,.disputeAiList span { color: #7f776d; font-size: 8px; line-height: 1.45; }
+.disputeAiList { margin-top: 8px; }
+.disputeAiList.caution { border-color: rgba(255,194,28,.12); }
+.disputeAiList.next { border-color: rgba(92,189,127,.12); }
+.disputeAiBrief > small { display: block; margin-top: 9px; color: #5f5951; font-size: 7px; line-height: 1.45; }
+@media (max-width: 680px) { .disputeAiLauncher { right: 14px; bottom: 92px; } .disputeAiOverlay { padding: 8px; align-items: end; } .disputeAiModal { padding: 18px 14px; border-radius: 22px; } .disputeAiControls,.disputeAiColumns { grid-template-columns: 1fr; } }

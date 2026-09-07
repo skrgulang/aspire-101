@@ -1,14 +1,18 @@
 import DiscoverRequestsV2 from '../DiscoverRequestsV2';
+import AspireMatchStrip from '../AspireMatchStrip';
+import AspireAgentLauncher from '../AspireAgentLauncher';
 import AppDock from '../AppDock';
 
 export default function DiscoverPage() {
-  return (
+  return <>
     <main className="postPage discoverPage">
       <div className="postPageGlow" aria-hidden="true" />
       <div className="discoverShell shell">
+        <AspireMatchStrip />
         <DiscoverRequestsV2 />
       </div>
       <AppDock active="discover" />
     </main>
-  );
+    <AspireAgentLauncher />
+  </>;
 }

@@ -1,0 +1,19 @@
+.campusPulseAi { margin: 0 22px 22px; padding: 17px; border: 1px solid rgba(255,255,255,.075); border-radius: 19px; background: rgba(255,255,255,.018); }
+.campusPulseAiHead { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.campusPulseAiHead > div { display: grid; gap: 4px; }
+.campusPulseAiHead span { color: #b7a156; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
+.campusPulseAiHead strong { color: #d8d0c5; font-size: 11px; }
+.campusPulseAiHead button { min-height: 32px; padding: 0 10px; border: 1px solid rgba(255,194,28,.15); border-radius: 10px; background: rgba(255,194,28,.035); color: #b9a65f; font-size: 7px; font-weight: 800; cursor: pointer; }
+.campusPulseAiHead button:disabled { opacity: .55; cursor: wait; }
+.campusPulseAi > p { margin: 10px 0 0; color: #756e65; font-size: 8px; line-height: 1.5; }
+.campusPulseAi .campusPulseError { color: #d48d8d; }
+.campusPulseBody h3 { margin: 13px 0 4px; color: #f0ebe3; font-size: 20px; letter-spacing: -.035em; }
+.campusPulseBody > p { margin: 0; color: #938b80; font-size: 9px; line-height: 1.55; }
+.campusPulseSignals { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; margin-top: 12px; }
+.campusPulseSignals article { display: grid; grid-template-columns: auto 1fr auto; gap: 5px 7px; padding: 10px; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; background: rgba(0,0,0,.15); }
+.campusPulseSignals article > span { color: #bca85f; font-size: 11px; }
+.campusPulseSignals strong { color: #aaa195; font-size: 8px; }
+.campusPulseSignals b { color: #ded5c8; font-size: 12px; }
+.campusPulseSignals small { grid-column: 2 / 4; color: #686158; font-size: 7px; line-height: 1.4; }
+.campusPulseWatch { display: block; margin-top: 10px; color: #766d61; font-size: 7px; line-height: 1.45; letter-spacing: .03em; }
+@media (max-width: 640px) { .campusPulseAi { margin: 0 12px 12px; padding: 14px; } .campusPulseAiHead { align-items: flex-start; flex-direction: column; } .campusPulseSignals { grid-template-columns: 1fr; } }

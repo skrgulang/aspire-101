@@ -1,0 +1,31 @@
+.connectionCopilot { margin-top: 14px; padding: 18px; border: 1px solid rgba(255,194,28,.12); border-radius: 20px; background: linear-gradient(135deg,rgba(255,194,28,.03),rgba(255,255,255,.012)); }
+.connectionCopilotHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.connectionCopilotHead > div { max-width: 720px; }
+.connectionCopilotHead span { color: #b9a45b; font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.connectionCopilotHead h2 { margin: 5px 0 3px; color: #ece6dd; font-size: 23px; letter-spacing: -.035em; }
+.connectionCopilotHead p { margin: 0; color: #7e766d; font-size: 8px; line-height: 1.5; }
+.connectionCopilotHead > b { padding: 6px 8px; border: 1px solid rgba(255,194,28,.12); border-radius: 999px; color: #9d8c52; font-size: 6px; letter-spacing: .1em; }
+.connectionCopilotControls { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 10px; margin-top: 14px; }
+.connectionCopilotControls label { display: grid; gap: 5px; }
+.connectionCopilotControls label > span { color: #655e56; font-size: 7px; font-weight: 900; letter-spacing: .1em; }
+.connectionCopilotControls select { width: 100%; min-height: 38px; padding: 0 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 11px; background: #0b0b09; color: #b8afa4; font-size: 9px; }
+.connectionCopilotControls .button { min-height: 38px; font-size: 8px; }
+.connectionCopilotSelected,.connectionCopilotEmpty { display: block; margin-top: 8px; color: #625c54; font-size: 7px; }
+.connectionCopilotError { margin: 10px 0 0; color: #d28b8b; font-size: 8px; }
+.connectionCopilotResult { margin-top: 13px; padding: 14px; border: 1px solid rgba(255,255,255,.07); border-radius: 15px; background: rgba(0,0,0,.18); }
+.connectionCopilotStatus { display: flex; align-items: center; gap: 8px; }
+.connectionCopilotStatus span { color: #675f56; font-size: 6px; font-weight: 900; letter-spacing: .1em; }
+.connectionCopilotStatus b { color: #c0ab60; font-size: 8px; }
+.connectionCopilotResult > p { margin: 7px 0 0; color: #aaa196; font-size: 9px; line-height: 1.5; }
+.connectionCopilotFacts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+.connectionCopilotFacts span { display: inline-flex; align-items: center; gap: 6px; min-height: 27px; padding: 0 8px; border: 1px solid rgba(255,255,255,.07); border-radius: 9px; color: #938a7f; font-size: 8px; }
+.connectionCopilotFacts b { color: #625b53; font-size: 6px; letter-spacing: .08em; }
+.connectionCopilotQuestions { display: grid; gap: 4px; margin-top: 10px; padding: 9px 10px; border-left: 2px solid rgba(255,194,28,.35); }
+.connectionCopilotQuestions strong { color: #a89658; font-size: 7px; }
+.connectionCopilotQuestions span { color: #7d756b; font-size: 8px; }
+.connectionCopilotReply { margin-top: 10px; padding: 10px; border: 1px solid rgba(255,194,28,.1); border-radius: 11px; background: rgba(255,194,28,.02); }
+.connectionCopilotReply > span { color: #8f8051; font-size: 6px; font-weight: 900; letter-spacing: .1em; }
+.connectionCopilotReply p { margin: 5px 0 7px; color: #aaa197; font-size: 9px; line-height: 1.5; }
+.connectionCopilotReply button { border: 0; background: transparent; color: #c3ad61; font-size: 7px; cursor: pointer; padding: 0; }
+.connectionCopilotResult > small { display: block; margin-top: 9px; color: #5f5952; font-size: 7px; line-height: 1.45; }
+@media (max-width: 660px) { .connectionCopilotHead { flex-direction: column; } .connectionCopilotControls { grid-template-columns: 1fr; } }

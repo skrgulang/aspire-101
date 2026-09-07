@@ -188,7 +188,13 @@ export async function sendConnectionMessage(connectionId: string, body: string) 
     .insert({ connection_id: connectionId, sender_id: authData.user.id, body: trimmed })
     .select('*')
     .single();
-  if (error) throw error;
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+    if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) throw new Error('That message contains language that is not allowed on Aspire.');
+    if (/MESSAGE_RATE_LIMIT/i.test(detail)) throw new Error('You are sending messages too quickly. Wait a moment and try again.');
+    if (/ACCOUNT_SUSPENDED/i.test(detail)) throw new Error('This Aspire account is suspended from sending new private messages. Check your account notice or contact support.');
+    throw error;
+  }
   return data as ConnectionMessage;
 }
 
@@ -240,10 +246,7 @@ export async function fetchCircleChoices(connectionIds: string[]) {
 
 export async function setCircleChoice(connectionId: string, keep: boolean) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc('set_circle_choice', {
-    p_connection_id: connectionId,
-    p_keep: keep
-  });
+  const { data, error } = await supabase.rpc('set_circle_choice', { p_connection_id: connectionId, p_keep: keep });
   if (error) throw error;
   return Boolean(data);
 }
@@ -270,12 +273,7 @@ export async function fetchConnectionReviews(connectionIds: string[]) {
   return (data ?? []) as ConnectionReview[];
 }
 
-export async function submitConnectionReview(
-  connectionId: string,
-  wouldConnectAgain: boolean,
-  tags: string[] = [],
-  note = ''
-) {
+export async function submitConnectionReview(connectionId: string, wouldConnectAgain: boolean, tags: string[] = [], note = '') {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('submit_connection_review', {
     p_connection_id: connectionId,

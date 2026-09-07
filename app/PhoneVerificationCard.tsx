@@ -21,6 +21,14 @@ function maskPhone(value: string) {
   return `••• ••• ${digits.slice(-4)}`;
 }
 
+function friendlyPhoneError(detail: string) {
+  if (/invalid from number|caller id|sms provider|phone provider|twilio|21212|unsupported|not enabled|sender/i.test(detail)) {
+    return 'Phone verification is temporarily unavailable while Aspire finishes connecting its SMS sender. Your school verification still works normally.';
+  }
+  if (/rate limit|too many/i.test(detail)) return 'Too many verification attempts. Wait a little and try again.';
+  return detail;
+}
+
 export default function PhoneVerificationCard({ initialPhone, initiallyVerified }: { initialPhone: string; initiallyVerified: boolean }) {
   const [phone, setPhone] = useState(initialPhone || '');
   const [submittedPhone, setSubmittedPhone] = useState(initialPhone || '');
@@ -49,9 +57,7 @@ export default function PhoneVerificationCard({ initialPhone, initiallyVerified 
       setMessage('We sent a 6-digit verification code.');
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Could not send a verification code.';
-      setMessage(/sms provider|phone provider|unsupported|not enabled/i.test(detail)
-        ? 'Phone verification is not configured yet. Aspire can keep using school verification while SMS is being connected.'
-        : detail);
+      setMessage(friendlyPhoneError(detail));
     } finally {
       setBusy(false);
     }
@@ -77,7 +83,8 @@ export default function PhoneVerificationCard({ initialPhone, initiallyVerified 
       setStep('verified');
       setMessage('Phone verified.');
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'That code could not be verified.');
+      const detail = error instanceof Error ? error.message : 'That code could not be verified.';
+      setMessage(friendlyPhoneError(detail));
     } finally {
       setBusy(false);
     }

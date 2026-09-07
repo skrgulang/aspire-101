@@ -1,0 +1,21 @@
+.aspireMatchStrip { margin-bottom: 16px; padding: 18px; border: 1px solid rgba(255,194,28,.17); border-radius: 21px; background: linear-gradient(135deg,rgba(255,194,28,.045),rgba(255,255,255,.012)); }
+.aspireMatchStripHead { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.aspireMatchStripHead > div { max-width: 720px; }
+.aspireMatchStripHead span { color: #b9a45a; font-size: 7px; font-weight: 900; letter-spacing: .13em; }
+.aspireMatchStripHead h2 { margin: 5px 0 3px; color: #eee8df; font-size: 23px; letter-spacing: -.035em; }
+.aspireMatchStripHead p { margin: 0; color: #7f776d; font-size: 8px; line-height: 1.5; }
+.aspireMatchStripHead > button { border: 0; background: transparent; color: #6d655c; font-size: 8px; cursor: pointer; }
+.aspireMatchCards { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin-top: 13px; }
+.aspireMatchCards article { padding: 12px; border: 1px solid rgba(255,255,255,.075); border-radius: 14px; background: rgba(0,0,0,.17); }
+.aspireMatchCards article.strong { border-color: rgba(102,195,134,.18); box-shadow: inset 2px 0 0 rgba(102,195,134,.45); }
+.aspireMatchCardMeta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.aspireMatchCardMeta b { color: #b8a45e; font-size: 6px; letter-spacing: .09em; }
+.aspireMatchCards article.strong .aspireMatchCardMeta b { color: #85bc96; }
+.aspireMatchCardMeta span { color: #655e55; font-size: 7px; }
+.aspireMatchCards h3 { margin: 7px 0 3px; color: #dad3c9; font-size: 12px; }
+.aspireMatchCards p { margin: 0; min-height: 34px; color: #81796f; font-size: 8px; line-height: 1.45; }
+.aspireMatchCards article > div:last-child { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-top: 9px; }
+.aspireMatchCards small { color: #a89b70; font-size: 8px; }
+.aspireMatchCards .button { min-height: 32px; padding-inline: 10px; font-size: 7px; }
+.aspireMatchNotice { margin: 10px 0 0; color: #a99d8d; font-size: 8px; }
+@media (max-width: 720px) { .aspireMatchCards { grid-template-columns: 1fr; } .aspireMatchStripHead { flex-direction: column; } }

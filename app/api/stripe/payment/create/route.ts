@@ -7,16 +7,15 @@ import {
   stripeFormRequest
 } from '../../../../../lib/server/aspireServer';
 
-type CheckoutSession = {
-  id: string;
-  url: string | null;
-};
+type CheckoutSession = { id: string; url: string | null };
 
 type PaymentRow = {
   id: string;
   status: string;
   transfer_group: string;
   checkout_attempt: number;
+  payer_id?: string;
+  payee_id?: string;
   base_amount_cents: number | null;
   requester_fee_cents: number | null;
   provider_fee_cents: number | null;
@@ -103,17 +102,38 @@ export async function POST(request: Request) {
 
     if (verification?.status !== 'verified') throw new Error('SCHOOL_REQUIRED');
     if (!connection) return NextResponse.json({ error: 'Connection not found.' }, { status: 404 });
-    if (connection.requester_id !== user.id) throw new Error('NOT_REQUESTER');
     if (!['confirmed', 'active'].includes(connection.status)) throw new Error('CONNECTION_NOT_READY');
 
-    const [{ data: aspireRequest }, { data: payoutAccount }, { data: existingPayment }] = await Promise.all([
-      supabase.from('requests').select('id,title,kind,amount_cents,currency,campus_id').eq('id', connection.request_id).maybeSingle(),
-      supabase.from('payment_accounts').select('stripe_account_id,status,transfers_enabled').eq('user_id', connection.responder_id).maybeSingle(),
-      supabase.from('connection_payments').select('*').eq('connection_id', connection.id).maybeSingle()
+    const [{ data: aspireRequest }, { data: existingPayment }, { data: marketOrder }] = await Promise.all([
+      supabase.from('requests').select('id,title,kind,amount_cents,currency,campus_id,market_intent').eq('id', connection.request_id).maybeSingle(),
+      supabase.from('connection_payments').select('*').eq('connection_id', connection.id).maybeSingle(),
+      supabase.from('market_orders').select('id,buyer_id,seller_id,status').eq('connection_id', connection.id).maybeSingle()
     ]);
 
     if (!aspireRequest) return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
     if (connection.payment_method !== 'aspire') throw new Error('PAYMENT_NOT_REQUIRED');
+
+    const isMarket = aspireRequest.kind === 'buy_sell';
+    if (isMarket && !marketOrder) {
+      return NextResponse.json({ error: 'This marketplace order is not initialized yet. Reconnect to the listing and try again.', code: 'MARKET_ORDER_NOT_READY' }, { status: 409 });
+    }
+
+    const payerId = isMarket ? marketOrder!.buyer_id : connection.requester_id;
+    const payeeId = isMarket ? marketOrder!.seller_id : connection.responder_id;
+
+    if (user.id !== payerId) {
+      return NextResponse.json({ error: isMarket ? 'Only the buyer can secure payment for this marketplace order.' : 'Only the requester can start this payment.', code: 'NOT_PAYER' }, { status: 403 });
+    }
+    if (isMarket && ['disputed', 'released', 'refunded', 'cancelled'].includes(String(marketOrder!.status))) {
+      return NextResponse.json({ error: 'This marketplace order can no longer accept a new payment.', code: 'MARKET_ORDER_CLOSED' }, { status: 409 });
+    }
+
+    const { data: payoutAccount } = await supabase
+      .from('payment_accounts')
+      .select('stripe_account_id,status,transfers_enabled')
+      .eq('user_id', payeeId)
+      .maybeSingle();
+
     if (!payoutAccount?.stripe_account_id || payoutAccount.status !== 'READY' || payoutAccount.transfers_enabled !== true) {
       throw new Error('PAYOUT_NOT_READY');
     }
@@ -154,11 +174,14 @@ export async function POST(request: Request) {
       provider_fee_percent_bps: quote.provider_fee_percent_bps,
       tip_fee_percent_bps: quote.tip_fee_percent_bps,
       minimum_paid_order_cents: quote.minimum_paid_order_cents,
-      standard_payout_cadence: quote.standard_payout_cadence
+      standard_payout_cadence: quote.standard_payout_cadence,
+      transaction_type: isMarket ? 'marketplace_physical_goods' : 'connection_service'
     };
 
     let payment = existingPayment as PaymentRow | null;
     const paymentValues = {
+      payer_id: payerId,
+      payee_id: payeeId,
       currency,
       base_amount_cents: quote.base_amount_cents,
       requester_fee_cents: quote.requester_fee_cents,
@@ -176,7 +199,6 @@ export async function POST(request: Request) {
       tip_fee_percent_bps: quote.tip_fee_percent_bps,
       minimum_paid_order_cents: quote.minimum_paid_order_cents,
       fee_snapshot: feeSnapshot,
-      // Backward-compatible aliases used by earlier V2 code.
       gross_amount_cents: quote.customer_total_cents,
       platform_fee_cents: quote.platform_fee_revenue_cents,
       provider_amount_cents: quote.provider_net_cents
@@ -186,8 +208,6 @@ export async function POST(request: Request) {
       const { data, error } = await supabase.from('connection_payments').insert({
         connection_id: connection.id,
         request_id: aspireRequest.id,
-        payer_id: connection.requester_id,
-        payee_id: connection.responder_id,
         status: 'not_started',
         transfer_group: transferGroup,
         ...paymentValues
@@ -212,23 +232,25 @@ export async function POST(request: Request) {
       customer_email: user.email || undefined,
       'line_items[0][price_data][currency]': currency.toLowerCase(),
       'line_items[0][price_data][product_data][name]': String(aspireRequest.title).slice(0, 100),
-      'line_items[0][price_data][product_data][description]': 'Aspire 101 connection',
+      'line_items[0][price_data][product_data][description]': isMarket ? 'Aspire Protected campus marketplace purchase' : 'Aspire 101 connection',
       'line_items[0][price_data][unit_amount]': quote.base_amount_cents,
       'line_items[0][quantity]': 1,
       'line_items[1][price_data][currency]': currency.toLowerCase(),
       'line_items[1][price_data][product_data][name]': 'Aspire 101 Service Fee',
-      'line_items[1][price_data][product_data][description]': 'Supports secure payments, support, trust & safety, and platform operations.',
+      'line_items[1][price_data][product_data][description]': 'Supports payments, support, trust & safety, dispute review, and platform operations.',
       'line_items[1][price_data][unit_amount]': quote.requester_fee_cents,
       'line_items[1][quantity]': 1,
       'payment_intent_data[transfer_group]': transferGroup,
       'payment_intent_data[metadata][aspire_payment_id]': payment.id,
       'payment_intent_data[metadata][connection_id]': connection.id,
       'payment_intent_data[metadata][request_id]': aspireRequest.id,
-      'payment_intent_data[metadata][payer_id]': connection.requester_id,
-      'payment_intent_data[metadata][payee_id]': connection.responder_id,
+      'payment_intent_data[metadata][payer_id]': payerId,
+      'payment_intent_data[metadata][payee_id]': payeeId,
+      'payment_intent_data[metadata][transaction_type]': isMarket ? 'marketplace' : 'connection',
       'payment_intent_data[metadata][fee_policy_version]': quote.fee_policy_version,
       'metadata[aspire_payment_id]': payment.id,
       'metadata[connection_id]': connection.id,
+      'metadata[transaction_type]': isMarket ? 'marketplace' : 'connection',
       'metadata[fee_policy_version]': quote.fee_policy_version,
       success_url: `${origin}/connections?payment=success&connection=${encodeURIComponent(connection.id)}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/connections?payment=cancelled&connection=${encodeURIComponent(connection.id)}`
@@ -260,6 +282,9 @@ export async function POST(request: Request) {
       url: session.url,
       paymentId: payment.id,
       status: 'checkout_created',
+      transactionType: isMarket ? 'marketplace' : 'connection',
+      payerId,
+      payeeId,
       feePolicyVersion: quote.fee_policy_version,
       baseAmountCents: quote.base_amount_cents,
       requesterFeeCents: quote.requester_fee_cents,

@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { runRequestAiSafety } from './trust';
 
 export type RequestKind =
   | 'community'
@@ -6,6 +7,15 @@ export type RequestKind =
   | 'split_cost'
   | 'buy_sell'
   | 'collaboration';
+
+export type MarketIntent = 'sell' | 'wanted';
+export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair' | 'for_parts';
+export type FulfillmentMethod = 'campus_pickup' | 'shipping';
+export type RequestModerationStatus = 'pending' | 'approved' | 'rejected' | 'blocked';
+export type AiModerationStatus = 'not_scanned' | 'scanning' | 'complete' | 'error';
+export type AiRiskLevel = 'unknown' | 'low' | 'medium' | 'high' | 'critical';
+export type AiRecommendedAction = 'approve' | 'review' | 'block';
+export type TrustBand = 'restricted' | 'caution' | 'new' | 'established' | 'trusted';
 
 export type AspireRequest = {
   id: string;
@@ -22,6 +32,28 @@ export type AspireRequest = {
   amount_cents: number | null;
   currency: string;
   payment_method: 'aspire' | 'in_person' | 'none';
+  market_intent?: MarketIntent | null;
+  item_condition?: ItemCondition | null;
+  price_negotiable?: boolean;
+  fulfillment_method?: FulfillmentMethod | null;
+  quantity?: number;
+  moderation_status?: RequestModerationStatus;
+  moderation_flags?: string[];
+  moderation_version?: string;
+  moderated_by?: string | null;
+  moderated_at?: string | null;
+  moderation_reason?: string | null;
+  ai_moderation_status?: AiModerationStatus;
+  ai_risk_level?: AiRiskLevel;
+  ai_risk_score?: number | null;
+  ai_recommended_action?: AiRecommendedAction;
+  ai_policy_flags?: string[];
+  ai_summary?: string | null;
+  ai_last_scanned_at?: string | null;
+  behavior_risk_score?: number | null;
+  behavior_flags?: string[];
+  trust_score_snapshot?: number | null;
+  trust_band_snapshot?: TrustBand | null;
   status: 'open' | 'matched' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
   created_at: string;
   updated_at: string;
@@ -33,7 +65,23 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
   amount_cents?: number;
   currency?: string;
   payment_method?: AspireRequest['payment_method'];
+  market_intent?: MarketIntent;
+  item_condition?: ItemCondition;
+  price_negotiable?: boolean;
+  fulfillment_method?: FulfillmentMethod;
+  quantity?: number;
 };
+
+function friendlyPolicyError(error: { message?: string; details?: string; hint?: string }, fallback: string) {
+  const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+  if (/CONTENT_POLICY_BLOCKED/i.test(detail)) return new Error('This post contains language that is not allowed on Aspire. Edit it before submitting.');
+  if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) return new Error('That message contains language that is not allowed on Aspire.');
+  if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little before submitting another request.');
+  if (/RESPONSE_RATE_LIMIT/i.test(detail)) return new Error('You are responding too quickly. Wait a little and try again.');
+  if (/ACCOUNT_SUSPENDED/i.test(detail)) return new Error('This Aspire account is suspended from new interactions. Check your account notice or contact support.');
+  if (/ACCOUNT_RESTRICTED/i.test(detail)) return new Error('This Aspire account is temporarily restricted from creating new posts or responses. Check your account notice or contact support.');
+  return new Error(error.message || fallback);
+}
 
 export async function fetchOpenRequests(limit = 24) {
   const supabase = getSupabaseBrowserClient();
@@ -41,9 +89,9 @@ export async function fetchOpenRequests(limit = 24) {
     .from('requests')
     .select('*')
     .eq('status', 'open')
+    .eq('moderation_status', 'approved')
     .order('created_at', { ascending: false })
     .limit(limit);
-
   if (error) throw error;
   return (data ?? []) as AspireRequest[];
 }
@@ -56,8 +104,19 @@ export async function createRequest(input: CreateRequestInput) {
 
   const { data: allowed, error: accessError } = await supabase.rpc('can_post_request');
   if (accessError) throw accessError;
-  if (!allowed) throw new Error('Verify your school identity in Profile before posting.');
+  if (!allowed) {
+    const { data: enforcement } = await supabase
+      .from('user_enforcement_states')
+      .select('state,reason,expires_at')
+      .eq('user_id', authData.user.id)
+      .maybeSingle();
+    const stillApplies = enforcement && (!enforcement.expires_at || new Date(enforcement.expires_at).getTime() > Date.now());
+    if (stillApplies && enforcement.state === 'suspended') throw new Error(`Your Aspire account is suspended from new interactions.${enforcement.reason ? ` ${enforcement.reason}` : ''}`);
+    if (stillApplies && enforcement.state === 'restricted') throw new Error(`Your Aspire account is temporarily restricted from creating new posts.${enforcement.reason ? ` ${enforcement.reason}` : ''}`);
+    throw new Error('Verify your school identity in Profile before posting.');
+  }
 
+  const isMarket = input.kind === 'buy_sell';
   const { data, error } = await supabase
     .from('requests')
     .insert({
@@ -71,12 +130,18 @@ export async function createRequest(input: CreateRequestInput) {
       longitude: null,
       amount_cents: input.amount_cents ?? null,
       currency: input.currency || 'USD',
-      payment_method: input.payment_method || 'none'
+      payment_method: input.payment_method || 'none',
+      market_intent: isMarket ? input.market_intent || 'sell' : null,
+      item_condition: isMarket && input.market_intent !== 'wanted' ? input.item_condition || 'good' : null,
+      price_negotiable: isMarket ? Boolean(input.price_negotiable) : false,
+      fulfillment_method: isMarket ? input.fulfillment_method || 'campus_pickup' : null,
+      quantity: isMarket ? Math.max(1, Math.min(99, input.quantity || 1)) : 1
     })
     .select('*')
     .single();
 
-  if (error) throw error;
+  if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
+  await runRequestAiSafety(data.id).catch(() => undefined);
   return data as AspireRequest;
 }
 
@@ -88,14 +153,9 @@ export async function respondToRequest(requestId: string, message?: string) {
 
   const { data, error } = await supabase
     .from('request_responses')
-    .insert({
-      request_id: requestId,
-      responder_id: authData.user.id,
-      message: message?.trim() || null
-    })
+    .insert({ request_id: requestId, responder_id: authData.user.id, message: message?.trim() || null })
     .select('*')
     .single();
-
-  if (error) throw error;
+  if (error) throw friendlyPolicyError(error, 'Could not send your response.');
   return data;
 }
