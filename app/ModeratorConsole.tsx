@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AppRole,
+  fetchEnforcementStates,
   fetchMyRole,
   fetchRequestsForModeration,
   fetchSafetyReportsForModeration,
@@ -15,7 +16,9 @@ import {
   runRequestAiSafety,
   SafetyReportForModeration,
   SchoolVerification,
-  setModeratorByEmail
+  setModeratorByEmail,
+  setUserEnforcement,
+  UserEnforcementState
 } from '../lib/supabase/trust';
 import type { AspireRequest } from '../lib/supabase/requests';
 import { fetchRequestMedia, RequestMedia } from '../lib/supabase/requestMedia';
@@ -40,6 +43,12 @@ function riskLabel(request: AspireRequest) {
   return `${level.toUpperCase()} · ${request.ai_risk_score ?? 0}/100`;
 }
 
+function effectiveEnforcement(item?: UserEnforcementState) {
+  if (!item) return 'active' as const;
+  if (item.expires_at && new Date(item.expires_at).getTime() <= Date.now()) return 'active' as const;
+  return item.state;
+}
+
 export default function ModeratorConsole() {
   const router = useRouter();
   const [role, setRole] = useState<AppRole>('member');
@@ -49,6 +58,7 @@ export default function ModeratorConsole() {
   const [reports, setReports] = useState<SafetyReportForModeration[]>([]);
   const [requests, setRequests] = useState<AspireRequest[]>([]);
   const [requestMedia, setRequestMedia] = useState<RequestMedia[]>([]);
+  const [enforcementStates, setEnforcementStates] = useState<UserEnforcementState[]>([]);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState('');
   const [teamEmail, setTeamEmail] = useState('');
@@ -68,11 +78,16 @@ export default function ModeratorConsole() {
         fetchSafetyReportsForModeration(),
         fetchRequestsForModeration()
       ]);
-      const media = await fetchRequestMedia(activeRequests.map((request) => request.id)).catch(() => [] as RequestMedia[]);
+      const userIds = [...new Set(activeRequests.map((request) => request.poster_id))];
+      const [media, enforcements] = await Promise.all([
+        fetchRequestMedia(activeRequests.map((request) => request.id)).catch(() => [] as RequestMedia[]),
+        fetchEnforcementStates(userIds).catch(() => [] as UserEnforcementState[])
+      ]);
       setVerifications(ids);
       setReports(safety);
       setRequests(activeRequests);
       setRequestMedia(media);
+      setEnforcementStates(enforcements);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load moderation tools.');
     } finally {
@@ -98,6 +113,7 @@ export default function ModeratorConsole() {
     });
     return map;
   }, [requestMedia]);
+  const enforcementMap = useMemo(() => new Map(enforcementStates.map((item) => [item.user_id, item])), [enforcementStates]);
 
   async function decideId(item: SchoolVerification, decision: 'verified' | 'rejected') {
     const note = decision === 'rejected' ? window.prompt('Short note for the student:', 'School ID could not be confirmed.') ?? '' : '';
@@ -134,6 +150,33 @@ export default function ModeratorConsole() {
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not run the AI safety scan. Human review is still available.');
       await reload();
+    } finally { setBusy(''); }
+  }
+
+  async function changeEnforcement(request: AspireRequest, next: 'active' | 'restricted' | 'suspended') {
+    const current = effectiveEnforcement(enforcementMap.get(request.poster_id));
+    if (current === next) return;
+    let reason = 'Restored by Trust & Safety review.';
+    let expiresAt: string | null = null;
+    if (next === 'restricted') {
+      reason = window.prompt('Reason for a 7-day account restriction:', 'Repeated policy or scam-risk signals require additional review.') ?? '';
+      if (!reason.trim()) return;
+      expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (next === 'suspended') {
+      reason = window.prompt('Reason for suspension:', 'Serious or repeated Community Guidelines violations.') ?? '';
+      if (!reason.trim()) return;
+      if (!window.confirm('Suspend this account from new posts, responses, and private messages? This action is audited.')) return;
+    } else if (!window.confirm('Restore this account to active status? This action is audited.')) {
+      return;
+    }
+
+    setBusy(`enforce-${request.poster_id}`);
+    try {
+      await setUserEnforcement(request.poster_id, next, reason, expiresAt);
+      setNotice(next === 'active' ? 'Account restored.' : next === 'restricted' ? 'Account restricted for 7 days.' : 'Account suspended.');
+      await reload();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update account enforcement.');
     } finally { setBusy(''); }
   }
 
@@ -198,7 +241,7 @@ export default function ModeratorConsole() {
           <div>
             <span>CLOUDORA LABS, INC. · ASPIRE 101</span>
             <div className="moderatorTitleRow"><h1>Trust &amp; Safety</h1><b>{role.toUpperCase()}</b></div>
-            <p>Every post stays private until a reviewer approves it. Safety Intelligence checks content; Scam Intelligence adds posting velocity, duplicate behavior, price anomalies, prior enforcement, and an internal trust history.</p>
+            <p>Every post stays private until a reviewer approves it. Safety Intelligence checks content; Scam Intelligence adds posting velocity, duplicate behavior, price anomalies, prior enforcement, and an internal trust history. Account restrictions always require a human action.</p>
           </div>
           <a href="/profile">Back to profile →</a>
         </header>
@@ -221,7 +264,7 @@ export default function ModeratorConsole() {
 
         {tab === 'requests' && (
           <section className="moderatorPanel">
-            <div className="moderatorPanelHead"><div><span>ASPIRE SAFETY + SCAM INTELLIGENCE</span><h2>Posts</h2></div><p>AI scores text and images. Aspire-specific checks add scam language, off-platform payment, duplicate/burst posting, price anomalies, and internal trust context. Humans still make the publication decision.</p></div>
+            <div className="moderatorPanelHead"><div><span>ASPIRE SAFETY + SCAM INTELLIGENCE</span><h2>Posts</h2></div><p>AI scores text and images. Aspire-specific checks add scam language, off-platform payment, duplicate/burst posting, price anomalies, and internal trust context. Humans still make publication and account-enforcement decisions.</p></div>
             <div className="moderatorList">
               {!activeRequests.length && <div className="moderatorEmpty"><i>✓</i><strong>Post queue is clear.</strong><span>New submissions will appear here before they can go public.</span></div>}
               {activeRequests
@@ -241,6 +284,8 @@ export default function ModeratorConsole() {
                   const photos = mediaMap.get(request.id) ?? [];
                   const risk = request.ai_risk_level || 'unknown';
                   const allSignals = [...new Set([...aiFlags, ...ruleFlags, ...behaviorFlags])];
+                  const enforcement = enforcementMap.get(request.poster_id);
+                  const enforcementState = effectiveEnforcement(enforcement);
                   return (
                     <article className={`moderatorRow moderatorContentRow ${pending ? 'attention' : ''} risk-${risk}`} key={request.id}>
                       <div className="moderatorRowMain">
@@ -254,12 +299,25 @@ export default function ModeratorConsole() {
                         <div className="scamContextRow">
                           <span><b>TRUST</b>{request.trust_band_snapshot ? `${request.trust_band_snapshot.toUpperCase()} · ${request.trust_score_snapshot ?? '—'}/100` : 'NOT SCORED'}</span>
                           <span><b>BEHAVIOR</b>{request.behavior_risk_score ?? 0}/100</span>
-                          <span><b>ACCOUNT</b>{behaviorFlags.length ? `${behaviorFlags.length} SIGNAL${behaviorFlags.length === 1 ? '' : 'S'}` : 'NORMAL'}</span>
+                          <span><b>SIGNALS</b>{behaviorFlags.length ? `${behaviorFlags.length} DETECTED` : 'NORMAL'}</span>
+                          <span className={`enforcement-${enforcementState}`}><b>ACCOUNT</b>{enforcementState.toUpperCase()}</span>
                         </div>
                         <div className="aiSafetyPanel">
                           <div><span>AI RECOMMENDATION</span><strong>{(request.ai_recommended_action || 'review').toUpperCase()}</strong></div>
                           <p>{request.ai_summary || 'No AI assessment yet. Scam rules and human review can still continue.'}</p>
                           {allSignals.length > 0 && <small>Signals: {allSignals.join(' · ')}</small>}
+                        </div>
+                        <div className="enforcementBar">
+                          <div><span>HUMAN ENFORCEMENT</span><strong>{enforcementState === 'active' ? 'No account restriction' : enforcement?.reason || enforcementState}</strong>{enforcement?.expires_at && enforcementState !== 'active' && <small>Expires {when(enforcement.expires_at)}</small>}</div>
+                          <div>
+                            {enforcementState === 'active' ? <>
+                              <button type="button" onClick={() => changeEnforcement(request, 'restricted')} disabled={busy === `enforce-${request.poster_id}`}>Restrict 7d</button>
+                              <button type="button" className="moderatorReject" onClick={() => changeEnforcement(request, 'suspended')} disabled={busy === `enforce-${request.poster_id}`}>Suspend</button>
+                            </> : <>
+                              <button type="button" onClick={() => changeEnforcement(request, 'active')} disabled={busy === `enforce-${request.poster_id}`}>Restore</button>
+                              {enforcementState === 'restricted' && <button type="button" className="moderatorReject" onClick={() => changeEnforcement(request, 'suspended')} disabled={busy === `enforce-${request.poster_id}`}>Suspend</button>}
+                            </>}
+                          </div>
                         </div>
                         <small>{request.campus || 'Campus'} · {when(request.created_at)} · {request.status}{request.ai_last_scanned_at ? ` · AI scanned ${when(request.ai_last_scanned_at)}` : ''}</small>
                       </div>
