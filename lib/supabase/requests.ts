@@ -78,6 +78,8 @@ function friendlyPolicyError(error: { message?: string; details?: string; hint?:
   if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) return new Error('That message contains language that is not allowed on Aspire.');
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little before submitting another request.');
   if (/RESPONSE_RATE_LIMIT/i.test(detail)) return new Error('You are responding too quickly. Wait a little and try again.');
+  if (/ACCOUNT_SUSPENDED/i.test(detail)) return new Error('This Aspire account is suspended from new interactions. Check your account notice or contact support.');
+  if (/ACCOUNT_RESTRICTED/i.test(detail)) return new Error('This Aspire account is temporarily restricted from creating new posts or responses. Check your account notice or contact support.');
   return new Error(error.message || fallback);
 }
 
@@ -90,7 +92,6 @@ export async function fetchOpenRequests(limit = 24) {
     .eq('moderation_status', 'approved')
     .order('created_at', { ascending: false })
     .limit(limit);
-
   if (error) throw error;
   return (data ?? []) as AspireRequest[];
 }
@@ -103,7 +104,17 @@ export async function createRequest(input: CreateRequestInput) {
 
   const { data: allowed, error: accessError } = await supabase.rpc('can_post_request');
   if (accessError) throw accessError;
-  if (!allowed) throw new Error('Verify your school identity in Profile before posting.');
+  if (!allowed) {
+    const { data: enforcement } = await supabase
+      .from('user_enforcement_states')
+      .select('state,reason,expires_at')
+      .eq('user_id', authData.user.id)
+      .maybeSingle();
+    const stillApplies = enforcement && (!enforcement.expires_at || new Date(enforcement.expires_at).getTime() > Date.now());
+    if (stillApplies && enforcement.state === 'suspended') throw new Error(`Your Aspire account is suspended from new interactions.${enforcement.reason ? ` ${enforcement.reason}` : ''}`);
+    if (stillApplies && enforcement.state === 'restricted') throw new Error(`Your Aspire account is temporarily restricted from creating new posts.${enforcement.reason ? ` ${enforcement.reason}` : ''}`);
+    throw new Error('Verify your school identity in Profile before posting.');
+  }
 
   const isMarket = input.kind === 'buy_sell';
   const { data, error } = await supabase
@@ -130,7 +141,6 @@ export async function createRequest(input: CreateRequestInput) {
     .single();
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
-
   await runRequestAiSafety(data.id).catch(() => undefined);
   return data as AspireRequest;
 }
@@ -146,7 +156,6 @@ export async function respondToRequest(requestId: string, message?: string) {
     .insert({ request_id: requestId, responder_id: authData.user.id, message: message?.trim() || null })
     .select('*')
     .single();
-
   if (error) throw friendlyPolicyError(error, 'Could not send your response.');
   return data;
 }
