@@ -20,6 +20,8 @@
 .connectionPaymentsHead span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .18em; }
 .connectionPaymentsHead h2 { margin: 6px 0 0; font-size: clamp(30px,4vw,46px); line-height: .98; letter-spacing: -.045em; }
 .connectionPaymentsHead p { margin: 0; color: #7f786e; font-size: 10px; line-height: 1.6; }
+.connectionPaymentsHead a { display:inline-block; margin-top:9px; color:#c9a84d; font-size:9px; font-weight:900; text-decoration:none; }
+.connectionPaymentsHead a:hover { color:#f0cf73; }
 .connectionPaymentsNotice { margin: 14px 0 0; padding: 11px 13px; border: 1px solid rgba(255,194,28,.16); border-radius: 14px; background: rgba(255,194,28,.035); color: #cbbd98; font-size: 10px; }
 .connectionPaymentList { margin-top: 14px; display: grid; gap: 10px; }
 .connectionPaymentCard { padding: 18px; border: 1px solid rgba(255,255,255,.075); border-radius: 22px; background: rgba(7,7,6,.58); }
@@ -59,6 +61,8 @@
 .connectionPaymentActions > a { color: var(--gold); font-size: 10px; font-weight: 800; }
 .paymentWaiting { color: #918a7f; font-size: 9px; }
 .paymentReleased { color: #9ad6b2; font-size: 10px; font-weight: 800; }
+.paymentReleased a { color:#bfe7cf; text-decoration:none; }
+.paymentReleased a:hover { color:#e4f8eb; }
 .paymentSkeleton { min-height: 130px; display: grid; grid-template-columns: 1.3fr 1fr .8fr; gap: 10px; }
 .paymentSkeleton span { border-radius: 18px; background: linear-gradient(90deg,rgba(255,255,255,.02),rgba(255,255,255,.055),rgba(255,255,255,.02)); background-size: 200% 100%; animation: paymentSkeleton 1.5s ease infinite; }
 @keyframes paymentSkeleton { to { background-position: -200% 0; } }
