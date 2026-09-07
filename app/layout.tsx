@@ -54,6 +54,7 @@ import './aspire-ai-launcher.css';
 import './campus-pulse-ai.css';
 import './connection-copilot.css';
 import './dispute-intelligence.css';
+import './aspire-match.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
