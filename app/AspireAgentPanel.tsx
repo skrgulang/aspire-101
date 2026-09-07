@@ -13,11 +13,11 @@ import {
 
 const quickPrompts = [
   'Get to the airport tomorrow',
+  'How does Aspire Protected work?',
   'Find a study partner',
   'Sell something on campus',
   'Buy something and get it delivered',
-  'I need help moving',
-  'Find a project teammate'
+  'Where is my payment?'
 ];
 
 function money(value: number | null | undefined) {
@@ -36,7 +36,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   async function run(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     const clean = message.trim();
-    if (clean.length < 3) return setError('Tell Aspire what you are trying to make happen.');
+    if (clean.length < 3) return setError('Tell Aspire what you need or ask a question about the platform.');
     setBusy(true);
     setError('');
     setAgentUnavailable(false);
@@ -46,9 +46,9 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
     } catch (err) {
       if (err instanceof AspireAgentError && err.code === 'AI_NOT_CONFIGURED') {
         setAgentUnavailable(true);
-        setError('Aspire Agent is temporarily unavailable. You can still browse campus or create a request manually.');
+        setError('Aspire action planning is temporarily unavailable. Platform questions can still work, and you can browse campus or create a request manually.');
       } else {
-        setError(err instanceof Error ? err.message : 'Aspire Agent could not finish that plan.');
+        setError(err instanceof Error ? err.message : 'Aspire could not finish that request.');
       }
     } finally {
       setBusy(false);
@@ -76,14 +76,16 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
     router.push('/post?agent=1');
   }
 
+  const helpMode = result?.mode === 'platform_help' || result?.mode === 'account_help';
+
   return (
     <section className="aspireAgent" aria-label="Aspire Agent">
       <div className="aspireAgentHalo" aria-hidden="true" />
       <div className="aspireAgentHead">
         <div>
           <span className="aspireAgentKicker"><i>✦</i> ASPIRE AGENT</span>
-          <h2>What are you trying to <em>make happen?</em></h2>
-          <p>Describe the outcome. Aspire can understand the need, look across {campusName}, and prepare the next step.</p>
+          <h2>What can Aspire help you <em>make happen?</em></h2>
+          <p>Describe a campus outcome or ask how Aspire works. Agent can help plan the next step, search {campusName}, or explain platform rules and your payment status.</p>
         </div>
         <b>AI DRIVE · BETA</b>
       </div>
@@ -92,13 +94,13 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder={`Try “My flight lands late and I need to get back to ${campusName}.”`}
+          placeholder={`Try “My flight lands late and I need to get back to ${campusName}” or “How does Aspire Protected work?”`}
           rows={3}
           maxLength={1200}
-          aria-label="Tell Aspire Agent what you need"
+          aria-label="Tell Aspire Agent what you need or ask about Aspire"
         />
         <div>
-          <span>{message.length ? `${message.length}/1200` : 'Need → understand → match → act'}</span>
+          <span>{message.length ? `${message.length}/1200` : 'Ask → understand → answer / match / act'}</span>
           <button type="submit" disabled={busy}>{busy ? 'Thinking…' : 'Ask Aspire'} <i>✦</i></button>
         </div>
       </form>
@@ -107,19 +109,25 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
       {error && <p className="aspireAgentError" role="alert">{error}</p>}
       {agentUnavailable && (
         <div className="aspireAgentFallback" aria-label="Aspire Agent fallback actions">
-          <div><b>Keep moving without AI.</b><span>Your campus network still works while Aspire Agent is unavailable.</span></div>
+          <div><b>Keep moving without action AI.</b><span>Your campus network and platform help still work while action planning is unavailable.</span></div>
           <a href="/discover">Browse campus →</a>
           <a href="/post">Create manually ↗</a>
         </div>
       )}
 
       {result && (
-        <div className={`aspireAgentResult status-${result.status}`}>
+        <div className={`aspireAgentResult status-${result.status} ${helpMode ? 'helpMode' : ''}`}>
           <div className="aspireAgentResultTop">
-            <span><i>✦</i> ASPIRE UNDERSTOOD</span>
+            <span><i>✦</i> {helpMode ? (result.mode === 'account_help' ? 'YOUR ASPIRE · ANSWER' : 'ASPIRE · PLATFORM ANSWER') : 'ASPIRE UNDERSTOOD'}</span>
             <button type="button" onClick={() => { setResult(null); setError(''); setAgentUnavailable(false); }}>Start over</button>
           </div>
           <p className="aspireAgentVoice">{result.assistantMessage}</p>
+
+          {helpMode && result.links && result.links.length > 0 && (
+            <div className="aspireAgentHelpLinks">
+              {result.links.map((link) => <a key={link.href} href={link.href}>{link.label} <span>→</span></a>)}
+            </div>
+          )}
 
           {result.plan && (
             <>
@@ -155,6 +163,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
             </>
           )}
 
+          {helpMode && <small className="aspireAgentFine">Platform answers use Aspire’s current product rules and, for account questions, only your authenticated Aspire payment snapshot. If Aspire cannot verify a state, it should say so rather than guess.</small>}
           {result.status === 'blocked' && <small className="aspireAgentFine">Safety by design: Aspire Agent will not turn prohibited activity into a campus action.</small>}
         </div>
       )}
