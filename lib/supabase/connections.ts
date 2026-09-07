@@ -192,6 +192,7 @@ export async function sendConnectionMessage(connectionId: string, body: string) 
     const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
     if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) throw new Error('That message contains language that is not allowed on Aspire.');
     if (/MESSAGE_RATE_LIMIT/i.test(detail)) throw new Error('You are sending messages too quickly. Wait a moment and try again.');
+    if (/ACCOUNT_SUSPENDED/i.test(detail)) throw new Error('This Aspire account is suspended from sending new private messages. Check your account notice or contact support.');
     throw error;
   }
   return data as ConnectionMessage;
