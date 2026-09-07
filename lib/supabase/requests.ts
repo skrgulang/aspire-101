@@ -15,6 +15,7 @@ export type RequestModerationStatus = 'pending' | 'approved' | 'rejected' | 'blo
 export type AiModerationStatus = 'not_scanned' | 'scanning' | 'complete' | 'error';
 export type AiRiskLevel = 'unknown' | 'low' | 'medium' | 'high' | 'critical';
 export type AiRecommendedAction = 'approve' | 'review' | 'block';
+export type TrustBand = 'restricted' | 'caution' | 'new' | 'established' | 'trusted';
 
 export type AspireRequest = {
   id: string;
@@ -49,6 +50,10 @@ export type AspireRequest = {
   ai_policy_flags?: string[];
   ai_summary?: string | null;
   ai_last_scanned_at?: string | null;
+  behavior_risk_score?: number | null;
+  behavior_flags?: string[];
+  trust_score_snapshot?: number | null;
+  trust_band_snapshot?: TrustBand | null;
   status: 'open' | 'matched' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
   created_at: string;
   updated_at: string;
@@ -69,12 +74,9 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
 
 function friendlyPolicyError(error: { message?: string; details?: string; hint?: string }, fallback: string) {
   const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
-  if (/CONTENT_POLICY_BLOCKED/i.test(detail)) {
-    return new Error('This post contains language that is not allowed on Aspire. Edit it before submitting.');
-  }
-  if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) {
-    return new Error('That message contains language that is not allowed on Aspire.');
-  }
+  if (/CONTENT_POLICY_BLOCKED/i.test(detail)) return new Error('This post contains language that is not allowed on Aspire. Edit it before submitting.');
+  if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) return new Error('That message contains language that is not allowed on Aspire.');
+  if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little before submitting another request.');
   return new Error(error.message || fallback);
 }
 
@@ -128,8 +130,8 @@ export async function createRequest(input: CreateRequestInput) {
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
 
-  // The request stays pending regardless of scan availability. Text is scanned now;
-  // requestMedia runs a second multimodal scan after any images finish uploading.
+  // Posts remain pending even if AI is unavailable. This first pass scores text + behavior;
+  // requestMedia runs another pass after supported images finish uploading.
   await runRequestAiSafety(data.id).catch(() => undefined);
   return data as AspireRequest;
 }
@@ -142,11 +144,7 @@ export async function respondToRequest(requestId: string, message?: string) {
 
   const { data, error } = await supabase
     .from('request_responses')
-    .insert({
-      request_id: requestId,
-      responder_id: authData.user.id,
-      message: message?.trim() || null
-    })
+    .insert({ request_id: requestId, responder_id: authData.user.id, message: message?.trim() || null })
     .select('*')
     .single();
 
