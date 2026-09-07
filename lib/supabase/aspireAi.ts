@@ -4,6 +4,16 @@ import type { ItemCondition, MarketIntent, RequestKind } from './requests';
 export type AspireAgentAction = 'join_existing' | 'create_request' | 'explore' | 'need_details';
 export type AspireAgentOutcome = 'planned' | 'opened_match' | 'drafted_post' | 'posted' | 'connected' | 'completed' | 'dismissed';
 
+export class AspireAgentError extends Error {
+  code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'AspireAgentError';
+    this.code = code;
+  }
+}
+
 export type AspireAgentPlan = {
   status: 'ready' | 'needs_details' | 'blocked';
   intent_summary: string;
@@ -65,15 +75,17 @@ export async function runAspireAgent(message: string, campusId?: string | null) 
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   const token = data.session?.access_token;
-  if (!token) throw new Error('Sign in again to use Aspire Agent.');
+  if (!token) throw new AspireAgentError('Sign in again to use Aspire Agent.', 'AUTH_REQUIRED');
 
   const response = await fetch('/api/ai/agent', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: message.trim(), campusId: campusId || undefined })
   });
-  const payload = await response.json().catch(() => ({})) as AspireAgentResponse & { error?: string };
-  if (!response.ok) throw new Error(payload.error || 'Aspire Agent could not finish that plan.');
+  const payload = await response.json().catch(() => ({})) as AspireAgentResponse & { error?: string; code?: string };
+  if (!response.ok) {
+    throw new AspireAgentError(payload.error || 'Aspire Agent could not finish that plan.', payload.code);
+  }
   return payload as AspireAgentResponse;
 }
 
