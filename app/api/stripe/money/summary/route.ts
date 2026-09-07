@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiError, getAuthenticatedUser, getSupabaseServiceClient } from '../../../../../../lib/server/aspireServer';
+import { apiError, getAuthenticatedUser, getSupabaseServiceClient } from '../../../../../lib/server/aspireServer';
 
 type Payment = {
   id: string;
