@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { fetchActiveUniversities } from '../lib/supabase/universities';
 import AspireAgentPanel from './AspireAgentPanel';
+import CampusPulsePanel from './CampusPulsePanel';
 
 export default function AspireAgentLauncher() {
   const [open, setOpen] = useState(false);
@@ -39,6 +40,7 @@ export default function AspireAgentLauncher() {
           <div className="aspireAgentModal">
             <button className="aspireAgentModalClose" type="button" onClick={() => setOpen(false)} aria-label="Close Aspire Agent">×</button>
             <AspireAgentPanel campusId={campus.id} campusName={campus.shortName} />
+            <CampusPulsePanel campusId={campus.id} campusName={campus.shortName} />
           </div>
         </div>
       )}
