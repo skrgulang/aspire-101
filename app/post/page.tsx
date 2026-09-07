@@ -1,8 +1,9 @@
 import PostAccessGate from '../PostAccessGate';
+import AspireAgentLauncher from '../AspireAgentLauncher';
 import AppDock from '../AppDock';
 
 export default function PostPage() {
-  return (
+  return <>
     <main className="postPage">
       <div className="postPageGlow" aria-hidden="true" />
       <div className="postDoodle postDoodleOne" aria-hidden="true">ASK → CONNECT → DO</div>
@@ -41,5 +42,6 @@ export default function PostPage() {
       </section>
       <AppDock active="post" />
     </main>
-  );
+    <AspireAgentLauncher />
+  </>;
 }
