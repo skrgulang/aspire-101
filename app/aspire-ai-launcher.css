@@ -10,4 +10,10 @@
 .aspireAgentFeatureGuide:hover { color: #e2d397; }
 .aspireAgentModal .aspireAgent { margin: 0; border: 0; border-radius: 0; }
 .aspireAgentModalClose { position: absolute; z-index: 4; right: 15px; top: 10px; width: 31px; height: 31px; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; background: rgba(0,0,0,.4); color: #8d857a; font-size: 17px; cursor: pointer; }
-@media (max-width: 760px) { .aspireAgentLauncher { left: 14px; bottom: 92px; min-height: 43px; } .aspireAgentOverlay { padding: 10px; align-items: end; } .aspireAgentModal { max-height: 88vh; border-radius: 23px; } .aspireAgentFeatureGuide { min-height: 44px; padding: 15px 50px 10px 18px; font-size: 8px; } .aspireAgentModal .aspireAgent { border-radius: 0; } }
+.aspireAgentFallback { margin-top: 10px; padding: 12px; display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 9px; border: 1px solid rgba(255,194,28,.13); border-radius: 13px; background: rgba(255,194,28,.025); }
+.aspireAgentFallback > div { min-width: 0; }
+.aspireAgentFallback b { display: block; color: #c9bb82; font-size: 9px; }
+.aspireAgentFallback span { display: block; margin-top: 2px; color: #756e64; font-size: 8px; line-height: 1.4; }
+.aspireAgentFallback a { padding: 8px 10px; border: 1px solid rgba(255,255,255,.075); border-radius: 10px; color: #aaa196; font-size: 8px; font-weight: 800; text-decoration: none; white-space: nowrap; }
+.aspireAgentFallback a:last-child { border-color: rgba(255,194,28,.2); background: rgba(255,194,28,.055); color: #d8c46f; }
+@media (max-width: 760px) { .aspireAgentLauncher { left: 14px; bottom: 92px; min-height: 43px; } .aspireAgentOverlay { padding: 10px; align-items: end; } .aspireAgentModal { max-height: 88vh; border-radius: 23px; } .aspireAgentFeatureGuide { min-height: 44px; padding: 15px 50px 10px 18px; font-size: 8px; } .aspireAgentModal .aspireAgent { border-radius: 0; } .aspireAgentFallback { grid-template-columns: 1fr 1fr; } .aspireAgentFallback > div { grid-column: 1 / -1; } .aspireAgentFallback a { text-align: center; } }
