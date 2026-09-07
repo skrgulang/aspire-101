@@ -58,8 +58,8 @@ export async function createLinkedDeliveryRequest(input: {
   if (pickupArea.length < 2 || dropoffArea.length < 2) throw new Error('Add a pickup area and drop-off area.');
 
   const fixed = input.compensationMode === 'fixed';
-  const amount = fixed ? Number(input.amountCents || 0) : null;
-  if (fixed && (!Number.isInteger(amount) || amount! <= 0)) throw new Error('Set a positive delivery amount.');
+  const amount = fixed ? Number(input.amountCents || 0) : 0;
+  if (fixed && (!Number.isInteger(amount) || amount <= 0)) throw new Error('Set a positive delivery amount.');
   if (fixed && !['aspire', 'off_platform'].includes(input.protectionMode)) throw new Error('Choose how the delivery will be paid.');
 
   const paymentMethod = input.compensationMode === 'fixed'
@@ -78,7 +78,7 @@ export async function createLinkedDeliveryRequest(input: {
     title: `Deliver ${input.itemTitle}`.slice(0, 180),
     details: `Help deliver an item from an Aspire Market purchase. Pickup area: ${pickupArea}. Drop-off area: ${dropoffArea}. Exact address should only be shared after a connection is chosen. ${compensationCopy}`,
     campusId: input.campusId,
-    amount_cents: fixed ? amount! : undefined,
+    amount_cents: fixed ? amount : undefined,
     payment_method: paymentMethod
   });
 
@@ -93,8 +93,12 @@ export async function createLinkedDeliveryRequest(input: {
     p_dropoff_area: dropoffArea
   });
   if (error) {
-    // Keep the request recoverable but close it if the protected link could not be created.
-    await supabase.from('requests').update({ status: 'cancelled' }).eq('id', request.id).catch(() => undefined);
+    // Close the orphan request if creating the delivery link fails.
+    try {
+      await supabase.from('requests').update({ status: 'cancelled' }).eq('id', request.id);
+    } catch {
+      // Preserve the original linking error.
+    }
     throw error;
   }
   return { request, link: link as MarketDeliveryLink };
