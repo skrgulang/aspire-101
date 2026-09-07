@@ -59,6 +59,8 @@ import './aspire-intelligence.css';
 import './aspire-money.css';
 import './market-delivery.css';
 import './payment-terms.css';
+import './protection.css';
+import './refunds.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
