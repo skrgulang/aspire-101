@@ -47,10 +47,17 @@ export async function GET(request: Request) {
     if (paymentError) throw paymentError;
     const rows = (payments ?? []) as Payment[];
     const requestIds = [...new Set(rows.map((item) => item.request_id))];
-    const { data: requests } = requestIds.length
-      ? await supabase.from('requests').select('id,title,category,kind,campus,currency').in('id', requestIds)
-      : { data: [] as any[] };
+    const connectionIds = [...new Set(rows.map((item) => item.connection_id))];
+    const [{ data: requests }, { data: marketOrders }] = await Promise.all([
+      requestIds.length
+        ? supabase.from('requests').select('id,title,category,kind,campus,currency').in('id', requestIds)
+        : Promise.resolve({ data: [] as any[] }),
+      connectionIds.length
+        ? supabase.from('market_orders').select('connection_id,status').in('connection_id', connectionIds)
+        : Promise.resolve({ data: [] as any[] })
+    ]);
     const requestMap = new Map((requests ?? []).map((item: any) => [item.id, item]));
+    const marketOrderMap = new Map((marketOrders ?? []).map((item: any) => [item.connection_id, item.status as string]));
 
     let pendingIncoming = 0;
     let releasedIncoming = 0;
@@ -65,16 +72,24 @@ export async function GET(request: Request) {
       const requestRow: any = requestMap.get(payment.request_id) || {};
       const customerTotal = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
       const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+      const marketStatus = marketOrderMap.get(payment.connection_id);
+      const effectiveStatus = marketStatus === 'disputed'
+        ? 'disputed'
+        : marketStatus === 'refunded'
+          ? 'refunded'
+          : marketStatus === 'released'
+            ? 'released'
+            : payment.status;
 
       if (role === 'payee') {
-        if (payment.status === 'secured') pendingIncoming += providerNet;
-        if (payment.status === 'released') releasedIncoming += providerNet;
-        if (payment.status === 'disputed') disputedIncoming += providerNet;
+        if (effectiveStatus === 'secured') pendingIncoming += providerNet;
+        if (effectiveStatus === 'released') releasedIncoming += providerNet;
+        if (effectiveStatus === 'disputed') disputedIncoming += providerNet;
         feesPaid += Number(payment.provider_fee_cents || 0);
       } else {
-        if (payment.status === 'secured') protectedOutgoing += customerTotal;
-        if (payment.status === 'released') completedOutgoing += customerTotal;
-        if (payment.status === 'refunded') refundedOutgoing += customerTotal;
+        if (effectiveStatus === 'secured') protectedOutgoing += customerTotal;
+        if (effectiveStatus === 'released') completedOutgoing += customerTotal;
+        if (effectiveStatus === 'refunded') refundedOutgoing += customerTotal;
         feesPaid += Number(payment.requester_fee_cents || 0);
       }
 
@@ -87,7 +102,7 @@ export async function GET(request: Request) {
         kind: requestRow.kind || null,
         campus: requestRow.campus || null,
         role,
-        status: payment.status,
+        status: effectiveStatus,
         currency: payment.currency || requestRow.currency || 'USD',
         baseAmountCents: payment.base_amount_cents,
         customerTotalCents: customerTotal,
@@ -98,7 +113,7 @@ export async function GET(request: Request) {
         paidAt: payment.paid_at,
         releasedAt: payment.released_at,
         refundedAt: payment.refunded_at,
-        disputedAt: payment.disputed_at,
+        disputedAt: effectiveStatus === 'disputed' ? (payment.disputed_at || payment.updated_at) : payment.disputed_at,
         updatedAt: payment.updated_at
       };
     });
