@@ -9,6 +9,22 @@ type Props = {
   name: string;
 };
 
+type AvatarReviewResponse = {
+  ok?: boolean;
+  status?: 'approved' | 'review';
+  avatarUrl?: string;
+  summary?: string;
+  error?: string;
+};
+
+const supportedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
+function extensionForMime(mimeType: string) {
+  if (mimeType === 'image/png') return 'png';
+  if (mimeType === 'image/webp') return 'webp';
+  return 'jpg';
+}
+
 export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
   const [url, setUrl] = useState(initialUrl || '');
   const [busy, setBusy] = useState(false);
@@ -19,8 +35,8 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (!['image/jpeg','image/png','image/webp','image/heic','image/heif'].includes(file.type)) {
-      setMessage('Choose a JPG, PNG, WebP, HEIC, or HEIF image.');
+    if (!supportedTypes.includes(file.type)) {
+      setMessage('Choose a JPG, PNG, or WebP image so Aspire Safety Intelligence can review it.');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -29,23 +45,48 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
     }
 
     setBusy(true);
-    setMessage('');
+    setMessage('Uploading privately for Aspire Safety Intelligence…');
     try {
       const supabase = getSupabaseBrowserClient();
-      const { data: authData, error: authError } = await supabase.auth.getUser();
+      const [{ data: authData, error: authError }, { data: sessionData, error: sessionError }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.auth.getSession()
+      ]);
       if (authError) throw authError;
-      if (!authData.user) throw new Error('Sign in again before changing your photo.');
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${authData.user.id}/avatar-${Date.now()}.${ext.replace(/[^a-z0-9]/g, '')}`;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' });
+      if (sessionError) throw sessionError;
+      if (!authData.user || !sessionData.session?.access_token) throw new Error('Sign in again before changing your photo.');
+
+      const path = `${authData.user.id}/avatar-${Date.now()}.${extensionForMime(file.type)}`;
+      const { error: uploadError } = await supabase.storage.from('avatar-review').upload(path, file, {
+        upsert: false,
+        contentType: file.type,
+        cacheControl: '300'
+      });
       if (uploadError) throw uploadError;
-      const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
-      const { error: profileError } = await supabase.from('profiles').update({ avatar_url: publicData.publicUrl, image_url: publicData.publicUrl }).eq('id', authData.user.id);
-      if (profileError) throw profileError;
-      setUrl(publicData.publicUrl);
-      setMessage('Profile photo updated.');
+
+      setMessage('Aspire Safety Intelligence is reviewing your photo…');
+      const response = await fetch('/api/moderation/avatar', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ storagePath: path, mimeType: file.type })
+      });
+      const payload = await response.json().catch(() => ({})) as AvatarReviewResponse;
+      if (!response.ok) throw new Error(payload.error || 'Could not finish the profile photo review.');
+
+      if (payload.status === 'approved' && payload.avatarUrl) {
+        setUrl(payload.avatarUrl);
+        setMessage('Profile photo approved by Aspire Safety Intelligence ✓');
+      } else {
+        setMessage('Photo submitted for human review. Your current approved photo stays visible for now.');
+      }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not upload your photo.');
+      const raw = error instanceof Error ? error.message : 'Could not upload your photo.';
+      setMessage(/AVATAR_MODERATION_REQUIRED/i.test(raw)
+        ? 'Profile photos must pass Aspire Safety Intelligence before they can appear.'
+        : raw);
     } finally {
       setBusy(false);
     }
@@ -57,8 +98,8 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
         {url ? <img src={url} alt={`${name} profile`} /> : initials}
         <span>{busy ? '…' : '+'}</span>
       </button>
-      <input ref={inputRef} className="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={upload} />
-      <small>{message || 'Add photo'}</small>
+      <input ref={inputRef} className="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
+      <small>{message || 'Add photo · AI safety reviewed'}</small>
     </div>
   );
 }
