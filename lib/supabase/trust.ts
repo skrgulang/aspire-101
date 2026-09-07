@@ -1,5 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
-import type { AspireRequest } from './requests';
+import type { AspireRequest, TrustBand } from './requests';
 
 export type SchoolVerificationStatus = 'pending' | 'verified' | 'rejected';
 export type SchoolVerificationMethod = 'manual_id' | 'school_email';
@@ -47,6 +47,9 @@ export type RequestAiSafetyResult = {
   riskScore: number;
   recommendedAction: 'approve' | 'review' | 'block';
   flags: string[];
+  behaviorFlags: string[];
+  trustScore: number | null;
+  trustBand: TrustBand | null;
   imageCount: number;
 };
 
@@ -111,52 +114,34 @@ export async function fetchMyRole(): Promise<AppRole> {
   if (authError) throw authError;
   if (!authData.user) return 'member';
 
-  const { data, error } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', authData.user.id)
-    .maybeSingle();
+  const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', authData.user.id).maybeSingle();
   if (error) throw error;
   return ((data?.role as AppRole | undefined) ?? 'member');
 }
 
 export async function fetchVerificationQueue() {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('school_verifications')
-    .select('*')
-    .order('submitted_at', { ascending: true });
+  const { data, error } = await supabase.from('school_verifications').select('*').order('submitted_at', { ascending: true });
   if (error) throw error;
   return (data ?? []) as SchoolVerification[];
 }
 
 export async function reviewSchoolVerification(userId: string, decision: 'verified' | 'rejected', note?: string) {
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.rpc('review_school_verification', {
-    p_user_id: userId,
-    p_decision: decision,
-    p_note: note?.trim() || null
-  });
+  const { error } = await supabase.rpc('review_school_verification', { p_user_id: userId, p_decision: decision, p_note: note?.trim() || null });
   if (error) throw error;
 }
 
 export async function fetchSafetyReportsForModeration() {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('safety_reports')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('safety_reports').select('*').order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as SafetyReportForModeration[];
 }
 
 export async function reviewSafetyReport(reportId: string, status: 'reviewing' | 'resolved' | 'dismissed', note?: string) {
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.rpc('moderator_review_safety_report', {
-    p_report_id: reportId,
-    p_status: status,
-    p_note: note?.trim() || null
-  });
+  const { error } = await supabase.rpc('moderator_review_safety_report', { p_report_id: reportId, p_status: status, p_note: note?.trim() || null });
   if (error) throw error;
 }
 
@@ -181,10 +166,7 @@ export async function runRequestAiSafety(requestId: string) {
 
   const response = await fetch('/api/moderation/request', {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ requestId })
   });
   const payload = await response.json().catch(() => ({})) as RequestAiSafetyResult & { error?: string; code?: string };
@@ -194,29 +176,19 @@ export async function runRequestAiSafety(requestId: string) {
 
 export async function reviewRequestModeration(requestId: string, decision: 'approved' | 'rejected', note?: string) {
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.rpc('moderator_review_request', {
-    p_request_id: requestId,
-    p_decision: decision,
-    p_note: note?.trim() || null
-  });
+  const { error } = await supabase.rpc('moderator_review_request', { p_request_id: requestId, p_decision: decision, p_note: note?.trim() || null });
   if (error) throw error;
 }
 
 export async function removeRequestAsModerator(requestId: string, reason: string) {
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.rpc('moderator_remove_request', {
-    p_request_id: requestId,
-    p_reason: reason.trim()
-  });
+  const { error } = await supabase.rpc('moderator_remove_request', { p_request_id: requestId, p_reason: reason.trim() });
   if (error) throw error;
 }
 
 export async function setModeratorByEmail(email: string, enabled: boolean) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc('set_moderator_by_email', {
-    p_email: email.trim(),
-    p_enabled: enabled
-  });
+  const { data, error } = await supabase.rpc('set_moderator_by_email', { p_email: email.trim(), p_enabled: enabled });
   if (error) throw error;
   return data as string;
 }
