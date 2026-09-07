@@ -39,6 +39,7 @@ export default function AspireAgentLauncher() {
         <div className="aspireAgentOverlay" role="dialog" aria-modal="true" aria-label="Aspire Agent">
           <div className="aspireAgentModal">
             <button className="aspireAgentModalClose" type="button" onClick={() => setOpen(false)} aria-label="Close Aspire Agent">×</button>
+            <a className="aspireAgentFeatureGuide" href="/intelligence">See everything Aspire Intelligence can do →</a>
             <AspireAgentPanel campusId={campus.id} campusName={campus.shortName} />
             <CampusPulsePanel campusId={campus.id} campusName={campus.shortName} />
           </div>
