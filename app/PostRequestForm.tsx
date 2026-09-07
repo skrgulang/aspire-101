@@ -12,6 +12,7 @@ import {
 import { uploadRequestMedia, validateRequestImages } from '../lib/supabase/requestMedia';
 import { acknowledgeSafety } from '../lib/supabase/safety';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
+import { clearAspireAgentDraft, markAspireAgentOutcome, readAspireAgentDraft } from '../lib/supabase/aspireAi';
 import CampusPicker from './CampusPicker';
 import PaymentFeePreview from './PaymentFeePreview';
 
@@ -72,6 +73,8 @@ export default function PostRequestForm() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
   const [posted, setPosted] = useState<{ id: string; title: string; campus: string; warning?: string } | null>(null);
+  const [agentPrepared, setAgentPrepared] = useState(false);
+  const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
 
   const selectedCategory = categories.find((item) => item.value === category) ?? categories[0];
   const context = safetyContext(category, kind);
@@ -83,6 +86,26 @@ export default function PostRequestForm() {
   const photoPreviews = useMemo(() => photos.map((file) => ({ file, url: URL.createObjectURL(file) })), [photos]);
 
   useEffect(() => () => photoPreviews.forEach((item) => URL.revokeObjectURL(item.url)), [photoPreviews]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('agent') !== '1') return;
+    const envelope = readAspireAgentDraft();
+    if (!envelope?.plan) return;
+    const plan = envelope.plan;
+    if (categories.some((item) => item.value === plan.category)) setCategory(plan.category);
+    setKind(plan.kind);
+    setTitle(plan.title || '');
+    setDetails(plan.details || '');
+    setAmount(plan.amount_cents != null ? (plan.amount_cents / 100).toFixed(plan.amount_cents % 100 === 0 ? 0 : 2) : '');
+    setPaymentMethod(plan.payment_method);
+    if (plan.market_intent) setMarketIntent(plan.market_intent);
+    if (plan.item_condition) setItemCondition(plan.item_condition);
+    setPriceNegotiable(Boolean(plan.price_negotiable));
+    setAgentPrepared(true);
+    setAgentSessionId(envelope.sessionId);
+  }, []);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -207,6 +230,9 @@ export default function PostRequestForm() {
       } catch {
         // Campus context is helpful but must not block posting.
       }
+      if (agentSessionId) await markAspireAgentOutcome(agentSessionId, 'posted').catch(() => undefined);
+      clearAspireAgentDraft();
+      setAgentPrepared(false);
       setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, warning });
       setConfirming(false);
     } catch (err) {
@@ -233,6 +259,7 @@ export default function PostRequestForm() {
   return <>
     <form className="postForm" onSubmit={openConfirmation} noValidate>
       <div className="postFormHeading"><div className="postModeSwitch"><a className="active" href="/post">I need something</a><a href="/discover">I can help</a></div><p className="eyebrow">ASK CAMPUS</p><h1>What do you need?</h1><p>Start with the need. Your verified home campus stays attached even when you&apos;re visiting somewhere else.</p></div>
+      {agentPrepared && <div className="agentDraftBanner"><div><span>✦ PREPARED BY ASPIRE AGENT</span><strong>AI turned your intent into an editable starting point. Check every detail before submitting.</strong></div><button type="button" onClick={() => { clearAspireAgentDraft(); setAgentPrepared(false); setAgentSessionId(null); }}>Dismiss AI label</button></div>}
       <div className="postCategoryPicker" aria-label="Choose a request category">{categories.map((item) => <button key={item.value} type="button" className={category === item.value ? 'active' : ''} onClick={() => chooseCategory(item)}><i>{item.icon}</i><strong>{item.label}</strong><span>{item.prompt}</span></button>)}</div>
       <div className="postQuickStarts"><span>TRY ONE</span>{selectedCategory.examples.map((example) => <button type="button" key={example} onClick={() => setTitle(example)}>{example} ↗</button>)}</div>
       <label className="postField postFieldLarge postComposerField"><span>{isMarket ? 'Listing title · required' : selectedCategory.prompt}</span><textarea value={title} onChange={(e) => setTitle(e.target.value)} maxLength={180} rows={3} placeholder={selectedCategory.examples[0]} /><small>{title.length}/180</small></label>
