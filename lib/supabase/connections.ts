@@ -215,7 +215,7 @@ export async function markConnectionRead(connectionId: string, lastMessageId?: n
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('mark_connection_read', {
     p_connection_id: connectionId,
-    p_last_read_message_id: lastMessageId ?? null
+    p_last_message_id: lastMessageId ?? null
   });
   if (error) throw error;
   return Number(data || 0);
