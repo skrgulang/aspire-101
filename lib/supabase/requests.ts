@@ -77,6 +77,7 @@ function friendlyPolicyError(error: { message?: string; details?: string; hint?:
   if (/CONTENT_POLICY_BLOCKED/i.test(detail)) return new Error('This post contains language that is not allowed on Aspire. Edit it before submitting.');
   if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) return new Error('That message contains language that is not allowed on Aspire.');
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little before submitting another request.');
+  if (/RESPONSE_RATE_LIMIT/i.test(detail)) return new Error('You are responding too quickly. Wait a little and try again.');
   return new Error(error.message || fallback);
 }
 
@@ -130,8 +131,6 @@ export async function createRequest(input: CreateRequestInput) {
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
 
-  // Posts remain pending even if AI is unavailable. This first pass scores text + behavior;
-  // requestMedia runs another pass after supported images finish uploading.
   await runRequestAiSafety(data.id).catch(() => undefined);
   return data as AspireRequest;
 }
