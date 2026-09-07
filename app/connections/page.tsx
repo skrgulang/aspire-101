@@ -1,6 +1,7 @@
 import ConnectionsHub from '../ConnectionsHub';
 import MarketOrdersPanel from '../MarketOrdersPanel';
 import MarketDeliveryPanel from '../MarketDeliveryPanel';
+import PaymentTermsPanel from '../PaymentTermsPanel';
 import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
 import ConnectionCopilotPanel from '../ConnectionCopilotPanel';
 import AppDock from '../AppDock';
@@ -13,6 +14,7 @@ export default function ConnectionsPage() {
         <ConnectionCopilotPanel />
         <MarketOrdersPanel />
         <MarketDeliveryPanel />
+        <PaymentTermsPanel />
         <ConnectionPaymentsPanel />
       </div>
       <AppDock active="connections" />
