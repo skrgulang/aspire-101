@@ -181,6 +181,15 @@ export async function runRequestAiSafety(requestId: string) {
   });
   const payload = await response.json().catch(() => ({})) as RequestAiSafetyResult & { error?: string; code?: string };
   if (!response.ok) throw new Error(payload.error || 'Aspire Safety Intelligence could not finish the scan.');
+
+  const finalizeResponse = await fetch('/api/moderation/request/finalize', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requestId })
+  });
+  const finalizePayload = await finalizeResponse.json().catch(() => ({})) as { error?: string };
+  if (!finalizeResponse.ok) throw new Error(finalizePayload.error || 'Aspire could not apply the automatic safety decision.');
+
   return payload as RequestAiSafetyResult;
 }
 
