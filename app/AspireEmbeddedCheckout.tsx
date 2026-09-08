@@ -44,6 +44,7 @@ export default function AspireEmbeddedCheckout({ connectionId }: { connectionId:
   return (
     <div className="embeddedCheckoutShell">
       <div className="embeddedCheckoutBrand">
+        <div className="embeddedBetaNotice"><b>PRIVATE BETA</b><span>Payment is still being tested. Do not use Aspire for real-money transactions yet; use sandbox/test payment data only.</span></div>
         <span>PAY WITH ASPIRE</span>
         <h1>Secure payment, without leaving Aspire.</h1>
         <p>Stripe securely processes the card and wallet fields embedded below. Aspire does not receive or store your full card number or CVC.</p>
