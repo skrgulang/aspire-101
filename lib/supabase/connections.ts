@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { moderateAuthenticatedText } from './contentSafety';
 import type { AspireRequest } from './requests';
 
 export type RequestResponse = {
@@ -183,6 +184,8 @@ export async function sendConnectionMessage(connectionId: string, body: string) 
   if (!trimmed) throw new Error('Write a message first.');
   if (trimmed.length > 2000) throw new Error('Messages can be up to 2,000 characters.');
 
+  await moderateAuthenticatedText('message', trimmed);
+
   const { data, error } = await supabase
     .from('connection_messages')
     .insert({ connection_id: connectionId, sender_id: authData.user.id, body: trimmed })
@@ -274,12 +277,15 @@ export async function fetchConnectionReviews(connectionIds: string[]) {
 }
 
 export async function submitConnectionReview(connectionId: string, wouldConnectAgain: boolean, tags: string[] = [], note = '') {
+  const cleanNote = note.trim();
+  if (cleanNote) await moderateAuthenticatedText('review', cleanNote);
+
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('submit_connection_review', {
     p_connection_id: connectionId,
     p_would_connect_again: wouldConnectAgain,
     p_tags: tags,
-    p_note: note || null
+    p_note: cleanNote || null
   });
   if (error) throw error;
   return Number(data);
