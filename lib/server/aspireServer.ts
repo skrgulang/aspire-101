@@ -27,6 +27,10 @@ function requireStripeSecret() {
   return secret;
 }
 
+export function stripeExpectedLivemode() {
+  return /^(sk|rk)_live_/.test(requireStripeSecret());
+}
+
 export async function getAuthenticatedUser(request: Request): Promise<{ user: User; accessToken: string }> {
   const accessToken = requireBearerToken(request);
   const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
@@ -160,6 +164,7 @@ export function apiError(error: unknown) {
   if (raw === 'COMPLETION_NOT_READY') return { status: 409, body: { error: 'Both people must mark the connection complete before payment can be released.', code: raw } };
   if (raw === 'PAYMENT_NOT_SECURED') return { status: 409, body: { error: 'Payment must be secured before it can be released.', code: raw } };
   if (raw === 'WEBHOOK_SIGNATURE') return { status: 400, body: { error: 'Invalid Stripe webhook signature.' } };
+  if (raw === 'WEBHOOK_MODE_MISMATCH') return { status: 400, body: { error: 'Stripe webhook environment does not match this deployment.' } };
   if (raw.startsWith('MISSING_ENV:')) return { status: 503, body: { error: 'Payments are not connected to this deployment yet.', code: raw } };
   if (raw.startsWith('STRIPE:')) return { status: 502, body: { error: raw.slice(7), code: 'STRIPE_ERROR' } };
   return { status: 500, body: { error: 'Could not complete that payment step.' } };
