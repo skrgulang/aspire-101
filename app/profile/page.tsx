@@ -10,7 +10,6 @@ import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
 import SchoolVerificationCard from '../SchoolVerificationCard';
 import PhoneVerificationCard from '../PhoneVerificationCard';
-import IdentityVerificationCard from '../IdentityVerificationCard';
 import MfaSecurityCard from '../MfaSecurityCard';
 import PaymentConnectRow from '../PaymentConnectRow';
 import ProfileAvatar from '../ProfileAvatar';
@@ -23,7 +22,6 @@ type ProfileView = {
   schoolVerified: boolean;
   phone: string;
   phoneVerified: boolean;
-  idVerified: boolean;
   avatarUrl: string;
 };
 
@@ -41,10 +39,9 @@ export default function ProfilePage() {
         return;
       }
 
-      const [{ data: profileRow }, { data: schoolVerification }, { data: identityVerification }, nextRole] = await Promise.all([
+      const [{ data: profileRow }, { data: schoolVerification }, nextRole] = await Promise.all([
         supabase.from('profiles').select('display_name,name,full_name,school,email,home_campus_id,avatar_url,image_url').eq('id', user.id).maybeSingle(),
         supabase.from('school_verifications').select('status,verification_method,school_email').eq('user_id', user.id).maybeSingle(),
-        supabase.from('identity_verifications').select('status').eq('user_id', user.id).maybeSingle(),
         fetchMyRole().catch(() => 'member' as AppRole)
       ]);
 
@@ -64,7 +61,6 @@ export default function ProfilePage() {
         schoolVerified: schoolVerification?.status === 'verified',
         phone: user.phone || '',
         phoneVerified: Boolean(user.phone_confirmed_at),
-        idVerified: identityVerification?.status === 'verified',
         avatarUrl: profileRow?.avatar_url || profileRow?.image_url || ''
       });
       setRole(nextRole);
@@ -99,7 +95,6 @@ export default function ProfilePage() {
             <p>{profile.school}</p>
             <div className="profileTrustChips" aria-label="Trust status">
               <span className={profile.schoolVerified ? 'verified' : ''}>{profile.schoolVerified ? '✓ Campus Verified' : 'Campus verification needed'}</span>
-              <span className={profile.idVerified ? 'verified' : ''}>{profile.idVerified ? '✓ ID Verified' : 'ID verification optional'}</span>
               <span className={profile.phoneVerified ? 'verified' : ''}>{profile.phoneVerified ? '✓ Phone Verified' : 'Phone optional'}</span>
               <span className={profile.emailVerified ? 'verified' : ''}>{profile.emailVerified ? '✓ Email confirmed' : 'Email not confirmed'}</span>
             </div>
@@ -109,13 +104,12 @@ export default function ProfilePage() {
         <section className="profileOverview">
           <div className="profileTrustPanel">
             <div className="profileSectionHeading">
-              <div><span>TRUST PASSPORT</span><h2>Verify what matters.</h2></div>
-              <p>Campus identity, government ID, phone, account security, and payment readiness stay separate so people can see what is actually verified.</p>
+              <div><span>TRUST PASSPORT</span><h2>Campus trust without unnecessary ID collection.</h2></div>
+              <p>Your verified university email is the core Aspire identity signal. Phone and stronger account security stay optional, while financial KYC is collected by Stripe only when someone needs to receive payouts.</p>
             </div>
 
             <div className="profileTrustCards profileTrustCardsExpanded">
               <SchoolVerificationCard school={profile.school} />
-              <IdentityVerificationCard />
               <MfaSecurityCard />
               <PhoneVerificationCard initialPhone={profile.phone} initiallyVerified={profile.phoneVerified} />
             </div>
