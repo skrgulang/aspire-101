@@ -7,7 +7,6 @@ type StripeAccountLink = { url: string };
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
-    if (!user.phone_confirmed_at) throw new Error('PHONE_REQUIRED');
 
     const supabase = getSupabaseServiceClient();
     const [{ data: verification }, { data: profile }, { data: paymentAccount }] = await Promise.all([
