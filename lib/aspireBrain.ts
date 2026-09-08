@@ -46,7 +46,7 @@ type Classification = {
   confidence: number;
 };
 
-const stop = new Set(['the','a','an','to','for','of','and','or','i','im','i’m','me','my','we','our','you','your','is','are','need','want','looking','looking for','can','someone','anyone','please','help','with','on','at','in','this','that','today','tomorrow']);
+const stop = new Set(['the','a','an','to','for','of','and','or','i','im','i’m','me','my','we','our','you','your','is','are','need','want','looking','can','someone','anyone','please','help','with','on','at','in','this','that','today','tomorrow']);
 
 function normalize(value: string) {
   return value.toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9$+:/.-]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -183,8 +183,8 @@ function rankMatches(message: string, classification: Classification, candidates
     .slice(0, 5)
     .map(({ candidate, score }) => ({
       id: candidate.id,
-      reason: score >= 0.72 ? 'Strong overlap in intent, category, and request details.' : 'Similar campus request with matching intent signals.',
-      strength: score >= 0.72 ? 'strong' as const : 'possible' as const,
+      reason: score >= 0.64 ? 'Strong overlap in intent, category, and request details.' : 'Similar campus request with matching intent signals.',
+      strength: score >= 0.64 ? 'strong' as const : 'possible' as const,
       score
     }));
 }
