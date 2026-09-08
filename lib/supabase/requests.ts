@@ -155,37 +155,13 @@ export async function respondToRequest(requestId: string, message?: string) {
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in to respond.');
 
-  const responderId = authData.user.id;
-  const { data: existing, error: existingError } = await supabase
-    .from('request_responses')
-    .select('*')
-    .eq('request_id', requestId)
-    .eq('responder_id', responderId)
-    .maybeSingle();
-  if (existingError) throw friendlyPolicyError(existingError, 'Could not check your existing response.');
-  if (existing) return existing;
-
   const cleanMessage = message?.trim() || '';
   if (cleanMessage) await moderateAuthenticatedText('response', cleanMessage);
 
-  const { data, error } = await supabase
-    .from('request_responses')
-    .insert({ request_id: requestId, responder_id: responderId, message: cleanMessage || null })
-    .select('*')
-    .single();
-
-  if (error) {
-    const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
-    if (error.code === '23505' || /request_responses_request_id_responder_id_key/i.test(detail)) {
-      const { data: racedExisting, error: racedError } = await supabase
-        .from('request_responses')
-        .select('*')
-        .eq('request_id', requestId)
-        .eq('responder_id', responderId)
-        .maybeSingle();
-      if (!racedError && racedExisting) return racedExisting;
-    }
-    throw friendlyPolicyError(error, 'Could not send your response.');
-  }
+  const { data, error } = await supabase.rpc('respond_to_request_idempotent', {
+    p_request_id: requestId,
+    p_message: cleanMessage || null
+  });
+  if (error) throw friendlyPolicyError(error, 'Could not send your response.');
   return data;
 }
