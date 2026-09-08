@@ -38,7 +38,11 @@ type ActivityMetrics = {
   responsesToday: number;
   connectionsToday: number;
   paymentsToday: number;
+  successfulTransactionsToday: number;
   processedVolumeCentsToday: number;
+  gmvCentsToday: number;
+  platformFeeRevenueCentsToday: number;
+  takeRateBpsToday: number;
   payoutsReleasedToday: number;
   daily: DailyPoint[];
   campusesToday: CampusPoint[];
@@ -64,7 +68,11 @@ function normalize(raw: any): ActivityMetrics {
     responsesToday: number(raw?.responsesToday),
     connectionsToday: number(raw?.connectionsToday),
     paymentsToday: number(raw?.paymentsToday),
+    successfulTransactionsToday: number(raw?.successfulTransactionsToday),
     processedVolumeCentsToday: number(raw?.processedVolumeCentsToday),
+    gmvCentsToday: number(raw?.gmvCentsToday),
+    platformFeeRevenueCentsToday: number(raw?.platformFeeRevenueCentsToday),
+    takeRateBpsToday: number(raw?.takeRateBpsToday),
     payoutsReleasedToday: number(raw?.payoutsReleasedToday),
     daily: Array.isArray(raw?.daily) ? raw.daily.map((item: any) => ({
       date: String(item.date || ''),
@@ -131,7 +139,13 @@ export default function AdminActivityDashboard() {
 
   const maxDau = useMemo(() => Math.max(1, ...(metrics?.daily.map((item) => item.dau) ?? [1])), [metrics]);
   const dauChange = metrics ? metrics.todayDau - metrics.yesterdayDau : 0;
+  const dauGrowth = metrics
+    ? metrics.yesterdayDau > 0
+      ? Math.round((dauChange / metrics.yesterdayDau) * 100)
+      : metrics.todayDau > 0 ? 100 : 0
+    : 0;
   const stickiness = metrics && metrics.mau > 0 ? Math.round((metrics.todayDau / metrics.mau) * 100) : 0;
+  const takeRate = metrics ? (metrics.takeRateBpsToday / 100).toFixed(2) : '0.00';
 
   if (loading && !metrics) return <AppLoader label="Opening growth monitor…" detail="DAU + marketplace activity" />;
 
@@ -139,7 +153,7 @@ export default function AdminActivityDashboard() {
     <main className="activityAdminPage">
       <div className="activityAdminShell">
         <header className="activityAdminTop">
-          <div><span>CLOUDORA LABS, INC. · ASPIRE 101</span><h1>Daily Active Monitor</h1><p>Privacy-minimized product activity for signed-in Aspire users. No page paths, message contents, IP addresses, card data, or device fingerprints are stored by this monitor.</p></div>
+          <div><span>CLOUDORA LABS, INC. · ASPIRE 101</span><h1>Founder Growth Monitor</h1><p>Daily active users, campus network growth, connections, and transaction health in one admin-only view. This monitor intentionally avoids page paths, message contents, IP addresses, card data, and device fingerprints.</p></div>
           <div className="activityAdminActions"><a href="/moderator">Trust &amp; Safety →</a><button type="button" onClick={() => void load(true)} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button></div>
         </header>
 
@@ -148,18 +162,21 @@ export default function AdminActivityDashboard() {
         {metrics && <>
           <section className="activityHeroStats">
             <article className="primary"><span>DAU · TODAY</span><strong>{metrics.todayDau}</strong><small className={dauChange >= 0 ? 'up' : 'down'}>{dauChange >= 0 ? '+' : ''}{dauChange} vs yesterday</small></article>
+            <article><span>DAU GROWTH</span><strong>{dauGrowth >= 0 ? '+' : ''}{dauGrowth}%</strong><small>Day-over-day active users</small></article>
             <article><span>WAU · 7D</span><strong>{metrics.wau}</strong><small>Unique signed-in users</small></article>
-            <article><span>MAU · 30D</span><strong>{metrics.mau}</strong><small>Unique signed-in users</small></article>
-            <article><span>DAU / MAU</span><strong>{stickiness}%</strong><small>Simple stickiness signal</small></article>
+            <article><span>MAU · 30D</span><strong>{metrics.mau}</strong><small>{stickiness}% DAU / MAU stickiness</small></article>
           </section>
 
           <section className="activitySecondaryStats">
+            <article><span>POSTS TODAY</span><strong>{metrics.postsToday}</strong><small>{metrics.responsesToday} responses</small></article>
+            <article><span>CONNECTIONS</span><strong>{metrics.connectionsToday}</strong><small>Created today</small></article>
+            <article><span>GMV / GTV</span><strong>{money(metrics.gmvCentsToday)}</strong><small>Successful base transaction value</small></article>
+            <article><span>TAKE RATE</span><strong>{takeRate}%</strong><small>{money(metrics.platformFeeRevenueCentsToday)} platform fees</small></article>
+            <article><span>SUCCESSFUL TXNS</span><strong>{metrics.successfulTransactionsToday}</strong><small>{metrics.paymentsToday} payment events today</small></article>
+            <article><span>PAYOUTS RELEASED</span><strong>{metrics.payoutsReleasedToday}</strong><small>{money(metrics.processedVolumeCentsToday)} processed payment volume</small></article>
             <article><span>NEW USERS TODAY</span><strong>{metrics.newUsersToday}</strong><small>{metrics.totalUsers} total accounts</small></article>
             <article><span>VERIFIED STUDENTS</span><strong>{metrics.verifiedStudents}</strong><small>School verification complete</small></article>
-            <article><span>POSTS / RESPONSES</span><strong>{metrics.postsToday} / {metrics.responsesToday}</strong><small>Created today</small></article>
-            <article><span>CONNECTIONS</span><strong>{metrics.connectionsToday}</strong><small>Created today</small></article>
-            <article><span>PAYMENTS</span><strong>{metrics.paymentsToday}</strong><small>{money(metrics.processedVolumeCentsToday)} processed today</small></article>
-            <article><span>PAYOUTS RELEASED</span><strong>{metrics.payoutsReleasedToday}</strong><small>Released today</small></article>
+            <article><span>NETWORK RESPONSE</span><strong>{metrics.responsesToday}</strong><small>Interest / responses created today</small></article>
           </section>
 
           <section className="activityChartPanel">
@@ -181,7 +198,7 @@ export default function AdminActivityDashboard() {
             </section>
           </div>
 
-          <footer className="activityAdminFoot"><span>Updated {new Date(metrics.generatedAt).toLocaleString()}</span><span>Definition: DAU = unique authenticated Aspire users with at least one activity heartbeat during the UTC day.</span></footer>
+          <footer className="activityAdminFoot"><span>Updated {new Date(metrics.generatedAt).toLocaleString()}</span><span>DAU = unique authenticated users with at least one privacy-minimized activity heartbeat during the UTC day. GMV/GTV excludes Aspire buyer fees and counts only secured or released transactions.</span></footer>
         </>}
       </div>
     </main>
