@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "brain:regression": "node --experimental-strip-types scripts/aspire-brain-regression.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
