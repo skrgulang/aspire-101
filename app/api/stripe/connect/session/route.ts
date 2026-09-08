@@ -5,7 +5,7 @@ import {
   getSupabaseServiceClient,
   stripeFormRequest,
   stripeRequest
-} from '../../../../../../lib/server/aspireServer';
+} from '../../../../../lib/server/aspireServer';
 
 type StripeAccount = { id: string };
 type AccountSession = { client_secret: string };
