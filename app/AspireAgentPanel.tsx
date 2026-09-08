@@ -13,9 +13,9 @@ import {
 const quickPrompts = [
   'Get to the airport tomorrow',
   'Open my connections',
-  'Sell something on campus',
-  'How do I verify my school?',
-  'Find a project teammate'
+  'Sell my monitor for $150',
+  'Find a Math 55 study partner',
+  'I need help moving Saturday'
 ];
 
 function money(value: number | null | undefined) {
@@ -33,14 +33,14 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   async function run(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     const clean = message.trim();
-    if (clean.length < 3) return setError('Tell Aspire what you want to do inside Aspire 101.');
+    if (clean.length < 3) return setError('Tell Aspire what you want to make happen on campus.');
     setBusy(true);
     setError('');
     try {
       const next = await runAspireAgent(clean, campusId);
       setResult(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Aspire Agent could not finish that plan.');
+      setError(err instanceof Error ? err.message : 'Aspire could not finish that action.');
     } finally {
       setBusy(false);
     }
@@ -64,9 +64,8 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
     saveAspireAgentDraft(result.sessionId, result.plan);
     void markAspireAgentOutcome(result.sessionId, 'drafted_post').catch(() => undefined);
 
-    // If the Agent is opened from /post, a client-side push to the same page does
-    // not remount PostRequestForm, so its one-time draft hydration never runs.
-    // A real navigation guarantees the saved draft is loaded immediately.
+    // From /post, force a real navigation so PostRequestForm remounts and hydrates
+    // the newly saved Aspire Brain draft immediately.
     if (typeof window !== 'undefined' && window.location.pathname === '/post') {
       window.location.assign('/post?agent=1');
       return;
@@ -75,29 +74,29 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   }
 
   return (
-    <section className="aspireAgent" aria-label="Aspire Agent">
+    <section className="aspireAgent" aria-label="Aspire Brain">
       <div className="aspireAgentHalo" aria-hidden="true" />
       <div className="aspireAgentHead">
         <div>
-          <span className="aspireAgentKicker"><i>✦</i> ASPIRE AGENT</span>
+          <span className="aspireAgentKicker"><i>✦</i> ASPIRE BRAIN</span>
           <h2>What are you trying to <em>make happen?</em></h2>
-          <p>Tell Aspire what you want to do. It can navigate Aspire 101, find the right place, or prepare the next campus action.</p>
+          <p>Say the outcome. Aspire can classify it, search your campus, reduce filtering, and prepare the next action.</p>
         </div>
-        <b>AI DRIVE · BETA</b>
+        <b>ASPIRE BRAIN · V1</b>
       </div>
 
       <form className="aspireAgentComposer" onSubmit={run}>
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder={`Try “Open my connections” or “I need a ride back to ${campusName} tomorrow.”`}
+          placeholder={`Try “I need a ride to IND tomorrow” or “Sell my monitor for $150.”`}
           rows={3}
           maxLength={1200}
-          aria-label="Tell Aspire Agent what you want to do"
+          aria-label="Tell Aspire what you want to make happen"
         />
         <div>
-          <span>{message.length ? `${message.length}/1200` : 'Need → route → match → act'}</span>
-          <button type="submit" disabled={busy}>{busy ? 'Routing…' : 'Ask Aspire'} <i>✦</i></button>
+          <span>{message.length ? `${message.length}/1200` : 'Need → classify → search → match → act'}</span>
+          <button type="submit" disabled={busy}>{busy ? 'Routing…' : 'Make it happen'} <i>✦</i></button>
         </div>
       </form>
 
@@ -107,7 +106,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
       {result && (
         <div className={`aspireAgentResult status-${result.status}`}>
           <div className="aspireAgentResultTop">
-            <span><i>✦</i> ASPIRE UNDERSTOOD</span>
+            <span><i>✦</i> ASPIRE ROUTED IT</span>
             <button type="button" onClick={() => { setResult(null); setError(''); }}>Start over</button>
           </div>
           <p className="aspireAgentVoice">{result.assistantMessage}</p>
@@ -138,7 +137,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
                 <span><b>CONFIDENCE</b>{result.plan.confidence.toUpperCase()}</span>
               </div>
 
-              {result.plan.questions.length > 0 && <div className="aspireAgentQuestions"><strong>I still need:</strong>{result.plan.questions.map((question) => <span key={question}>· {question}</span>)}</div>}
+              {result.plan.questions.length > 0 && <div className="aspireAgentQuestions"><strong>Only missing:</strong>{result.plan.questions.map((question) => <span key={question}>· {question}</span>)}</div>}
 
               {result.matches.length > 0 && (
                 <div className="aspireAgentMatches">
@@ -158,12 +157,12 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
                 {result.matches.length > 0 && <button type="button" className="button buttonGold" onClick={openMatches}>View best matches <span>→</span></button>}
                 <button type="button" className={result.matches.length ? 'aspireAgentSecondary' : 'button buttonGold'} onClick={buildRequest}>{result.plan.status === 'needs_details' ? 'Open editable draft' : 'Create request draft'} <span>↗</span></button>
               </div>
-              <small className="aspireAgentFine">Aspire Agent proposes actions; you stay in control. Any post still passes Safety Intelligence and human review before it can appear publicly.</small>
+              <small className="aspireAgentFine">Aspire Brain routes, searches, and prefills; you stay in control. Any post still passes Safety Intelligence and review before it can appear publicly.</small>
             </>
           )}
 
-          {result.mode === 'out_of_scope' && <small className="aspireAgentFine">Aspire Agent is intentionally scoped to Aspire 101 navigation, campus actions, and Aspire product help — not general homework, trivia, or open-ended ChatGPT use.</small>}
-          {result.status === 'blocked' && result.mode === 'safety' && <small className="aspireAgentFine">Safety by design: Aspire Agent will not turn prohibited activity into a campus action.</small>}
+          {result.mode === 'out_of_scope' && <small className="aspireAgentFine">Aspire Brain is intentionally scoped to Aspire 101 navigation, campus actions, matching, and product help — not general homework, trivia, or open-ended ChatGPT use.</small>}
+          {result.status === 'blocked' && result.mode === 'safety' && <small className="aspireAgentFine">Safety by design: Aspire will not turn prohibited activity into a campus action.</small>}
         </div>
       )}
     </section>
