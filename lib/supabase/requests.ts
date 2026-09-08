@@ -73,8 +73,9 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
   quantity?: number;
 };
 
-function friendlyPolicyError(error: { message?: string; details?: string; hint?: string }, fallback: string) {
+function friendlyPolicyError(error: { message?: string; details?: string; hint?: string; code?: string }, fallback: string) {
   const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+  if (error.code === '23505' || /request_responses_request_id_responder_id_key/i.test(detail)) return new Error('You already sent interest for this request.');
   if (/CONTENT_POLICY_BLOCKED/i.test(detail)) return new Error('This post contains language that is not allowed on Aspire. Edit it before submitting.');
   if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) return new Error('That message contains language that is not allowed on Aspire.');
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little before submitting another request.');
@@ -154,14 +155,37 @@ export async function respondToRequest(requestId: string, message?: string) {
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in to respond.');
 
+  const responderId = authData.user.id;
+  const { data: existing, error: existingError } = await supabase
+    .from('request_responses')
+    .select('*')
+    .eq('request_id', requestId)
+    .eq('responder_id', responderId)
+    .maybeSingle();
+  if (existingError) throw friendlyPolicyError(existingError, 'Could not check your existing response.');
+  if (existing) return existing;
+
   const cleanMessage = message?.trim() || '';
   if (cleanMessage) await moderateAuthenticatedText('response', cleanMessage);
 
   const { data, error } = await supabase
     .from('request_responses')
-    .insert({ request_id: requestId, responder_id: authData.user.id, message: cleanMessage || null })
+    .insert({ request_id: requestId, responder_id: responderId, message: cleanMessage || null })
     .select('*')
     .single();
-  if (error) throw friendlyPolicyError(error, 'Could not send your response.');
+
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+    if (error.code === '23505' || /request_responses_request_id_responder_id_key/i.test(detail)) {
+      const { data: racedExisting, error: racedError } = await supabase
+        .from('request_responses')
+        .select('*')
+        .eq('request_id', requestId)
+        .eq('responder_id', responderId)
+        .maybeSingle();
+      if (!racedError && racedExisting) return racedExisting;
+    }
+    throw friendlyPolicyError(error, 'Could not send your response.');
+  }
   return data;
 }
