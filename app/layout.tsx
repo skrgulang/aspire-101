@@ -43,6 +43,7 @@ import './moderator-polish.css';
 import './discover-v2.css';
 import './payments-connect.css';
 import './connection-payments.css';
+import './stripe-embedded.css';
 import './ecosystem-v2.css';
 import './discover-ecosystem.css';
 import './ecosystem-polish.css';
