@@ -18,6 +18,15 @@ export function requireEnv(name: string) {
   return value;
 }
 
+function requireStripeSecret() {
+  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const vercelEnv = String(process.env.VERCEL_ENV || '').toLowerCase();
+  if (vercelEnv && vercelEnv !== 'production' && /^(sk|rk)_live_/.test(secret)) {
+    throw new Error('STRIPE:Live Stripe keys are blocked outside production.');
+  }
+  return secret;
+}
+
 export async function getAuthenticatedUser(request: Request): Promise<{ user: User; accessToken: string }> {
   const accessToken = requireBearerToken(request);
   const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
@@ -36,7 +45,7 @@ export function getSupabaseServiceClient() {
 
 /** JSON helper for Stripe Accounts v2 preview endpoints. */
 export async function stripeRequest<T>(path: string, init: RequestInit = {}) {
-  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const secret = requireStripeSecret();
   const response = await fetch(`${stripeApiBase}${path}`, {
     ...init,
     headers: {
@@ -62,7 +71,7 @@ export async function stripeFormRequest<T>(
   params: Record<string, string | number | boolean | null | undefined>,
   options: { idempotencyKey?: string } = {}
 ) {
-  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const secret = requireStripeSecret();
   const body = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== null && value !== undefined) body.set(key, String(value));
@@ -88,7 +97,7 @@ export async function stripeFormRequest<T>(
 }
 
 export async function stripeGet<T>(path: string) {
-  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const secret = requireStripeSecret();
   const response = await fetch(`${stripeApiBase}${path}`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${secret}` },
