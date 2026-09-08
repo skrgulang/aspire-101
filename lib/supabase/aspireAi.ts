@@ -4,6 +4,7 @@ import type { ItemCondition, MarketIntent, RequestKind } from './requests';
 export type AspireAgentAction = 'join_existing' | 'create_request' | 'explore' | 'need_details';
 export type AspireAgentOutcome = 'planned' | 'opened_match' | 'drafted_post' | 'posted' | 'connected' | 'completed' | 'dismissed';
 export type AspireAgentMode = 'action' | 'navigation' | 'product_help' | 'out_of_scope' | 'safety';
+export type AspireAgentEngine = 'aspire_brain_v1' | 'ai_fallback' | 'product_router' | 'local_router' | 'local_safety' | 'moderation_fallback';
 
 export type AspireAgentNavigation = {
   label: string;
@@ -48,6 +49,7 @@ export type AspireAgentResponse = {
   sessionId: string | null;
   status: 'ready' | 'needs_details' | 'blocked';
   mode?: AspireAgentMode;
+  engine?: AspireAgentEngine;
   assistantMessage: string;
   campus?: { id: string; name: string; shortName: string };
   plan: AspireAgentPlan | null;
@@ -75,7 +77,7 @@ export async function runAspireAgent(message: string, campusId?: string | null) 
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   const token = data.session?.access_token;
-  if (!token) throw new Error('Sign in again to use Aspire Agent.');
+  if (!token) throw new Error('Sign in again to use Aspire.');
 
   const response = await fetch('/api/ai/agent', {
     method: 'POST',
@@ -87,7 +89,7 @@ export async function runAspireAgent(message: string, campusId?: string | null) 
     })
   });
   const payload = await response.json().catch(() => ({})) as AspireAgentResponse & { error?: string };
-  if (!response.ok) throw new Error(payload.error || 'Aspire Agent could not finish that plan.');
+  if (!response.ok) throw new Error(payload.error || 'Aspire could not finish that action.');
   return payload as AspireAgentResponse;
 }
 
@@ -134,9 +136,6 @@ export function clearAspireAgentMatches() {
 export async function markAspireAgentOutcome(sessionId: string | null | undefined, outcome: AspireAgentOutcome) {
   if (!sessionId) return;
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase
-    .from('aspire_ai_sessions')
-    .update({ outcome })
-    .eq('id', sessionId);
+  const { error } = await supabase.from('aspire_ai_sessions').update({ outcome }).eq('id', sessionId);
   if (error) throw error;
 }
