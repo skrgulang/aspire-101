@@ -12,9 +12,9 @@ import {
 
 const quickPrompts = [
   'Get to the airport tomorrow',
-  'Find a study partner',
+  'Open my connections',
   'Sell something on campus',
-  'I need help moving',
+  'How do I verify my school?',
   'Find a project teammate'
 ];
 
@@ -33,7 +33,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   async function run(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     const clean = message.trim();
-    if (clean.length < 3) return setError('Tell Aspire what you are trying to make happen.');
+    if (clean.length < 3) return setError('Tell Aspire what you want to do inside Aspire 101.');
     setBusy(true);
     setError('');
     try {
@@ -60,9 +60,17 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   }
 
   function buildRequest() {
-    if (!result?.plan) return;
+    if (!result?.plan || result.plan.scope !== 'action') return;
     saveAspireAgentDraft(result.sessionId, result.plan);
     void markAspireAgentOutcome(result.sessionId, 'drafted_post').catch(() => undefined);
+
+    // If the Agent is opened from /post, a client-side push to the same page does
+    // not remount PostRequestForm, so its one-time draft hydration never runs.
+    // A real navigation guarantees the saved draft is loaded immediately.
+    if (typeof window !== 'undefined' && window.location.pathname === '/post') {
+      window.location.assign('/post?agent=1');
+      return;
+    }
     router.push('/post?agent=1');
   }
 
@@ -73,7 +81,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
         <div>
           <span className="aspireAgentKicker"><i>✦</i> ASPIRE AGENT</span>
           <h2>What are you trying to <em>make happen?</em></h2>
-          <p>Describe the outcome. Aspire can understand the need, look across {campusName}, and prepare the next step.</p>
+          <p>Tell Aspire what you want to do. It can navigate Aspire 101, find the right place, or prepare the next campus action.</p>
         </div>
         <b>AI DRIVE · BETA</b>
       </div>
@@ -82,14 +90,14 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder={`Try “My flight lands late and I need to get back to ${campusName}.”`}
+          placeholder={`Try “Open my connections” or “I need a ride back to ${campusName} tomorrow.”`}
           rows={3}
           maxLength={1200}
-          aria-label="Tell Aspire Agent what you need"
+          aria-label="Tell Aspire Agent what you want to do"
         />
         <div>
-          <span>{message.length ? `${message.length}/1200` : 'Need → understand → match → act'}</span>
-          <button type="submit" disabled={busy}>{busy ? 'Thinking…' : 'Ask Aspire'} <i>✦</i></button>
+          <span>{message.length ? `${message.length}/1200` : 'Need → route → match → act'}</span>
+          <button type="submit" disabled={busy}>{busy ? 'Routing…' : 'Ask Aspire'} <i>✦</i></button>
         </div>
       </form>
 
@@ -104,7 +112,23 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
           </div>
           <p className="aspireAgentVoice">{result.assistantMessage}</p>
 
-          {result.plan && (
+          {result.navigation && result.navigation.length > 0 && (
+            <div className="aspireAgentActions">
+              {result.navigation.map((item, index) => (
+                <button
+                  type="button"
+                  key={`${item.href}-${item.label}`}
+                  className={index === 0 ? 'button buttonGold' : 'aspireAgentSecondary'}
+                  onClick={() => router.push(item.href)}
+                  title={item.description || item.label}
+                >
+                  {item.label} <span>→</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {result.plan && result.plan.scope === 'action' && (
             <>
               <div className="aspireAgentFacts">
                 <span><b>TYPE</b>{result.plan.category}</span>
@@ -138,7 +162,8 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
             </>
           )}
 
-          {result.status === 'blocked' && <small className="aspireAgentFine">Safety by design: Aspire Agent will not turn prohibited activity into a campus action.</small>}
+          {result.mode === 'out_of_scope' && <small className="aspireAgentFine">Aspire Agent is intentionally scoped to Aspire 101 navigation, campus actions, and Aspire product help — not general homework, trivia, or open-ended ChatGPT use.</small>}
+          {result.status === 'blocked' && result.mode === 'safety' && <small className="aspireAgentFine">Safety by design: Aspire Agent will not turn prohibited activity into a campus action.</small>}
         </div>
       )}
     </section>
