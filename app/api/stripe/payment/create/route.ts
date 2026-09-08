@@ -88,7 +88,6 @@ function quoteFromPayment(payment: PaymentRow): FeeQuote | null {
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
-    if (!user.phone_confirmed_at) throw new Error('PHONE_REQUIRED');
 
     const body = await request.json().catch(() => ({}));
     const connectionId = typeof body?.connectionId === 'string' ? body.connectionId : '';
