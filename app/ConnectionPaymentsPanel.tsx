@@ -57,7 +57,7 @@ export default function ConnectionPaymentsPanel() {
     void reload();
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
-      setNotice('Payment submitted. Waiting for Stripe confirmation…');
+      setNotice('Payment submitted. Waiting for confirmation…');
       const a = window.setTimeout(() => void reload(true), 1400);
       const b = window.setTimeout(() => void reload(true), 3800);
       return () => { clearTimeout(a); clearTimeout(b); };
@@ -95,7 +95,7 @@ export default function ConnectionPaymentsPanel() {
       const result = await createAspireCheckout(connectionId);
       window.location.assign(result.url);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not start payment.');
+      setNotice(error instanceof Error ? error.message : 'Could not start secure payment.');
       setBusy('');
     }
   }
@@ -109,7 +109,7 @@ export default function ConnectionPaymentsPanel() {
       if (count >= 2) {
         try {
           await releaseAspirePayment(connectionId);
-          setNotice('Both people confirmed completion. Payout released through Stripe ✓');
+          setNotice('Both people confirmed completion. Payout released ✓');
         } catch (releaseError) {
           setNotice(releaseError instanceof Error ? `Completion saved. ${releaseError.message}` : 'Completion saved. Payout is waiting to release.');
         }
@@ -127,7 +127,7 @@ export default function ConnectionPaymentsPanel() {
     setNotice('');
     try {
       await releaseAspirePayment(connectionId);
-      setNotice('Payout released through Stripe ✓');
+      setNotice('Payout released ✓');
       await reload(true);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Payout is not ready to release yet.');
@@ -141,7 +141,7 @@ export default function ConnectionPaymentsPanel() {
     <section className="connectionPayments" aria-label="Aspire service payments">
       <header className="connectionPaymentsHead">
         <div><span>SERVICE PAYMENTS</span><h2>Money stays attached to the connection.</h2><a href="/money">Open Aspire Money →</a></div>
-        <p>Paid help and shared-cost payments use the regular Aspire completion flow. Marketplace purchases use the separate Aspire Protected order flow below.</p>
+        <p>Paid help and shared-cost payments use the regular Aspire completion flow. Sensitive card and banking fields are processed by Stripe inside Aspire&apos;s payment experience and are not stored as raw financial credentials in Aspire.</p>
       </header>
       {notice && <div className="connectionPaymentsNotice" role="status">{notice}</div>}
       <div className="connectionPaymentList">
@@ -168,12 +168,12 @@ export default function ConnectionPaymentsPanel() {
               <div className="paymentProgress"><span className={canWork ? 'done' : ''}>1 <b>Connected</b></span><span className={payment && ['processing','secured','released'].includes(payment.status) ? 'done' : ''}>2 <b>Paid</b></span><span className={bothComplete ? 'done' : selfComplete ? 'current' : ''}>3 <b>Complete</b></span><span className={released ? 'done' : ''}>4 <b>Released</b></span></div>
               <div className="connectionPaymentActions">
                 {!payWithAspire && isRequester && canWork && Number(base || 0) > 0 && <button type="button" className="button buttonGold" onClick={() => chooseAspire(connection.id)} disabled={busy === `method-${connection.id}`}>Use Pay with Aspire →</button>}
-                {payWithAspire && isRequester && canWork && (!payment || ['failed','checkout_created'].includes(payment.status)) && <button type="button" className="button buttonGold" onClick={() => checkout(connection.id)} disabled={busy === `pay-${connection.id}`}>{busy === `pay-${connection.id}` ? 'Opening Stripe…' : `Secure ${money(total, request.currency)} →`}</button>}
+                {payWithAspire && isRequester && canWork && (!payment || ['failed','checkout_created'].includes(payment.status)) && <button type="button" className="button buttonGold" onClick={() => checkout(connection.id)} disabled={busy === `pay-${connection.id}`}>{busy === `pay-${connection.id}` ? 'Opening secure payment…' : `Secure ${money(total, request.currency)} →`}</button>}
                 {payWithAspire && isResponder && canWork && !payment && <a href="/profile">Set up payouts →</a>}
                 {secured && !selfComplete && <button type="button" className="button buttonGold" onClick={() => complete(connection.id)} disabled={busy === `complete-${connection.id}`}>Mark complete ✓</button>}
                 {secured && selfComplete && !bothComplete && <span className="paymentWaiting">You marked complete · waiting for the other person</span>}
                 {secured && bothComplete && <button type="button" className="button buttonGold" onClick={() => retryRelease(connection.id)} disabled={busy === `release-${connection.id}`}>{busy === `release-${connection.id}` ? 'Releasing…' : 'Release payout →'}</button>}
-                {released && <span className="paymentReleased">Released through Stripe ✓ · <a href="/money">View money trail</a></span>}
+                {released && <span className="paymentReleased">Payout released ✓ · <a href="/money">View money trail</a></span>}
               </div>
             </article>
           );
