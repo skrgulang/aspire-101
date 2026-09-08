@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { moderateAuthenticatedText } from './contentSafety';
 import { runRequestAiSafety } from './trust';
 
 export type RequestKind =
@@ -116,6 +117,8 @@ export async function createRequest(input: CreateRequestInput) {
     throw new Error('Verify your school identity in Profile before posting.');
   }
 
+  await moderateAuthenticatedText('request', [input.title, input.details].filter(Boolean).join('\n'));
+
   const isMarket = input.kind === 'buy_sell';
   const { data, error } = await supabase
     .from('requests')
@@ -151,9 +154,12 @@ export async function respondToRequest(requestId: string, message?: string) {
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in to respond.');
 
+  const cleanMessage = message?.trim() || '';
+  if (cleanMessage) await moderateAuthenticatedText('response', cleanMessage);
+
   const { data, error } = await supabase
     .from('request_responses')
-    .insert({ request_id: requestId, responder_id: authData.user.id, message: message?.trim() || null })
+    .insert({ request_id: requestId, responder_id: authData.user.id, message: cleanMessage || null })
     .select('*')
     .single();
   if (error) throw friendlyPolicyError(error, 'Could not send your response.');
