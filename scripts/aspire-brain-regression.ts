@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+// @ts-ignore Node's built-in type stripping executes the source .ts module directly.
 import { planDeterministically, type BrainCandidate } from '../lib/aspireBrain.ts';
 
 const candidates: BrainCandidate[] = [
