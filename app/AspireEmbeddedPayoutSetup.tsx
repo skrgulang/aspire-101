@@ -80,7 +80,9 @@ export default function AspireEmbeddedPayoutSetup() {
       <div className="embeddedPayoutBrand">
         <span>ASPIRE PAYOUTS</span>
         <h1>Set up earnings without leaving Aspire.</h1>
-        <p>Stripe securely collects the identity and banking information required to send you payouts. Aspire stores only the minimum status needed for payment readiness.</p>
+        <p>Stripe directly collects and verifies the identity, tax and banking information needed to make payouts. Sensitive bank-account and KYC fields are handled inside Stripe&apos;s embedded component rather than stored in Aspire&apos;s application database.</p>
+        <p>Aspire keeps limited payment records such as your Stripe account identifier, payout-readiness status, transaction amounts, release status and transfer identifiers so we can operate support, refunds, disputes and payout reconciliation.</p>
+        <small>Stripe may request additional information when required for financial compliance. By continuing, you acknowledge Aspire&apos;s <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms</a>, and Stripe&apos;s own terms and privacy practices apply to information Stripe processes.</small>
       </div>
       <div className="embeddedPayoutFrame">
         <ConnectComponentsProvider connectInstance={connectInstance}>
