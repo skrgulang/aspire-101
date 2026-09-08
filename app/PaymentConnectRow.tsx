@@ -36,7 +36,7 @@ function paymentError(payload: { error?: string; code?: string }, fallback: stri
   return payload.error || fallback;
 }
 
-export default function PaymentConnectRow({ phoneVerified, schoolVerified }: { phoneVerified: boolean; schoolVerified: boolean }) {
+export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoolVerified }: { phoneVerified: boolean; schoolVerified: boolean }) {
   const [status, setStatus] = useState<PaymentStatus>('NOT_STARTED');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -88,10 +88,6 @@ export default function PaymentConnectRow({ phoneVerified, schoolVerified }: { p
     }
     if (!schoolVerified) {
       setMessage('Verify your school identity before setting up payouts.');
-      return;
-    }
-    if (!phoneVerified) {
-      setMessage('Verify your phone before setting up payouts.');
       return;
     }
     if (status === 'UNDER_REVIEW') {
