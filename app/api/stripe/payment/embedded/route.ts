@@ -5,7 +5,7 @@ import {
   getSupabaseServiceClient,
   publicOrigin,
   stripeFormRequest
-} from '../../../../../../lib/server/aspireServer';
+} from '../../../../../lib/server/aspireServer';
 
 type CheckoutSession = { id: string; client_secret: string | null };
 
