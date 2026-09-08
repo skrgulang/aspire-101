@@ -3,8 +3,16 @@ import type { ItemCondition, MarketIntent, RequestKind } from './requests';
 
 export type AspireAgentAction = 'join_existing' | 'create_request' | 'explore' | 'need_details';
 export type AspireAgentOutcome = 'planned' | 'opened_match' | 'drafted_post' | 'posted' | 'connected' | 'completed' | 'dismissed';
+export type AspireAgentMode = 'action' | 'navigation' | 'product_help' | 'out_of_scope' | 'safety';
+
+export type AspireAgentNavigation = {
+  label: string;
+  href: string;
+  description?: string;
+};
 
 export type AspireAgentPlan = {
+  scope: 'action' | 'out_of_scope';
   status: 'ready' | 'needs_details' | 'blocked';
   intent_summary: string;
   assistant_message: string;
@@ -39,10 +47,12 @@ export type AspireAgentResponse = {
   ok: boolean;
   sessionId: string | null;
   status: 'ready' | 'needs_details' | 'blocked';
+  mode?: AspireAgentMode;
   assistantMessage: string;
   campus?: { id: string; name: string; shortName: string };
   plan: AspireAgentPlan | null;
   matches: AspireAgentMatch[];
+  navigation?: AspireAgentNavigation[];
 };
 
 export type AspireAgentDraftEnvelope = {
@@ -70,7 +80,11 @@ export async function runAspireAgent(message: string, campusId?: string | null) 
   const response = await fetch('/api/ai/agent', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: message.trim(), campusId: campusId || undefined })
+    body: JSON.stringify({
+      message: message.trim(),
+      campusId: campusId || undefined,
+      currentPath: typeof window !== 'undefined' ? window.location.pathname : undefined
+    })
   });
   const payload = await response.json().catch(() => ({})) as AspireAgentResponse & { error?: string };
   if (!response.ok) throw new Error(payload.error || 'Aspire Agent could not finish that plan.');
