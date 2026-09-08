@@ -46,7 +46,9 @@ export default function AspireEmbeddedCheckout({ connectionId }: { connectionId:
       <div className="embeddedCheckoutBrand">
         <span>PAY WITH ASPIRE</span>
         <h1>Secure payment, without leaving Aspire.</h1>
-        <p>Stripe handles the sensitive card fields in the background. Aspire never stores your raw card number.</p>
+        <p>Stripe securely processes the card and wallet fields embedded below. Aspire does not receive or store your full card number or CVC.</p>
+        <p>After a successful charge, Aspire stores limited transaction identifiers, amounts, fee snapshots, and payment status so the transaction can be protected, refunded or disputed when applicable. Seller release is initiated only after the product&apos;s completion and release rules are satisfied.</p>
+        <small>By paying, you agree to Aspire&apos;s <a href="/terms">Terms</a> and acknowledge the <a href="/privacy">Privacy Policy</a>. Stripe&apos;s own terms and privacy practices also apply to payment information it processes.</small>
       </div>
       <div className="embeddedCheckoutFrame">
         <EmbeddedCheckoutProvider
