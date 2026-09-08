@@ -45,7 +45,8 @@ function candidate(
 
 export function looksLikeAspireAction(message: string) {
   const value = message.trim().toLowerCase();
-  return /\b(ride|drive|driving|airport|ind|ord|mdw|sfo|oak|sjc|lax|pickup|pick up|errand|package|move|moving|carry|lift|study partner|study buddy|classmate|project teammate|hackathon|collab|collaboration|sell|selling|for sale|buy|buying|looking for|marketplace|campus|request|post)\b/i.test(value);
+  return /\b(ride|drive|driving|airport|ind|ord|mdw|sfo|oak|sjc|lax|pickup|pick up|errand|package|move|moving|carry|lift|study partner|study buddy|classmate|tutor|tutoring|project teammate|teammate|hackathon|startup|frontend|backend|developer|designer|engineer|coder|programmer|collab|collaboration|sell|selling|for sale|buy|buying|looking for|marketplace|campus|request|post)\b/i.test(value)
+    || /\b(can someone|could someone|need someone|anyone able|looking for someone)\b/i.test(value);
 }
 
 export function parseAspireIntent(message: string): AspireIntent {
@@ -80,8 +81,8 @@ export function parseAspireIntent(message: string): AspireIntent {
   {
     let score = 0;
     const signals: string[] = [];
-    if (hit(value, /\b(study partner|study buddy|study group|classmate|study with|study together)\b/i)) { score += 90; signals.push('study-partner'); }
-    if (hit(value, /\b(study|midterm|final|exam|quiz|course|class)\b/i)) { score += 35; signals.push('study-language'); }
+    if (hit(value, /\b(study partner|study buddy|study group|classmate|study with|study together|tutor|tutoring|homework help)\b/i)) { score += 90; signals.push('study-partner'); }
+    if (hit(value, /\b(study|midterm|final|exam|quiz|course|class|homework)\b/i)) { score += 35; signals.push('study-language'); }
     if (hit(value, /\b(math|cs|data|stat|stats|econ|physics|chem|bio|ece|ee|me|mgmt)\s*[- ]?[a-z]?\d{1,3}[a-z]?\b/i)) { score += 35; signals.push('course-code'); }
     if (score > 0) results.push(candidate('FIND_STUDY', 'Study', 'community', null, score, signals));
   }
@@ -91,7 +92,7 @@ export function parseAspireIntent(message: string): AspireIntent {
     const signals: string[] = [];
     if (hit(value, /\b(project teammate|teammate|hackathon teammate|cofounder|co-founder|collaborator)\b/i)) { score += 90; signals.push('teammate-language'); }
     if (hit(value, /\b(project|hackathon|startup|build something|collab|collaboration)\b/i)) { score += 45; signals.push('project-language'); }
-    if (hit(value, /\b(frontend|backend|developer|designer|engineer|coder|programmer)\b/i)) { score += 20; signals.push('role-language'); }
+    if (hit(value, /\b(frontend|backend|developer|designer|engineer|coder|programmer)\b/i)) { score += 30; signals.push('role-language'); }
     if (score > 0) results.push(candidate('FIND_PROJECT', 'Project / collab', 'collaboration', null, score, signals));
   }
 
