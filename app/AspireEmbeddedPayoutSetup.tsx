@@ -78,6 +78,7 @@ export default function AspireEmbeddedPayoutSetup() {
   return (
     <div className="embeddedPayoutShell">
       <div className="embeddedPayoutBrand">
+        <div className="embeddedBetaNotice"><b>PRIVATE BETA</b><span>Payout onboarding is being tested. In Preview, use Stripe sandbox/test information only and do not enter real banking or identity data for beta testing.</span></div>
         <span>ASPIRE PAYOUTS</span>
         <h1>Set up earnings without leaving Aspire.</h1>
         <p>Stripe directly collects and verifies the identity, tax and banking information needed to make payouts. Sensitive bank-account and KYC fields are handled inside Stripe&apos;s embedded component rather than stored in Aspire&apos;s application database.</p>
