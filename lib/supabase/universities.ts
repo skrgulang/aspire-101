@@ -18,13 +18,44 @@ export type NearbyUniversity = University & {
 
 export type NearestUniversity = NearbyUniversity;
 
+const universitySelect = 'id,name,short_name,slug,city,state,country,cover_image,launch_status';
+
+function normalizedEmailDomain(email: string) {
+  return email.trim().toLowerCase().split('@')[1] ?? '';
+}
+
 export async function resolveUniversityByEmail(email: string) {
   const supabase = getSupabaseBrowserClient();
+  const cleanEmail = email.trim().toLowerCase();
+  const domain = normalizedEmailDomain(cleanEmail);
+  if (!domain) return null;
+
+  // Primary path: use the canonical database resolver so subdomains and future
+  // campus aliases continue to work without shipping a new frontend build.
   const { data, error } = await supabase.rpc('resolve_university_by_email', {
-    p_email: email.trim().toLowerCase()
+    p_email: cleanEmail
   });
+
+  const resolved = ((data ?? [])[0] ?? null) as University | null;
+  if (resolved) return resolved;
+
+  // Defensive fallback: the signup form is public and should not incorrectly
+  // label a real supported campus as unavailable if the RPC/schema cache has a
+  // transient issue. Exact domains such as purdue.edu can be resolved directly
+  // from the public university directory.
+  const { data: fallback, error: fallbackError } = await supabase
+    .from('universities')
+    .select(universitySelect)
+    .eq('active', true)
+    .contains('email_domains', [domain])
+    .order('name')
+    .limit(1)
+    .maybeSingle();
+
+  if (fallback) return fallback as University;
+  if (fallbackError) throw fallbackError;
   if (error) throw error;
-  return ((data ?? [])[0] ?? null) as University | null;
+  return null;
 }
 
 export async function findNearestUniversity(lat: number, lng: number) {
@@ -58,7 +89,7 @@ export async function fetchActiveUniversities() {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('universities')
-    .select('id,name,short_name,slug,city,state,country,cover_image,launch_status')
+    .select(universitySelect)
     .eq('active', true)
     .order('name');
   if (error) throw error;
