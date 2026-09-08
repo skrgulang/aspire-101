@@ -4,10 +4,16 @@ import {
   getAuthenticatedUser,
   getSupabaseServiceClient,
   publicOrigin,
-  stripeFormRequest
+  stripeFormRequest,
+  stripeGet
 } from '../../../../../lib/server/aspireServer';
 
-type CheckoutSession = { id: string; client_secret: string | null };
+type CheckoutSession = {
+  id: string;
+  client_secret: string | null;
+  status?: 'open' | 'complete' | 'expired' | null;
+  payment_status?: 'paid' | 'unpaid' | 'no_payment_required' | null;
+};
 
 type FeeQuote = {
   fee_policy_version: string;
@@ -78,15 +84,67 @@ export async function POST(request: Request) {
     if (!payoutAccount?.stripe_account_id || payoutAccount.status !== 'READY' || payoutAccount.transfers_enabled !== true) {
       throw new Error('PAYOUT_NOT_READY');
     }
+
     if (existingPayment && ['secured', 'released'].includes(existingPayment.status)) throw new Error('PAYMENT_ALREADY_SECURED');
+    if (existingPayment && ['disputed', 'refunded'].includes(existingPayment.status)) {
+      return NextResponse.json({ error: 'This payment is already closed. Start a new eligible transaction instead of charging this connection again.', code: 'PAYMENT_CLOSED' }, { status: 409 });
+    }
 
     const baseAmount = Number(connection.agreed_amount_cents ?? aspireRequest.amount_cents ?? 0);
     if (!Number.isInteger(baseAmount) || baseAmount <= 0) {
       return NextResponse.json({ error: 'This connection does not have a valid agreed amount yet.' }, { status: 409 });
     }
+    const currency = String(aspireRequest.currency || 'USD').toUpperCase();
+
+    // Reuse an existing open Embedded Checkout session instead of creating a second
+    // payable session when a browser retries, refreshes, or double-clicks.
+    if (existingPayment?.stripe_checkout_session_id && ['checkout_created', 'processing', 'failed'].includes(existingPayment.status)) {
+      const priorSession = await stripeGet<CheckoutSession>(`/v1/checkout/sessions/${encodeURIComponent(existingPayment.stripe_checkout_session_id)}`);
+      const sameTerms = Number(existingPayment.base_amount_cents ?? 0) === baseAmount
+        && String(existingPayment.currency || 'USD').toUpperCase() === currency;
+
+      if (priorSession.status === 'complete' || priorSession.payment_status === 'paid') {
+        return NextResponse.json({
+          error: 'Your payment is already being confirmed. Refresh Connections in a moment instead of paying again.',
+          code: 'PAYMENT_PROCESSING'
+        }, { status: 409 });
+      }
+
+      if (priorSession.status === 'open' && sameTerms) {
+        if (!priorSession.client_secret) throw new Error('STRIPE:Existing Embedded Checkout session is missing its client secret.');
+        return NextResponse.json({
+          clientSecret: priorSession.client_secret,
+          paymentId: existingPayment.id,
+          status: 'checkout_created',
+          transactionType: isMarket ? 'marketplace' : 'connection',
+          customerTotalCents: existingPayment.customer_total_cents,
+          currency,
+          reused: true
+        });
+      }
+
+      // If both users changed the agreed amount before payment, expire the old open
+      // session so it cannot later be completed at stale terms.
+      if (priorSession.status === 'open' && !sameTerms) {
+        await stripeFormRequest(`/v1/checkout/sessions/${encodeURIComponent(priorSession.id)}/expire`, {});
+      } else if (existingPayment.status === 'processing' && priorSession.status !== 'expired') {
+        return NextResponse.json({
+          error: 'Your payment is still processing. Wait for Stripe confirmation before trying again.',
+          code: 'PAYMENT_PROCESSING'
+        }, { status: 409 });
+      }
+    } else if (existingPayment?.status === 'processing') {
+      return NextResponse.json({
+        error: 'Your payment is still processing. Wait for confirmation before trying again.',
+        code: 'PAYMENT_PROCESSING'
+      }, { status: 409 });
+    }
 
     let quote: FeeQuote | null = null;
-    if (existingPayment?.base_amount_cents != null && existingPayment?.customer_total_cents != null && existingPayment?.fee_policy_version) {
+    const existingTermsMatch = existingPayment?.base_amount_cents != null
+      && Number(existingPayment.base_amount_cents) === baseAmount
+      && String(existingPayment.currency || 'USD').toUpperCase() === currency;
+    if (existingTermsMatch && existingPayment?.customer_total_cents != null && existingPayment?.fee_policy_version) {
       quote = {
         fee_policy_version: existingPayment.fee_policy_version,
         base_amount_cents: existingPayment.base_amount_cents,
@@ -126,7 +184,6 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    const currency = String(aspireRequest.currency || 'USD').toUpperCase();
     const transferGroup = existingPayment?.transfer_group || `aspire_${connection.id.replace(/-/g, '')}`;
     const feeSnapshot = {
       version: quote.fee_policy_version,
@@ -200,11 +257,6 @@ export async function POST(request: Request) {
       'line_items[0][price_data][product_data][description]': isMarket ? 'Aspire Protected campus marketplace purchase' : 'Aspire 101 connection',
       'line_items[0][price_data][unit_amount]': quote.base_amount_cents,
       'line_items[0][quantity]': 1,
-      'line_items[1][price_data][currency]': currency.toLowerCase(),
-      'line_items[1][price_data][product_data][name]': 'Aspire 101 Service Fee',
-      'line_items[1][price_data][product_data][description]': 'Supports payments, support, trust & safety, dispute review, and platform operations.',
-      'line_items[1][price_data][unit_amount]': quote.requester_fee_cents,
-      'line_items[1][quantity]': 1,
       'payment_intent_data[transfer_group]': transferGroup,
       'payment_intent_data[metadata][aspire_payment_id]': payment.id,
       'payment_intent_data[metadata][connection_id]': connection.id,
@@ -220,11 +272,20 @@ export async function POST(request: Request) {
       return_url: `${origin}/connections?payment=success&connection=${encodeURIComponent(connection.id)}&session_id={CHECKOUT_SESSION_ID}`
     };
 
+    let nextLineItem = 1;
+    if (quote.requester_fee_cents > 0) {
+      params[`line_items[${nextLineItem}][price_data][currency]`] = currency.toLowerCase();
+      params[`line_items[${nextLineItem}][price_data][product_data][name]`] = 'Aspire 101 Service Fee';
+      params[`line_items[${nextLineItem}][price_data][product_data][description]`] = 'Supports payments, support, trust & safety, dispute review, and platform operations.';
+      params[`line_items[${nextLineItem}][price_data][unit_amount]`] = quote.requester_fee_cents;
+      params[`line_items[${nextLineItem}][quantity]`] = 1;
+      nextLineItem += 1;
+    }
     if (quote.tip_amount_cents > 0) {
-      params['line_items[2][price_data][currency]'] = currency.toLowerCase();
-      params['line_items[2][price_data][product_data][name]'] = 'Tip';
-      params['line_items[2][price_data][unit_amount]'] = quote.tip_amount_cents;
-      params['line_items[2][quantity]'] = 1;
+      params[`line_items[${nextLineItem}][price_data][currency]`] = currency.toLowerCase();
+      params[`line_items[${nextLineItem}][price_data][product_data][name]`] = 'Tip';
+      params[`line_items[${nextLineItem}][price_data][unit_amount]`] = quote.tip_amount_cents;
+      params[`line_items[${nextLineItem}][quantity]`] = 1;
     }
 
     const session = await stripeFormRequest<CheckoutSession>('/v1/checkout/sessions', params, {
@@ -247,7 +308,8 @@ export async function POST(request: Request) {
       status: 'checkout_created',
       transactionType: isMarket ? 'marketplace' : 'connection',
       customerTotalCents: quote.customer_total_cents,
-      currency
+      currency,
+      reused: false
     });
   } catch (error) {
     const resolved = apiError(error);
