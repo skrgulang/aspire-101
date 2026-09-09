@@ -4,11 +4,23 @@ import {
   getAuthenticatedUser,
   getSupabaseServiceClient,
   stripeFormRequest,
-  stripeGet
+  stripeGet,
+  stripeRequest
 } from '../../../../../lib/server/aspireServer';
 
 type StripePaymentIntent = { latest_charge?: string | { id?: string } | null };
 type StripeTransfer = { id: string };
+type StripeAccountState = {
+  configuration?: {
+    recipient?: {
+      capabilities?: {
+        stripe_balance?: {
+          stripe_transfers?: { status?: string };
+        };
+      };
+    };
+  };
+};
 
 function stripeId(value: unknown) {
   if (typeof value === 'string') return value;
@@ -30,21 +42,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'You are not part of this connection.' }, { status: 403 });
     }
 
-    const [{ data: payment }, { data: completions }, { data: marketOrder }, { data: openDispute }] = await Promise.all([
+    const [{ data: payment }, { data: completions }, { data: marketOrder }] = await Promise.all([
       supabase.from('connection_payments').select('*').eq('connection_id', connectionId).maybeSingle(),
       supabase.from('connection_completion_confirmations').select('user_id').eq('connection_id', connectionId),
-      supabase.from('market_orders').select('*').eq('connection_id', connectionId).maybeSingle(),
-      supabase.from('market_disputes').select('id,status,market_order_id').in('status', ['open', 'under_review'])
+      supabase.from('market_orders').select('*').eq('connection_id', connectionId).maybeSingle()
     ]);
 
-    if (!payment || payment.status !== 'secured') throw new Error('PAYMENT_NOT_SECURED');
+    if (!payment) throw new Error('PAYMENT_NOT_SECURED');
+
+    const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+    if (payment.status === 'released' && payment.stripe_transfer_id) {
+      return NextResponse.json({
+        status: 'released',
+        transactionType: marketOrder ? 'marketplace' : 'connection',
+        transferId: payment.stripe_transfer_id,
+        providerNetCents: providerNet,
+        feePolicyVersion: payment.fee_policy_version || 'legacy_v0',
+        duplicate: true
+      });
+    }
+    if (payment.status !== 'secured') throw new Error('PAYMENT_NOT_SECURED');
 
     if (marketOrder) {
       if (user.id !== marketOrder.buyer_id && user.id !== marketOrder.seller_id) {
         return NextResponse.json({ error: 'You are not part of this marketplace order.' }, { status: 403 });
       }
-      const disputeForOrder = (openDispute ?? []).some((row) => row.market_order_id === marketOrder.id);
-      if (disputeForOrder || marketOrder.status === 'disputed') {
+      const { data: openDispute } = await supabase
+        .from('market_disputes')
+        .select('id')
+        .eq('market_order_id', marketOrder.id)
+        .in('status', ['open', 'under_review'])
+        .limit(1)
+        .maybeSingle();
+      if (openDispute || marketOrder.status === 'disputed') {
         return NextResponse.json({ error: 'Seller payout is paused while this order is under review.', code: 'MARKET_ORDER_DISPUTED' }, { status: 409 });
       }
       if (marketOrder.status !== 'release_ready' || !marketOrder.seller_handed_off_at || !marketOrder.buyer_received_at) {
@@ -62,8 +92,30 @@ export async function POST(request: Request) {
       .select('stripe_account_id,status,transfers_enabled')
       .eq('user_id', payment.payee_id)
       .maybeSingle();
-    if (!payoutAccount?.stripe_account_id || payoutAccount.status !== 'READY' || payoutAccount.transfers_enabled !== true) {
+    if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
+
+    const stripeAccount = await stripeRequest<StripeAccountState>(
+      `/v2/core/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}?include[0]=configuration.recipient`,
+      { method: 'GET' }
+    );
+    const transferStatus = stripeAccount.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || '';
+    const transfersEnabled = transferStatus === 'active';
+    if (!transfersEnabled) {
+      await supabase.from('payment_accounts').update({
+        status: transferStatus === 'restricted' ? 'RESTRICTED' : 'ACTION_REQUIRED',
+        transfers_enabled: false,
+        last_synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).eq('user_id', payment.payee_id);
       throw new Error('PAYOUT_NOT_READY');
+    }
+    if (payoutAccount.status !== 'READY' || payoutAccount.transfers_enabled !== true) {
+      await supabase.from('payment_accounts').update({
+        status: 'READY',
+        transfers_enabled: true,
+        last_synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).eq('user_id', payment.payee_id);
     }
 
     let chargeId = payment.stripe_charge_id as string | null;
@@ -76,7 +128,6 @@ export async function POST(request: Request) {
     }
     if (!chargeId) throw new Error('STRIPE:Payment charge is not ready for transfer yet.');
 
-    const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
     if (!Number.isInteger(providerNet) || providerNet <= 0) {
       return NextResponse.json({ error: 'No seller/provider payout is due for this payment.' }, { status: 409 });
     }
@@ -95,14 +146,21 @@ export async function POST(request: Request) {
     }, { idempotencyKey: `aspire_release_${payment.id}` });
 
     const now = new Date().toISOString();
-    const { error: updateError } = await supabase.from('connection_payments').update({
+    const { data: updated, error: updateError } = await supabase.from('connection_payments').update({
       status: 'released',
       stripe_transfer_id: transfer.id,
       released_at: now,
       failure_reason: null,
       updated_at: now
-    }).eq('id', payment.id).eq('status', 'secured');
+    }).eq('id', payment.id).eq('status', 'secured').select('id,status,stripe_transfer_id').maybeSingle();
     if (updateError) throw updateError;
+
+    if (!updated) {
+      const { data: latest } = await supabase.from('connection_payments').select('status,stripe_transfer_id').eq('id', payment.id).maybeSingle();
+      if (latest?.status !== 'released' || !latest?.stripe_transfer_id) {
+        throw new Error('STRIPE:Transfer was created but Aspire could not finalize the payment record. Retry this payout step.');
+      }
+    }
 
     await Promise.all([
       supabase.from('connections').update({ status: 'completed', updated_at: now }).eq('id', connection.id),

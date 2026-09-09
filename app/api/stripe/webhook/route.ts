@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { apiError, getSupabaseServiceClient, verifyStripeWebhookSignature } from '../../../../lib/server/aspireServer';
+import {
+  apiError,
+  getSupabaseServiceClient,
+  stripeExpectedLivemode,
+  verifyStripeWebhookSignature
+} from '../../../../lib/server/aspireServer';
 
 type StripeEvent = {
   id: string;
@@ -27,6 +32,9 @@ export async function POST(request: Request) {
 
     if (!event?.id || !event?.type || !event?.data?.object) {
       return NextResponse.json({ error: 'Invalid Stripe event.' }, { status: 400 });
+    }
+    if (Boolean(event.livemode) !== stripeExpectedLivemode()) {
+      throw new Error('WEBHOOK_MODE_MISMATCH');
     }
 
     const supabase = getSupabaseServiceClient();
@@ -144,20 +152,48 @@ export async function POST(request: Request) {
     if (event.type === 'charge.dispute.created') {
       const chargeId = objectId(object.charge);
       if (chargeId) {
-        await supabase.from('connection_payments').update({
+        const now = new Date().toISOString();
+        const { data: disputedPayment } = await supabase.from('connection_payments').update({
           status: 'disputed',
-          disputed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }).eq('stripe_charge_id', chargeId).neq('status', 'refunded');
+          disputed_at: now,
+          failure_reason: 'Stripe reported a cardholder dispute. Seller release and reconciliation require review.',
+          updated_at: now
+        }).eq('stripe_charge_id', chargeId).neq('status', 'refunded').select('id,connection_id').maybeSingle();
+
+        if (disputedPayment?.connection_id) {
+          await supabase.from('market_orders').update({ status: 'disputed', updated_at: now }).eq('connection_id', disputedPayment.connection_id).neq('status', 'refunded');
+        }
       }
     }
 
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {
-      await supabase.from('connection_payments').update({
-        status: 'refunded',
-        refunded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('stripe_charge_id', object.id).neq('status', 'released');
+      const now = new Date().toISOString();
+      const { data: payment } = await supabase
+        .from('connection_payments')
+        .select('id,connection_id,status,stripe_transfer_id')
+        .eq('stripe_charge_id', object.id)
+        .maybeSingle();
+
+      if (payment) {
+        if (payment.status === 'released' || payment.stripe_transfer_id) {
+          // A refund after seller release requires reconciliation. Preserve the fact that
+          // a seller transfer occurred instead of falsely presenting this as a clean pre-release refund.
+          await supabase.from('connection_payments').update({
+            refunded_at: now,
+            failure_reason: 'Stripe reported a full refund after seller payout release. Manual transfer reconciliation is required.',
+            updated_at: now
+          }).eq('id', payment.id);
+          await supabase.from('market_orders').update({ status: 'disputed', updated_at: now }).eq('connection_id', payment.connection_id).neq('status', 'refunded');
+        } else {
+          await supabase.from('connection_payments').update({
+            status: 'refunded',
+            refunded_at: now,
+            failure_reason: null,
+            updated_at: now
+          }).eq('id', payment.id);
+          await supabase.from('market_orders').update({ status: 'refunded', refunded_at: now, updated_at: now }).eq('connection_id', payment.connection_id);
+        }
+      }
     }
 
     await supabase.from('stripe_webhook_events').update({

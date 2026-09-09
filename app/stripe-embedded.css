@@ -1,0 +1,110 @@
+.embeddedPaymentPage {
+  min-height: 100vh;
+  padding: 72px 24px 120px;
+  background:
+    radial-gradient(circle at 18% 10%, rgba(228, 189, 73, .10), transparent 32%),
+    #090907;
+  color: #f5f0e4;
+}
+
+.embeddedCheckoutShell,
+.embeddedPayoutShell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.28fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.embeddedCheckoutBrand,
+.embeddedPayoutBrand,
+.embeddedCheckoutFrame,
+.embeddedPayoutFrame,
+.embeddedStripeError,
+.embeddedStripeLoading {
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 28px;
+  background: rgba(16,16,13,.94);
+  box-shadow: 0 24px 80px rgba(0,0,0,.28);
+}
+
+.embeddedCheckoutBrand,
+.embeddedPayoutBrand {
+  padding: 34px;
+  position: sticky;
+  top: 24px;
+}
+
+.embeddedCheckoutBrand span,
+.embeddedPayoutBrand span {
+  display: inline-block;
+  margin-bottom: 18px;
+  color: #e4bd49;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .15em;
+}
+
+.embeddedCheckoutBrand h1,
+.embeddedPayoutBrand h1 {
+  margin: 0;
+  font-size: clamp(34px, 5vw, 58px);
+  line-height: .98;
+  letter-spacing: -.045em;
+}
+
+.embeddedCheckoutBrand p,
+.embeddedPayoutBrand p {
+  margin: 22px 0 0;
+  max-width: 42rem;
+  color: rgba(245,240,228,.62);
+  line-height: 1.65;
+}
+
+.embeddedCheckoutFrame,
+.embeddedPayoutFrame {
+  overflow: hidden;
+  padding: 18px;
+  min-height: 560px;
+}
+
+.embeddedPayoutFrame {
+  padding: 24px;
+}
+
+.embeddedStripeError,
+.embeddedStripeLoading {
+  width: min(680px, 100%);
+  margin: 8vh auto 0;
+  padding: 36px;
+}
+
+.embeddedStripeError strong {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.embeddedStripeError p,
+.embeddedStripeLoading {
+  color: rgba(245,240,228,.68);
+}
+
+.embeddedStripeError a {
+  display: inline-block;
+  margin-top: 18px;
+  color: #e4bd49;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+@media (max-width: 860px) {
+  .embeddedPaymentPage { padding: 28px 14px 96px; }
+  .embeddedCheckoutShell,
+  .embeddedPayoutShell { grid-template-columns: 1fr; }
+  .embeddedCheckoutBrand,
+  .embeddedPayoutBrand { position: static; padding: 24px; }
+  .embeddedCheckoutFrame,
+  .embeddedPayoutFrame { padding: 8px; border-radius: 20px; }
+}

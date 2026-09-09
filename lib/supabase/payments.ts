@@ -126,26 +126,16 @@ export async function setConnectionPaymentMethod(connectionId: string, method: '
   return data as 'none' | 'in_person' | 'aspire';
 }
 
+/**
+ * Open Aspire's own payment screen. The Stripe form is embedded on that page,
+ * so card data is still handled by Stripe without redirecting the user to stripe.com.
+ */
 export async function createAspireCheckout(connectionId: string) {
-  const headers = await bearerHeaders();
-  const response = await fetch('/api/stripe/payment/create', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ connectionId })
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error || 'Could not start Aspire payment.');
-  return payload as {
-    url: string;
-    status: string;
-    feePolicyVersion: string;
-    baseAmountCents: number;
-    requesterFeeCents: number;
-    customerTotalCents: number;
-    providerFeeCents: number;
-    providerNetCents: number;
-    tipAmountCents: number;
-  };
+  if (!connectionId) throw new Error('Missing connection.');
+  return {
+    url: `/pay?connection=${encodeURIComponent(connectionId)}`,
+    status: 'embedded'
+  } as const;
 }
 
 export async function releaseAspirePayment(connectionId: string) {

@@ -4,34 +4,15 @@ import {
   getAuthenticatedUser,
   getSupabaseServiceClient,
   publicOrigin,
-  stripeFormRequest
+  stripeFormRequest,
+  stripeGet
 } from '../../../../../lib/server/aspireServer';
 
-type CheckoutSession = { id: string; url: string | null };
-
-type PaymentRow = {
+type CheckoutSession = {
   id: string;
-  status: string;
-  transfer_group: string;
-  checkout_attempt: number;
-  payer_id?: string;
-  payee_id?: string;
-  base_amount_cents: number | null;
-  requester_fee_cents: number | null;
-  provider_fee_cents: number | null;
-  tip_amount_cents: number;
-  tip_fee_cents: number;
-  customer_total_cents: number | null;
-  provider_net_cents: number | null;
-  fee_policy_version: string | null;
-  requester_fee_percent_bps: number | null;
-  requester_fee_fixed_cents: number | null;
-  requester_fee_min_cents: number | null;
-  requester_fee_max_cents: number | null;
-  provider_fee_percent_bps: number | null;
-  tip_fee_percent_bps: number | null;
-  minimum_paid_order_cents: number | null;
-  fee_snapshot: Record<string, unknown>;
+  client_secret: string | null;
+  status?: 'open' | 'complete' | 'expired' | null;
+  payment_status?: 'paid' | 'unpaid' | 'no_payment_required' | null;
 };
 
 type FeeQuote = {
@@ -54,41 +35,9 @@ type FeeQuote = {
   standard_payout_cadence: string;
 };
 
-function quoteFromPayment(payment: PaymentRow): FeeQuote | null {
-  if (
-    payment.base_amount_cents == null ||
-    payment.requester_fee_cents == null ||
-    payment.provider_fee_cents == null ||
-    payment.customer_total_cents == null ||
-    payment.provider_net_cents == null ||
-    !payment.fee_policy_version
-  ) return null;
-
-  return {
-    fee_policy_version: payment.fee_policy_version,
-    base_amount_cents: payment.base_amount_cents,
-    requester_fee_cents: payment.requester_fee_cents,
-    provider_fee_cents: payment.provider_fee_cents,
-    tip_amount_cents: Number(payment.tip_amount_cents || 0),
-    tip_fee_cents: Number(payment.tip_fee_cents || 0),
-    customer_total_cents: payment.customer_total_cents,
-    provider_net_cents: payment.provider_net_cents,
-    platform_fee_revenue_cents: Number(payment.requester_fee_cents || 0) + Number(payment.provider_fee_cents || 0) + Number(payment.tip_fee_cents || 0),
-    requester_fee_percent_bps: Number(payment.requester_fee_percent_bps || 0),
-    requester_fee_fixed_cents: Number(payment.requester_fee_fixed_cents || 0),
-    requester_fee_min_cents: Number(payment.requester_fee_min_cents || 0),
-    requester_fee_max_cents: Number(payment.requester_fee_max_cents || 0),
-    provider_fee_percent_bps: Number(payment.provider_fee_percent_bps || 0),
-    tip_fee_percent_bps: Number(payment.tip_fee_percent_bps || 0),
-    minimum_paid_order_cents: Number(payment.minimum_paid_order_cents || 0),
-    standard_payout_cadence: String(payment.fee_snapshot?.standard_payout_cadence || 'weekly')
-  };
-}
-
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
-
     const body = await request.json().catch(() => ({}));
     const connectionId = typeof body?.connectionId === 'string' ? body.connectionId : '';
     if (!connectionId) return NextResponse.json({ error: 'Missing connection.' }, { status: 400 });
@@ -102,6 +51,7 @@ export async function POST(request: Request) {
     if (verification?.status !== 'verified') throw new Error('SCHOOL_REQUIRED');
     if (!connection) return NextResponse.json({ error: 'Connection not found.' }, { status: 404 });
     if (!['confirmed', 'active'].includes(connection.status)) throw new Error('CONNECTION_NOT_READY');
+    if (connection.payment_method !== 'aspire') throw new Error('PAYMENT_NOT_REQUIRED');
 
     const [{ data: aspireRequest }, { data: existingPayment }, { data: marketOrder }] = await Promise.all([
       supabase.from('requests').select('id,title,kind,amount_cents,currency,campus_id,market_intent').eq('id', connection.request_id).maybeSingle(),
@@ -110,21 +60,19 @@ export async function POST(request: Request) {
     ]);
 
     if (!aspireRequest) return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
-    if (connection.payment_method !== 'aspire') throw new Error('PAYMENT_NOT_REQUIRED');
 
     const isMarket = aspireRequest.kind === 'buy_sell';
     if (isMarket && !marketOrder) {
-      return NextResponse.json({ error: 'This marketplace order is not initialized yet. Reconnect to the listing and try again.', code: 'MARKET_ORDER_NOT_READY' }, { status: 409 });
+      return NextResponse.json({ error: 'This marketplace order is not initialized yet.', code: 'MARKET_ORDER_NOT_READY' }, { status: 409 });
     }
 
     const payerId = isMarket ? marketOrder!.buyer_id : connection.requester_id;
     const payeeId = isMarket ? marketOrder!.seller_id : connection.responder_id;
-
     if (user.id !== payerId) {
-      return NextResponse.json({ error: isMarket ? 'Only the buyer can secure payment for this marketplace order.' : 'Only the requester can start this payment.', code: 'NOT_PAYER' }, { status: 403 });
+      return NextResponse.json({ error: isMarket ? 'Only the buyer can secure this payment.' : 'Only the requester can start this payment.', code: 'NOT_PAYER' }, { status: 403 });
     }
     if (isMarket && ['disputed', 'released', 'refunded', 'cancelled'].includes(String(marketOrder!.status))) {
-      return NextResponse.json({ error: 'This marketplace order can no longer accept a new payment.', code: 'MARKET_ORDER_CLOSED' }, { status: 409 });
+      return NextResponse.json({ error: 'This marketplace order can no longer accept a payment.', code: 'MARKET_ORDER_CLOSED' }, { status: 409 });
     }
 
     const { data: payoutAccount } = await supabase
@@ -136,14 +84,88 @@ export async function POST(request: Request) {
     if (!payoutAccount?.stripe_account_id || payoutAccount.status !== 'READY' || payoutAccount.transfers_enabled !== true) {
       throw new Error('PAYOUT_NOT_READY');
     }
+
     if (existingPayment && ['secured', 'released'].includes(existingPayment.status)) throw new Error('PAYMENT_ALREADY_SECURED');
+    if (existingPayment && ['disputed', 'refunded'].includes(existingPayment.status)) {
+      return NextResponse.json({ error: 'This payment is already closed. Start a new eligible transaction instead of charging this connection again.', code: 'PAYMENT_CLOSED' }, { status: 409 });
+    }
 
     const baseAmount = Number(connection.agreed_amount_cents ?? aspireRequest.amount_cents ?? 0);
     if (!Number.isInteger(baseAmount) || baseAmount <= 0) {
       return NextResponse.json({ error: 'This connection does not have a valid agreed amount yet.' }, { status: 409 });
     }
+    const currency = String(aspireRequest.currency || 'USD').toUpperCase();
 
-    let quote = existingPayment ? quoteFromPayment(existingPayment as PaymentRow) : null;
+    // Reuse an existing open Embedded Checkout session instead of creating a second
+    // payable session when a browser retries, refreshes, or double-clicks.
+    if (existingPayment?.stripe_checkout_session_id && ['checkout_created', 'processing', 'failed'].includes(existingPayment.status)) {
+      const priorSession = await stripeGet<CheckoutSession>(`/v1/checkout/sessions/${encodeURIComponent(existingPayment.stripe_checkout_session_id)}`);
+      const sameTerms = Number(existingPayment.base_amount_cents ?? 0) === baseAmount
+        && String(existingPayment.currency || 'USD').toUpperCase() === currency;
+
+      if (priorSession.status === 'complete' || priorSession.payment_status === 'paid') {
+        return NextResponse.json({
+          error: 'Your payment is already being confirmed. Refresh Connections in a moment instead of paying again.',
+          code: 'PAYMENT_PROCESSING'
+        }, { status: 409 });
+      }
+
+      if (priorSession.status === 'open' && sameTerms) {
+        if (!priorSession.client_secret) throw new Error('STRIPE:Existing Embedded Checkout session is missing its client secret.');
+        return NextResponse.json({
+          clientSecret: priorSession.client_secret,
+          paymentId: existingPayment.id,
+          status: 'checkout_created',
+          transactionType: isMarket ? 'marketplace' : 'connection',
+          customerTotalCents: existingPayment.customer_total_cents,
+          currency,
+          reused: true
+        });
+      }
+
+      // If both users changed the agreed amount before payment, expire the old open
+      // session so it cannot later be completed at stale terms.
+      if (priorSession.status === 'open' && !sameTerms) {
+        await stripeFormRequest(`/v1/checkout/sessions/${encodeURIComponent(priorSession.id)}/expire`, {});
+      } else if (existingPayment.status === 'processing' && priorSession.status !== 'expired') {
+        return NextResponse.json({
+          error: 'Your payment is still processing. Wait for Stripe confirmation before trying again.',
+          code: 'PAYMENT_PROCESSING'
+        }, { status: 409 });
+      }
+    } else if (existingPayment?.status === 'processing') {
+      return NextResponse.json({
+        error: 'Your payment is still processing. Wait for confirmation before trying again.',
+        code: 'PAYMENT_PROCESSING'
+      }, { status: 409 });
+    }
+
+    let quote: FeeQuote | null = null;
+    const existingTermsMatch = existingPayment?.base_amount_cents != null
+      && Number(existingPayment.base_amount_cents) === baseAmount
+      && String(existingPayment.currency || 'USD').toUpperCase() === currency;
+    if (existingTermsMatch && existingPayment?.customer_total_cents != null && existingPayment?.fee_policy_version) {
+      quote = {
+        fee_policy_version: existingPayment.fee_policy_version,
+        base_amount_cents: existingPayment.base_amount_cents,
+        requester_fee_cents: existingPayment.requester_fee_cents ?? 0,
+        provider_fee_cents: existingPayment.provider_fee_cents ?? 0,
+        tip_amount_cents: existingPayment.tip_amount_cents ?? 0,
+        tip_fee_cents: existingPayment.tip_fee_cents ?? 0,
+        customer_total_cents: existingPayment.customer_total_cents,
+        provider_net_cents: existingPayment.provider_net_cents ?? 0,
+        platform_fee_revenue_cents: Number(existingPayment.requester_fee_cents || 0) + Number(existingPayment.provider_fee_cents || 0) + Number(existingPayment.tip_fee_cents || 0),
+        requester_fee_percent_bps: Number(existingPayment.requester_fee_percent_bps || 0),
+        requester_fee_fixed_cents: Number(existingPayment.requester_fee_fixed_cents || 0),
+        requester_fee_min_cents: Number(existingPayment.requester_fee_min_cents || 0),
+        requester_fee_max_cents: Number(existingPayment.requester_fee_max_cents || 0),
+        provider_fee_percent_bps: Number(existingPayment.provider_fee_percent_bps || 0),
+        tip_fee_percent_bps: Number(existingPayment.tip_fee_percent_bps || 0),
+        minimum_paid_order_cents: Number(existingPayment.minimum_paid_order_cents || 0),
+        standard_payout_cadence: String(existingPayment.fee_snapshot?.standard_payout_cadence || 'weekly')
+      };
+    }
+
     if (!quote) {
       const { data: quoteRows, error: quoteError } = await supabase.rpc('quote_aspire_fees', {
         p_base_amount_cents: baseAmount,
@@ -162,7 +184,6 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    const currency = String(aspireRequest.currency || 'USD').toUpperCase();
     const transferGroup = existingPayment?.transfer_group || `aspire_${connection.id.replace(/-/g, '')}`;
     const feeSnapshot = {
       version: quote.fee_policy_version,
@@ -177,7 +198,6 @@ export async function POST(request: Request) {
       transaction_type: isMarket ? 'marketplace_physical_goods' : 'connection_service'
     };
 
-    let payment = existingPayment as PaymentRow | null;
     const paymentValues = {
       payer_id: payerId,
       payee_id: payeeId,
@@ -203,42 +223,40 @@ export async function POST(request: Request) {
       provider_amount_cents: quote.provider_net_cents
     };
 
+    let payment = existingPayment;
     if (!payment) {
       const { data, error } = await supabase.from('connection_payments').insert({
         connection_id: connection.id,
         request_id: aspireRequest.id,
         status: 'not_started',
         transfer_group: transferGroup,
+        checkout_attempt: 0,
         ...paymentValues
       }).select('*').single();
       if (error) throw error;
-      payment = data as PaymentRow;
+      payment = data;
     } else {
       const { data, error } = await supabase.from('connection_payments').update({
         ...paymentValues,
         updated_at: new Date().toISOString()
       }).eq('id', payment.id).select('*').single();
       if (error) throw error;
-      payment = data as PaymentRow;
+      payment = data;
     }
 
     const attempt = Number(payment.checkout_attempt || 0) + 1;
     const origin = publicOrigin(request);
     if (!origin.startsWith('https://')) throw new Error('MISSING_ENV:NEXT_PUBLIC_SITE_URL');
 
-    const checkoutParams: Record<string, string | number | boolean | null | undefined> = {
+    const params: Record<string, string | number | boolean | null | undefined> = {
       mode: 'payment',
+      ui_mode: 'embedded',
       customer_email: user.email || undefined,
       'line_items[0][price_data][currency]': currency.toLowerCase(),
       'line_items[0][price_data][product_data][name]': String(aspireRequest.title).slice(0, 100),
       'line_items[0][price_data][product_data][description]': isMarket ? 'Aspire Protected campus marketplace purchase' : 'Aspire 101 connection',
       'line_items[0][price_data][unit_amount]': quote.base_amount_cents,
       'line_items[0][quantity]': 1,
-      'line_items[1][price_data][currency]': currency.toLowerCase(),
-      'line_items[1][price_data][product_data][name]': 'Aspire 101 Service Fee',
-      'line_items[1][price_data][product_data][description]': 'Supports payments, support, trust & safety, dispute review, and platform operations.',
-      'line_items[1][price_data][unit_amount]': quote.requester_fee_cents,
-      'line_items[1][quantity]': 1,
       'payment_intent_data[transfer_group]': transferGroup,
       'payment_intent_data[metadata][aspire_payment_id]': payment.id,
       'payment_intent_data[metadata][connection_id]': connection.id,
@@ -251,22 +269,29 @@ export async function POST(request: Request) {
       'metadata[connection_id]': connection.id,
       'metadata[transaction_type]': isMarket ? 'marketplace' : 'connection',
       'metadata[fee_policy_version]': quote.fee_policy_version,
-      success_url: `${origin}/connections?payment=success&connection=${encodeURIComponent(connection.id)}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/connections?payment=cancelled&connection=${encodeURIComponent(connection.id)}`
+      return_url: `${origin}/connections?payment=success&connection=${encodeURIComponent(connection.id)}&session_id={CHECKOUT_SESSION_ID}`
     };
 
+    let nextLineItem = 1;
+    if (quote.requester_fee_cents > 0) {
+      params[`line_items[${nextLineItem}][price_data][currency]`] = currency.toLowerCase();
+      params[`line_items[${nextLineItem}][price_data][product_data][name]`] = 'Aspire 101 Service Fee';
+      params[`line_items[${nextLineItem}][price_data][product_data][description]`] = 'Supports payments, support, trust & safety, dispute review, and platform operations.';
+      params[`line_items[${nextLineItem}][price_data][unit_amount]`] = quote.requester_fee_cents;
+      params[`line_items[${nextLineItem}][quantity]`] = 1;
+      nextLineItem += 1;
+    }
     if (quote.tip_amount_cents > 0) {
-      checkoutParams['line_items[2][price_data][currency]'] = currency.toLowerCase();
-      checkoutParams['line_items[2][price_data][product_data][name]'] = 'Tip';
-      checkoutParams['line_items[2][price_data][unit_amount]'] = quote.tip_amount_cents;
-      checkoutParams['line_items[2][quantity]'] = 1;
+      params[`line_items[${nextLineItem}][price_data][currency]`] = currency.toLowerCase();
+      params[`line_items[${nextLineItem}][price_data][product_data][name]`] = 'Tip';
+      params[`line_items[${nextLineItem}][price_data][unit_amount]`] = quote.tip_amount_cents;
+      params[`line_items[${nextLineItem}][quantity]`] = 1;
     }
 
-    const session = await stripeFormRequest<CheckoutSession>('/v1/checkout/sessions', checkoutParams, {
-      idempotencyKey: `aspire_checkout_${payment.id}_${attempt}`
+    const session = await stripeFormRequest<CheckoutSession>('/v1/checkout/sessions', params, {
+      idempotencyKey: `aspire_embedded_checkout_${payment.id}_${attempt}`
     });
-
-    if (!session.url) throw new Error('STRIPE:Checkout did not return a redirect URL.');
+    if (!session.client_secret) throw new Error('STRIPE:Embedded Checkout did not return a client secret.');
 
     const { error: saveError } = await supabase.from('connection_payments').update({
       status: 'checkout_created',
@@ -278,19 +303,13 @@ export async function POST(request: Request) {
     if (saveError) throw saveError;
 
     return NextResponse.json({
-      url: session.url,
+      clientSecret: session.client_secret,
       paymentId: payment.id,
       status: 'checkout_created',
       transactionType: isMarket ? 'marketplace' : 'connection',
-      payerId,
-      payeeId,
-      feePolicyVersion: quote.fee_policy_version,
-      baseAmountCents: quote.base_amount_cents,
-      requesterFeeCents: quote.requester_fee_cents,
       customerTotalCents: quote.customer_total_cents,
-      providerFeeCents: quote.provider_fee_cents,
-      providerNetCents: quote.provider_net_cents,
-      tipAmountCents: quote.tip_amount_cents
+      currency,
+      reused: false
     });
   } catch (error) {
     const resolved = apiError(error);

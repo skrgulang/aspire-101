@@ -18,6 +18,19 @@ export function requireEnv(name: string) {
   return value;
 }
 
+function requireStripeSecret() {
+  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const vercelEnv = String(process.env.VERCEL_ENV || '').toLowerCase();
+  if (vercelEnv && vercelEnv !== 'production' && /^(sk|rk)_live_/.test(secret)) {
+    throw new Error('STRIPE:Live Stripe keys are blocked outside production.');
+  }
+  return secret;
+}
+
+export function stripeExpectedLivemode() {
+  return /^(sk|rk)_live_/.test(requireStripeSecret());
+}
+
 export async function getAuthenticatedUser(request: Request): Promise<{ user: User; accessToken: string }> {
   const accessToken = requireBearerToken(request);
   const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
@@ -36,7 +49,7 @@ export function getSupabaseServiceClient() {
 
 /** JSON helper for Stripe Accounts v2 preview endpoints. */
 export async function stripeRequest<T>(path: string, init: RequestInit = {}) {
-  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const secret = requireStripeSecret();
   const response = await fetch(`${stripeApiBase}${path}`, {
     ...init,
     headers: {
@@ -62,7 +75,7 @@ export async function stripeFormRequest<T>(
   params: Record<string, string | number | boolean | null | undefined>,
   options: { idempotencyKey?: string } = {}
 ) {
-  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const secret = requireStripeSecret();
   const body = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== null && value !== undefined) body.set(key, String(value));
@@ -88,7 +101,7 @@ export async function stripeFormRequest<T>(
 }
 
 export async function stripeGet<T>(path: string) {
-  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const secret = requireStripeSecret();
   const response = await fetch(`${stripeApiBase}${path}`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${secret}` },
@@ -151,6 +164,7 @@ export function apiError(error: unknown) {
   if (raw === 'COMPLETION_NOT_READY') return { status: 409, body: { error: 'Both people must mark the connection complete before payment can be released.', code: raw } };
   if (raw === 'PAYMENT_NOT_SECURED') return { status: 409, body: { error: 'Payment must be secured before it can be released.', code: raw } };
   if (raw === 'WEBHOOK_SIGNATURE') return { status: 400, body: { error: 'Invalid Stripe webhook signature.' } };
+  if (raw === 'WEBHOOK_MODE_MISMATCH') return { status: 400, body: { error: 'Stripe webhook environment does not match this deployment.' } };
   if (raw.startsWith('MISSING_ENV:')) return { status: 503, body: { error: 'Payments are not connected to this deployment yet.', code: raw } };
   if (raw.startsWith('STRIPE:')) return { status: 502, body: { error: raw.slice(7), code: 'STRIPE_ERROR' } };
   return { status: 500, body: { error: 'Could not complete that payment step.' } };

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { moderatePublicSignupName } from '../lib/supabase/contentSafety';
 import { findNearbyUniversities, NearbyUniversity, resolveUniversityByEmail, University } from '../lib/supabase/universities';
 import { aspireLogo } from './logo';
 import AppLoader from './AppLoader';
@@ -162,6 +163,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           throw new Error('Aspire is not open for this university email yet.');
         }
 
+        await moderatePublicSignupName(name);
         setDetectedCampus(campus);
         const nextQuery = `&next=${encodeURIComponent(nextPath)}`;
         const { data, error } = await supabase.auth.signUp({
@@ -308,7 +310,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               <a href={switchHref}>{signup ? 'Sign in' : 'Sign up'} ↗</a>
             </div>
 
-            {signup && <label><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required /></label>}
+            {signup && <label><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" maxLength={80} required /></label>}
             <label><span>{signup ? 'University email' : 'Email'}</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={signup ? 'you@university.edu' : 'you@example.com'} autoComplete="email" required /></label>
 
             {signup && (
@@ -339,11 +341,11 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             <label><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} autoComplete={signup ? 'new-password' : 'current-password'} required /></label>
             {!signup && <div className="authUtilityRow"><span>Two-step verification runs automatically if enabled.</span><a href={recoveryHref}>Forgot password?</a></div>}
 
-            <button className="button buttonGold authSubmit" type="submit" disabled={busy || (signup && checkingSchool)}>{busy ? (signup ? 'Creating account…' : 'Signing in…') : signup ? 'Create school account →' : 'Continue securely →'}</button>
+            <button className="button buttonGold authSubmit" type="submit" disabled={busy || (signup && checkingSchool)}>{busy ? (signup ? 'Checking + creating…' : 'Signing in…') : signup ? 'Create school account →' : 'Continue securely →'}</button>
 
             {pendingConfirmation && <div className="authEmailActions"><button type="button" onClick={resendConfirmation} disabled={resending}>{resending ? 'Sending…' : 'Resend confirmation'}</button><a href={recoveryHref}>I already had an account</a></div>}
             {message && <p className="authMessage" role="status">{message}</p>}
-            <div className="authTrustRow" aria-label="Aspire trust features"><span>School email</span><span>Optional MFA</span><span>Report + block</span></div>
+            <div className="authTrustRow" aria-label="Aspire trust features"><span>School email</span><span>Automatic safety</span><span>Report + block</span></div>
             <p className="authLegal">By continuing, you agree to Aspire 101&apos;s <a href="/terms">Terms</a>, <a href="/guidelines">Guidelines</a>, and <a href="/privacy">Privacy Policy</a>.</p>
           </form>
         )}
