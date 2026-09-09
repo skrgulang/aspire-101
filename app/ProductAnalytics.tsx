@@ -50,6 +50,10 @@ export default function ProductAnalytics() {
   useEffect(() => {
     const page = surfaceFor(pathname || '/');
     void recordProductEvent('page_view', page.surface, page.target);
+    if (pathname?.startsWith('/login')) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('confirmed') === '1') void recordProductEvent('signup_success', 'auth', 'email_confirmed');
+    }
   }, [pathname]);
 
   useEffect(() => {
@@ -60,6 +64,7 @@ export default function ProductAnalytics() {
       if (!target) return;
       const page = surfaceFor(window.location.pathname);
       void recordProductEvent('cta_click', page.surface, target);
+      if (target === 'signup_cta' && page.surface === 'auth') void recordProductEvent('signup_submit', 'auth', 'signup');
     }
     document.addEventListener('click', onClick, { capture: true });
     return () => document.removeEventListener('click', onClick, { capture: true });
