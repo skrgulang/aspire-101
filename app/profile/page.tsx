@@ -135,6 +135,9 @@ export default function ProfilePage() {
               <a className="profileMenuRow" href="/safety">
                 <i>◇</i><div><strong>Safety & privacy</strong><span>Reporting, blocking, verification, and privacy</span></div><b>→</b>
               </a>
+              <a className="profileMenuRow" href="/account/delete">
+                <i>×</i><div><strong>Delete account</strong><span>Permanently close your Aspire account and remove direct personal data</span></div><b>→</b>
+              </a>
               {staff && (
                 <a className="profileMenuRow moderator" href="/moderator">
                   <i>✦</i><div><strong>{role === 'admin' ? 'Admin console' : 'Moderation tools'}</strong><span>Review trust & safety queues</span></div><b>→</b>
