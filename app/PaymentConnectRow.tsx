@@ -14,11 +14,11 @@ type StatusResponse = {
 };
 
 const receiveCopy: Record<PaymentStatus, { detail: string; action: string }> = {
-  NOT_STARTED: { detail: 'Receiving is not set up yet.', action: 'Set up receiving' },
-  ACTION_REQUIRED: { detail: 'Stripe still needs information before this account can receive money.', action: 'Continue setup' },
-  UNDER_REVIEW: { detail: 'Stripe is reviewing the information needed for this account to receive money.', action: 'Check again' },
-  READY: { detail: 'Receiving is ready ✓', action: 'Manage payouts' },
-  RESTRICTED: { detail: 'Stripe needs an update before this account can receive money.', action: 'Fix receiving' }
+  NOT_STARTED: { detail: 'Receiving is optional until you want money sent to you.', action: 'Set up receiving' },
+  ACTION_REQUIRED: { detail: 'Receiving setup is incomplete. You can still buy and pay normally.', action: 'Finish setup' },
+  UNDER_REVIEW: { detail: 'Stripe is reviewing your receiving setup. You can still buy and pay normally.', action: 'Check status' },
+  READY: { detail: 'Receiving is ready ✓ You can both pay and receive with this Aspire account.', action: 'Manage payouts' },
+  RESTRICTED: { detail: 'Receiving setup needs more information. Buying and checkout are not affected.', action: 'Finish setup' }
 };
 
 async function authHeaders() {
@@ -107,7 +107,7 @@ export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoo
       <i>$</i>
       <div>
         <strong>{loading ? 'Checking payments…' : 'Payments'}</strong>
-        <span>One Aspire account can both pay and receive. Pay with a card or wallet at checkout; set up receiving once only if you want money sent to you.</span>
+        <span>One Aspire account can both pay and receive. Add a card or wallet only when you check out; set up a payout account only when you want to receive money.</span>
         <small className="paymentConnectMessage">{loading ? 'Checking receiving status…' : receiveState.detail}</small>
         <a className="paymentMoneyLink" href="/money">View Aspire Money →</a>
         {message && <small className="paymentConnectMessage" role="status">{message}</small>}
