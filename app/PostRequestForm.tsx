@@ -73,7 +73,7 @@ export default function PostRequestForm() {
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
-  const [posted, setPosted] = useState<{ id: string; title: string; campus: string; warning?: string } | null>(null);
+  const [posted, setPosted] = useState<{ id: string; title: string; campus: string; campusId: string; warning?: string } | null>(null);
   const [agentPrepared, setAgentPrepared] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
 
@@ -125,9 +125,12 @@ export default function PostRequestForm() {
         if (!active) return;
         const homeId = typeof profile?.home_campus_id === 'string' ? profile.home_campus_id : '';
         const currentId = typeof profile?.current_campus_id === 'string' ? profile.current_campus_id : '';
+        const storedId = typeof window !== 'undefined' ? window.sessionStorage.getItem('aspire-active-campus-id') || '' : '';
+        const validCampusId = (value: string) => Boolean(value && campusList.some((item) => item.id === value));
+        const initialCampusId = validCampusId(storedId) ? storedId : validCampusId(currentId) ? currentId : homeId;
         setUniversities(campusList);
         setHomeCampusId(homeId);
-        setCampusId(currentId && campusList.some((item) => item.id === currentId) ? currentId : homeId);
+        setCampusId(initialCampusId);
         if (!homeId) setError('We could not resolve your verified home campus. Open Profile before posting.');
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'Could not load your campus identity.');
@@ -225,6 +228,7 @@ export default function PostRequestForm() {
         }
       }
       await acknowledgeSafety(`${category}:${kind}`, request.id).catch(() => undefined);
+      if (typeof window !== 'undefined') window.sessionStorage.setItem('aspire-active-campus-id', selectedCampus.id);
       const supabase = getSupabaseBrowserClient();
       try {
         await supabase.from('profiles').update({ current_campus_id: visiting ? selectedCampus.id : null, campus_last_selected_at: new Date().toISOString() }).eq('id', request.poster_id);
@@ -234,7 +238,7 @@ export default function PostRequestForm() {
       if (agentSessionId) await markAspireAgentOutcome(agentSessionId, 'posted').catch(() => undefined);
       clearAspireAgentDraft();
       setAgentPrepared(false);
-      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, warning });
+      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, campusId: selectedCampus.id, warning });
       setConfirming(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit this request. Try again.');
@@ -252,14 +256,14 @@ export default function PostRequestForm() {
       <h1>Now test discovery.</h1>
       <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · #{posted.id.slice(0, 8)} · safety check</small></article>
       {posted.warning && <p className="postError">{posted.warning}</p>}
-      <p className="postSuccessNote">Once the automated safety check allows it, ask another student to open Browse and confirm they can see it, respond, connect, and message you. That network loop is the main beta test right now.</p>
-      <div className="postSuccessActions"><a className="button buttonGold" href="/discover">Open Browse <span>↗</span></a><button className="quietPostButton" type="button" onClick={() => { setPosted(null); setTitle(''); setDetails(''); setAmount(''); setPhotos([]); }}>Post another</button></div>
+      <p className="postSuccessNote">This post is listed on {posted.campus}. Buyers and helpers need to browse that same campus to see it. Once the automated safety check allows it, ask another student to confirm they can see it, respond, connect, and message you.</p>
+      <div className="postSuccessActions"><a className="button buttonGold" href={`/discover?campus=${encodeURIComponent(posted.campusId)}${isMarket ? '&category=Buy%20%26%20sell' : ''}`}>Open this campus listing <span>↗</span></a><button className="quietPostButton" type="button" onClick={() => { setPosted(null); setTitle(''); setDetails(''); setAmount(''); setPhotos([]); }}>Post another</button></div>
     </section>
   );
 
   return <>
     <form className="postForm" onSubmit={openConfirmation} noValidate>
-      <div className="postFormHeading"><div className="postModeSwitch"><a className="active" href="/post">I need something</a><a href="/discover">I can help</a></div><p className="eyebrow">POST A NEED</p><h1>What do you need?</h1><p>Keep it simple. Your verified university email connects this post to your home campus.</p></div>
+      <div className="postFormHeading"><div className="postModeSwitch"><a className="active" href="/post">I need something</a><a href="/discover">I can help</a></div><p className="eyebrow">POST A NEED</p><h1>What do you need?</h1><p>Keep it simple. Aspire posts to the campus you are currently browsing, while your verified school identity stays unchanged.</p></div>
       {agentPrepared && <div className="agentDraftBanner"><div><span>✦ PREPARED BY ASPIRE AGENT</span><strong>AI turned your intent into an editable starting point. Check every detail before submitting.</strong></div><button type="button" onClick={() => { clearAspireAgentDraft(); setAgentPrepared(false); setAgentSessionId(null); }}>Dismiss AI label</button></div>}
       <div className="postCategoryPicker" aria-label="Choose a request category">{categories.map((item) => <button key={item.value} type="button" className={category === item.value ? 'active' : ''} onClick={() => chooseCategory(item)}><i>{item.icon}</i><strong>{item.label}</strong><span>{item.prompt}</span></button>)}</div>
       <div className="postQuickStarts"><span>TRY ONE</span>{selectedCategory.examples.map((example) => <button type="button" key={example} onClick={() => setTitle(example)}>{example} ↗</button>)}</div>
