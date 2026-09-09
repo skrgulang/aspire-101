@@ -37,33 +37,26 @@ export default function PostAccessGate() {
     return (
       <div className="postGateLoading" aria-live="polite" aria-busy="true">
         <div className="postGateLoadingRadar" aria-hidden="true"><span /><i /></div>
-        <strong>Checking your trust pass…</strong>
-        <small>School verification</small>
+        <strong>Checking your campus access…</strong>
+        <small>Verified university email</small>
       </div>
     );
   }
 
   if (verification?.status !== 'verified') {
-    const pending = verification?.status === 'pending';
-    const rejected = verification?.status === 'rejected';
     return (
       <section className="postVerificationGate">
-        <div className="verificationGateBadge">SCHOOL ID REQUIRED</div>
+        <div className="verificationGateBadge">UNIVERSITY EMAIL REQUIRED</div>
         <div className="verificationGateRadar" aria-hidden="true"><span /><i /></div>
-        <h1>{pending ? 'Your ID is under review.' : rejected ? 'Your school ID needs attention.' : 'Verify before you post.'}</h1>
-        <p>{pending
-          ? 'A moderator needs to approve your school ID before requests can go live.'
-          : rejected
-            ? 'Open your profile, review the moderator note, and resubmit your school ID.'
-            : 'Aspire lets you browse first. Posting is unlocked after your school ID is reviewed and verified.'}</p>
+        <h1>Confirm your school email first.</h1>
+        <p>Aspire uses your confirmed supported university email as the core campus identity check. Government ID is not required for normal C2C posting.</p>
         <div className="verificationGateSteps">
-          <span className={verification ? 'done' : ''}><b>01</b> Enter school ID</span>
-          <span className={pending || rejected ? 'current' : ''}><b>02</b> Moderator review</span>
+          <span className="done"><b>01</b> Create account</span>
+          <span className="current"><b>02</b> Confirm .edu email</span>
           <span><b>03</b> Post to campus</span>
         </div>
-        {rejected && verification?.review_note && <div className="verificationGateNote"><span>MODERATOR NOTE</span><p>{verification.review_note}</p></div>}
         <div className="verificationGateActions">
-          <a className="button buttonGold" href="/profile#school-verification">{pending ? 'View verification →' : 'Verify school ID →'}</a>
+          <a className="button buttonGold" href="/profile">Open Profile →</a>
           <a href="/discover">Browse campus instead</a>
         </div>
       </section>
