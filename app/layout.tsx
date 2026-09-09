@@ -59,6 +59,7 @@ import './aspire-match.css';
 import './aspire-intelligence.css';
 import './aspire-money.css';
 import './admin-metrics.css';
+import './mobile-product.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
