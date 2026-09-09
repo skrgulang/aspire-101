@@ -36,8 +36,29 @@
   top: 24px;
 }
 
-.embeddedCheckoutBrand span,
-.embeddedPayoutBrand span {
+.embeddedBetaNotice {
+  margin: 0 0 22px;
+  padding: 12px 13px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(228,189,73,.34);
+  border-radius: 14px;
+  background: rgba(228,189,73,.07);
+}
+.embeddedBetaNotice b {
+  color: #f2cb56;
+  font-size: 10px;
+  letter-spacing: .13em;
+}
+.embeddedBetaNotice span {
+  margin: 0;
+  color: #cfc5b1;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.embeddedCheckoutBrand > span,
+.embeddedPayoutBrand > span {
   display: inline-block;
   margin-bottom: 18px;
   color: #e4bd49;

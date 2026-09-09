@@ -134,6 +134,11 @@ export default function ProfilePage() {
                   <i>✦</i><div><strong>{role === 'admin' ? 'Admin console' : 'Moderation tools'}</strong><span>Review trust & safety queues</span></div><b>→</b>
                 </a>
               )}
+              {role === 'admin' && (
+                <a className="profileMenuRow moderator" href="/admin/metrics">
+                  <i>↗</i><div><strong>Growth monitor</strong><span>DAU, WAU, MAU, campus activity and payment volume</span></div><b>→</b>
+                </a>
+              )}
             </div>
 
             <div className="profileAccountFoot">
