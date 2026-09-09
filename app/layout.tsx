@@ -60,7 +60,8 @@ import './aspire-intelligence.css';
 import './aspire-money.css';
 import './admin-metrics.css';
 import './mobile-product.css';
-import type { Metadata } from 'next';
+import './mobile-product-v2.css';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
@@ -73,7 +74,21 @@ const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','7
 export const metadata: Metadata = {
   title: 'Aspire 101 — Ask campus. Feel at home.',
   description: 'A college request network that helps students find support, make connections, and feel more at home on campus.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Aspire 101'
+  },
+  formatDetection: { telephone: false },
   icons: { icon: aspireLogo, shortcut: aspireLogo, apple: aspireLogo }
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#090907'
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
