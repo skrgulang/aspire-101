@@ -9,18 +9,14 @@ const directPersonalTables: Array<{ table: string; column: string }> = [
   { table: 'connection_message_reads', column: 'user_id' },
   { table: 'identity_verifications', column: 'user_id' },
   { table: 'notifications', column: 'user_id' },
-  { table: 'payment_accounts', column: 'user_id' },
   { table: 'safety_acknowledgements', column: 'user_id' },
   { table: 'school_verifications', column: 'user_id' },
   { table: 'task_claims', column: 'user_id' },
   { table: 'task_swipes', column: 'user_id' },
-  { table: 'user_balances', column: 'user_id' },
   { table: 'user_daily_activity', column: 'user_id' },
-  { table: 'user_enforcement_states', column: 'user_id' },
   { table: 'user_locations', column: 'user_id' },
   { table: 'user_roles', column: 'user_id' },
-  { table: 'user_trust_profiles', column: 'user_id' },
-  { table: 'wallets', column: 'user_id' }
+  { table: 'user_trust_profiles', column: 'user_id' }
 ];
 
 export async function DELETE(request: Request) {
@@ -36,8 +32,8 @@ export async function DELETE(request: Request) {
     const supabase = getSupabaseServiceClient();
 
     // Remove direct personal/account data first. Historical marketplace, payment-ledger,
-    // dispute, moderation, and safety records may be retained where Aspire has a legal,
-    // fraud-prevention, accounting, or platform-integrity reason to keep them.
+    // payout, dispute, moderation, fraud-prevention, and enforcement records are retained
+    // where Aspire may need them for accounting, legal obligations, refunds, or platform integrity.
     for (const item of directPersonalTables) {
       const { error } = await supabase.from(item.table).delete().eq(item.column, user.id);
       if (error) throw new Error(`ACCOUNT_DELETE:${item.table}:${error.message}`);
