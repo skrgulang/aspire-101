@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
 
     const stripeAccount = await stripeRequest<StripeAccountState>(
-      `/v2/core/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}?include[]=configuration.recipient`,
+      `/v2/core/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}?include[0]=configuration.recipient`,
       { method: 'GET' }
     );
     const transferStatus = stripeAccount.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || '';
