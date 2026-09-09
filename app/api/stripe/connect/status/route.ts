@@ -56,7 +56,7 @@ export async function GET(request: Request) {
 
     const accountId = paymentAccount.stripe_account_id as string;
     const account = await stripeRequest<StripeAccountState>(
-      `/v2/core/accounts/${encodeURIComponent(accountId)}?include[]=configuration.recipient&include[]=requirements`,
+      `/v2/core/accounts/${encodeURIComponent(accountId)}?include[0]=configuration.recipient&include[1]=requirements`,
       { method: 'GET' }
     );
     const next = deriveStatus(account);
