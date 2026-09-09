@@ -90,7 +90,7 @@ export default function AspireEmbeddedPayoutSetup() {
       <div className="embeddedPayoutFrame">
         <ConnectComponentsProvider connectInstance={connectInstance}>
           <ConnectAccountOnboarding
-            collectionOptions={{ fields: 'eventually_due' }}
+            collectionOptions={{ fields: 'currently_due' }}
             onExit={() => window.location.assign('/profile?payments=return')}
           />
         </ConnectComponentsProvider>
