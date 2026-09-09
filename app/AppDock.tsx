@@ -2,9 +2,9 @@ type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'profile';
 
 const items: { key: AppDockTab; label: string; href: string; icon: string }[] = [
   { key: 'home', label: 'Home', href: '/campus', icon: '⌂' },
-  { key: 'discover', label: 'Discover', href: '/discover', icon: '◎' },
+  { key: 'discover', label: 'Browse', href: '/discover', icon: '◎' },
   { key: 'post', label: 'Post', href: '/post', icon: '+' },
-  { key: 'connections', label: 'Connections', href: '/connections', icon: '♧' },
+  { key: 'connections', label: 'Inbox', href: '/connections', icon: '♧' },
   { key: 'profile', label: 'Profile', href: '/profile', icon: '○' }
 ];
 
