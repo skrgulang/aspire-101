@@ -4,16 +4,21 @@ import AppDock from '../AppDock';
 
 export default function PostPage() {
   return <>
-    <main className="postPage">
+    <main className="postPage postEntryPage">
       <div className="postPageGlow" aria-hidden="true" />
       <div className="postDoodle postDoodleOne" aria-hidden="true">ASK → CONNECT → DO</div>
       <div className="postDoodle postDoodleTwo" aria-hidden="true">just post it on aspire ↗</div>
 
+      <header className="postEntryHeader">
+        <div><span>ASPIRE 101 · PRIVATE BETA</span><strong>Start with one real campus need.</strong></div>
+        <nav aria-label="Post entry shortcuts"><a href="/campus">Home</a><a href="/discover">Browse campus</a></nav>
+      </header>
+
       <section className="postShell shell">
         <aside className="postSide postSideAlive">
-          <p className="eyebrow">ONE PLACE TO ASK</p>
-          <h2>Your campus<br /><span>is already helping.</span></h2>
-          <p>Pick a need, say what is happening, and let nearby students decide if they can help.</p>
+          <p className="eyebrow">YOUR FIRST BETA TASK</p>
+          <h2>Post something<br /><span>campus can see.</span></h2>
+          <p>Right now we are testing the network first: post a real need or marketplace listing, then check whether another student can discover it, respond, connect, and message you.</p>
 
           <div className="postLiveStack" aria-label="Example requests">
             <article className="postLiveCard cardRide">
@@ -22,9 +27,9 @@ export default function PostPage() {
               <small>Purdue · 3 interested</small>
             </article>
             <article className="postLiveCard cardPickup">
-              <span>PICKUP · PAID HELP</span>
-              <strong>Target order before 8</strong>
-              <small>$12 · campus</small>
+              <span>MARKET · FOR SALE</span>
+              <strong>Mini fridge near campus</strong>
+              <small>$40 · pickup</small>
             </article>
             <article className="postLiveCard cardStudy">
               <span>STUDY · COMMUNITY</span>
@@ -33,7 +38,7 @@ export default function PostPage() {
             </article>
           </div>
 
-          <a className="postDiscoverLink" href="/discover">Or browse what campus needs <span>→</span></a>
+          <a className="postDiscoverLink" href="/discover">Or browse what campus posted <span>→</span></a>
         </aside>
 
         <div className="postPanel">
