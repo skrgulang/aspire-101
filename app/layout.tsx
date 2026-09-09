@@ -64,6 +64,7 @@ import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
 import ActivityHeartbeat from './ActivityHeartbeat';
+import ProductAnalytics from './ProductAnalytics';
 import { aspireLogo } from './logo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -79,6 +80,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body className={`${inter.variable} ${display.variable}`}>
+        <ProductAnalytics />
         <ActivityHeartbeat />
         {children}
         <SiteFooter />
