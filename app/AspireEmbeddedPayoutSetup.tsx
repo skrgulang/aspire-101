@@ -72,16 +72,20 @@ export default function AspireEmbeddedPayoutSetup() {
   }
 
   if (!connectInstance) {
-    return <div className="embeddedStripeLoading">Preparing secure payout setup…</div>;
+    return <div className="embeddedStripeLoading">Preparing secure seller payout setup…</div>;
   }
 
   return (
     <div className="embeddedPayoutShell">
       <div className="embeddedPayoutBrand">
-        <span>ASPIRE PAYOUTS</span>
-        <h1>Set up earnings without leaving Aspire.</h1>
-        <p>Stripe directly collects and verifies the identity, tax and banking information needed to make payouts. Sensitive bank-account and KYC fields are handled inside Stripe&apos;s embedded component rather than stored in Aspire&apos;s application database.</p>
+        <span>SELLER PAYOUTS · STRIPE CONNECT</span>
+        <h1>Only sellers need this setup.</h1>
+        <p><strong>If you are only buying or paying another student, you do not need to complete this form.</strong> Buyers enter a card only at Aspire checkout after a real connection or marketplace order is ready.</p>
+        <p>This page is only for people who want to <strong>receive earnings</strong>. Stripe directly collects and verifies the identity, tax and banking information needed to send seller payouts. Sensitive bank-account and KYC fields are handled inside Stripe&apos;s embedded component rather than stored in Aspire&apos;s application database.</p>
         <p>Aspire keeps limited payment records such as your Stripe account identifier, payout-readiness status, transaction amounts, release status and transfer identifiers so we can operate support, refunds, disputes and payout reconciliation.</p>
+        <div className="embeddedPayoutBuyerExit">
+          <a href="/connections">I only want to buy / pay → Back to Connections</a>
+        </div>
         <small>Stripe may request additional information when required for financial compliance. By continuing, you acknowledge Aspire&apos;s <a href="/privacy">Privacy Policy</a> and <a href="/terms">Terms</a>, and Stripe&apos;s own terms and privacy practices apply to information Stripe processes.</small>
       </div>
       <div className="embeddedPayoutFrame">
