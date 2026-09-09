@@ -14,7 +14,6 @@ import { acknowledgeSafety } from '../lib/supabase/safety';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
 import { clearAspireAgentDraft, markAspireAgentOutcome, readAspireAgentDraft } from '../lib/supabase/aspireAi';
 import CampusPicker from './CampusPicker';
-import PaymentFeePreview from './PaymentFeePreview';
 
 type CategoryOption = { label: string; value: string; icon: string; prompt: string; examples: string[]; defaultKind: RequestKind };
 
@@ -44,11 +43,13 @@ const conditions: { value: ItemCondition; label: string }[] = [
   { value: 'for_parts', label: 'For parts' }
 ];
 
+const betaPaymentLocked = true;
+
 function safetyContext(category: string, kind: RequestKind) {
   if (category === 'Ride') return { title: 'Riding together?', note: 'Confirm the driver, vehicle, pickup point, destination, and exact cost before leaving. If something feels wrong, do not get in the car.' };
   if (category === 'Moving / help') return { title: 'Meeting at a private place?', note: 'Share a detailed address only after you choose who to connect with. Consider having another person around and keep valuables out of sight.' };
-  if (category === 'Buy & sell') return { title: 'Campus marketplace transaction', note: 'Aspire Protected is for permitted physical goods in this beta. Keep the item, agreed price, and handoff inside the order. Do not list prohibited goods, stolen goods, counterfeit goods, account credentials, or anything that violates another service’s rules.' };
-  if (kind === 'paid_help' || kind === 'split_cost') return { title: 'Money involved?', note: 'Agree on the amount, timing, scope, and what counts as complete before anything starts. Pay with Aspire is only released after both people mark the connection complete.' };
+  if (category === 'Buy & sell') return { title: 'Campus marketplace beta', note: 'For this beta, test listing visibility, responses, connection, messaging, and safe handoff coordination. Do not use Aspire for real-money payments yet.' };
+  if (kind === 'paid_help' || kind === 'split_cost') return { title: 'Money involved?', note: 'Agree on the amount, timing, scope, and what counts as complete, but keep Aspire real-money payments off during this private beta while the payment system is still being tested.' };
   if (kind === 'collaboration') return { title: 'Building together?', note: 'Agree on the goal and expectations first. A project connection is not employment unless both sides separately enter an employment relationship.' };
   return { title: 'Keep the connection clear.', note: 'Choose who you want to connect with, keep expectations clear, and use Report or Block if someone misuses Aspire.' };
 }
@@ -72,7 +73,7 @@ export default function PostRequestForm() {
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
-  const [posted, setPosted] = useState<{ id: string; title: string; campus: string; warning?: string } | null>(null);
+  const [posted, setPosted] = useState<{ id: string; title: string; campus: string; campusId: string; warning?: string } | null>(null);
   const [agentPrepared, setAgentPrepared] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
 
@@ -99,7 +100,7 @@ export default function PostRequestForm() {
     setTitle(plan.title || '');
     setDetails(plan.details || '');
     setAmount(plan.amount_cents != null ? (plan.amount_cents / 100).toFixed(plan.amount_cents % 100 === 0 ? 0 : 2) : '');
-    setPaymentMethod(plan.payment_method);
+    setPaymentMethod(plan.payment_method === 'aspire' && betaPaymentLocked ? 'in_person' : plan.payment_method);
     if (plan.market_intent) setMarketIntent(plan.market_intent);
     if (plan.item_condition) setItemCondition(plan.item_condition);
     setPriceNegotiable(Boolean(plan.price_negotiable));
@@ -124,9 +125,12 @@ export default function PostRequestForm() {
         if (!active) return;
         const homeId = typeof profile?.home_campus_id === 'string' ? profile.home_campus_id : '';
         const currentId = typeof profile?.current_campus_id === 'string' ? profile.current_campus_id : '';
+        const storedId = typeof window !== 'undefined' ? window.sessionStorage.getItem('aspire-active-campus-id') || '' : '';
+        const validCampusId = (value: string) => Boolean(value && campusList.some((item) => item.id === value));
+        const initialCampusId = validCampusId(storedId) ? storedId : validCampusId(currentId) ? currentId : homeId;
         setUniversities(campusList);
         setHomeCampusId(homeId);
-        setCampusId(currentId && campusList.some((item) => item.id === currentId) ? currentId : homeId);
+        setCampusId(initialCampusId);
         if (!homeId) setError('We could not resolve your verified home campus. Open Profile before posting.');
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'Could not load your campus identity.');
@@ -141,7 +145,7 @@ export default function PostRequestForm() {
     setCategory(item.value);
     setKind(item.defaultKind);
     if (item.defaultKind === 'buy_sell') {
-      setPaymentMethod('aspire');
+      setPaymentMethod('in_person');
       setMarketIntent('sell');
       setItemCondition('good');
     } else if (item.defaultKind === 'community' || item.defaultKind === 'collaboration') {
@@ -152,7 +156,7 @@ export default function PostRequestForm() {
 
   function chooseKind(next: RequestKind) {
     setKind(next);
-    if (next === 'buy_sell') setPaymentMethod('aspire');
+    if (next === 'buy_sell') setPaymentMethod('in_person');
     if (next === 'community' || next === 'collaboration') {
       setAmount('');
       setPaymentMethod('none');
@@ -224,6 +228,7 @@ export default function PostRequestForm() {
         }
       }
       await acknowledgeSafety(`${category}:${kind}`, request.id).catch(() => undefined);
+      if (typeof window !== 'undefined') window.sessionStorage.setItem('aspire-active-campus-id', selectedCampus.id);
       const supabase = getSupabaseBrowserClient();
       try {
         await supabase.from('profiles').update({ current_campus_id: visiting ? selectedCampus.id : null, campus_last_selected_at: new Date().toISOString() }).eq('id', request.poster_id);
@@ -233,7 +238,7 @@ export default function PostRequestForm() {
       if (agentSessionId) await markAspireAgentOutcome(agentSessionId, 'posted').catch(() => undefined);
       clearAspireAgentDraft();
       setAgentPrepared(false);
-      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, warning });
+      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, campusId: selectedCampus.id, warning });
       setConfirming(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit this request. Try again.');
@@ -247,18 +252,18 @@ export default function PostRequestForm() {
 
   if (posted) return (
     <section className="postSuccess">
-      <p className="eyebrow">SUBMITTED FOR REVIEW</p>
-      <h1>Almost there.</h1>
-      <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · #{posted.id.slice(0, 8)} · pending review</small></article>
+      <p className="eyebrow">POSTED TO BETA REVIEW</p>
+      <h1>Now test discovery.</h1>
+      <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · #{posted.id.slice(0, 8)} · safety check</small></article>
       {posted.warning && <p className="postError">{posted.warning}</p>}
-      <p className="postSuccessNote">{isMarket ? 'Your marketplace listing is saved but is not public yet. Aspire reviews new listings before they appear in Discover.' : 'Your request is saved but is not public yet. Aspire reviews new posts before they appear in the campus feed.'}</p>
-      <div className="postSuccessActions"><a className="button buttonGold" href="/connections">View my activity <span>↗</span></a><button className="quietPostButton" type="button" onClick={() => { setPosted(null); setTitle(''); setDetails(''); setAmount(''); setPhotos([]); }}>Submit another</button></div>
+      <p className="postSuccessNote">This post is listed on {posted.campus}. Buyers and helpers need to browse that same campus to see it. Once the automated safety check allows it, ask another student to confirm they can see it, respond, connect, and message you.</p>
+      <div className="postSuccessActions"><a className="button buttonGold" href={`/discover?campus=${encodeURIComponent(posted.campusId)}${isMarket ? '&category=Buy%20%26%20sell' : ''}`}>Open this campus listing <span>↗</span></a><button className="quietPostButton" type="button" onClick={() => { setPosted(null); setTitle(''); setDetails(''); setAmount(''); setPhotos([]); }}>Post another</button></div>
     </section>
   );
 
   return <>
     <form className="postForm" onSubmit={openConfirmation} noValidate>
-      <div className="postFormHeading"><div className="postModeSwitch"><a className="active" href="/post">I need something</a><a href="/discover">I can help</a></div><p className="eyebrow">ASK CAMPUS</p><h1>What do you need?</h1><p>Start with the need. Your verified home campus stays attached even when you&apos;re visiting somewhere else.</p></div>
+      <div className="postFormHeading"><div className="postModeSwitch"><a className="active" href="/post">I need something</a><a href="/discover">I can help</a></div><p className="eyebrow">POST A NEED</p><h1>What do you need?</h1><p>Keep it simple. Aspire posts to the campus you are currently browsing, while your verified school identity stays unchanged.</p></div>
       {agentPrepared && <div className="agentDraftBanner"><div><span>✦ PREPARED BY ASPIRE AGENT</span><strong>AI turned your intent into an editable starting point. Check every detail before submitting.</strong></div><button type="button" onClick={() => { clearAspireAgentDraft(); setAgentPrepared(false); setAgentSessionId(null); }}>Dismiss AI label</button></div>}
       <div className="postCategoryPicker" aria-label="Choose a request category">{categories.map((item) => <button key={item.value} type="button" className={category === item.value ? 'active' : ''} onClick={() => chooseCategory(item)}><i>{item.icon}</i><strong>{item.label}</strong><span>{item.prompt}</span></button>)}</div>
       <div className="postQuickStarts"><span>TRY ONE</span>{selectedCategory.examples.map((example) => <button type="button" key={example} onClick={() => setTitle(example)}>{example} ↗</button>)}</div>
@@ -266,18 +271,18 @@ export default function PostRequestForm() {
 
       {isMarket && (
         <section className="marketComposer" aria-label="Campus marketplace listing details">
-          <div className="marketComposerHead"><div><span>ASPIRE MARKET</span><h2>Set the transaction up clearly.</h2></div><b>Aspire Protected available</b></div>
+          <div className="marketComposerHead"><div><span>ASPIRE MARKET</span><h2>Make the listing easy to find.</h2></div><b>PAYMENTS TESTING</b></div>
           <div className="marketIntentGrid">
-            <button type="button" className={marketIntent === 'sell' ? 'active' : ''} onClick={() => { setMarketIntent('sell'); setPaymentMethod('aspire'); }}><i>↑</i><strong>I&apos;m selling</strong><span>I have the item. A buyer will pay me.</span></button>
-            <button type="button" className={marketIntent === 'wanted' ? 'active' : ''} onClick={() => { setMarketIntent('wanted'); setPaymentMethod('aspire'); }}><i>↓</i><strong>I&apos;m looking to buy</strong><span>I&apos;m posting what I want to find.</span></button>
+            <button type="button" className={marketIntent === 'sell' ? 'active' : ''} onClick={() => { setMarketIntent('sell'); setPaymentMethod('in_person'); }}><i>↑</i><strong>I&apos;m selling</strong><span>I have the item. Let campus find it.</span></button>
+            <button type="button" className={marketIntent === 'wanted' ? 'active' : ''} onClick={() => { setMarketIntent('wanted'); setPaymentMethod('in_person'); }}><i>↓</i><strong>I&apos;m looking to buy</strong><span>I&apos;m posting what I want to find.</span></button>
           </div>
           <div className="marketFields">
             {marketIntent === 'sell' && <label className="postField"><span>Condition</span><select value={itemCondition} onChange={(e) => setItemCondition(e.target.value as ItemCondition)}>{conditions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>}
             <label className="postField"><span>{marketIntent === 'sell' ? 'Price' : 'Budget'}</span><div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="40" /></div></label>
-            <label className="marketCheck"><input type="checkbox" checked={priceNegotiable} onChange={(e) => setPriceNegotiable(e.target.checked)} /><span><strong>Price is negotiable</strong><small>Final price is locked when you connect.</small></span></label>
+            <label className="marketCheck"><input type="checkbox" checked={priceNegotiable} onChange={(e) => setPriceNegotiable(e.target.checked)} /><span><strong>Price is negotiable</strong><small>Final terms are agreed after you connect.</small></span></label>
             <div className="marketFulfillment"><span>HANDOFF</span><strong>Campus pickup</strong><small>Meet in a sensible public campus location. Shipping support is coming later.</small></div>
           </div>
-          <div className="marketProtectionNote"><i>✓</i><div><strong>Aspire Protected</strong><p>For on-platform payments, the buyer pays first. Aspire waits to transfer the seller payout until the seller marks handoff and the buyer confirms receipt. A dispute pauses release.</p></div></div>
+          <div className="marketProtectionNote betaOnly"><i>β</i><div><strong>Payment is not the beta goal yet.</strong><p>Do not use Aspire for real-money transactions during this test. First confirm that listings can be discovered, responded to, connected, messaged, and handed off safely.</p></div></div>
           <p className="marketPhysicalOnly">Physical goods only in this beta. No account credentials, gift-card codes, prohibited goods, stolen items, counterfeit goods, or off-platform transaction tricks.</p>
         </section>
       )}
@@ -286,15 +291,15 @@ export default function PostRequestForm() {
 
       <div className="postEssentials"><div className="postField postCampusField"><span>Campus context</span><CampusPicker universities={universities} value={campusId} onChange={setCampusId} homeCampusId={homeCampusId} maxNearbyMiles={300} /><small>{visiting ? `VISITING · You are posting at ${selectedCampus?.short_name}, but your verified identity remains ${homeCampus?.short_name}.` : `HOME CAMPUS · ${homeCampus?.name || 'Your verified university'} stays attached to your identity.`}</small></div><fieldset className="postKinds"><legend>Exchange</legend><div className="postKindGrid">{kinds.map((item) => <button type="button" key={item.value} className={kind === item.value ? 'postKind active' : 'postKind'} onClick={() => chooseKind(item.value)}><strong>{item.label}</strong><span>{item.helper}</span></button>)}</div></fieldset></div>
 
-      {moneyInvolved && !isMarket && <><div className="postMoney postMoneyFresh"><label className="postField"><span>{kind === 'paid_help' ? 'What are you offering?' : 'Amount / share'}</span><div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" /></div></label><label className="postField"><span>Payment plan</span><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'none' | 'in_person' | 'aspire')}><option value="none">Agree after you connect</option><option value="aspire">Pay with Aspire</option><option value="in_person">Pay in person</option></select><small>{paymentMethod === 'aspire' ? 'After a mutual connection, Stripe secures the agreed amount. Release happens after both people mark complete.' : 'Off-platform payments are not processed or protected as Aspire payments.'}</small></label></div>{paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}</>}
+      {moneyInvolved && !isMarket && <div className="postMoney postMoneyFresh"><label className="postField"><span>{kind === 'paid_help' ? 'What are you offering?' : 'Amount / share'}</span><div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" /></div></label><label className="postField"><span>Payment during beta</span><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'none' | 'in_person' | 'aspire')}><option value="none">Agree after you connect</option><option value="in_person">Coordinate separately</option><option value="aspire" disabled>Pay with Aspire — still testing</option></select><small>Real-money Aspire payments are disabled for public beta testing. Focus on discovery, responses, connection, and messaging.</small></label></div>}
 
-      {isMarket && <section className="marketPaymentChoice"><div><span>PAYMENT</span><strong>Choose how the order is protected.</strong></div><label className={paymentMethod === 'aspire' ? 'active' : ''}><input type="radio" name="market-payment" checked={paymentMethod === 'aspire'} onChange={() => setPaymentMethod('aspire')} /><span><b>Aspire Protected</b><small>Buyer pays through Stripe. Seller transfer waits for receipt confirmation.</small></span></label><label className={paymentMethod === 'in_person' ? 'active offPlatform' : 'offPlatform'}><input type="radio" name="market-payment" checked={paymentMethod === 'in_person'} onChange={() => setPaymentMethod('in_person')} /><span><b>Pay in person</b><small>Not processed or protected by Aspire.</small></span></label>{paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}</section>}
+      {isMarket && <section className="marketPaymentChoice"><div><span>PAYMENT · PRIVATE BETA</span><strong>Test the marketplace network first.</strong></div><label className="betaLocked"><input type="radio" name="market-payment" checked={false} disabled /><span><b>Aspire Protected — test only</b><small>Still being tested. Do not use this beta for real-money transactions.</small></span></label><label className={paymentMethod === 'in_person' ? 'active offPlatform' : 'offPlatform'}><input type="radio" name="market-payment" checked={paymentMethod === 'in_person'} onChange={() => setPaymentMethod('in_person')} /><span><b>Coordinate after connecting</b><small>Aspire is not processing this payment during the public beta.</small></span></label></section>}
 
       <label className="postField postDetailsField"><span>{isMarket ? 'Description' : 'Anything else?'} <em>optional</em></span><textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} placeholder={isMarket ? 'Model, size, included accessories, defects, approximate pickup area, or anything a buyer should know.' : 'Timing, approximate area, what to bring, or anything that helps someone decide. Share exact addresses only after connecting.'} /></label>
       <div className="postContextCard"><div><span>SAFETY FOR THIS REQUEST</span><strong>{context.title}</strong></div><p>{context.note}</p><a href="/safety">Safety center ↗</a></div>{error && <p className="postError" role="alert">{error}</p>}
-      <div className="postSubmitRow"><p>Submitting sends this to Aspire&apos;s review gate. It will not appear publicly in Discover until it is approved. Automated policy checks may block clearly prohibited language before submission.</p><button className="button buttonGold" type="submit">Review + submit <span>→</span></button></div>
+      <div className="postSubmitRow"><p>This beta is testing whether campus can actually see, respond to, connect around, and message about each other&apos;s posts. Payment remains test-only.</p><button className="button buttonGold" type="submit">Review + post <span>→</span></button></div>
     </form>
 
-    {confirming && selectedCampus && <div className="publishOverlay" role="dialog" aria-modal="true" aria-labelledby="publish-title"><div className="publishModal publishModalContext"><span className="publishKicker">BEFORE YOU SUBMIT · {isMarket ? 'ASPIRE MARKET' : selectedCategory.label.toUpperCase()}</span><h2 id="publish-title">{context.title}</h2><p>{context.note}</p><div className="publishPreviewMeta"><span>{selectedCampus.short_name}</span>{isMarket && <span>{marketIntent === 'sell' ? 'SELLING' : 'WANTED'} · ${Number(amount).toFixed(2)}</span>}{isMarket && priceNegotiable && <span>NEGOTIABLE</span>}{visiting && <span>Visiting from {homeCampus?.short_name} ✓</span>}{photos.length > 0 && <span>{photos.length} photo{photos.length === 1 ? '' : 's'}</span>}</div><div className="publishRules"><span><b>01</b> Submitted to {selectedCampus.short_name} for review. {visiting ? `Your identity remains ${homeCampus?.short_name}.` : 'This is your home campus.'}</span><span><b>02</b> The post stays out of Discover until Aspire approves it.</span><span><b>03</b> {isMarket && paymentMethod === 'aspire' ? 'Aspire Protected records payment, handoff, buyer receipt, and dispute state before seller payout.' : paymentMethod === 'aspire' ? 'Pay with Aspire starts only after mutual confirmation; Stripe confirms payment status.' : 'Confirm timing, location, scope, and money before anything starts.'}</span></div><p className="publishFinePrint">Aspire uses automated checks and human review to reduce abusive, prohibited, or unsafe content. Follow the <a href="/guidelines" target="_blank">Community Guidelines ↗</a> and <a href="/safety" target="_blank">Safety Center ↗</a>.</p><div className="publishActions"><button className="quietPostButton" type="button" onClick={() => setConfirming(false)} disabled={publishing}>Go back</button><button className="button buttonGold" type="button" onClick={publish} disabled={publishing}>{publishing ? (photos.length ? 'Submitting + uploading…' : 'Submitting…') : 'Submit for review'}</button></div></div></div>}
+    {confirming && selectedCampus && <div className="publishOverlay" role="dialog" aria-modal="true" aria-labelledby="publish-title"><div className="publishModal publishModalContext"><span className="publishKicker">BEFORE YOU POST · {isMarket ? 'ASPIRE MARKET' : selectedCategory.label.toUpperCase()}</span><h2 id="publish-title">{context.title}</h2><p>{context.note}</p><div className="publishPreviewMeta"><span>{selectedCampus.short_name}</span>{isMarket && <span>{marketIntent === 'sell' ? 'SELLING' : 'WANTED'} · ${Number(amount).toFixed(2)}</span>}{isMarket && priceNegotiable && <span>NEGOTIABLE</span>}{visiting && <span>Visiting from {homeCampus?.short_name} ✓</span>}{photos.length > 0 && <span>{photos.length} photo{photos.length === 1 ? '' : 's'}</span>}</div><div className="publishRules"><span><b>01</b> Post to {selectedCampus.short_name} and let Aspire Safety Intelligence check it.</span><span><b>02</b> Ask another student to confirm it appears in Browse and that Interested / response works.</span><span><b>03</b> Test connection + messaging. Do not use real-money Aspire payments during this beta.</span></div><p className="publishFinePrint">Aspire uses automated safety checks to reduce abusive, prohibited, or unsafe content. Follow the <a href="/guidelines" target="_blank">Community Guidelines ↗</a> and <a href="/safety" target="_blank">Safety Center ↗</a>.</p><div className="publishActions"><button className="quietPostButton" type="button" onClick={() => setConfirming(false)} disabled={publishing}>Go back</button><button className="button buttonGold" type="button" onClick={publish} disabled={publishing}>{publishing ? (photos.length ? 'Posting + uploading…' : 'Posting…') : 'Post to campus'}</button></div></div></div>}
   </>;
 }

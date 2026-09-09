@@ -14,9 +14,9 @@ const peopleImage = 'https://images.pexels.com/photos/7973095/pexels-photo-79730
 const imageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
 function readSafeNextPath() {
-  if (typeof window === 'undefined') return '/campus';
+  if (typeof window === 'undefined') return '/post';
   const next = new URLSearchParams(window.location.search).get('next');
-  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/campus';
+  return next && next.startsWith('/') && !next.startsWith('//') ? next : '/post';
 }
 
 function emailDomain(value: string) {
@@ -34,7 +34,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState('');
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
-  const [nextPath, setNextPath] = useState('/campus');
+  const [nextPath, setNextPath] = useState('/post');
   const [detectedCampus, setDetectedCampus] = useState<University | null>(null);
   const [checkingSchool, setCheckingSchool] = useState(false);
   const [schoolChecked, setSchoolChecked] = useState(false);
@@ -230,7 +230,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email.trim().toLowerCase(),
-        options: { emailRedirectTo: `${window.location.origin}/login?confirmed=1&next=${encodeURIComponent('/campus')}` }
+        options: { emailRedirectTo: `${window.location.origin}/login?confirmed=1&next=${encodeURIComponent('/post')}` }
       });
       if (error) throw error;
       setMessage('Confirmation email sent. Check your inbox and spam folder.');
@@ -241,7 +241,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     }
   }
 
-  const nextQuery = nextPath === '/campus' ? '' : `?next=${encodeURIComponent(nextPath)}`;
+  const nextQuery = nextPath === '/post' ? '' : `?next=${encodeURIComponent(nextPath)}`;
   const switchHref = signup ? `/login${nextQuery}` : `/signup${nextQuery}`;
   const recoveryHref = `/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ''}`;
 
@@ -260,7 +260,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const visualCampusName = detectedCampus?.short_name ?? nearbyPrimary?.short_name ?? 'Your campus';
   const visualCampusImage = detectedCampus?.cover_image || nearbyPrimary?.cover_image || imageFallback;
 
-  if (entering) return <AppLoader label="Entering your circle…" detail="Opening Community Circle" />;
+  if (entering) return <AppLoader label="Opening Post a need…" detail="You can return Home anytime" />;
 
   return (
     <main className={`authPage ${signup ? 'authSignup' : 'authLogin'}`}>
@@ -309,6 +309,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               <div><span>{signup ? 'JOIN ASPIRE' : 'SIGN IN'}</span><h2>{signup ? 'Find your campus.' : 'Good to see you.'}</h2></div>
               <a href={switchHref}>{signup ? 'Sign in' : 'Sign up'} ↗</a>
             </div>
+            <div className="authEntryHint"><b>Start with a need.</b><span>After you sign in, Aspire opens the Post screen first. You can go Home or Browse anytime.</span></div>
 
             {signup && <label><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" maxLength={80} required /></label>}
             <label><span>{signup ? 'University email' : 'Email'}</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={signup ? 'you@university.edu' : 'you@example.com'} autoComplete="email" required /></label>
