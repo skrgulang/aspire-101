@@ -1,0 +1,328 @@
+/* Mobile-first product pass for the private beta. Keep the core actions obvious: Post, Browse, Inbox, Home. */
+
+.postEntryHeader {
+  width: min(1200px, calc(100% - 40px));
+  margin: 22px auto 0;
+  min-height: 64px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  position: relative;
+  z-index: 20;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 20px;
+  background: rgba(10,9,7,.78);
+  backdrop-filter: blur(18px);
+}
+.postEntryHeader > div { display: grid; gap: 3px; }
+.postEntryHeader span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .14em; }
+.postEntryHeader strong { font-size: 14px; letter-spacing: -.02em; }
+.postEntryHeader nav { display: flex; gap: 8px; }
+.postEntryHeader nav a {
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 999px;
+  color: #b8b0a2;
+  font-size: 10px;
+  font-weight: 800;
+}
+.postEntryHeader nav a:hover { color: #fff; border-color: rgba(255,194,28,.30); }
+
+.authEntryHint {
+  margin: -4px 0 18px;
+  padding: 12px 13px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(255,194,28,.14);
+  border-radius: 14px;
+  background: rgba(255,194,28,.045);
+}
+.authEntryHint b { color: var(--gold); font-size: 10px; }
+.authEntryHint span { color: #8f877b; font-size: 9px; line-height: 1.5; }
+
+.marketProtectionNote.betaOnly { border-color: rgba(255,194,28,.22); background: rgba(255,194,28,.045); }
+.marketPaymentChoice .betaLocked { opacity: .58; cursor: not-allowed; }
+.marketPaymentChoice .betaLocked input { cursor: not-allowed; }
+
+@media (max-width: 820px) {
+  html { scroll-padding-bottom: 88px; }
+  body { overflow-x: hidden; }
+
+  /* Auth: on phones the form comes first instead of a tall marketing collage. */
+  .authPage { min-height: 100dvh; padding: 10px 0 120px; overflow: visible; }
+  .authTopbar { width: calc(100% - 28px); min-height: 54px; }
+  .authBrand img { width: 34px; height: 34px; }
+  .authBack { font-size: 9px; }
+  .authShell {
+    width: calc(100% - 28px);
+    min-height: 0;
+    margin: 12px auto 0;
+    display: block;
+  }
+  .authVisual { display: none !important; }
+  .authCard {
+    width: 100%;
+    padding: 20px;
+    border-radius: 22px;
+    box-shadow: 0 18px 54px rgba(0,0,0,.32);
+  }
+  .authCardTop { margin-bottom: 18px; }
+  .authCardTop h2 { font-size: 28px; }
+  .authCard label { margin-top: 13px; }
+  .authCard input,
+  .authCard select,
+  .authMfaInput { min-height: 52px; font-size: 16px; }
+  .authSubmit { min-height: 54px; margin-top: 18px; }
+  .authEntryHint { margin-top: -2px; }
+  .authFindNearby { min-height: 50px; }
+
+  /* Shared app navigation: true mobile bottom bar + safe area. */
+  .appDock {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    min-height: 68px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    transform: none;
+    border-inline: 0;
+    border-bottom: 0;
+    border-radius: 20px 20px 0 0;
+    background: rgba(8,8,7,.94);
+  }
+  .appDock a { min-height: 52px; border-radius: 15px; gap: 4px; }
+  .appDock a i { font-size: 18px; }
+  .appDock a span { font-size: 9px; }
+  .appDock .appDockPost { margin-top: -10px; min-height: 58px; border-radius: 18px; }
+  .appDock .appDockPost i { font-size: 26px; }
+
+  /* Post entry: form first, no decorative side rail on a phone. */
+  .postEntryHeader {
+    width: 100%;
+    min-height: 58px;
+    margin: 0;
+    padding: 10px 14px;
+    position: sticky;
+    top: 0;
+    border-inline: 0;
+    border-top: 0;
+    border-radius: 0 0 18px 18px;
+    background: rgba(9,8,6,.94);
+  }
+  .postEntryHeader > div span { font-size: 7px; }
+  .postEntryHeader > div strong { font-size: 12px; }
+  .postEntryHeader nav { gap: 5px; }
+  .postEntryHeader nav a { min-height: 38px; padding: 0 10px; font-size: 9px; }
+  .postEntryPage .postPageGlow,
+  .postEntryPage .postDoodle,
+  .postEntryPage .postSide { display: none !important; }
+  .postEntryPage .postShell {
+    width: 100%;
+    display: block;
+    padding: 10px 0 106px;
+  }
+  .postEntryPage .postPanel {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+  .postForm { padding: 16px 14px 116px; }
+  .postFormHeading { padding-top: 4px; }
+  .postModeSwitch { width: 100%; margin-bottom: 18px; }
+  .postModeSwitch a { min-height: 42px; flex: 1; display: grid; place-items: center; }
+  .postFormHeading h1 { font-size: 38px; margin-top: 8px; }
+  .postFormHeading > p:last-child { font-size: 12px; }
+
+  .postCategoryPicker {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 8px;
+    margin: 20px -14px 0;
+    padding: 0 14px 5px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+  .postCategoryPicker::-webkit-scrollbar { display: none; }
+  .postCategoryPicker button {
+    flex: 0 0 132px;
+    min-height: 74px;
+    padding: 10px 11px;
+    scroll-snap-align: start;
+    border-radius: 16px;
+  }
+  .postCategoryPicker button i { width: 28px; height: 28px; border-radius: 9px; }
+  .postCategoryPicker button strong { margin-top: 8px; font-size: 11px; }
+  .postCategoryPicker button span { display: none; }
+  .postQuickStarts {
+    margin: 14px -14px 0;
+    padding: 0 14px 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .postQuickStarts::-webkit-scrollbar { display: none; }
+  .postQuickStarts > span,
+  .postQuickStarts button { flex: 0 0 auto; }
+  .postQuickStarts button { min-height: 38px; }
+
+  .postField input,
+  .postField textarea,
+  .postField select,
+  .moneyInput input { font-size: 16px; }
+  .postFieldLarge textarea { min-height: 96px; font-size: 18px; }
+  .postEssentials,
+  .postMoney,
+  .marketFields { display: grid !important; grid-template-columns: 1fr !important; gap: 0 !important; }
+  .postKindGrid { display: grid; grid-template-columns: 1fr 1fr; }
+  .postKind { min-height: 58px; }
+  .marketIntentGrid { grid-template-columns: 1fr !important; }
+  .marketComposer,
+  .marketPaymentChoice,
+  .requestMediaComposer { border-radius: 18px !important; }
+  .requestMediaHead { align-items: flex-start !important; flex-direction: column; gap: 6px; }
+  .requestMediaRail { overflow-x: auto; flex-wrap: nowrap !important; scrollbar-width: none; }
+  .requestMediaRail::-webkit-scrollbar { display: none; }
+  .requestMediaRail figure,
+  .requestMediaAdd { flex: 0 0 126px; }
+  .postContextCard { grid-template-columns: 1fr; gap: 8px; }
+
+  .postSubmitRow {
+    position: sticky;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    z-index: 50;
+    margin: 24px -14px -10px;
+    padding: 11px 14px;
+    border-top: 1px solid rgba(255,255,255,.10);
+    background: rgba(9,8,6,.94);
+    backdrop-filter: blur(18px);
+  }
+  .postSubmitRow p { display: none; }
+  .postSubmitRow .button { width: 100%; min-height: 52px; }
+  .postSuccess { min-height: 70dvh; padding: 28px 14px 120px; }
+  .postSuccess h1 { font-size: 40px; }
+  .postSuccessActions { flex-direction: column; align-items: stretch; }
+  .postSuccessActions .button,
+  .postSuccessActions button { min-height: 50px; }
+
+  .publishOverlay { place-items: end center; padding: 0; }
+  .publishModal {
+    width: 100%;
+    max-height: 88dvh;
+    overflow-y: auto;
+    padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
+    border-radius: 24px 24px 0 0;
+  }
+  .publishModal h2 { font-size: 32px; }
+  .publishActions { flex-direction: column-reverse; align-items: stretch; }
+  .publishActions .button,
+  .publishActions button { min-height: 50px; width: 100%; }
+
+  /* Browse: remove stacked/rotated deck styling on touch screens. */
+  .discoverPage .discoverShell { width: 100%; padding: 18px 12px 104px; }
+  .discoverPage .discoverExperience { width: 100%; }
+  .discoverPage .discoverTopline { margin-bottom: 12px; }
+  .discoverPage .discoverTopline h1 { font-size: 40px; }
+  .discoverPage .discoverTopline > p:last-child { font-size: 12px; }
+  .discoverPage .discoverCategories { margin-top: 18px; padding-bottom: 8px; }
+  .discoverPage .discoverCategories button { min-height: 40px; }
+  .discoverPage .discoverStage { margin-top: 10px; min-height: 0; }
+  .discoverPage .requestDeck { min-height: 0; display: block; perspective: none; }
+  .discoverPage .deckGhost { display: none; }
+  .discoverPage .discoverCard {
+    width: 100%;
+    min-height: 0;
+    padding: 20px;
+    border-radius: 20px;
+    transform: none !important;
+  }
+  .discoverPage .discoverExchange { margin-top: 24px; }
+  .discoverPage .discoverCard h2 { font-size: 34px; }
+  .discoverPage .discoverOffer { margin-top: 28px; }
+  .discoverPage .discoverCardFooter { grid-template-columns: 1fr 1.35fr; }
+  .discoverPage .discoverCardFooter button { min-height: 52px; }
+
+  /* Inbox + Profile: reduce giant headings and keep tap targets comfortable. */
+  .connectionsPage .connectionsShell { width: 100%; padding: 20px 12px 104px; }
+  .connectionsPage .connectionsHero h1 { font-size: 40px; }
+  .connectionsPage button,
+  .connectionsPage a,
+  .profilePage button,
+  .profilePage a { touch-action: manipulation; }
+  .profilePage { padding: 22px 12px 104px; }
+  .profileTop { margin-bottom: 26px; }
+  .profileHero h1 { font-size: 42px; }
+  .profileOverview { grid-template-columns: 1fr !important; }
+  .profileTrustCardsExpanded { grid-template-columns: 1fr !important; }
+  .profileMenuRow { min-height: 64px; }
+
+  /* Home: simplify the decorative radar on mobile; prioritize live posts and sections. */
+  .campusHome { padding: 0 12px 104px !important; overflow: visible; }
+  .communityTopbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    margin: 0 -12px;
+    padding: 9px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 9px;
+    background: rgba(9,9,7,.94);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .communityBrand span { display: none; }
+  .communityCampusIdentity { grid-column: 1 / -1; width: 100%; }
+  .communityCampusPicker { width: 100%; min-width: 0; }
+  .returnHomeCampus { min-height: 38px; }
+  .communityHero { display: block !important; padding-top: 28px; }
+  .communityIntro h1 { font-size: 48px !important; }
+  .communityLead { font-size: 13px !important; }
+  .communityQuickFilters {
+    margin-inline: -12px;
+    padding-inline: 12px;
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+  .communityQuickFilters::-webkit-scrollbar { display: none; }
+  .communityQuickFilters a { flex: 0 0 auto; min-height: 40px; display: inline-flex; align-items: center; }
+  .communityRadarWrap { display: none !important; }
+  .communityNowItem { min-height: 72px; }
+  .communitySections { padding-top: 30px !important; }
+  .communitySectionsHead { align-items: flex-start !important; flex-direction: column; gap: 6px; }
+  .communitySectionsHead h2 { font-size: 30px !important; }
+  .communitySectionGrid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .communitySectionCard { min-height: 132px; padding: 14px !important; border-radius: 18px !important; }
+  .communitySectionCard h3 { font-size: 19px !important; }
+  .communitySectionCard p { font-size: 10px !important; }
+
+  /* Any form control users tap should avoid iOS zoom. */
+  input,
+  textarea,
+  select { font-size: 16px; }
+}
+
+@media (max-width: 430px) {
+  .postEntryHeader > div strong { display: none; }
+  .postEntryHeader nav a { padding-inline: 9px; }
+  .postCategoryPicker button { flex-basis: 122px; }
+  .postKindGrid { grid-template-columns: 1fr; }
+  .discoverPage .discoverCardFooter { grid-template-columns: 1fr; }
+  .communitySectionGrid { grid-template-columns: 1fr !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .postEntryHeader,
+  .appDock,
+  .discoverPage .discoverCard { scroll-behavior: auto; transition: none; }
+}
