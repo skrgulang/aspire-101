@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import AdminActivityDashboard from '../../AdminActivityDashboard';
+import FounderGrowthDashboard from '../../FounderGrowthDashboard';
 
 export const metadata: Metadata = {
-  title: 'Daily Active Monitor — Aspire 101',
-  description: 'Admin-only product activity monitoring for Aspire 101.'
+  title: 'Founder Growth Monitor — Aspire 101',
+  description: 'Admin-only DAU, CTR, signup conversion, campus growth, and transaction monitoring for Aspire 101.'
 };
 
 export default function AdminMetricsPage() {
-  return <AdminActivityDashboard />;
+  return <FounderGrowthDashboard />;
 }
