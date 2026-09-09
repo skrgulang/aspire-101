@@ -13,12 +13,12 @@ type StatusResponse = {
   code?: string;
 };
 
-const copy: Record<PaymentStatus, { title: string; detail: string; action: string }> = {
-  NOT_STARTED: { title: 'Seller payouts', detail: 'Only set this up if you plan to receive money. Buyers add a card only when they check out.', action: 'Set up seller payouts' },
-  ACTION_REQUIRED: { title: 'Finish seller payout setup', detail: 'Stripe still needs information before you can receive seller earnings.', action: 'Continue seller setup' },
-  UNDER_REVIEW: { title: 'Seller payout review', detail: 'Stripe is reviewing the information needed for you to receive earnings.', action: 'Check again' },
-  READY: { title: 'Seller payouts ready ✓', detail: 'You can receive Aspire seller payouts. Buyer checkout still requires no advance setup.', action: 'Manage seller payouts' },
-  RESTRICTED: { title: 'Seller payout action required', detail: 'Stripe needs an update before you can receive seller earnings.', action: 'Fix seller setup' }
+const receiveCopy: Record<PaymentStatus, { detail: string; action: string }> = {
+  NOT_STARTED: { detail: 'Receiving is not set up yet.', action: 'Set up receiving' },
+  ACTION_REQUIRED: { detail: 'Stripe still needs information before this account can receive money.', action: 'Continue setup' },
+  UNDER_REVIEW: { detail: 'Stripe is reviewing the information needed for this account to receive money.', action: 'Check again' },
+  READY: { detail: 'Receiving is ready ✓', action: 'Manage payouts' },
+  RESTRICTED: { detail: 'Stripe needs an update before this account can receive money.', action: 'Fix receiving' }
 };
 
 async function authHeaders() {
@@ -48,10 +48,10 @@ export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoo
       const headers = await authHeaders();
       const response = await fetch('/api/stripe/connect/status', { headers, cache: 'no-store' });
       const payload = await response.json() as StatusResponse;
-      if (!response.ok) throw new Error(paymentError(payload, 'Could not check payout status.'));
+      if (!response.ok) throw new Error(paymentError(payload, 'Could not check receiving status.'));
       setStatus(payload.status);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Could not check payout status.');
+      setMessage(error instanceof Error ? error.message : 'Could not check receiving status.');
     } finally {
       setLoading(false);
     }
@@ -61,8 +61,8 @@ export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoo
     void refresh();
     if (typeof window !== 'undefined') {
       const state = new URLSearchParams(window.location.search).get('payments');
-      if (state === 'return') setMessage('Welcome back. Checking your seller payout setup…');
-      if (state === 'refresh') setMessage('Your seller payout setup session expired. You can continue here.');
+      if (state === 'return') setMessage('Welcome back. Checking your receiving setup…');
+      if (state === 'refresh') setMessage('Your receiving setup session expired. You can continue here.');
     }
   }, []);
 
@@ -87,7 +87,7 @@ export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoo
       return;
     }
     if (!schoolVerified) {
-      setMessage('Verify your school identity before setting up seller payouts.');
+      setMessage('Verify your school identity before setting up receiving.');
       return;
     }
     if (status === 'UNDER_REVIEW') {
@@ -100,19 +100,20 @@ export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoo
     window.location.assign('/payments/setup');
   }
 
-  const state = copy[status];
+  const receiveState = receiveCopy[status];
 
   return (
     <div className={`profileMenuRow paymentConnectRow payment-${status.toLowerCase()}`}>
       <i>$</i>
       <div>
-        <strong>{loading ? 'Checking seller payouts…' : state.title}</strong>
-        <span>{loading ? 'Syncing seller payout status' : state.detail}</span>
+        <strong>{loading ? 'Checking payments…' : 'Payments'}</strong>
+        <span>One Aspire account can both pay and receive. Pay with a card or wallet at checkout; set up receiving once only if you want money sent to you.</span>
+        <small className="paymentConnectMessage">{loading ? 'Checking receiving status…' : receiveState.detail}</small>
         <a className="paymentMoneyLink" href="/money">View Aspire Money →</a>
         {message && <small className="paymentConnectMessage" role="status">{message}</small>}
       </div>
       <button type="button" onClick={openPayoutSetup} disabled={loading || busy}>
-        {busy ? 'Opening…' : loading ? '…' : state.action}
+        {busy ? 'Opening…' : loading ? '…' : receiveState.action}
       </button>
     </div>
   );
