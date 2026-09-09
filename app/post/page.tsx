@@ -33,7 +33,10 @@ export default function PostPage() {
             </article>
           </div>
 
-          <a className="postDiscoverLink" href="/discover">Or browse what campus needs <span>→</span></a>
+          <div className="postNavChoices">
+            <a className="postDiscoverLink" href="/campus">Back to campus home <span>→</span></a>
+            <a className="postDiscoverLink" href="/discover">Browse what campus needs <span>→</span></a>
+          </div>
         </aside>
 
         <div className="postPanel">
