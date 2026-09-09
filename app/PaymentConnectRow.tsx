@@ -14,11 +14,11 @@ type StatusResponse = {
 };
 
 const copy: Record<PaymentStatus, { title: string; detail: string; action: string }> = {
-  NOT_STARTED: { title: 'Payments & earnings', detail: 'Set up payouts before you receive money.', action: 'Start setup' },
-  ACTION_REQUIRED: { title: 'Finish payout setup', detail: 'More information is still needed before payouts are ready.', action: 'Continue' },
-  UNDER_REVIEW: { title: 'Payout identity under review', detail: 'Your payout information is being reviewed.', action: 'Check again' },
-  READY: { title: 'Payments ready ✓', detail: 'Your account can receive Aspire payouts.', action: 'Manage payouts' },
-  RESTRICTED: { title: 'Payout action required', detail: 'An update is required before payouts can continue.', action: 'Fix setup' }
+  NOT_STARTED: { title: 'Seller payouts', detail: 'Only set this up if you plan to receive money. Buyers add a card only when they check out.', action: 'Set up seller payouts' },
+  ACTION_REQUIRED: { title: 'Finish seller payout setup', detail: 'Stripe still needs information before you can receive seller earnings.', action: 'Continue seller setup' },
+  UNDER_REVIEW: { title: 'Seller payout review', detail: 'Stripe is reviewing the information needed for you to receive earnings.', action: 'Check again' },
+  READY: { title: 'Seller payouts ready ✓', detail: 'You can receive Aspire seller payouts. Buyer checkout still requires no advance setup.', action: 'Manage seller payouts' },
+  RESTRICTED: { title: 'Seller payout action required', detail: 'Stripe needs an update before you can receive seller earnings.', action: 'Fix seller setup' }
 };
 
 async function authHeaders() {
@@ -61,8 +61,8 @@ export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoo
     void refresh();
     if (typeof window !== 'undefined') {
       const state = new URLSearchParams(window.location.search).get('payments');
-      if (state === 'return') setMessage('Welcome back. Checking your payout setup…');
-      if (state === 'refresh') setMessage('Your payout setup session expired. You can continue here.');
+      if (state === 'return') setMessage('Welcome back. Checking your seller payout setup…');
+      if (state === 'refresh') setMessage('Your seller payout setup session expired. You can continue here.');
     }
   }, []);
 
@@ -87,7 +87,7 @@ export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoo
       return;
     }
     if (!schoolVerified) {
-      setMessage('Verify your school identity before setting up payouts.');
+      setMessage('Verify your school identity before setting up seller payouts.');
       return;
     }
     if (status === 'UNDER_REVIEW') {
@@ -106,8 +106,8 @@ export default function PaymentConnectRow({ phoneVerified: _phoneVerified, schoo
     <div className={`profileMenuRow paymentConnectRow payment-${status.toLowerCase()}`}>
       <i>$</i>
       <div>
-        <strong>{loading ? 'Checking payments…' : state.title}</strong>
-        <span>{loading ? 'Syncing payout status' : state.detail}</span>
+        <strong>{loading ? 'Checking seller payouts…' : state.title}</strong>
+        <span>{loading ? 'Syncing seller payout status' : state.detail}</span>
         <a className="paymentMoneyLink" href="/money">View Aspire Money →</a>
         {message && <small className="paymentConnectMessage" role="status">{message}</small>}
       </div>
