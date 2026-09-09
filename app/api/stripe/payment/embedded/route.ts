@@ -37,6 +37,13 @@ type FeeQuote = {
 
 export async function POST(request: Request) {
   try {
+    if (process.env.VERCEL_ENV === 'production' && process.env.ASPIRE_REAL_PAYMENTS_ENABLED !== 'true') {
+      return NextResponse.json({
+        error: 'Aspire payments are still in private beta. Real-money transactions are disabled while we test the campus network.',
+        code: 'BETA_PAYMENTS_DISABLED'
+      }, { status: 503 });
+    }
+
     const { user } = await getAuthenticatedUser(request);
     const body = await request.json().catch(() => ({}));
     const connectionId = typeof body?.connectionId === 'string' ? body.connectionId : '';
@@ -123,8 +130,6 @@ export async function POST(request: Request) {
         });
       }
 
-      // If both users changed the agreed amount before payment, expire the old open
-      // session so it cannot later be completed at stale terms.
       if (priorSession.status === 'open' && !sameTerms) {
         await stripeFormRequest(`/v1/checkout/sessions/${encodeURIComponent(priorSession.id)}/expire`, {});
       } else if (existingPayment.status === 'processing' && priorSession.status !== 'expired') {
