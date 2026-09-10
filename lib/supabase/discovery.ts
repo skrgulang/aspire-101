@@ -20,8 +20,12 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
   media: RequestMedia[];
 };
 
+type DiscoverPriceFilter = 'any' | 'free' | 'paid';
+
 const discoverLanguageKey = 'aspire:discover-language';
 const discoverKeywordKey = 'aspire:discover-keywords';
+const discoverPriceKey = 'aspire:discover-price';
+const discoverPhotoOnlyKey = 'aspire:discover-photo-only';
 const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
 const seededCorecImage = '/seeded/corec.webp?v=5';
 const seededGamingImage = '/seeded/gaming.webp?v=5';
@@ -63,6 +67,17 @@ function resolveKeywordFilters() {
   } catch {
     return [];
   }
+}
+
+function resolvePriceFilter(): DiscoverPriceFilter {
+  if (typeof window === 'undefined') return 'any';
+  const stored = window.localStorage.getItem(discoverPriceKey);
+  return stored === 'free' || stored === 'paid' ? stored : 'any';
+}
+
+function resolvePhotoOnlyFilter() {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(discoverPhotoOnlyKey) === '1';
 }
 
 function seededMedia(row: Pick<DiscoverRequest, 'id' | 'title' | 'poster_id' | 'created_at'>): RequestMedia[] {
@@ -175,6 +190,16 @@ function matchesSmartKeywordFilters(item: DiscoverRequest, keywords: string[]) {
   return keywords.every((keyword) => matchesSmartKeyword(item, keyword));
 }
 
+function matchesPriceFilter(item: DiscoverRequest, price: DiscoverPriceFilter) {
+  if (price === 'any') return true;
+  const paid = typeof item.amount_cents === 'number' && item.amount_cents > 0;
+  return price === 'paid' ? paid : !paid;
+}
+
+function matchesPhotoFilter(item: DiscoverRequest, photoOnly: boolean) {
+  return !photoOnly || item.media.length > 0;
+}
+
 function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: DiscoverCategory, language?: RequestLanguageCode | 'all') {
   if (category && category !== 'Anything' && localCategory(item) !== category) return false;
   if (language && language !== 'all' && (item.language_code || 'en') !== language) return false;
@@ -214,16 +239,24 @@ export async function fetchCampusFeedRequests(input: {
   const limit = input.limit ?? 40;
   const language = resolveLanguageFilter(input.language);
   const keywords = resolveKeywordFilters();
-  const publicFetchLimit = keywords.length ? Math.max(limit, 80) : limit;
+  const price = resolvePriceFilter();
+  const photoOnly = resolvePhotoOnlyFilter();
+  const extraFiltersActive = keywords.length > 0 || price !== 'any' || photoOnly;
+  const publicFetchLimit = extraFiltersActive ? Math.max(limit, 80) : limit;
 
   const [{ data: authData }, publicItems] = await Promise.all([
     supabase.auth.getUser(),
     fetchDiscoverRequests({ ...input, limit: publicFetchLimit, language })
   ]);
 
+  const applySmartFilters = (item: DiscoverRequest) =>
+    matchesSmartKeywordFilters(item, keywords)
+    && matchesPriceFilter(item, price)
+    && matchesPhotoFilter(item, photoOnly);
+
   if (!authData.user) {
     return publicItems
-      .filter((item) => matchesSmartKeywordFilters(item, keywords))
+      .filter(applySmartFilters)
       .slice(0, limit);
   }
 
@@ -251,7 +284,7 @@ export async function fetchCampusFeedRequests(input: {
   ownItems.forEach((item) => merged.set(item.id, item));
 
   return Array.from(merged.values())
-    .filter((item) => matchesSmartKeywordFilters(item, keywords))
+    .filter(applySmartFilters)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit);
 }
