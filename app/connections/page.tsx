@@ -8,10 +8,14 @@ export default function ConnectionsPage() {
   return (
     <main className="connectionsPage">
       <div className="connectionsShell shell">
-        <ConnectionsHub />
+        <section id="my-activity">
+          <ConnectionsHub />
+        </section>
         <ConnectionCopilotPanel />
-        <MarketOrdersPanel />
-        <ConnectionPaymentsPanel />
+        <section id="transactions">
+          <MarketOrdersPanel />
+          <ConnectionPaymentsPanel />
+        </section>
       </div>
       <AppDock active="connections" />
     </main>
