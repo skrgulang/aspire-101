@@ -83,6 +83,13 @@ function friendlyPolicyError(error: { message?: string; details?: string; hint?:
   return new Error(error.message || fallback);
 }
 
+function notifyCampusFeedChanged() {
+  if (typeof window === 'undefined') return;
+  const version = String(Date.now());
+  try { window.localStorage.setItem('aspire:campus-feed-refresh-version', version); } catch { /* ignore storage errors */ }
+  window.dispatchEvent(new Event('aspire:campus-feed-refresh'));
+}
+
 export async function fetchOpenRequests(limit = 24) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
@@ -141,6 +148,7 @@ export async function createRequest(input: CreateRequestInput) {
     .single();
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
+  notifyCampusFeedChanged();
   await runRequestAiSafety(data.id).catch(() => undefined);
   return data as AspireRequest;
 }
