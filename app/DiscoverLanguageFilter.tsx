@@ -26,6 +26,13 @@ const timeOptions: { value: TimeFilter; label: string }[] = [
   { value: 'week', label: 'This week' }
 ];
 
+const sortLabels: Record<SortMode, string> = {
+  best: 'Best match',
+  soonest: 'Soonest first',
+  newest: 'Newest first',
+  highest: 'Highest pay'
+};
+
 function readStoredKeywords() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(keywordStorageKey) || '[]');
@@ -99,6 +106,21 @@ export default function DiscoverLanguageFilter() {
       window.removeEventListener('pointerdown', onPointerDown);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!portalTarget) return;
+    const syncLabel = () => {
+      const label = document.querySelector<HTMLElement>('.discoverV2ResultMeta > span');
+      const next = sortLabels[sort];
+      if (label && label.textContent !== next) label.textContent = next;
+    };
+    syncLabel();
+    const root = document.querySelector('.discoverV2Experience');
+    if (!root) return;
+    const observer = new MutationObserver(syncLabel);
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [portalTarget, sort]);
 
   const activeCount = useMemo(
     () => keywords.length + (language === 'all' ? 0 : 1) + (price === 'any' ? 0 : 1) + (photoOnly ? 1 : 0) + (time === 'any' ? 0 : 1),
