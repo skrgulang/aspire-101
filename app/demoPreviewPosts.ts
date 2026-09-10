@@ -57,6 +57,26 @@ export const demoPreviewPostDefinitions: DemoPreviewPostDefinition[] = [
     kind: 'split_cost',
     amount_cents: 2500,
     hoursAgo: 5
+  },
+  {
+    id: 'demo-preview-study',
+    title: 'Math 55 study group later today?',
+    details: 'Looking for a few Purdue students to review Math 55 together later today.',
+    category: 'Study / class',
+    displayCategory: 'Study Help',
+    kind: 'community',
+    amount_cents: null,
+    hoursAgo: 6
+  },
+  {
+    id: 'demo-preview-coffee',
+    title: 'Anyone free to grab coffee on campus?',
+    details: 'Looking for someone around Purdue to grab coffee and hang out for a bit.',
+    category: 'People / community',
+    displayCategory: 'People',
+    kind: 'community',
+    amount_cents: null,
+    hoursAgo: 8
   }
 ];
 
