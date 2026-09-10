@@ -1,46 +1,74 @@
 import PostAccessGate from '../PostAccessGate';
 import AspireAgentLauncher from '../AspireAgentLauncher';
 import AppDock from '../AppDock';
+import UiIcon from '../UiIcon';
 
 export default function PostPage() {
   return <>
-    <main className="postPage">
-      <div className="postPageGlow" aria-hidden="true" />
-      <div className="postDoodle postDoodleOne" aria-hidden="true">ASK → CONNECT → DO</div>
-      <div className="postDoodle postDoodleTwo" aria-hidden="true">just post it on aspire ↗</div>
+    <main className="postPage postPageRefreshed">
+      <AppDock active="post" />
 
-      <section className="postShell shell">
-        <aside className="postSide postSideAlive">
-          <p className="eyebrow">ONE PLACE TO ASK</p>
-          <h2>Your campus<br /><span>is already helping.</span></h2>
-          <p>Pick a need, say what is happening, and let nearby students decide if they can help.</p>
-
-          <div className="postLiveStack" aria-label="Example requests">
-            <article className="postLiveCard cardRide">
-              <span>RIDE · SPLIT COST</span>
-              <strong>IND Friday at 4?</strong>
-              <small>Purdue · 3 interested</small>
-            </article>
-            <article className="postLiveCard cardPickup">
-              <span>PICKUP · PAID HELP</span>
-              <strong>Target order before 8</strong>
-              <small>$12 · campus</small>
-            </article>
-            <article className="postLiveCard cardStudy">
-              <span>STUDY · COMMUNITY</span>
-              <strong>Math 55 tonight?</strong>
-              <small>2 classmates nearby</small>
-            </article>
+      <section className="postWorkspace">
+        <header className="postWorkspaceHeader">
+          <div>
+            <h1>Create a post</h1>
+            <p>Share what you need with students on your campus.</p>
           </div>
 
-          <a className="postDiscoverLink" href="/discover">Or browse what campus needs <span>→</span></a>
-        </aside>
+          <ol className="postProgress" aria-label="Post creation steps">
+            <li className="active"><b>1</b><span>Category</span></li>
+            <li><b>2</b><span>Details</span></li>
+            <li><b>3</b><span>Photos</span></li>
+            <li><b>4</b><span>Review</span></li>
+          </ol>
+        </header>
 
-        <div className="postPanel">
-          <PostAccessGate />
+        <div className="postWorkspaceGrid">
+          <div className="postMainColumn">
+            <div className="postPanel">
+              <PostAccessGate />
+            </div>
+          </div>
+
+          <aside className="postRightRail" aria-label="Posting help">
+            <section className="postVerifiedCard">
+              <div className="postVerifiedIcon"><UiIcon name="check" /></div>
+              <div><strong>Purdue Verified</strong><span>Your post is visible only to students in the selected campus community.</span></div>
+            </section>
+
+            <section className="postRailCard">
+              <div className="postRailHeading"><UiIcon name="bell" /><h2>Posting tips</h2></div>
+              <ul className="postTipList">
+                <li><i><UiIcon name="check" /></i><span>Be specific and include the details someone needs to respond.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Use a clear title that can be understood at a glance.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Add real photos when they make the post easier to trust.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Keep personal information private until you connect.</span></li>
+                <li><i><UiIcon name="check" /></i><span>You can manage your request later from Inbox.</span></li>
+              </ul>
+            </section>
+
+            <section className="postRailCard">
+              <div className="postRailHeading"><UiIcon name="check" /><h2>Trust & safety</h2></div>
+              <ul className="postTipList compact">
+                <li><i><UiIcon name="check" /></i><span>Interact with verified campus members.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Meet in public, well-lit places when possible.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Report suspicious activity or prohibited listings.</span></li>
+              </ul>
+              <a className="postSafetyLink" href="/safety">Learn more about safety <UiIcon name="chevron" /></a>
+            </section>
+
+            <section className="postPreviewPanel">
+              <div className="postPreviewTitle"><UiIcon name="search" /><h2>Live preview</h2></div>
+              <article className="postPreviewCard">
+                <div className="postPreviewMeta"><span>POST PREVIEW</span><small>Just now</small></div>
+                <strong>Your post will appear here.</strong>
+                <p>As you add a title, campus, photos, and details, this card shows the visual style students will see in Browse.</p>
+                <div className="postPreviewFooter"><UiIcon name="mapPin" /><span>Purdue community</span></div>
+              </article>
+            </section>
+          </aside>
         </div>
       </section>
-      <AppDock active="post" />
     </main>
     <AspireAgentLauncher />
   </>;
