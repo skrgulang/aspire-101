@@ -29,6 +29,10 @@ export default function CampusFeedCard({
   footerLeft,
   footerRight
 }: Props) {
+  // Defense-in-depth: Purdue-only preview cards must never render while browsing another campus,
+  // even if stale client state briefly survives a campus switch.
+  if (item.id.startsWith('demo-preview-') && !/\bpurdue\b/i.test(campusLabel)) return null;
+
   const category = campusFeedCategory(item);
   const image = item.media?.[0]?.public_url || fallbackImage || '';
   const mine = Boolean(currentUserId && item.poster_id === currentUserId);
