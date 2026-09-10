@@ -40,6 +40,16 @@ export type ConnectionLocationShare = {
   updated_at: string;
 };
 
+export type ConnectionEvent = {
+  id: number;
+  connection_id: string;
+  actor_id: string | null;
+  event_type: 'schedule_set' | 'on_the_way' | 'arrived' | 'in_progress' | 'location_shared' | 'location_stopped' | 'reminder';
+  body: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};
+
 export async function fetchLiveConnections() {
   const supabase = getSupabaseBrowserClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -89,6 +99,32 @@ export async function fetchLiveConnections() {
   }
 
   return { userId: authData.user.id, connections, requests, profiles, locations };
+}
+
+export async function fetchConnectionEvents(connectionId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from('connection_events')
+    .select('id,connection_id,actor_id,event_type,body,metadata,created_at')
+    .eq('connection_id', connectionId)
+    .order('created_at', { ascending: true })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []) as ConnectionEvent[];
+}
+
+export function subscribeToConnectionEvents(onEvent: (event: ConnectionEvent) => void) {
+  const supabase = getSupabaseBrowserClient();
+  const channel = supabase
+    .channel(`aspire-connection-events-${Math.random().toString(36).slice(2)}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'connection_events' }, (payload) => {
+      onEvent(payload.new as ConnectionEvent);
+    })
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }
 
 export async function setConnectionSchedule(
