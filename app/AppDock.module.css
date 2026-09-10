@@ -1,0 +1,108 @@
+.dock {
+  position: fixed;
+  inset: 18px auto 18px 18px;
+  z-index: 100;
+  width: 84px;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  border: 1px solid rgba(17, 17, 17, .08);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .94);
+  color: #171717;
+  box-shadow: 0 20px 60px rgba(17, 17, 17, .10);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+.brand {
+  width: 48px;
+  height: 48px;
+  margin: 2px auto 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #111;
+  color: #ffc72c;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+.navItem {
+  min-height: 58px;
+  padding: 7px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 17px;
+  color: #737373;
+  transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+
+.navItem svg { width: 21px; height: 21px; }
+.navItem span { font-size: 10px; font-weight: 750; line-height: 1; }
+.navItem:hover { background: #f3f3f1; color: #111; transform: translateY(-1px); }
+.active { background: #f1f1ee; color: #111; }
+.post { background: #ffc72c; color: #18130a; }
+.post:hover, .post.active { background: #ffc72c; color: #18130a; }
+
+.spacer { flex: 1; }
+.themeButton {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 2px;
+  border: 1px solid #e8e8e4;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #595959;
+  cursor: pointer;
+}
+.themeButton svg { width: 19px; height: 19px; }
+
+:global(html[data-aspire-theme='dark']) .dock {
+  border-color: rgba(255,255,255,.10);
+  background: rgba(12,12,11,.93);
+  color: #f7f4ed;
+  box-shadow: 0 20px 70px rgba(0,0,0,.38);
+}
+:global(html[data-aspire-theme='dark']) .brand { background: #ffc72c; color: #171109; }
+:global(html[data-aspire-theme='dark']) .navItem { color: #8d887f; }
+:global(html[data-aspire-theme='dark']) .navItem:hover,
+:global(html[data-aspire-theme='dark']) .active { background: rgba(255,255,255,.06); color: #f7f4ed; }
+:global(html[data-aspire-theme='dark']) .post,
+:global(html[data-aspire-theme='dark']) .post:hover,
+:global(html[data-aspire-theme='dark']) .post.active { background: #ffc72c; color: #171109; }
+:global(html[data-aspire-theme='dark']) .themeButton { border-color: rgba(255,255,255,.10); background: #171716; color: #d8d3ca; }
+
+@media (min-width: 901px) {
+  :global(body:has(.signedInDock) .discoverPage),
+  :global(body:has(.signedInDock) .connectionsPage),
+  :global(body:has(.signedInDock) .postPage),
+  :global(body:has(.signedInDock) .profilePage) {
+    padding-left: 118px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .dock {
+    inset: auto 10px 10px 10px;
+    width: auto;
+    height: 70px;
+    padding: 7px 8px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    border-radius: 23px;
+  }
+  .brand, .spacer, .themeButton { display: none; }
+  .navItem { min-height: 54px; padding: 5px 2px; gap: 3px; border-radius: 17px; }
+  .navItem svg { width: 19px; height: 19px; }
+  .navItem span { font-size: 9px; }
+}
