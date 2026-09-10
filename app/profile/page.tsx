@@ -42,7 +42,7 @@ export default function ProfilePage() {
       }
 
       const [{ data: profileRow }, { data: schoolVerification }, { data: identityVerification }, nextRole] = await Promise.all([
-        supabase.from('profiles').select('display_name,name,full_name,school,email,home_campus_id,avatar_url,image_url').eq('id', user.id).maybeSingle(),
+        supabase.from('profiles').select('display_name,name,full_name,school,home_campus_id,avatar_url,image_url').eq('id', user.id).maybeSingle(),
         supabase.from('school_verifications').select('status,verification_method,school_email').eq('user_id', user.id).maybeSingle(),
         supabase.from('identity_verifications').select('status').eq('user_id', user.id).maybeSingle(),
         fetchMyRole().catch(() => 'member' as AppRole)
@@ -58,7 +58,7 @@ export default function ProfilePage() {
           : typeof metadata.display_name === 'string' && metadata.display_name.trim()
             ? metadata.display_name.trim()
             : user.email?.split('@')[0] || 'Aspire student',
-        email: user.email || profileRow?.email || '',
+        email: user.email || '',
         school: typeof backendSchool === 'string' && backendSchool.trim() ? backendSchool.trim() : 'Unsupported / unknown campus',
         emailVerified: Boolean(user.email_confirmed_at),
         schoolVerified: schoolVerification?.status === 'verified',
