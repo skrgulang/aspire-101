@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
+import DemoCampusRecentInjector from './DemoCampusRecentInjector';
 
 type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'profile';
 type Theme = 'light' | 'dark';
@@ -36,29 +37,32 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
   }
 
   return (
-    <nav className={`${styles.dock} signedInDock`} aria-label="Aspire app navigation">
-      <a className={styles.brand} href={preview ? '/ui-preview' : '/campus'} aria-label="Aspire 101 home">
-        <img src={aspireLogo} alt="" />
-        <span>Aspire 101</span>
-      </a>
-
-      {items.map((item) => (
-        <a
-          key={item.key}
-          href={preview ? '/ui-preview' : item.href}
-          className={`${styles.navItem} ${item.key === active ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
-          aria-current={item.key === active ? 'page' : undefined}
-          onClick={preview ? (event) => event.preventDefault() : undefined}
-        >
-          <UiIcon name={item.icon} />
-          <span>{item.label}</span>
+    <>
+      <nav className={`${styles.dock} signedInDock`} aria-label="Aspire app navigation">
+        <a className={styles.brand} href={preview ? '/ui-preview' : '/campus'} aria-label="Aspire 101 home">
+          <img src={aspireLogo} alt="" />
+          <span>Aspire 101</span>
         </a>
-      ))}
 
-      <span className={styles.spacer} aria-hidden="true" />
-      <button className={styles.themeButton} type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'Black & Gold' : 'Light'} mode`}>
-        <UiIcon name={theme === 'light' ? 'moon' : 'sun'} />
-      </button>
-    </nav>
+        {items.map((item) => (
+          <a
+            key={item.key}
+            href={preview ? '/ui-preview' : item.href}
+            className={`${styles.navItem} ${item.key === active ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
+            aria-current={item.key === active ? 'page' : undefined}
+            onClick={preview ? (event) => event.preventDefault() : undefined}
+          >
+            <UiIcon name={item.icon} />
+            <span>{item.label}</span>
+          </a>
+        ))}
+
+        <span className={styles.spacer} aria-hidden="true" />
+        <button className={styles.themeButton} type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'Black & Gold' : 'Light'} mode`}>
+          <UiIcon name={theme === 'light' ? 'moon' : 'sun'} />
+        </button>
+      </nav>
+      {!preview && <DemoCampusRecentInjector />}
+    </>
   );
 }
