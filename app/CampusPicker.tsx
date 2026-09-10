@@ -12,6 +12,7 @@ type Props = {
   compact?: boolean;
   label?: string;
   maxNearbyMiles?: number;
+  autoDetectNearby?: boolean;
 };
 
 export default function CampusPicker({
@@ -22,7 +23,8 @@ export default function CampusPicker({
   className = '',
   compact = false,
   label = 'Campus',
-  maxNearbyMiles = 250
+  maxNearbyMiles = 250,
+  autoDetectNearby
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -30,8 +32,10 @@ export default function CampusPicker({
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState('');
   const pickerRef = useRef<HTMLDivElement | null>(null);
+  const autoLocateStarted = useRef(false);
 
   const selected = universities.find((item) => item.id === value) ?? universities[0] ?? null;
+  const shouldAutoDetect = autoDetectNearby ?? !compact;
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +53,53 @@ export default function CampusPicker({
     };
   }, [open]);
 
+  async function loadNearby(latitude: number, longitude: number, showMessage = true) {
+    try {
+      const result = await findNearbyUniversities(latitude, longitude, {
+        limit: compact ? 5 : 8,
+        maxMiles: maxNearbyMiles
+      });
+      setNearby(result);
+      if (showMessage) {
+        setLocationMessage(result.length ? `${result.length} nearby campuses found.` : 'No supported campuses found nearby yet.');
+      }
+    } catch (error) {
+      if (showMessage) setLocationMessage(error instanceof Error ? error.message : 'Could not find nearby campuses.');
+    } finally {
+      setLocating(false);
+    }
+  }
+
+  function requestNearbyLocation(showMessage = true) {
+    if (!('geolocation' in navigator)) {
+      if (showMessage) setLocationMessage('Location is not available in this browser.');
+      return;
+    }
+
+    setLocating(true);
+    if (showMessage) setLocationMessage('');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        void loadNearby(position.coords.latitude, position.coords.longitude, showMessage);
+      },
+      () => {
+        if (showMessage) setLocationMessage('Location permission was not shared. You can still search by school.');
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  }
+
+  useEffect(() => {
+    if (!shouldAutoDetect || !universities.length || autoLocateStarted.current) return;
+    autoLocateStarted.current = true;
+
+    // Signed-in campus pickers automatically resolve nearby supported campuses.
+    // The browser still controls location permission, and Aspire never stores
+    // the user's precise coordinates here.
+    requestNearbyLocation(false);
+  }, [shouldAutoDetect, universities.length]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (q) {
@@ -60,7 +111,12 @@ export default function CampusPicker({
     }
 
     const selectedCampus = universities.find((item) => item.id === value) ?? null;
+    const nearbyRank = new Map(nearby.map((campus, index) => [campus.id, index]));
     const ranked = [...universities].sort((a, b) => {
+      const aNearby = nearbyRank.has(a.id);
+      const bNearby = nearbyRank.has(b.id);
+      if (aNearby !== bNearby) return aNearby ? -1 : 1;
+      if (aNearby && bNearby) return (nearbyRank.get(a.id) ?? 999) - (nearbyRank.get(b.id) ?? 999);
       if (a.id === value) return -1;
       if (b.id === value) return 1;
       const aSameState = Boolean(selectedCampus?.state && a.state === selectedCampus.state);
@@ -72,7 +128,7 @@ export default function CampusPicker({
       return a.name.localeCompare(b.name);
     });
     return ranked.slice(0, compact ? 4 : 30);
-  }, [universities, query, compact, value]);
+  }, [universities, query, compact, value, nearby]);
 
   function choose(id: string) {
     onChange(id);
@@ -80,34 +136,8 @@ export default function CampusPicker({
     setQuery('');
   }
 
-  async function useLocation() {
-    if (!('geolocation' in navigator)) {
-      setLocationMessage('Location is not available in this browser.');
-      return;
-    }
-    setLocating(true);
-    setLocationMessage('');
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const result = await findNearbyUniversities(position.coords.latitude, position.coords.longitude, {
-            limit: compact ? 5 : 8,
-            maxMiles: maxNearbyMiles
-          });
-          setNearby(result);
-          setLocationMessage(result.length ? `${result.length} nearby campuses found.` : 'No supported campuses found nearby yet.');
-        } catch (error) {
-          setLocationMessage(error instanceof Error ? error.message : 'Could not find nearby campuses.');
-        } finally {
-          setLocating(false);
-        }
-      },
-      () => {
-        setLocationMessage('Location permission was not shared. You can still search by school.');
-        setLocating(false);
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
-    );
+  function useLocation() {
+    requestNearbyLocation(true);
   }
 
   return (
@@ -131,7 +161,7 @@ export default function CampusPicker({
 
           <button className="campusLocationButton" type="button" onClick={useLocation} disabled={locating}>
             <span>◎</span>
-            <div><strong>{locating ? 'Finding campuses…' : 'Nearby campuses'}</strong><small>Use my location</small></div>
+            <div><strong>{locating ? 'Finding campuses…' : nearby.length ? 'Refresh nearby campuses' : 'Nearby campuses'}</strong><small>{nearby.length ? 'Based on your current location' : 'Use my location'}</small></div>
             <b>→</b>
           </button>
           {locationMessage && <p className="campusLocationMessage">{locationMessage}</p>}
@@ -149,14 +179,14 @@ export default function CampusPicker({
           )}
 
           <section className="campusPickerResults">
-            <span>{query ? 'RESULTS' : compact ? 'SUGGESTED' : 'EXPLORE CAMPUSES'}</span>
+            <span>{query ? 'RESULTS' : nearby.length ? 'NEARBY + SUGGESTED' : compact ? 'SUGGESTED' : 'EXPLORE CAMPUSES'}</span>
             {filtered.map((campus) => (
               <button type="button" key={campus.id} onClick={() => choose(campus.id)} className={campus.id === value ? 'active' : ''}>
                 <div>
                   <strong>{campus.name}</strong>
                   <small>{campus.city}{campus.state ? `, ${campus.state}` : ''}</small>
                 </div>
-                <b>{campus.id === homeCampusId ? 'HOME ✓' : campus.id === value ? 'SELECTED' : campus.launch_status === 'live' ? 'LIVE' : 'BETA'}</b>
+                <b>{campus.id === homeCampusId ? 'HOME ✓' : campus.id === value ? 'SELECTED' : nearbyRankLabel(nearby, campus.id) || (campus.launch_status === 'live' ? 'LIVE' : 'BETA')}</b>
               </button>
             ))}
             {!filtered.length && <p className="campusPickerEmpty">That campus is not in Aspire yet.</p>}
@@ -166,4 +196,10 @@ export default function CampusPicker({
       )}
     </div>
   );
+}
+
+function nearbyRankLabel(nearby: NearbyUniversity[], campusId: string) {
+  const match = nearby.find((campus) => campus.id === campusId);
+  if (!match) return '';
+  return match.distance_miles < 10 ? `${match.distance_miles.toFixed(1)} MI` : `${Math.round(match.distance_miles)} MI`;
 }
