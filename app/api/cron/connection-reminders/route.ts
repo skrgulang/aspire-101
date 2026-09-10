@@ -60,6 +60,13 @@ export async function GET(request: Request) {
   const now = new Date();
   const horizon = new Date(now.getTime() + 24 * 60 * 60_000 + 5 * 60_000);
 
+  // Expired shares are already hidden by RLS. Delete them too so exact coordinates are
+  // not retained after the sharing window ends.
+  const { count: cleanedLocations, error: cleanupError } = await supabase
+    .from('connection_live_locations')
+    .delete({ count: 'exact' })
+    .lte('expires_at', now.toISOString());
+
   const { data: rows, error } = await supabase
     .from('connections')
     .select('id,request_id,requester_id,responder_id,scheduled_start_at,timezone,meeting_label')
@@ -92,7 +99,10 @@ export async function GET(request: Request) {
 
     const copy = reminderCopy(milestone);
     const title = requestTitles.get(connection.request_id) || 'Aspire connection';
-    const eventKey = `connection-reminder:${connection.id}:${milestone}`;
+    // Include the agreed start timestamp so moving the appointment creates a fresh,
+    // appropriate reminder sequence for the new plan without duplicating cron retries.
+    const scheduleVersion = start.getTime();
+    const eventKey = `connection-reminder:${connection.id}:${scheduleVersion}:${milestone}`;
     const when = formatStart(start, connection.timezone);
     const eventBody = `${copy.title}. ${title} · ${when}${connection.meeting_label ? ` · ${connection.meeting_label}` : ''}`;
 
@@ -140,6 +150,8 @@ export async function GET(request: Request) {
     checked: connections.length,
     createdEvents,
     createdNotifications,
+    cleanedLocations: cleanedLocations ?? 0,
+    cleanupWarning: cleanupError?.message || null,
     generatedAt: now.toISOString()
   });
 }
