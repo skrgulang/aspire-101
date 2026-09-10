@@ -16,6 +16,11 @@ type Props = {
   footerRight?: ReactNode;
 };
 
+const curatedSeedImages: Record<string, string> = {
+  '31953690-e181-41d1-ac64-868ac3935d92': '/seeded/corec.webp?v=prod-1',
+  '32681530-eba3-4154-931b-442038cab1e2': '/seeded/gaming.webp?v=prod-1'
+};
+
 function initialFor(name: string) {
   return name.trim().charAt(0).toUpperCase() || 'A';
 }
@@ -34,7 +39,8 @@ export default function CampusFeedCard({
   if (item.id.startsWith('demo-preview-') && !/\bpurdue\b/i.test(campusLabel)) return null;
 
   const category = campusFeedCategory(item);
-  const image = item.media?.[0]?.public_url || fallbackImage || '';
+  // These two seeded launch posts use their dedicated production artwork first.
+  const image = curatedSeedImages[item.id] || item.media?.[0]?.public_url || fallbackImage || '';
   const mine = Boolean(currentUserId && item.poster_id === currentUserId);
   const displayAuthor = mine ? (authorName || 'You') : 'Campus student';
   const price = campusFeedPrice(item);
