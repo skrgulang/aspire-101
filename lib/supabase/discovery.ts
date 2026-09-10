@@ -1,5 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
-import type { AspireRequest } from './requests';
+import type { AspireRequest, RequestLanguageCode } from './requests';
 import { fetchRequestMedia, RequestMedia } from './requestMedia';
 
 export type DiscoverCategory =
@@ -20,6 +20,31 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
   media: RequestMedia[];
 };
 
+const discoverLanguageKey = 'aspire:discover-language';
+const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
+
+function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
+  if (value) return value;
+  if (typeof window === 'undefined') return 'all';
+  const stored = window.localStorage.getItem(discoverLanguageKey);
+  if (!stored || stored === 'all') return 'all';
+  return supportedLanguages.has(stored as RequestLanguageCode) ? stored as RequestLanguageCode : 'all';
+}
+
+function storedCoverMedia(row: Omit<DiscoverRequest, 'latitude' | 'longitude' | 'media'>): RequestMedia[] {
+  if (!row.cover_image_url) return [];
+  return [{
+    id: `cover-${row.id}`,
+    request_id: row.id,
+    uploader_id: row.poster_id,
+    storage_path: '',
+    mime_type: 'image/*',
+    sort_order: 0,
+    created_at: row.created_at,
+    public_url: row.cover_image_url
+  }];
+}
+
 async function attachMedia(rows: Omit<DiscoverRequest, 'latitude' | 'longitude' | 'media'>[]) {
   let media: RequestMedia[] = [];
   try {
@@ -39,7 +64,7 @@ async function attachMedia(rows: Omit<DiscoverRequest, 'latitude' | 'longitude' 
     ...row,
     latitude: null,
     longitude: null,
-    media: byRequest.get(row.id) ?? []
+    media: byRequest.get(row.id)?.length ? byRequest.get(row.id)! : storedCoverMedia(row)
   })) as DiscoverRequest[];
 }
 
@@ -55,8 +80,9 @@ function localCategory(item: Pick<DiscoverRequest, 'title' | 'category' | 'kind'
   return 'People / community';
 }
 
-function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: DiscoverCategory) {
+function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: DiscoverCategory, language?: RequestLanguageCode | 'all') {
   if (category && category !== 'Anything' && localCategory(item) !== category) return false;
+  if (language && language !== 'all' && (item.language_code || 'en') !== language) return false;
   const needle = query?.trim().toLowerCase();
   if (!needle) return true;
   return `${item.title} ${item.details || ''} ${item.category || ''}`.toLowerCase().includes(needle);
@@ -66,14 +92,17 @@ export async function fetchDiscoverRequests(input: {
   campusId: string;
   query?: string;
   category?: DiscoverCategory;
+  language?: RequestLanguageCode | 'all';
   limit?: number;
 }) {
   const supabase = getSupabaseBrowserClient();
+  const language = resolveLanguageFilter(input.language);
   const { data, error } = await supabase.rpc('discover_requests', {
     p_campus_id: input.campusId,
     p_query: input.query?.trim() || null,
     p_category: input.category || 'Anything',
-    p_limit: input.limit ?? 40
+    p_limit: input.limit ?? 40,
+    p_language: language !== 'all' ? language : null
   });
   if (error) throw error;
 
@@ -85,14 +114,16 @@ export async function fetchCampusFeedRequests(input: {
   campusId: string;
   query?: string;
   category?: DiscoverCategory;
+  language?: RequestLanguageCode | 'all';
   limit?: number;
 }) {
   const supabase = getSupabaseBrowserClient();
   const limit = input.limit ?? 40;
+  const language = resolveLanguageFilter(input.language);
 
   const [{ data: authData }, publicItems] = await Promise.all([
     supabase.auth.getUser(),
-    fetchDiscoverRequests(input)
+    fetchDiscoverRequests({ ...input, language })
   ]);
 
   if (!authData.user) return publicItems;
@@ -115,7 +146,7 @@ export async function fetchCampusFeedRequests(input: {
     // Public discovery should still render even if the user's private rows cannot be loaded.
   }
 
-  const ownItems = (await attachMedia(ownRows)).filter((item) => matchesLocalFilters(item, input.query, input.category));
+  const ownItems = (await attachMedia(ownRows)).filter((item) => matchesLocalFilters(item, input.query, input.category, language));
   const merged = new Map<string, DiscoverRequest>();
   publicItems.forEach((item) => merged.set(item.id, item));
   ownItems.forEach((item) => merged.set(item.id, item));
