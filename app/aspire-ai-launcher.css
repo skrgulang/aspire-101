@@ -1,4 +1,4 @@
-.aspireAgentLauncher { position: fixed; z-index: 48; left: 22px; bottom: 24px; display: inline-flex; align-items: center; gap: 9px; min-height: 48px; padding: 7px 13px 7px 9px; border: 1px solid rgba(255,194,28,.22); border-radius: 16px; background: rgba(12,12,10,.92); box-shadow: 0 14px 48px rgba(0,0,0,.35); color: #eee8de; backdrop-filter: blur(16px); cursor: pointer; }
+.aspireAgentLauncher { position: fixed; z-index: 48; left: auto; right: 22px; bottom: 24px; display: inline-flex; align-items: center; gap: 9px; min-height: 48px; padding: 7px 13px 7px 9px; border: 1px solid rgba(255,194,28,.22); border-radius: 16px; background: rgba(12,12,10,.92); box-shadow: 0 14px 48px rgba(0,0,0,.35); color: #eee8de; backdrop-filter: blur(16px); cursor: pointer; }
 .aspireAgentLauncher > i { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 10px; background: var(--gold); color: #171307; font-style: normal; font-size: 14px; box-shadow: 0 0 24px rgba(255,194,28,.16); }
 .aspireAgentLauncher > span { display: grid; gap: 1px; text-align: left; }
 .aspireAgentLauncher b { font-size: 9px; letter-spacing: -.01em; }
@@ -8,4 +8,4 @@
 .aspireAgentModal { position: relative; width: min(880px,100%); max-height: min(84vh,820px); overflow-y: auto; border: 1px solid rgba(255,255,255,.08); border-radius: 29px; background: #0a0a08; box-shadow: 0 30px 100px rgba(0,0,0,.58); }
 .aspireAgentModal .aspireAgent { margin: 0; border: 0; border-radius: 29px; }
 .aspireAgentModalClose { position: absolute; z-index: 4; right: 15px; top: 15px; width: 31px; height: 31px; border: 1px solid rgba(255,255,255,.08); border-radius: 50%; background: rgba(0,0,0,.4); color: #8d857a; font-size: 17px; cursor: pointer; }
-@media (max-width: 760px) { .aspireAgentLauncher { left: 14px; bottom: 92px; min-height: 43px; } .aspireAgentOverlay { padding: 10px; align-items: end; } .aspireAgentModal { max-height: 88vh; border-radius: 23px; } .aspireAgentModal .aspireAgent { border-radius: 23px; } }
+@media (max-width: 760px) { .aspireAgentLauncher { left: auto; right: 14px; bottom: 92px; min-height: 43px; } .aspireAgentOverlay { padding: 10px; align-items: end; } .aspireAgentModal { max-height: 88vh; border-radius: 23px; } .aspireAgentModal .aspireAgent { border-radius: 23px; } }
