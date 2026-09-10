@@ -22,8 +22,8 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
 
 const discoverLanguageKey = 'aspire:discover-language';
 const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
-const seededCorecImage = '/seeded/corec.webp';
-const seededGamingImage = '/seeded/gaming.webp';
+const seededCorecImage = '/seeded/corec.webp?v=2';
+const seededGamingImage = '/seeded/gaming.webp?v=2';
 
 function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
   if (value) return value;
