@@ -4,21 +4,20 @@ import {
   getAuthenticatedUser,
   getSupabaseServiceClient,
   stripeFormRequest,
-  stripeGet,
-  stripeRequest
+  stripeGet
 } from '../../../../../lib/server/aspireServer';
 
 type StripePaymentIntent = { latest_charge?: string | { id?: string } | null };
 type StripeTransfer = { id: string };
-type StripeAccountState = {
-  configuration?: {
-    recipient?: {
-      capabilities?: {
-        stripe_balance?: {
-          stripe_transfers?: { status?: string };
-        };
-      };
-    };
+type StripeConnectAccount = {
+  capabilities?: { transfers?: string | null };
+  payouts_enabled?: boolean;
+  details_submitted?: boolean;
+  requirements?: {
+    currently_due?: string[];
+    past_due?: string[];
+    pending_verification?: string[];
+    disabled_reason?: string | null;
   };
 };
 
@@ -26,6 +25,25 @@ function stripeId(value: unknown) {
   if (typeof value === 'string') return value;
   if (value && typeof value === 'object' && typeof (value as { id?: unknown }).id === 'string') return (value as { id: string }).id;
   return null;
+}
+
+function stripePayoutState(account: StripeConnectAccount) {
+  const transferActive = account.capabilities?.transfers === 'active';
+  const payoutsEnabled = account.payouts_enabled === true;
+  const currentlyDue = account.requirements?.currently_due ?? [];
+  const pastDue = account.requirements?.past_due ?? [];
+  const disabledReason = account.requirements?.disabled_reason || '';
+  const requirementsDue = new Set([...currentlyDue, ...pastDue]).size;
+  const ready = transferActive && payoutsEnabled;
+  const status = ready
+    ? 'READY'
+    : pastDue.length > 0 || disabledReason.includes('past_due')
+      ? 'RESTRICTED'
+      : currentlyDue.length > 0 || account.details_submitted === false
+        ? 'ACTION_REQUIRED'
+        : 'UNDER_REVIEW';
+
+  return { ready, status, requirementsDue };
 }
 
 export async function POST(request: Request) {
@@ -94,29 +112,23 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
 
-    const stripeAccount = await stripeRequest<StripeAccountState>(
-      `/v2/core/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}?include[]=configuration.recipient`,
-      { method: 'GET' }
+    // Re-check the connected account with Stripe's stable v1 Account endpoint
+    // immediately before a transfer so a stale Aspire status cannot block or
+    // incorrectly allow release.
+    const stripeAccount = await stripeGet<StripeConnectAccount>(
+      `/v1/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}`
     );
-    const transferStatus = stripeAccount.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || '';
-    const transfersEnabled = transferStatus === 'active';
-    if (!transfersEnabled) {
-      await supabase.from('payment_accounts').update({
-        status: transferStatus === 'restricted' ? 'RESTRICTED' : 'ACTION_REQUIRED',
-        transfers_enabled: false,
-        last_synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('user_id', payment.payee_id);
-      throw new Error('PAYOUT_NOT_READY');
-    }
-    if (payoutAccount.status !== 'READY' || payoutAccount.transfers_enabled !== true) {
-      await supabase.from('payment_accounts').update({
-        status: 'READY',
-        transfers_enabled: true,
-        last_synced_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('user_id', payment.payee_id);
-    }
+    const payoutState = stripePayoutState(stripeAccount);
+
+    await supabase.from('payment_accounts').update({
+      status: payoutState.status,
+      transfers_enabled: payoutState.ready,
+      requirements_due: payoutState.requirementsDue,
+      last_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }).eq('user_id', payment.payee_id);
+
+    if (!payoutState.ready) throw new Error('PAYOUT_NOT_READY');
 
     let chargeId = payment.stripe_charge_id as string | null;
     if (!chargeId && payment.stripe_payment_intent_id) {
