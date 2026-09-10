@@ -146,7 +146,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <aside className="profileQuickPanel">
+          <aside className="profileQuickPanel" id="account-settings">
             <div className="profileSectionHeading compact"><div><span>ACCOUNT</span><h2>Account & activity</h2></div></div>
 
             <div className="profileMenuList">
