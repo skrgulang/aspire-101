@@ -1,42 +1,47 @@
 import { NextResponse } from 'next/server';
-import { apiError, getAuthenticatedUser, getSupabaseServiceClient, stripeRequest } from '../../../../../lib/server/aspireServer';
+import { apiError, getAuthenticatedUser, getSupabaseServiceClient, stripeGet } from '../../../../../lib/server/aspireServer';
 
 type PaymentStatus = 'NOT_STARTED' | 'ACTION_REQUIRED' | 'UNDER_REVIEW' | 'READY' | 'RESTRICTED';
 
-type StripeAccountState = {
-  configuration?: {
-    recipient?: {
-      capabilities?: {
-        stripe_balance?: {
-          stripe_transfers?: {
-            status?: string;
-            status_details?: { code?: string };
-          };
-        };
-      };
-    };
-  };
+type StripeConnectAccount = {
+  capabilities?: { transfers?: string | null };
+  payouts_enabled?: boolean;
+  details_submitted?: boolean;
   requirements?: {
-    entries?: Array<{ minimum_deadline?: { status?: string }; requested_reasons?: Array<{ code?: string }> }>;
-  } | Array<unknown>;
+    currently_due?: string[];
+    past_due?: string[];
+    pending_verification?: string[];
+    disabled_reason?: string | null;
+  };
 };
 
-function deriveStatus(account: StripeAccountState) {
-  const transfers = account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers;
-  const entries = Array.isArray(account.requirements)
-    ? account.requirements
-    : account.requirements?.entries ?? [];
-  const transferStatus = transfers?.status || '';
-  const detailCode = transfers?.status_details?.code || '';
-  const pastDue = !Array.isArray(account.requirements) && (account.requirements?.entries ?? []).some((entry) => entry.minimum_deadline?.status === 'past_due');
-  const currentlyDue = !Array.isArray(account.requirements) && (account.requirements?.entries ?? []).some((entry) => entry.minimum_deadline?.status === 'currently_due');
+function deriveStatus(account: StripeConnectAccount) {
+  const transferActive = account.capabilities?.transfers === 'active';
+  const payoutsEnabled = account.payouts_enabled === true;
+  const currentlyDue = account.requirements?.currently_due ?? [];
+  const pastDue = account.requirements?.past_due ?? [];
+  const pendingVerification = account.requirements?.pending_verification ?? [];
+  const disabledReason = account.requirements?.disabled_reason || '';
+  const requirementsDue = new Set([...currentlyDue, ...pastDue]).size;
 
   let status: PaymentStatus = 'UNDER_REVIEW';
-  if (transferStatus === 'active') status = 'READY';
-  else if (pastDue || detailCode === 'requirements_past_due' || transferStatus === 'restricted') status = 'RESTRICTED';
-  else if (currentlyDue || entries.length > 0) status = 'ACTION_REQUIRED';
+  if (transferActive && payoutsEnabled) {
+    status = 'READY';
+  } else if (pastDue.length > 0 || disabledReason.includes('past_due')) {
+    status = 'RESTRICTED';
+  } else if (currentlyDue.length > 0 || account.details_submitted === false) {
+    status = 'ACTION_REQUIRED';
+  } else if (pendingVerification.length > 0 || account.details_submitted === true) {
+    status = 'UNDER_REVIEW';
+  } else {
+    status = 'ACTION_REQUIRED';
+  }
 
-  return { status, transfersEnabled: transferStatus === 'active', requirementsDue: entries.length };
+  return {
+    status,
+    transfersEnabled: transferActive && payoutsEnabled,
+    requirementsDue
+  };
 }
 
 export async function GET(request: Request) {
@@ -54,11 +59,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ status: 'NOT_STARTED', transfersEnabled: false, requirementsDue: 0 });
     }
 
+    // Use Stripe's stable Connect Account endpoint as the source of truth.
+    // The previous v2 preview recipient-status check could report a stale/restricted
+    // state even when the connected account already had transfers and payouts enabled.
     const accountId = paymentAccount.stripe_account_id as string;
-    const account = await stripeRequest<StripeAccountState>(
-      `/v2/core/accounts/${encodeURIComponent(accountId)}?include[]=configuration.recipient&include[]=requirements`,
-      { method: 'GET' }
-    );
+    const account = await stripeGet<StripeConnectAccount>(`/v1/accounts/${encodeURIComponent(accountId)}`);
     const next = deriveStatus(account);
 
     await supabase.from('payment_accounts').update({
