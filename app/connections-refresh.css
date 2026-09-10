@@ -1,0 +1,392 @@
+/* Signed-in Inbox refresh. Presentation only: preserve existing connections logic. */
+.connectionsPage {
+  --inbox-bg: #f7f7f5;
+  --inbox-surface: #ffffff;
+  --inbox-surface-2: #fafaf8;
+  --inbox-text: #161616;
+  --inbox-muted: #777773;
+  --inbox-border: #e7e7e2;
+  --inbox-soft: #f1f1ed;
+  --inbox-gold: #ffc72c;
+  min-height: 100vh;
+  background: var(--inbox-bg) !important;
+  color: var(--inbox-text);
+}
+
+html[data-aspire-theme='dark'] .connectionsPage {
+  --inbox-bg: #0b0b0a;
+  --inbox-surface: #111110;
+  --inbox-surface-2: #151513;
+  --inbox-text: #f4f1e8;
+  --inbox-muted: #969187;
+  --inbox-border: rgba(255,255,255,.10);
+  --inbox-soft: rgba(255,255,255,.045);
+  background:
+    radial-gradient(circle at 80% 0%, rgba(255,199,44,.055), transparent 27rem),
+    #0b0b0a !important;
+}
+
+/* The dock is fixed at 236px on desktop. Never let page content sit underneath it. */
+.connectionsPage .connectionsShell {
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 0 0 236px !important;
+  padding: 46px 30px 110px !important;
+}
+
+.connectionsPage .connectionsHub {
+  width: min(1280px, 100%);
+  margin: 0 auto;
+  min-height: 640px;
+}
+
+/* Compact Inbox header based on the signed-in reference direction. */
+.connectionsPage .connectionsHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 34px;
+  align-items: end;
+  padding: 4px 0 24px;
+}
+
+.connectionsPage .connectionsHero .eyebrow { display: none; }
+.connectionsPage .connectionsHero h1 {
+  margin: 0;
+  font-size: 0;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.connectionsPage .connectionsHero h1 span { display: none; }
+.connectionsPage .connectionsHero h1::after {
+  content: 'Inbox';
+  display: block;
+  color: var(--inbox-text);
+  font-family: var(--font-inter), Arial, sans-serif;
+  font-size: clamp(38px, 4vw, 56px);
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+.connectionsPage .connectionsHero > div:first-child > p:last-child {
+  max-width: 620px;
+  margin: 9px 0 0;
+  color: transparent;
+  font-size: 0;
+  line-height: 1.5;
+}
+.connectionsPage .connectionsHero > div:first-child > p:last-child::after {
+  content: 'Manage responses, connections, and private chats.';
+  color: var(--inbox-muted);
+  font-size: 14px;
+}
+
+.connectionsPage .connectionsStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 10px;
+}
+.connectionsPage .connectionsStats article {
+  min-width: 0;
+  min-height: 82px;
+  padding: 15px 17px;
+  border: 1px solid var(--inbox-border);
+  border-radius: 15px;
+  background: var(--inbox-surface);
+  box-shadow: none;
+}
+.connectionsPage .connectionsStats strong {
+  display: block;
+  color: var(--inbox-text);
+  font-size: 27px;
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+.connectionsPage .connectionsStats span {
+  display: block;
+  margin-top: 7px;
+  color: var(--inbox-muted);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+/* Tabs become a clean navigation row instead of one large rounded container. */
+.connectionsPage .connectionsTabs {
+  position: relative;
+  margin-top: 2px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-bottom: 1px solid var(--inbox-border);
+  border-radius: 0;
+  background: transparent;
+}
+.connectionsPage .connectionsTabs button,
+.connectionsPage .connectionsTabs a {
+  position: relative;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  color: var(--inbox-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+.connectionsPage .connectionsTabs button:hover,
+.connectionsPage .connectionsTabs a:hover { color: var(--inbox-text); }
+.connectionsPage .connectionsTabs button.active {
+  color: var(--inbox-text) !important;
+}
+.connectionsPage .connectionsTabs button.active::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: var(--inbox-gold);
+}
+.connectionsPage .connectionsTabs a {
+  margin-left: auto;
+  color: #a17a00;
+}
+html[data-aspire-theme='dark'] .connectionsPage .connectionsTabs a { color: var(--inbox-gold); }
+.connectionsPage .connectionsTabs .notificationToggle {
+  margin-left: auto;
+  color: var(--inbox-muted);
+}
+.connectionsPage .connectionsTabs .notificationToggle + a { margin-left: 0; }
+
+.connectionsPage .unreadPill {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--inbox-gold);
+  color: #19150b;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.connectionsPage .connectionsNotice {
+  margin-top: 14px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255,199,44,.28);
+  border-radius: 12px;
+  background: rgba(255,199,44,.08);
+  color: var(--inbox-text);
+  font-size: 10px;
+}
+
+/* Request cards: denser, easier to scan, closer to an actual inbox. */
+.connectionsPage .requestInbox,
+.connectionsPage .connectionList,
+.connectionsPage .circleList {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.connectionsPage .inboxRequest,
+.connectionsPage .connectionCard,
+.connectionsPage .circleCard {
+  padding: 16px;
+  border: 1px solid var(--inbox-border);
+  border-radius: 17px;
+  background: var(--inbox-surface);
+  box-shadow: none;
+}
+.connectionsPage .inboxRequestHeader {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+.connectionsPage .inboxRequestHeader span,
+.connectionsPage .connectionCardTop span {
+  color: #936f00;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .08em;
+}
+html[data-aspire-theme='dark'] .connectionsPage .inboxRequestHeader span,
+html[data-aspire-theme='dark'] .connectionsPage .connectionCardTop span { color: var(--inbox-gold); }
+.connectionsPage .inboxRequestHeader h2,
+.connectionsPage .connectionCard h2 {
+  margin: 6px 0 5px;
+  color: var(--inbox-text);
+  font-size: 20px;
+  line-height: 1.16;
+  letter-spacing: -.025em;
+}
+.connectionsPage .inboxRequestHeader p {
+  margin: 0;
+  color: var(--inbox-muted);
+  font-size: 10px;
+}
+.connectionsPage .requestStatus {
+  padding: 7px 10px;
+  border: 1px solid var(--inbox-border);
+  border-radius: 999px;
+  background: var(--inbox-soft);
+  color: var(--inbox-muted);
+  font-size: 8px;
+  font-weight: 850;
+}
+.connectionsPage .status-open {
+  border-color: rgba(255,199,44,.24);
+  background: rgba(255,199,44,.12);
+  color: #8d6800;
+}
+html[data-aspire-theme='dark'] .connectionsPage .status-open { color: var(--inbox-gold); }
+
+.connectionsPage .responseList {
+  gap: 0;
+  margin-top: 14px;
+  padding-top: 0;
+  border-top: 1px solid var(--inbox-border);
+}
+.connectionsPage .responseRow {
+  min-height: 58px;
+  padding: 10px 4px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 11px;
+  border: 0;
+  border-bottom: 1px solid var(--inbox-border);
+  border-radius: 0;
+  background: transparent;
+}
+.connectionsPage .responseRow:last-child { border-bottom: 0; }
+.connectionsPage .responseAvatar,
+.connectionsPage .connectionPerson i,
+.connectionsPage .circleAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f2d473;
+  color: #1a160c;
+  font-size: 12px;
+}
+.connectionsPage .responseCopy strong { color: var(--inbox-text); font-size: 11px; }
+.connectionsPage .responseCopy span { color: var(--inbox-muted); font-size: 8px; }
+.connectionsPage .responseCopy p {
+  margin: 4px 0 0;
+  color: var(--inbox-text);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.connectionsPage .responseRow > button {
+  min-height: 36px;
+  padding: 0 13px;
+  border-radius: 10px;
+  background: var(--inbox-gold);
+  color: #17130a;
+  font-size: 10px;
+}
+.connectionsPage .responseState {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--inbox-soft);
+  color: var(--inbox-muted);
+  font-size: 8px;
+  font-weight: 800;
+}
+.connectionsPage .noResponses { padding: 16px 3px 4px; color: var(--inbox-muted); }
+
+/* Connections and circle use the same compact product language. */
+.connectionsPage .connectionCardTop small,
+.connectionsPage .connectionPerson div span,
+.connectionsPage .connectionChecks span { color: var(--inbox-muted); }
+.connectionsPage .connectionPerson div strong { color: var(--inbox-text); }
+.connectionsPage .connectionChecks { margin-top: 13px; gap: 6px; }
+.connectionsPage .connectionChecks span {
+  padding: 7px 9px;
+  border-color: var(--inbox-border);
+  background: var(--inbox-soft);
+}
+.connectionsPage .connectionActions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-color: var(--inbox-border);
+}
+.connectionsPage .connectionCancel {
+  border-color: var(--inbox-border);
+  background: transparent;
+  color: var(--inbox-muted);
+}
+.connectionsPage .connectionActions > a { color: var(--inbox-muted); }
+
+.connectionsPage .connectionsEmpty {
+  padding: 50px 24px;
+  border-color: var(--inbox-border);
+  border-radius: 17px;
+  background: var(--inbox-surface);
+}
+.connectionsPage .connectionsEmpty strong { color: var(--inbox-text); font-size: 22px; }
+.connectionsPage .connectionsEmpty p { color: var(--inbox-muted); }
+
+/* Keep chat functional, but visually align it with the refreshed UI. */
+.connectionsPage .connectionChat {
+  border-color: var(--inbox-border);
+  background: var(--inbox-surface);
+  color: var(--inbox-text);
+}
+.connectionsPage .connectionChat header,
+.connectionsPage .chatSafetyBar,
+.connectionsPage .chatComposer { border-color: var(--inbox-border); }
+.connectionsPage .connectionChat header button { border-color: var(--inbox-border); color: var(--inbox-muted); }
+.connectionsPage .chatSafetyBar { color: var(--inbox-muted); background: rgba(255,199,44,.07); }
+.connectionsPage .chatBubble {
+  border-color: var(--inbox-border);
+  background: var(--inbox-soft);
+  color: var(--inbox-text);
+}
+.connectionsPage .chatComposer input {
+  border-color: var(--inbox-border);
+  background: var(--inbox-surface-2);
+  color: var(--inbox-text);
+}
+
+@media (max-width: 1120px) {
+  .connectionsPage .connectionsHero { grid-template-columns: 1fr; }
+  .connectionsPage .connectionsStats { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+
+@media (max-width: 900px) {
+  .connectionsPage .connectionsShell {
+    margin-left: 0 !important;
+    padding: 28px 18px 112px !important;
+  }
+  .connectionsPage .connectionsHero { gap: 20px; }
+  .connectionsPage .connectionsTabs { overflow-x: auto; scrollbar-width: none; }
+  .connectionsPage .connectionsTabs::-webkit-scrollbar { display: none; }
+  .connectionsPage .connectionsTabs button,
+  .connectionsPage .connectionsTabs a { flex: 0 0 auto; }
+}
+
+@media (max-width: 640px) {
+  .connectionsPage .connectionsShell { padding: 22px 13px 108px !important; }
+  .connectionsPage .connectionsHero { padding-bottom: 18px; }
+  .connectionsPage .connectionsHero h1::after { font-size: 36px; }
+  .connectionsPage .connectionsHero > div:first-child > p:last-child::after { font-size: 12px; }
+  .connectionsPage .connectionsStats {
+    grid-template-columns: repeat(3, 138px);
+    overflow-x: auto;
+    padding-bottom: 3px;
+    scrollbar-width: none;
+  }
+  .connectionsPage .connectionsStats::-webkit-scrollbar { display: none; }
+  .connectionsPage .connectionsTabs a { display: none; }
+  .connectionsPage .connectionsTabs .notificationToggle { margin-left: 0; }
+  .connectionsPage .inboxRequest { padding: 14px; }
+  .connectionsPage .inboxRequestHeader { grid-template-columns: 1fr; gap: 9px; }
+  .connectionsPage .requestStatus { justify-self: start; }
+  .connectionsPage .responseRow { grid-template-columns: 34px minmax(0,1fr); }
+  .connectionsPage .responseRow > button,
+  .connectionsPage .responseState { grid-column: 2; justify-self: start; }
+}

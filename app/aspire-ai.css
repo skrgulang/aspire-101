@@ -1,55 +1,214 @@
-/* Aspire AI — product intelligence surfaces */
-.aspireAgent { position: relative; margin-top: 24px; padding: 22px; overflow: hidden; border: 1px solid rgba(255,194,28,.18); border-radius: 26px; background: linear-gradient(145deg,rgba(255,194,28,.055),rgba(255,255,255,.018) 45%,rgba(0,0,0,.2)); box-shadow: 0 18px 60px rgba(0,0,0,.16); }
-.aspireAgentHalo { position: absolute; width: 310px; height: 310px; right: -140px; top: -190px; border-radius: 50%; background: radial-gradient(circle,rgba(255,194,28,.16),transparent 67%); pointer-events: none; }
-.aspireAgentHead { position: relative; display: flex; justify-content: space-between; align-items: flex-start; gap: 22px; }
-.aspireAgentHead > div { max-width: 670px; }
-.aspireAgentKicker { display: inline-flex; align-items: center; gap: 7px; color: #cbb56b; font-size: 8px; font-weight: 900; letter-spacing: .15em; }
-.aspireAgentKicker i { color: var(--gold); font-style: normal; font-size: 13px; }
-.aspireAgentHead h2 { margin: 7px 0 5px; color: #f2eee8; font-size: clamp(28px,3.3vw,44px); line-height: .98; letter-spacing: -.045em; }
-.aspireAgentHead h2 em { color: var(--gold); font-family: var(--font-display),serif; font-weight: 600; }
-.aspireAgentHead p { margin: 0; max-width: 620px; color: #91897d; font-size: 10px; line-height: 1.55; }
-.aspireAgentHead > b { position: relative; flex: 0 0 auto; padding: 7px 9px; border: 1px solid rgba(255,194,28,.17); border-radius: 999px; background: rgba(255,194,28,.045); color: #bda75e; font-size: 7px; letter-spacing: .12em; }
-.aspireAgentComposer { position: relative; margin-top: 17px; padding: 5px; border: 1px solid rgba(255,255,255,.1); border-radius: 19px; background: rgba(5,5,4,.66); }
-.aspireAgentComposer textarea { width: 100%; min-height: 82px; resize: vertical; padding: 14px 15px 8px; border: 0; outline: 0; background: transparent; color: #f1ece4; font: inherit; font-size: 14px; line-height: 1.5; }
-.aspireAgentComposer textarea::placeholder { color: #625d55; }
-.aspireAgentComposer > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 8px 8px 12px; }
-.aspireAgentComposer > div > span { color: #625b51; font-size: 8px; }
-.aspireAgentComposer button { min-height: 37px; padding: 0 15px; border: 1px solid rgba(255,194,28,.28); border-radius: 12px; background: var(--gold); color: #121007; font-weight: 900; font-size: 9px; cursor: pointer; }
-.aspireAgentComposer button:disabled { opacity: .55; cursor: wait; }
-.aspireAgentComposer button i { margin-left: 5px; font-style: normal; }
-.aspireAgentQuick { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 10px; }
-.aspireAgentQuick > span { margin-right: 2px; color: #625c53; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
-.aspireAgentQuick button { padding: 7px 10px; border: 1px solid rgba(255,255,255,.075); border-radius: 999px; background: rgba(255,255,255,.02); color: #8e867b; font-size: 8px; cursor: pointer; }
-.aspireAgentQuick button:hover { border-color: rgba(255,194,28,.22); color: #d7c982; }
-.aspireAgentError { margin: 12px 0 0; padding: 10px 12px; border: 1px solid rgba(255,100,100,.18); border-radius: 12px; background: rgba(255,80,80,.04); color: #d89191; font-size: 9px; }
-.aspireAgentResult { position: relative; margin-top: 14px; padding: 16px; border: 1px solid rgba(255,255,255,.075); border-radius: 18px; background: rgba(0,0,0,.22); }
-.aspireAgentResult.status-blocked { border-color: rgba(255,120,80,.18); }
-.aspireAgentResultTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.aspireAgentResultTop > span { color: #c4ad60; font-size: 7px; font-weight: 900; letter-spacing: .13em; }
-.aspireAgentResultTop > span i { font-style: normal; color: var(--gold); }
-.aspireAgentResultTop button { border: 0; background: transparent; color: #686158; font-size: 8px; cursor: pointer; }
-.aspireAgentVoice { margin: 9px 0 0; max-width: 760px; color: #c8c0b5; font-size: 12px; line-height: 1.55; }
-.aspireAgentFacts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
-.aspireAgentFacts span { display: inline-flex; gap: 7px; align-items: center; min-height: 28px; padding: 0 9px; border: 1px solid rgba(255,255,255,.075); border-radius: 9px; background: rgba(255,255,255,.018); color: #a79d90; font-size: 8px; }
-.aspireAgentFacts b { color: #676057; font-size: 6px; letter-spacing: .1em; }
-.aspireAgentQuestions { display: grid; gap: 5px; margin-top: 12px; padding: 11px 12px; border-left: 2px solid rgba(255,194,28,.45); background: rgba(255,194,28,.025); }
-.aspireAgentQuestions strong { color: #bba862; font-size: 8px; letter-spacing: .06em; }
-.aspireAgentQuestions span { color: #8d857a; font-size: 9px; }
-.aspireAgentMatches { margin-top: 14px; display: grid; gap: 8px; }
-.aspireAgentMatches > div:first-child { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
-.aspireAgentMatches > div:first-child span { color: #b9a457; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
-.aspireAgentMatches > div:first-child strong { color: #81796e; font-size: 8px; font-weight: 600; }
-.aspireAgentMatches article { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; row-gap: 3px; padding: 10px 11px; border: 1px solid rgba(255,255,255,.075); border-radius: 13px; background: rgba(255,255,255,.016); }
-.aspireAgentMatches article > b { grid-row: 1 / span 3; align-self: start; padding: 5px 7px; border: 1px solid rgba(255,194,28,.16); border-radius: 999px; color: #aa995f; font-size: 6px; letter-spacing: .08em; }
-.aspireAgentMatches article > b.strong { border-color: rgba(86,196,129,.22); color: #83bc95; background: rgba(86,196,129,.04); }
-.aspireAgentMatches article > strong { color: #ddd6cc; font-size: 10px; }
-.aspireAgentMatches article p { margin: 0; color: #81796f; font-size: 8px; line-height: 1.4; }
-.aspireAgentMatches article small { color: #635d55; font-size: 7px; }
-.aspireAgentActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.aspireAgentActions .button { min-height: 38px; font-size: 8px; }
-.aspireAgentSecondary { min-height: 38px; padding: 0 13px; border: 1px solid rgba(255,255,255,.09); border-radius: 11px; background: rgba(255,255,255,.02); color: #aaa196; font-size: 8px; cursor: pointer; }
-.aspireAgentFine { display: block; margin-top: 10px; color: #5d574f; font-size: 7px; line-height: 1.45; }
+/* Aspire Brain — signed-in campus AI surface */
+.aspireAgent {
+  position: relative;
+  margin: 0;
+  padding: 30px 34px 22px;
+  overflow: hidden;
+  background: transparent;
+  color: #f5f1e9;
+}
+.aspireAgentHalo {
+  position: absolute;
+  z-index: 0;
+  width: 360px;
+  height: 260px;
+  right: -110px;
+  top: -155px;
+  border-radius: 50%;
+  background: radial-gradient(circle,rgba(255,199,44,.13),transparent 68%);
+  pointer-events: none;
+}
+.aspireAgentHead { position: relative; z-index: 1; display: block; }
+.aspireAgentHead > div { max-width: 720px; }
+.aspireAgentKicker,
+.aspireAgentHead > b { display: none; }
+.aspireAgentHead h2 {
+  margin: 0;
+  color: #f7f3ec;
+  font-family: var(--font-inter),system-ui,sans-serif;
+  font-size: clamp(27px,3.1vw,34px);
+  font-weight: 780;
+  line-height: 1.08;
+  letter-spacing: -.04em;
+}
+.aspireAgentHead h2 em { color: inherit; font-family: inherit; font-style: normal; font-weight: inherit; }
+.aspireAgentHead p {
+  margin: 9px 0 0;
+  max-width: 680px;
+  color: #a8a096;
+  font-size: 13px;
+  line-height: 1.55;
+}
 
+.aspireAgentComposer {
+  position: relative;
+  z-index: 1;
+  margin-top: 20px;
+  padding: 6px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 17px;
+  background: rgba(8,8,7,.64);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.aspireAgentComposer:focus-within { border-color: rgba(255,199,44,.38); box-shadow: 0 0 0 3px rgba(255,199,44,.045); }
+.aspireAgentComposer textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 116px;
+  resize: vertical;
+  padding: 14px 15px 8px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f3eee7;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.aspireAgentComposer textarea::placeholder { color: #69635c; }
+.aspireAgentComposer > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 7px 7px 12px;
+}
+.aspireAgentComposer > div > span { color: #777067; font-size: 10px; }
+.aspireAgentComposer button {
+  min-height: 44px;
+  padding: 0 19px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(255,199,44,.46);
+  border-radius: 12px;
+  background: #ffc72c;
+  color: #171307;
+  font-weight: 850;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(255,199,44,.10);
+}
+.aspireAgentComposer button:disabled { opacity: .55; cursor: wait; }
+.aspireAgentComposer button > span { font-size: 17px; line-height: 1; }
+
+.aspireAgentQuick {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 12px;
+}
+.aspireAgentQuick > span {
+  flex: 0 0 auto;
+  padding-top: 8px;
+  color: #b1aaa0;
+  font-size: 10px;
+  font-weight: 650;
+}
+.aspireAgentQuick > div { display: flex; flex-wrap: wrap; gap: 7px; }
+.aspireAgentQuick button {
+  min-height: 34px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 999px;
+  background: rgba(255,255,255,.022);
+  color: #c6beb4;
+  font-size: 10px;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.aspireAgentQuick button svg { width: 14px; height: 14px; color: #c6a52c; }
+.aspireAgentQuick button:hover { border-color: rgba(255,199,44,.32); background: rgba(255,199,44,.045); color: #f0e8dd; }
+
+.aspireBrainAbilities {
+  position: relative;
+  z-index: 1;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.09);
+}
+.aspireBrainSectionHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.aspireBrainSectionHead h3 { margin: 0; color: #f1ece4; font-size: 16px; font-weight: 760; letter-spacing: -.025em; }
+.aspireBrainSectionHead p { margin: 4px 0 0; color: #827b72; font-size: 10px; line-height: 1.45; }
+.aspireBrainSectionHead a { flex: 0 0 auto; color: #d7b12d; font-size: 10px; font-weight: 750; text-decoration: none; }
+.aspireBrainSectionHead a span { margin-left: 4px; }
+.aspireBrainAbilityGrid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin-top: 12px; }
+.aspireBrainAbilityGrid article {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  background: rgba(255,255,255,.018);
+}
+.aspireBrainAbilityGrid article > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 11px;
+  border-radius: 9px;
+  background: rgba(255,199,44,.055);
+  color: #ffc72c;
+}
+.aspireBrainAbilityGrid svg { width: 17px; height: 17px; }
+.aspireBrainAbilityGrid strong { display: block; color: #eee8df; font-size: 11px; font-weight: 760; }
+.aspireBrainAbilityGrid p { margin: 5px 0 0; color: #817a71; font-size: 9px; line-height: 1.45; }
+
+.aspireAgentError {
+  position: relative;
+  z-index: 1;
+  margin: 14px 0 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(255,100,100,.2);
+  border-radius: 12px;
+  background: rgba(255,80,80,.045);
+  color: #dca0a0;
+  font-size: 10px;
+}
+
+.aspireAgentResult {
+  position: relative;
+  z-index: 1;
+  margin-top: 17px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  background: rgba(0,0,0,.23);
+}
+.aspireAgentResult.status-blocked { border-color: rgba(255,120,80,.24); }
+.aspireAgentResultTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.aspireAgentResultTop > span { color: #d0ae37; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
+.aspireAgentResultTop > span i { color: #ffc72c; font-style: normal; }
+.aspireAgentResultTop button { border: 0; background: transparent; color: #918980; font-size: 10px; cursor: pointer; }
+.aspireAgentVoice { margin: 10px 0 0; max-width: 790px; color: #d4ccc1; font-size: 13px; line-height: 1.55; }
+.aspireAgentFacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.aspireAgentFacts span { display: inline-flex; gap: 8px; align-items: center; min-height: 31px; padding: 0 10px; border: 1px solid rgba(255,255,255,.09); border-radius: 9px; background: rgba(255,255,255,.02); color: #b3aa9f; font-size: 9px; }
+.aspireAgentFacts b { color: #746d65; font-size: 7px; letter-spacing: .09em; }
+.aspireAgentQuestions { display: grid; gap: 5px; margin-top: 13px; padding: 12px 13px; border-left: 2px solid rgba(255,199,44,.55); background: rgba(255,199,44,.03); }
+.aspireAgentQuestions strong { color: #cdb45c; font-size: 9px; }
+.aspireAgentQuestions span { color: #9a9187; font-size: 10px; }
+.aspireAgentMatches { margin-top: 15px; display: grid; gap: 8px; }
+.aspireAgentMatches > div:first-child { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.aspireAgentMatches > div:first-child span { color: #cbae45; font-size: 8px; font-weight: 900; letter-spacing: .1em; }
+.aspireAgentMatches > div:first-child strong { color: #968d82; font-size: 9px; font-weight: 600; }
+.aspireAgentMatches article { display: grid; grid-template-columns: auto 1fr; column-gap: 11px; row-gap: 3px; padding: 12px; border: 1px solid rgba(255,255,255,.09); border-radius: 13px; background: rgba(255,255,255,.017); }
+.aspireAgentMatches article > b { grid-row: 1 / span 3; align-self: start; padding: 5px 7px; border: 1px solid rgba(255,199,44,.19); border-radius: 999px; color: #b4a064; font-size: 7px; letter-spacing: .07em; }
+.aspireAgentMatches article > b.strong { border-color: rgba(86,196,129,.25); color: #8dc49e; background: rgba(86,196,129,.05); }
+.aspireAgentMatches article > strong { color: #e4ddd4; font-size: 11px; }
+.aspireAgentMatches article p { margin: 0; color: #918980; font-size: 9px; line-height: 1.45; }
+.aspireAgentMatches article small { color: #766f67; font-size: 8px; }
+.aspireAgentActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
+.aspireAgentActions .button { min-height: 40px; font-size: 9px; }
+.aspireAgentSecondary { min-height: 40px; padding: 0 14px; border: 1px solid rgba(255,255,255,.11); border-radius: 11px; background: rgba(255,255,255,.025); color: #b8afa4; font-size: 9px; cursor: pointer; }
+.aspireAgentFine { display: block; margin-top: 11px; color: #706961; font-size: 8px; line-height: 1.45; }
+
+/* Existing hand-off banners used by Post and Discover. */
 .agentDraftBanner { margin-bottom: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid rgba(255,194,28,.18); border-radius: 15px; background: linear-gradient(120deg,rgba(255,194,28,.055),rgba(255,255,255,.015)); }
 .agentDraftBanner > div span { color: #b9a454; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
 .agentDraftBanner > div strong { display: block; margin-top: 4px; color: #d8d0c5; font-size: 10px; }
@@ -60,13 +219,29 @@
 .agentMatchReason { margin: 2px 0 10px; padding: 9px 10px; border-radius: 10px; background: rgba(255,194,28,.035); color: #918779; font-size: 8px; line-height: 1.45; }
 .agentMatchReason b { display: block; margin-bottom: 3px; color: #c0aa5c; font-size: 7px; letter-spacing: .09em; }
 
-@media (max-width: 720px) {
-  .aspireAgent { padding: 17px; border-radius: 21px; }
-  .aspireAgentHead { flex-direction: column; gap: 9px; }
-  .aspireAgentHead > b { align-self: flex-start; }
-  .aspireAgentComposer textarea { font-size: 13px; }
-  .aspireAgentQuick { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 3px; }
+@media (max-width: 820px) {
+  .aspireAgent { padding: 24px 22px 18px; }
+  .aspireBrainAbilityGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width: 560px) {
+  .aspireAgent { padding: 20px 15px 16px; }
+  .aspireAgentHead h2 { font-size: 27px; }
+  .aspireAgentHead p { font-size: 12px; }
+  .aspireAgentComposer { margin-top: 17px; }
+  .aspireAgentComposer textarea { min-height: 102px; font-size: 14px; padding: 12px 11px 7px; }
+  .aspireAgentComposer > div { align-items: flex-end; padding-left: 10px; }
+  .aspireAgentComposer > div > span { max-width: 150px; font-size: 8px; }
+  .aspireAgentComposer button { min-height: 41px; padding: 0 14px; }
+  .aspireAgentQuick { display: block; }
+  .aspireAgentQuick > span { display: block; padding: 0 0 8px; }
+  .aspireAgentQuick > div { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; scrollbar-width: none; }
+  .aspireAgentQuick > div::-webkit-scrollbar { display: none; }
   .aspireAgentQuick button { flex: 0 0 auto; }
+  .aspireBrainSectionHead { align-items: flex-end; }
+  .aspireBrainSectionHead p { display: none; }
+  .aspireBrainAbilityGrid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .aspireBrainAbilityGrid article { padding: 12px; }
   .aspireAgentMatches article { grid-template-columns: 1fr; }
   .aspireAgentMatches article > b { grid-row: auto; justify-self: start; }
   .agentDraftBanner { align-items: flex-start; flex-direction: column; }

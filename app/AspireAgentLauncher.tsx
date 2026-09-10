@@ -33,13 +33,16 @@ export default function AspireAgentLauncher() {
   return (
     <>
       <button className="aspireAgentLauncher" type="button" onClick={() => setOpen(true)} aria-label="Open Aspire Brain">
-        <i>✦</i><span><b>Aspire Brain</b><small>route · match · act</small></span>
+        <i>✦</i><span><b>Aspire Brain</b><small>Campus AI</small></span>
       </button>
       {open && (
         <div className="aspireAgentOverlay" role="dialog" aria-modal="true" aria-label="Aspire Brain">
           <div className="aspireAgentModal">
-            <button className="aspireAgentModalClose" type="button" onClick={() => setOpen(false)} aria-label="Close Aspire Brain">×</button>
-            <a className="aspireAgentFeatureGuide" href="/intelligence">See everything Aspire Intelligence can do →</a>
+            <header className="aspireBrainHeader">
+              <div className="aspireBrainBrand"><i>✦</i><strong>Aspire Brain</strong><span>Beta</span></div>
+              <div className="aspireBrainHeaderNote">Your campus AI assistant.<br />From needs to next steps.</div>
+              <button className="aspireAgentModalClose" type="button" onClick={() => setOpen(false)} aria-label="Close Aspire Brain">×</button>
+            </header>
             <AspireAgentPanel campusId={campus.id} campusName={campus.shortName} />
             <CampusPulsePanel campusId={campus.id} campusName={campus.shortName} />
           </div>

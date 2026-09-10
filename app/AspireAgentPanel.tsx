@@ -9,13 +9,25 @@ import {
   saveAspireAgentDraft,
   saveAspireAgentMatches
 } from '../lib/supabase/aspireAi';
+import UiIcon, { UiIconName } from './UiIcon';
 
-const quickPrompts = [
-  'Get to the airport tomorrow',
-  'Open my connections',
-  'Sell my monitor for $150',
-  'Find a Math 55 study partner',
-  'I need help moving Saturday'
+type QuickPrompt = { label: string; value: string; icon: UiIconName };
+type BrainAbility = { title: string; description: string; icon: UiIconName };
+
+const quickPrompts: QuickPrompt[] = [
+  { label: 'Need a ride from IND', value: 'I land at IND and need a ride back to campus.', icon: 'car' },
+  { label: 'Find a study partner', value: 'Find a study partner on campus.', icon: 'book' },
+  { label: 'Sell an item', value: 'I want to sell something on campus.', icon: 'tag' },
+  { label: 'Need help moving', value: 'I need help moving something near campus.', icon: 'wrench' },
+  { label: 'Find project teammates', value: 'Find a project teammate on campus.', icon: 'code' },
+  { label: 'Meet people on campus', value: 'I want to meet people on campus.', icon: 'users' }
+];
+
+const abilities: BrainAbility[] = [
+  { title: 'Draft a post', description: 'Turn what you need into a clear, ready-to-edit campus post.', icon: 'activity' },
+  { title: 'Find matching requests', description: 'Search relevant posts and possibilities already on campus.', icon: 'search' },
+  { title: 'Suggest a category', description: 'Choose the best place for your request so people can find it.', icon: 'sliders' },
+  { title: 'Improve wording', description: 'Make your message clearer, more specific, and easier to respond to.', icon: 'message' }
 ];
 
 function money(value: number | null | undefined) {
@@ -33,14 +45,14 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   async function run(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     const clean = message.trim();
-    if (clean.length < 3) return setError('Tell Aspire what you want to make happen on campus.');
+    if (clean.length < 3) return setError('Tell Aspire what you need help with.');
     setBusy(true);
     setError('');
     try {
       const next = await runAspireAgent(clean, campusId);
       setResult(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Aspire could not finish that action.');
+      setError(err instanceof Error ? err.message : 'Aspire Brain could not finish that plan.');
     } finally {
       setBusy(false);
     }
@@ -60,16 +72,9 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   }
 
   function buildRequest() {
-    if (!result?.plan || result.plan.scope !== 'action') return;
+    if (!result?.plan) return;
     saveAspireAgentDraft(result.sessionId, result.plan);
     void markAspireAgentOutcome(result.sessionId, 'drafted_post').catch(() => undefined);
-
-    // From /post, force a real navigation so PostRequestForm remounts and hydrates
-    // the newly saved Aspire Brain draft immediately.
-    if (typeof window !== 'undefined' && window.location.pathname === '/post') {
-      window.location.assign('/post?agent=1');
-      return;
-    }
     router.push('/post?agent=1');
   }
 
@@ -78,56 +83,69 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
       <div className="aspireAgentHalo" aria-hidden="true" />
       <div className="aspireAgentHead">
         <div>
-          <span className="aspireAgentKicker"><i>✦</i> ASPIRE BRAIN</span>
-          <h2>What are you trying to <em>make happen?</em></h2>
-          <p>Say the outcome. Aspire can classify it, search your campus, reduce filtering, and prepare the next action.</p>
+          <h2>What do you need help with today?</h2>
+          <p>Aspire Brain can turn your need into a post, find relevant matches, or suggest the next step across {campusName}.</p>
         </div>
-        <b>ASPIRE BRAIN · V1</b>
       </div>
 
       <form className="aspireAgentComposer" onSubmit={run}>
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder={`Try “I need a ride to IND tomorrow” or “Sell my monitor for $150.”`}
-          rows={3}
+          placeholder={`Try “I land at IND at 11 PM and need a ride back to ${campusName}.”`}
+          rows={4}
           maxLength={1200}
-          aria-label="Tell Aspire what you want to make happen"
+          aria-label="Tell Aspire Brain what you need"
         />
         <div>
-          <span>{message.length ? `${message.length}/1200` : 'Need → classify → search → match → act'}</span>
-          <button type="submit" disabled={busy}>{busy ? 'Routing…' : 'Make it happen'} <i>✦</i></button>
+          <span>{message.length ? `${message.length}/1200` : 'Describe what you need in your own words.'}</span>
+          <button type="submit" disabled={busy}>{busy ? 'Thinking…' : 'Ask Aspire'} <span aria-hidden="true">→</span></button>
         </div>
       </form>
 
-      {!result && <div className="aspireAgentQuick"><span>TRY</span>{quickPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => usePrompt(prompt)}>{prompt}</button>)}</div>}
+      {!result && (
+        <>
+          <div className="aspireAgentQuick">
+            <span>Try a quick prompt:</span>
+            <div>
+              {quickPrompts.map((prompt) => (
+                <button type="button" key={prompt.label} onClick={() => usePrompt(prompt.value)}>
+                  <UiIcon name={prompt.icon} />
+                  {prompt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <section className="aspireBrainAbilities" aria-label="What Aspire Brain can do">
+            <div className="aspireBrainSectionHead">
+              <div><h3>What Aspire Brain can do</h3><p>Turn your needs into action without making the process feel complicated.</p></div>
+              <a href="/intelligence">Learn more <span>→</span></a>
+            </div>
+            <div className="aspireBrainAbilityGrid">
+              {abilities.map((ability) => (
+                <article key={ability.title}>
+                  <span><UiIcon name={ability.icon} /></span>
+                  <strong>{ability.title}</strong>
+                  <p>{ability.description}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
       {error && <p className="aspireAgentError" role="alert">{error}</p>}
 
       {result && (
         <div className={`aspireAgentResult status-${result.status}`}>
           <div className="aspireAgentResultTop">
-            <span><i>✦</i> ASPIRE ROUTED IT</span>
+            <span><i>✦</i> ASPIRE UNDERSTOOD</span>
             <button type="button" onClick={() => { setResult(null); setError(''); }}>Start over</button>
           </div>
           <p className="aspireAgentVoice">{result.assistantMessage}</p>
 
-          {result.navigation && result.navigation.length > 0 && (
-            <div className="aspireAgentActions">
-              {result.navigation.map((item, index) => (
-                <button
-                  type="button"
-                  key={`${item.href}-${item.label}`}
-                  className={index === 0 ? 'button buttonGold' : 'aspireAgentSecondary'}
-                  onClick={() => router.push(item.href)}
-                  title={item.description || item.label}
-                >
-                  {item.label} <span>→</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {result.plan && result.plan.scope === 'action' && (
+          {result.plan && (
             <>
               <div className="aspireAgentFacts">
                 <span><b>TYPE</b>{result.plan.category}</span>
@@ -137,7 +155,7 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
                 <span><b>CONFIDENCE</b>{result.plan.confidence.toUpperCase()}</span>
               </div>
 
-              {result.plan.questions.length > 0 && <div className="aspireAgentQuestions"><strong>Only missing:</strong>{result.plan.questions.map((question) => <span key={question}>· {question}</span>)}</div>}
+              {result.plan.questions.length > 0 && <div className="aspireAgentQuestions"><strong>I still need:</strong>{result.plan.questions.map((question) => <span key={question}>· {question}</span>)}</div>}
 
               {result.matches.length > 0 && (
                 <div className="aspireAgentMatches">
@@ -157,12 +175,11 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
                 {result.matches.length > 0 && <button type="button" className="button buttonGold" onClick={openMatches}>View best matches <span>→</span></button>}
                 <button type="button" className={result.matches.length ? 'aspireAgentSecondary' : 'button buttonGold'} onClick={buildRequest}>{result.plan.status === 'needs_details' ? 'Open editable draft' : 'Create request draft'} <span>↗</span></button>
               </div>
-              <small className="aspireAgentFine">Aspire Brain routes, searches, and prefills; you stay in control. Any post still passes Safety Intelligence and review before it can appear publicly.</small>
+              <small className="aspireAgentFine">Aspire Brain proposes actions; you stay in control. Any post still passes Safety Intelligence and human review before it can appear publicly.</small>
             </>
           )}
 
-          {result.mode === 'out_of_scope' && <small className="aspireAgentFine">Aspire Brain is intentionally scoped to Aspire 101 navigation, campus actions, matching, and product help — not general homework, trivia, or open-ended ChatGPT use.</small>}
-          {result.status === 'blocked' && result.mode === 'safety' && <small className="aspireAgentFine">Safety by design: Aspire will not turn prohibited activity into a campus action.</small>}
+          {result.status === 'blocked' && <small className="aspireAgentFine">Safety by design: Aspire Brain will not turn prohibited activity into a campus action.</small>}
         </div>
       )}
     </section>

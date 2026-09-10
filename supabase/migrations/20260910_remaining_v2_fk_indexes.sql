@@ -1,0 +1,33 @@
+-- Aspire 101 remaining V2 foreign-key indexes — 2026-09-10
+
+create index if not exists avatar_moderation_reviews_reviewed_by_idx on public.avatar_moderation_reviews (reviewed_by) where reviewed_by is not null;
+create index if not exists connection_completion_confirmations_user_idx on public.connection_completion_confirmations (user_id);
+create index if not exists connection_message_reads_last_message_idx on public.connection_message_reads (last_read_message_id) where last_read_message_id is not null;
+create index if not exists connection_payment_agreements_proposed_by_idx on public.connection_payment_agreements (proposed_by);
+create index if not exists connection_reviews_reviewer_idx on public.connection_reviews (reviewer_id);
+create index if not exists fee_policies_campus_idx on public.fee_policies (campus_id) where campus_id is not null;
+create index if not exists fee_policies_created_by_idx on public.fee_policies (created_by) where created_by is not null;
+create index if not exists market_disputes_opened_by_idx on public.market_disputes (opened_by);
+create index if not exists market_order_events_actor_idx on public.market_order_events (actor_id) where actor_id is not null;
+create index if not exists moderation_actions_moderator_idx on public.moderation_actions (moderator_id);
+create index if not exists moderation_actions_target_user_idx on public.moderation_actions (target_user_id) where target_user_id is not null;
+create index if not exists moderation_actions_request_idx on public.moderation_actions (request_id) where request_id is not null;
+create index if not exists moderation_actions_report_idx on public.moderation_actions (report_id) where report_id is not null;
+create index if not exists payment_ledger_connection_idx on public.payment_ledger_events (connection_id) where connection_id is not null;
+create index if not exists payment_ledger_request_idx on public.payment_ledger_events (request_id) where request_id is not null;
+create index if not exists payment_ledger_market_order_idx on public.payment_ledger_events (market_order_id) where market_order_id is not null;
+create index if not exists payment_refund_connection_idx on public.payment_refund_requests (connection_id) where connection_id is not null;
+create index if not exists payment_refund_requested_by_idx on public.payment_refund_requests (requested_by);
+create index if not exists payment_refund_reviewed_by_idx on public.payment_refund_requests (reviewed_by) where reviewed_by is not null;
+create index if not exists product_analytics_events_user_idx on public.product_analytics_events (user_id) where user_id is not null;
+create index if not exists profiles_home_campus_idx on public.profiles (home_campus_id) where home_campus_id is not null;
+create index if not exists profiles_current_campus_idx on public.profiles (current_campus_id) where current_campus_id is not null;
+create index if not exists request_private_locations_owner_idx on public.request_private_locations (owner_id);
+create index if not exists requests_moderated_by_idx on public.requests (moderated_by) where moderated_by is not null;
+create index if not exists safety_ack_request_idx on public.safety_acknowledgements (request_id) where request_id is not null;
+create index if not exists safety_reports_connection_idx on public.safety_reports (connection_id) where connection_id is not null;
+create index if not exists safety_reports_reviewed_by_idx on public.safety_reports (reviewed_by) where reviewed_by is not null;
+create index if not exists school_verifications_university_idx on public.school_verifications (university_id) where university_id is not null;
+create index if not exists school_verifications_reviewed_by_idx on public.school_verifications (reviewed_by) where reviewed_by is not null;
+create index if not exists user_blocks_blocked_idx on public.user_blocks (blocked_id);
+create index if not exists user_enforcement_set_by_idx on public.user_enforcement_states (set_by) where set_by is not null;

@@ -17,6 +17,13 @@ const maxFileSize = 8 * 1024 * 1024;
 const maxFiles = 5;
 const signedUrlSeconds = 60 * 60;
 
+function notifyCampusFeedChanged() {
+  if (typeof window === 'undefined') return;
+  const version = String(Date.now());
+  try { window.localStorage.setItem('aspire:campus-feed-refresh-version', version); } catch { /* ignore storage errors */ }
+  window.dispatchEvent(new Event('aspire:campus-feed-refresh'));
+}
+
 function extensionFor(file: File) {
   const nameExt = file.name.split('.').pop()?.toLowerCase();
   if (nameExt && /^[a-z0-9]{2,5}$/.test(nameExt)) return nameExt;
@@ -79,6 +86,7 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
   // Text is scanned when the request is created. Run again now so the final
   // assessment includes every uploaded image before a moderator approves it.
   await runRequestAiSafety(requestId).catch(() => undefined);
+  notifyCampusFeedChanged();
   return created;
 }
 

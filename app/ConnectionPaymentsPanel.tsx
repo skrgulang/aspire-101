@@ -107,8 +107,12 @@ export default function ConnectionPaymentsPanel() {
       const count = await confirmConnectionCompletion(connectionId);
       await reload(true);
       if (count >= 2) {
-        await releaseAspirePayment(connectionId);
-        setNotice('Both people confirmed completion. Payout released through Stripe ✓');
+        try {
+          await releaseAspirePayment(connectionId);
+          setNotice('Both people confirmed completion. Payout released through Stripe ✓');
+        } catch (releaseError) {
+          setNotice(releaseError instanceof Error ? `Completion saved. ${releaseError.message}` : 'Completion saved. Payout is waiting to release.');
+        }
         await reload(true);
       } else {
         setNotice('Marked complete. Waiting for the other person.');
@@ -118,13 +122,25 @@ export default function ConnectionPaymentsPanel() {
     } finally { setBusy(''); }
   }
 
+  async function retryRelease(connectionId: string) {
+    setBusy(`release-${connectionId}`);
+    setNotice('');
+    try {
+      await releaseAspirePayment(connectionId);
+      setNotice('Payout released through Stripe ✓');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Payout is not ready to release yet.');
+    } finally { setBusy(''); }
+  }
+
   if (loading) return <section className="connectionPayments paymentSkeleton"><span /><span /><span /></section>;
   if (!data?.connections.length) return null;
 
   return (
     <section className="connectionPayments" aria-label="Aspire service payments">
       <header className="connectionPaymentsHead">
-        <div><span>SERVICE PAYMENTS</span><h2>Money stays attached to the connection.</h2></div>
+        <div><span>SERVICE PAYMENTS</span><h2>Money stays attached to the connection.</h2><a href="/money">Open Aspire Money →</a></div>
         <p>Paid help and shared-cost payments use the regular Aspire completion flow. Marketplace purchases use the separate Aspire Protected order flow below.</p>
       </header>
       {notice && <div className="connectionPaymentsNotice" role="status">{notice}</div>}
@@ -156,7 +172,8 @@ export default function ConnectionPaymentsPanel() {
                 {payWithAspire && isResponder && canWork && !payment && <a href="/profile">Set up payouts →</a>}
                 {secured && !selfComplete && <button type="button" className="button buttonGold" onClick={() => complete(connection.id)} disabled={busy === `complete-${connection.id}`}>Mark complete ✓</button>}
                 {secured && selfComplete && !bothComplete && <span className="paymentWaiting">You marked complete · waiting for the other person</span>}
-                {released && <span className="paymentReleased">Released through Stripe ✓</span>}
+                {secured && bothComplete && <button type="button" className="button buttonGold" onClick={() => retryRelease(connection.id)} disabled={busy === `release-${connection.id}`}>{busy === `release-${connection.id}` ? 'Releasing…' : 'Release payout →'}</button>}
+                {released && <span className="paymentReleased">Released through Stripe ✓ · <a href="/money">View money trail</a></span>}
               </div>
             </article>
           );

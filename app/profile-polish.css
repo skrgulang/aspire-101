@@ -1,138 +1,334 @@
-/* Polished consumer profile + trust passport */
-.profilePagePolished { padding: 32px max(18px, 4vw) 160px !important; }
-.profileShellPolished { width: min(1180px, 100%); }
-.profileTopPolished { margin-bottom: 34px; justify-content: space-between; }
-.profileBrand { display: inline-flex; align-items: center; gap: 11px; color: var(--paper); }
-.profileBack { color: #8f877a; font-size: 10px; font-weight: 800; }
-.profileBack:hover { color: var(--gold); }
+/* Signed-in profile: same clean product language as the campus dashboard. */
+body:has(.profilePagePolished) { background: #f7f7f5; }
+html[data-aspire-theme='dark'] body:has(.profilePagePolished) { background: #0b0b0a; }
+
+.profilePagePolished {
+  min-height: 100vh;
+  padding: 34px 30px 90px 266px !important;
+  background: #f7f7f5 !important;
+  color: #171717 !important;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+.profileShellPolished { width: min(1280px, 100%); margin: 0 auto; }
+
+.profileTopPolished {
+  margin: 0 0 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.profilePageHeading > span,
+.profileHeroMeta > span,
+.profileSectionHeading > div > span,
+.profileSetupTop span,
+.profileAccountFoot span {
+  color: #9a7400;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.profilePageHeading h1 { margin: 5px 0 5px; font-size: clamp(30px, 3vw, 40px); line-height: 1; letter-spacing: -.045em; }
+.profilePageHeading p { max-width: 620px; margin: 0; color: #777772; font-size: 13px; line-height: 1.5; }
+.profileBack {
+  min-height: 42px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #3e3e3a;
+  font-size: 12px;
+  font-weight: 750;
+}
+.profileBack svg { width: 17px; height: 17px; }
+.profileBack:hover { border-color: #d5d5cf; background: #fbfbf9; color: #111; }
 
 .profileHeroPolished {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0,1fr) 260px;
   gap: 24px;
   align-items: center;
-  padding: 28px 0 30px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  padding: 26px;
+  border: 1px solid #e7e7e3;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(17,17,17,.035);
 }
+.profileAvatarWrap { display: grid; justify-items: center; gap: 7px; }
+.profileAvatarWrap > small { max-width: 112px; color: #8d8d87; font-size: 9px; text-align: center; line-height: 1.3; }
 .profileAvatar {
-  width: 96px;
-  height: 96px;
+  position: relative;
+  width: 104px;
+  height: 104px;
+  overflow: hidden;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(255,194,28,.26);
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255,214,91,.18), transparent 55%),
-    rgba(255,194,28,.07);
-  color: var(--gold);
+  border: 1px solid #eadcaa;
+  border-radius: 28px;
+  background: #fff4cf;
+  color: #8a6500;
+  box-shadow: none;
   font-size: 30px;
   font-weight: 900;
-  letter-spacing: -.06em;
-  box-shadow: inset 0 0 40px rgba(255,194,28,.035), 0 18px 60px rgba(0,0,0,.26);
+  letter-spacing: -.05em;
 }
-.profileHeroMeta { display: flex; align-items: center; gap: 9px; }
-.profileHeroMeta span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .18em; }
-.profileHeroMeta b { padding: 5px 8px; border: 1px solid rgba(255,194,28,.18); border-radius: 999px; color: #d4bc6d; background: rgba(255,194,28,.045); font-size: 7px; letter-spacing: .1em; }
-.profileHeroPolished h1 { margin: 8px 0 4px; font-size: clamp(46px, 5.5vw, 72px); }
-.profileHeroPolished .profileHeroCopy > p { margin: 0; color: #918a7e; font-size: 14px; }
-.profileTrustChips { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 7px; }
-.profileTrustChips span { padding: 7px 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 999px; background: rgba(255,255,255,.022); color: #777064; font-size: 8px; font-weight: 850; }
-.profileTrustChips span.verified { border-color: rgba(255,194,28,.19); background: rgba(255,194,28,.045); color: #d9c77f; }
-
-.profileOverview { margin-top: 24px; display: grid; grid-template-columns: minmax(0, 1.28fr) minmax(330px, .72fr); gap: 14px; align-items: start; }
-.profileTrustPanel,
-.profileQuickPanel {
-  border: 1px solid rgba(255,255,255,.085);
-  border-radius: 28px;
-  background: rgba(255,255,255,.018);
-  box-shadow: 0 24px 70px rgba(0,0,0,.18);
-}
-.profileTrustPanel { padding: 24px; }
-.profileQuickPanel { padding: 20px; position: sticky; top: 20px; }
-.profileSectionHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 22px; margin-bottom: 18px; }
-.profileSectionHeading > div > span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .16em; }
-.profileSectionHeading h2 { margin: 6px 0 0; font-size: 30px; letter-spacing: -.045em; }
-.profileSectionHeading > p { max-width: 390px; margin: 0; color: #777065; font-size: 10px; line-height: 1.55; }
-.profileSectionHeading.compact { margin-bottom: 14px; }
-.profileSectionHeading.compact h2 { font-size: 26px; }
-
-.profileTrustCards { display: grid; gap: 10px; }
-.profileTrustCards .profileCard {
-  min-height: 0;
-  padding: 18px;
-  border-radius: 20px;
+.profileAvatar img { width: 100%; height: 100%; object-fit: cover; }
+.profileAvatarEditable > span {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 25px;
+  height: 25px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #ffc72c;
+  color: #171109;
+  font-size: 16px;
+  line-height: 1;
 }
-.profileTrustCards .profileSchoolIdCard { grid-column: auto; min-height: 0; }
-.profileTrustCards .profileCard > div:not(.trustCardIcon) { min-width: 0; }
-.profileTrustCards .profileCard > span { grid-column: 1 / -1; }
-.profileTrustCards .profileCard strong { margin-top: 8px; font-size: 20px; }
-.profileTrustCards .profileCard p { margin-top: 6px; }
-.profileTrustCards .profileCard small { color: #6f695f; font-size: 9px; line-height: 1.45; }
-.trustCardIcon { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.08); border-radius: 13px; background: rgba(255,255,255,.025); color: #91897d; font-size: 15px; }
-.profilePhoneCard.isVerified .trustCardIcon { border-color: rgba(255,194,28,.18); color: var(--gold); background: rgba(255,194,28,.05); }
+.profileHeroCopy { min-width: 0; }
+.profileHeroMeta { display: flex; align-items: center; gap: 8px; }
+.profileHeroMeta b { padding: 5px 8px; border: 1px solid #ead99d; border-radius: 999px; background: #fff8df; color: #806000; font-size: 8px; letter-spacing: .08em; }
+.profileHeroPolished h2 { margin: 7px 0 4px; font-size: clamp(32px, 3.8vw, 48px); line-height: .98; letter-spacing: -.05em; }
+.profileHeroPolished .profileHeroCopy > p { margin: 0; color: #797974; font-size: 14px; }
+.profileTrustChips { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 7px; }
+.profileTrustChips span { padding: 7px 10px; border: 1px solid #e8e8e4; border-radius: 999px; background: #fafaf8; color: #85857f; font-size: 9px; font-weight: 750; }
+.profileTrustChips span.verified { border-color: #ead99d; background: #fff8df; color: #7a5c00; }
+.profileHeroActions { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px; }
+.profileHeroActions a { min-height: 38px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #e6e6e2; border-radius: 11px; color: #343431; font-size: 11px; font-weight: 750; }
+.profileHeroActions a:first-child { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+.profileHeroActions svg { width: 15px; height: 15px; }
 
-.phoneVerificationBody > span { display: block; color: #777065; font-size: 9px; font-weight: 900; letter-spacing: .12em; }
-.phoneVerificationBody > strong { display: block; }
-.phoneVerifyForm { margin-top: 13px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; }
-.phoneVerifyForm input { min-height: 44px; padding: 0 13px; border: 1px solid rgba(255,255,255,.10); border-radius: 13px; background: rgba(7,7,6,.82); color: var(--paper); outline: none; font: inherit; font-size: 12px; }
-.phoneVerifyForm input:focus { border-color: rgba(255,194,28,.42); box-shadow: 0 0 0 3px rgba(255,194,28,.05); }
-.phoneVerifyForm .button { min-height: 44px; padding: 0 14px; border-radius: 13px; }
-.phoneCodeForm { grid-template-columns: minmax(0,1fr) auto auto; }
-.phoneVerifyBack { border: 0; background: transparent; color: #857d71; font: inherit; font-size: 9px; cursor: pointer; }
-.phoneVerifyMessage { display: block; margin-top: 8px; color: #bcae87 !important; }
+.profileSetupCard { padding: 17px; border: 1px solid #eee4c0; border-radius: 18px; background: linear-gradient(145deg,#fffaf0,#fff4cf); }
+.profileSetupTop { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.profileSetupTop > div:first-child { display: grid; gap: 2px; }
+.profileSetupTop strong { font-size: 24px; letter-spacing: -.04em; }
+.profileSetupBadge { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: #111; color: #ffc72c; }
+.profileSetupBadge svg { width: 18px; height: 18px; }
+.profileSetupCard p { margin: 12px 0; color: #766f5e; font-size: 10px; line-height: 1.5; }
+.profileSetupMeter { height: 7px; overflow: hidden; border-radius: 999px; background: rgba(17,17,17,.09); }
+.profileSetupMeter i { display: block; width: 0; height: 100%; border-radius: inherit; background: #111; transition: width .25s ease; }
+.profileSetupMeter.level1 i { width: 25%; }
+.profileSetupMeter.level2 i { width: 50%; }
+.profileSetupMeter.level3 i { width: 75%; }
+.profileSetupMeter.level4 i { width: 100%; }
+.profileSetupCard > a { margin-top: 13px; display: flex; align-items: center; justify-content: space-between; color: #4c4638; font-size: 10px; font-weight: 800; }
+.profileSetupCard > a svg { width: 14px; height: 14px; }
+
+.profileOverview { margin-top: 18px; display: grid; grid-template-columns: minmax(0,1.35fr) minmax(310px,.65fr); gap: 18px; align-items: start; }
+.profileTrustPanel,
+.profileQuickPanel { border: 1px solid #e7e7e3; border-radius: 22px; background: #fff; box-shadow: 0 8px 28px rgba(17,17,17,.03); }
+.profileTrustPanel { padding: 22px; scroll-margin-top: 24px; }
+.profileQuickPanel { padding: 18px; position: sticky; top: 20px; }
+.profileSectionHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 17px; }
+.profileSectionHeading h2 { margin: 5px 0 0; font-size: 24px; line-height: 1.05; letter-spacing: -.035em; }
+.profileSectionHeading > p { max-width: 390px; margin: 0; color: #85857f; font-size: 10px; line-height: 1.55; }
+.profileSectionHeading.compact { margin-bottom: 12px; }
+.profileSectionHeading.compact h2 { font-size: 20px; }
+
+.profileTrustCardsExpanded { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.profileTrustCards > .profileCard,
+.profileTrustCards > .trustPassportCard {
+  min-width: 0;
+  min-height: 206px;
+  margin: 0;
+  padding: 17px;
+  border: 1px solid #e9e9e5;
+  border-radius: 17px;
+  background: #fafaf8;
+  color: #20201d;
+  box-shadow: none;
+}
+.profileTrustCards > .profileCard.isVerified,
+.profileTrustCards > .trustPassportCard:has(.trustPassportStatus.isVerified) { border-color: #e9d99e; background: #fffaf0; }
+
+.profileTrustCards .profileCard { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 12px; align-items: start; }
+.profileTrustCards .profileSchoolIdCard { display: block; }
+.profileTrustCards .profileCard > div:not(.trustCardIcon) { min-width: 0; }
+.profileTrustCards .profileCard > span,
+.profileTrustCards .phoneVerificationBody > span,
+.profileTrustCards .trustPassportCopy > span { color: #9a7400; font-size: 9px; font-weight: 850; letter-spacing: .10em; }
+.profileTrustCards .profileCard strong { display: block; margin-top: 6px; color: #232320; font-size: 17px; line-height: 1.16; }
+.profileTrustCards .profileCard p { margin: 7px 0 0; color: #777772; font-size: 10px; line-height: 1.5; }
+.profileTrustCards .profileCard small { color: #8c8c86; font-size: 9px; line-height: 1.45; }
+.trustCardIcon { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #e5e5e1; border-radius: 12px; background: #fff; color: #8a6500; font-size: 13px; }
+.profilePhoneCard.isVerified .trustCardIcon { border-color: #e7d594; background: #fff2bd; color: #755700; }
+
+.profileTrustCards > .trustPassportCard { position: relative; display: grid; grid-template-columns: 40px minmax(0,1fr) auto; gap: 11px; align-items: start; }
+.trustPassportIcon { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #e6d594; border-radius: 12px; background: #fff2bd; color: #755700; font-size: 11px; font-weight: 900; }
+.trustPassportCopy { min-width: 0; }
+.trustPassportCopy h3 { margin: 5px 0 0; color: #232320; font-size: 17px; line-height: 1.1; letter-spacing: -.02em; }
+.trustPassportCopy p { margin: 7px 0 0; color: #777772; font-size: 10px; line-height: 1.5; }
+.trustPassportStatus { padding: 5px 7px; border: 1px solid #e4e4df; border-radius: 999px; background: #fff; color: #92928c; font-size: 7px; font-weight: 850; letter-spacing: .06em; white-space: nowrap; }
+.trustPassportStatus.isVerified { border-color: #d9e9d8; background: #edf8ec; color: #397444; }
+.trustPassportStatus.needsAttention { border-color: #f0d5cf; background: #fff2ef; color: #a64a3b; }
+.trustPassportAction { grid-column: 2 / -1; width: fit-content; min-height: 36px; padding: 0 11px; border: 1px solid #deded9; border-radius: 10px; background: #fff; color: #343431; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
+.trustPassportAction:hover { border-color: #cfcfc8; background: #fdfdfb; }
+.trustPassportMessage,
+.trustPassportPrivacy { grid-column: 2 / -1; margin: 0; color: #868680; font-size: 8px; line-height: 1.45; }
+.trustPassportMessage.success { color: #4f7b54; }
+
+.mfaEnrollment { grid-column: 1 / -1; margin-top: 6px; padding-top: 12px; border-top: 1px solid #e7e7e3; display: grid; grid-template-columns: 110px minmax(0,1fr); gap: 14px; }
+.mfaEnrollment > img { width: 110px; height: 110px; border: 1px solid #e5e5e1; border-radius: 12px; background: #fff; }
+.mfaEnrollment strong { color: #292926; font-size: 11px; }
+.mfaEnrollment p { color: #7b7b76; font-size: 9px; line-height: 1.45; }
+.mfaEnrollment code { display: block; max-width: 100%; overflow-wrap: anywhere; margin: 7px 0; padding: 7px; border-radius: 8px; background: #efefec; color: #44443f; font-size: 8px; }
+.mfaEnrollment label { display: grid; gap: 5px; }
+.mfaEnrollment label span { color: #777772; font-size: 8px; font-weight: 750; }
+.mfaEnrollment input,
+.phoneVerifyForm input,
+.schoolIdForm input { min-height: 40px; padding: 0 11px; border: 1px solid #deded9; border-radius: 10px; background: #fff; color: #22221f; outline: none; font: inherit; font-size: 11px; }
+.mfaEnrollment input:focus,
+.phoneVerifyForm input:focus,
+.schoolIdForm input:focus { border-color: #d1b74f; box-shadow: 0 0 0 3px rgba(255,199,44,.12); }
+.mfaActions { margin-top: 8px; display: flex; gap: 7px; }
+.mfaActions button,
+.profileTrustCards .button { min-height: 38px; padding: 0 11px; border: 1px solid #deded9; border-radius: 10px; background: #fff; color: #373733; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
+.mfaActions .buttonGold,
+.profileTrustCards .buttonGold { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+
+.phoneVerifyForm { margin-top: 12px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 7px; }
+.phoneCodeForm { grid-template-columns: minmax(0,1fr) auto; }
+.phoneVerifyBack { grid-column: 1 / -1; min-height: 26px; padding: 0; border: 0; background: transparent; color: #7c7c76; font: inherit; font-size: 8px; text-align: left; cursor: pointer; }
+.phoneVerifyMessage { display: block; margin-top: 7px; color: #88743b !important; overflow-wrap: anywhere; }
+.schoolIdForm { margin-top: 12px; display: grid; gap: 8px; }
+.schoolIdForm label { display: grid; gap: 5px; }
+.schoolIdForm label > span { color: #777772; font-size: 8px; font-weight: 750; }
+.schoolIdMessage { overflow-wrap: anywhere; }
 
 .profileMenuList { display: grid; gap: 7px; }
-.profileMenuRow { min-height: 62px; padding: 11px 12px; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; gap: 10px; align-items: center; border: 1px solid rgba(255,255,255,.07); border-radius: 17px; background: rgba(8,8,7,.42); color: inherit; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
-a.profileMenuRow:hover { transform: translateY(-1px); border-color: rgba(255,194,28,.18); background: rgba(255,194,28,.028); }
-.profileMenuRow i { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 11px; background: rgba(255,255,255,.035); color: #8e8679; font-style: normal; }
-.profileMenuRow > div { min-width: 0; display: grid; gap: 3px; }
-.profileMenuRow strong { font-size: 11px; }
-.profileMenuRow span { color: #6f695f; font-size: 8px; line-height: 1.35; }
-.profileMenuRow > b { color: #746d62; font-size: 7px; letter-spacing: .08em; white-space: nowrap; }
-.profileMenuRow.moderator { border-color: rgba(255,194,28,.16); background: rgba(255,194,28,.035); }
-.profileMenuRow.moderator i,.profileMenuRow.moderator > b { color: var(--gold); }
-.profileMenuRow.muted { opacity: .68; }
+.profileMenuRow { min-height: 62px; padding: 10px 11px; display: grid; grid-template-columns: 36px minmax(0,1fr) auto; gap: 10px; align-items: center; border: 1px solid #e9e9e5; border-radius: 14px; background: #fafaf8; color: #292926; transition: border-color .16s ease, background .16s ease; }
+a.profileMenuRow:hover { border-color: #d8d8d1; background: #fff; }
+.profileMenuRow > i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: #fff; color: #806000; font-style: normal; }
+.profileMenuRow > i svg { width: 17px; height: 17px; }
+.profileMenuRow > div { min-width: 0; display: grid; gap: 2px; }
+.profileMenuRow strong { color: #292926; font-size: 10px; }
+.profileMenuRow span { color: #85857f; font-size: 8px; line-height: 1.35; }
+.profileMenuRow > b { color: #888882; font-size: 8px; font-weight: 750; white-space: nowrap; }
+.profileMenuRow > b svg { width: 14px; height: 14px; }
+.profileMenuRow > button { min-height: 34px; padding: 0 9px; border: 1px solid #deded9; border-radius: 9px; background: #fff; color: #393936; font: inherit; font-size: 8px; font-weight: 800; cursor: pointer; }
+.profileMenuRow.moderator { border-color: #ead99d; background: #fff8df; }
+.profileMenuRow.moderator > i,
+.profileMenuRow.moderator > b { color: #795b00; }
+.paymentConnectRow .paymentMoneyLink { color: #846400; font-size: 8px; font-weight: 750; }
+.paymentConnectMessage { margin-top: 4px; max-height: 3.9em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; color: #997833 !important; font-size: 7px !important; line-height: 1.3 !important; overflow-wrap: anywhere; }
 
-.profileAccountFoot { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.07); display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+.profileAccountFoot { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e8e8e4; display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
 .profileAccountFoot > div { min-width: 0; display: grid; gap: 3px; }
-.profileAccountFoot span { color: #625c53; font-size: 7px; font-weight: 900; letter-spacing: .12em; }
-.profileAccountFoot strong { overflow: hidden; text-overflow: ellipsis; color: #999184; font-size: 9px; }
-.profileAccountFoot small { color: #645e55; font-size: 8px; }
-.profileAccountFoot button { border: 0; background: transparent; color: #8c8377; font: inherit; font-size: 9px; text-decoration: underline; cursor: pointer; }
-.profileAccountFoot button:hover { color: var(--paper); }
-.profileOperator { margin: 20px 0 0; color: #555047; font-size: 8px; text-align: center; }
+.profileAccountFoot strong { overflow: hidden; text-overflow: ellipsis; color: #555550; font-size: 9px; }
+.profileAccountFoot small { color: #8b8b85; font-size: 8px; }
+.profileAccountFoot button { border: 0; background: transparent; color: #6c6c67; font: inherit; font-size: 9px; text-decoration: underline; cursor: pointer; }
+.profileAccountFoot button:hover { color: #111; }
+.profileOperator { margin: 18px 0 0; color: #9a9a94; font-size: 8px; text-align: center; }
 
-/* Compact the legacy/manual verification fallback inside the new trust panel. */
-.profileTrustCards .profileSchoolIdCard > span,
-.profileTrustCards .profileSchoolIdCard > strong,
-.profileTrustCards .profileSchoolIdCard > p,
-.profileTrustCards .profileSchoolIdCard > small,
-.profileTrustCards .profileSchoolIdCard > form { grid-column: 1 / -1; }
-.profileTrustCards .schoolIdForm { margin-top: 12px; }
+/* Black & Gold keeps the same component structure; only tokens change. */
+html[data-aspire-theme='dark'] .profilePagePolished { background: #0b0b0a !important; color: #f7f4ed !important; }
+html[data-aspire-theme='dark'] .profilePageHeading p,
+html[data-aspire-theme='dark'] .profileHeroPolished .profileHeroCopy > p,
+html[data-aspire-theme='dark'] .profileSectionHeading > p,
+html[data-aspire-theme='dark'] .profileTrustCards .profileCard p,
+html[data-aspire-theme='dark'] .trustPassportCopy p { color: #908b82; }
+html[data-aspire-theme='dark'] .profilePageHeading > span,
+html[data-aspire-theme='dark'] .profileHeroMeta > span,
+html[data-aspire-theme='dark'] .profileSectionHeading > div > span,
+html[data-aspire-theme='dark'] .profileSetupTop span,
+html[data-aspire-theme='dark'] .profileAccountFoot span { color: #ffc72c; }
+html[data-aspire-theme='dark'] .profileBack,
+html[data-aspire-theme='dark'] .profileHeroPolished,
+html[data-aspire-theme='dark'] .profileTrustPanel,
+html[data-aspire-theme='dark'] .profileQuickPanel { border-color: #292927; background: #151514; color: #f7f4ed; box-shadow: none; }
+html[data-aspire-theme='dark'] .profileTrustChips span,
+html[data-aspire-theme='dark'] .profileHeroActions a,
+html[data-aspire-theme='dark'] .profileTrustCards > .profileCard,
+html[data-aspire-theme='dark'] .profileTrustCards > .trustPassportCard,
+html[data-aspire-theme='dark'] .profileMenuRow { border-color: #2b2b28; background: #1b1b19; color: #eeeae2; }
+html[data-aspire-theme='dark'] .profileTrustChips span.verified,
+html[data-aspire-theme='dark'] .profileTrustCards > .profileCard.isVerified,
+html[data-aspire-theme='dark'] .profileTrustCards > .trustPassportCard:has(.trustPassportStatus.isVerified),
+html[data-aspire-theme='dark'] .profileMenuRow.moderator { border-color: rgba(255,199,44,.24); background: rgba(255,199,44,.07); color: #f5df98; }
+html[data-aspire-theme='dark'] .profileHeroActions a:first-child { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+html[data-aspire-theme='dark'] .profileAvatar { border-color: rgba(255,199,44,.26); background: rgba(255,199,44,.10); color: #ffc72c; }
+html[data-aspire-theme='dark'] .profileAvatarEditable > span { border-color: #151514; }
+html[data-aspire-theme='dark'] .profileSetupCard { border-color: rgba(255,199,44,.20); background: rgba(255,199,44,.07); }
+html[data-aspire-theme='dark'] .profileSetupBadge,
+html[data-aspire-theme='dark'] .profileSetupMeter i { background: #ffc72c; color: #18130a; }
+html[data-aspire-theme='dark'] .profileSetupMeter { background: rgba(255,255,255,.10); }
+html[data-aspire-theme='dark'] .profileSetupCard p,
+html[data-aspire-theme='dark'] .profileSetupCard > a { color: #b7b0a4; }
+html[data-aspire-theme='dark'] .profileTrustCards .profileCard strong,
+html[data-aspire-theme='dark'] .trustPassportCopy h3,
+html[data-aspire-theme='dark'] .profileMenuRow strong { color: #f1ede5; }
+html[data-aspire-theme='dark'] .trustCardIcon,
+html[data-aspire-theme='dark'] .trustPassportIcon,
+html[data-aspire-theme='dark'] .profileMenuRow > i { border-color: #30302d; background: #242421; color: #ffc72c; }
+html[data-aspire-theme='dark'] .trustPassportStatus { border-color: #30302d; background: #232321; color: #9a958c; }
+html[data-aspire-theme='dark'] .trustPassportStatus.isVerified { border-color: rgba(83,173,99,.24); background: rgba(83,173,99,.10); color: #82ce8e; }
+html[data-aspire-theme='dark'] .trustPassportAction,
+html[data-aspire-theme='dark'] .profileMenuRow > button,
+html[data-aspire-theme='dark'] .mfaEnrollment input,
+html[data-aspire-theme='dark'] .phoneVerifyForm input,
+html[data-aspire-theme='dark'] .schoolIdForm input,
+html[data-aspire-theme='dark'] .mfaActions button,
+html[data-aspire-theme='dark'] .profileTrustCards .button { border-color: #33332f; background: #242421; color: #ded9d0; }
+html[data-aspire-theme='dark'] .mfaActions .buttonGold,
+html[data-aspire-theme='dark'] .profileTrustCards .buttonGold { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+html[data-aspire-theme='dark'] .mfaEnrollment { border-color: #2c2c29; }
+html[data-aspire-theme='dark'] .mfaEnrollment > img { border-color: #33332f; }
+html[data-aspire-theme='dark'] .mfaEnrollment code { background: #242421; color: #c7c1b7; }
+html[data-aspire-theme='dark'] .profileAccountFoot { border-color: #292927; }
+html[data-aspire-theme='dark'] .profileAccountFoot strong { color: #aaa59b; }
+
+@media (max-width: 1120px) {
+  .profileHeroPolished { grid-template-columns: auto minmax(0,1fr); }
+  .profileSetupCard { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0,1fr) minmax(180px,260px); column-gap: 20px; align-items: center; }
+  .profileSetupTop { grid-column: 1; }
+  .profileSetupCard p { grid-column: 1; }
+  .profileSetupMeter { grid-column: 2; grid-row: 1 / 3; }
+  .profileSetupCard > a { grid-column: 1 / -1; }
+  .profileOverview { grid-template-columns: minmax(0,1fr) 300px; }
+}
 
 @media (max-width: 900px) {
+  .profilePagePolished { padding: 18px 14px 106px !important; }
+  .profileTopPolished { margin-bottom: 16px; }
   .profileOverview { grid-template-columns: 1fr; }
   .profileQuickPanel { position: static; }
 }
 
-@media (max-width: 640px) {
-  .profilePagePolished { padding: 18px 14px 138px !important; }
-  .profileTopPolished { margin-bottom: 18px; }
-  .profileBack { font-size: 8px; }
-  .profileHeroPolished { grid-template-columns: 70px minmax(0,1fr); gap: 15px; padding: 20px 0 22px; }
-  .profileAvatar { width: 70px; height: 70px; border-radius: 22px; font-size: 22px; }
-  .profileHeroPolished h1 { font-size: clamp(36px, 12vw, 54px); }
-  .profileTrustPanel,.profileQuickPanel { padding: 16px; border-radius: 22px; }
-  .profileSectionHeading { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .profileSectionHeading h2 { font-size: 25px; }
+@media (max-width: 680px) {
+  .profileTopPolished { align-items: flex-start; }
+  .profilePageHeading h1 { font-size: 30px; }
+  .profilePageHeading p { font-size: 11px; }
+  .profileBack { min-width: 42px; width: 42px; padding: 0; justify-content: center; font-size: 0; }
+  .profileHeroPolished { grid-template-columns: 76px minmax(0,1fr); gap: 14px; padding: 17px; border-radius: 20px; }
+  .profileAvatar { width: 76px; height: 76px; border-radius: 22px; font-size: 23px; }
+  .profileAvatarWrap > small { display: none; }
+  .profileHeroPolished h2 { font-size: 30px; }
+  .profileHeroPolished .profileHeroCopy > p { font-size: 11px; }
+  .profileTrustChips { margin-top: 10px; gap: 5px; }
+  .profileTrustChips span { padding: 6px 8px; font-size: 8px; }
+  .profileHeroActions { grid-column: 1 / -1; }
+  .profileSetupCard { grid-column: 1 / -1; display: block; }
+  .profileSetupMeter { margin-top: 0; }
+  .profileTrustPanel,.profileQuickPanel { padding: 15px; border-radius: 19px; }
+  .profileSectionHeading { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .profileSectionHeading h2 { font-size: 21px; }
+  .profileTrustCardsExpanded { grid-template-columns: 1fr; }
+  .profileTrustCards > .profileCard,
+  .profileTrustCards > .trustPassportCard { min-height: 0; }
+  .mfaEnrollment { grid-template-columns: 1fr; }
+  .mfaEnrollment > img { width: 120px; height: 120px; }
   .phoneVerifyForm,.phoneCodeForm { grid-template-columns: 1fr; }
-  .phoneVerifyBack { min-height: 34px; text-align: left; }
+  .profileMenuRow { min-height: 58px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .profileMenuRow { transition: none; }
+  .profileMenuRow,
+  .profileSetupMeter i { transition: none; }
 }
