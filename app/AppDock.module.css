@@ -81,15 +81,6 @@
 :global(html[data-aspire-theme='dark']) .post.active { background: #ffc72c; color: #171109; }
 :global(html[data-aspire-theme='dark']) .themeButton { border-color: rgba(255,255,255,.10); background: #171716; color: #d8d3ca; }
 
-@media (min-width: 901px) {
-  :global(body:has(.signedInDock) .discoverPage),
-  :global(body:has(.signedInDock) .connectionsPage),
-  :global(body:has(.signedInDock) .postPage),
-  :global(body:has(.signedInDock) .profilePage) {
-    padding-left: 118px !important;
-  }
-}
-
 @media (max-width: 900px) {
   .dock {
     inset: auto 10px 10px 10px;
