@@ -81,11 +81,11 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
 
         <span className={styles.spacer} aria-hidden="true" />
 
-        <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/profile#safety'} title="Safety & Help" onClick={preview ? (event) => event.preventDefault() : undefined}>
+        <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/safety'} title="Safety & Help" onClick={preview ? (event) => event.preventDefault() : undefined}>
           <UiIcon name="shield" />
           <span>Safety & Help</span>
         </a>
-        <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/profile#settings'} title="Settings" onClick={preview ? (event) => event.preventDefault() : undefined}>
+        <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/profile#account-settings'} title="Settings" onClick={preview ? (event) => event.preventDefault() : undefined}>
           <UiIcon name="settings" />
           <span>Settings</span>
         </a>
