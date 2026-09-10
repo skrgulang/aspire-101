@@ -22,7 +22,12 @@ export type UiIconName =
   | 'wrench'
   | 'calendar'
   | 'flame'
-  | 'sliders';
+  | 'sliders'
+  | 'activity'
+  | 'bookmark'
+  | 'wallet'
+  | 'shield'
+  | 'settings';
 
 const paths: Record<UiIconName, ReactNode> = {
   home: <><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-6h5v6"/></>,
@@ -43,10 +48,15 @@ const paths: Record<UiIconName, ReactNode> = {
   check: <path d="m5 12.5 4 4L19 6.5"/>,
   chevron: <path d="m9 6 6 6-6 6"/>,
   compass: <><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2.1 4.9-4.9 2.1 2.1-4.9 4.9-2.1Z"/></>,
-  wrench: <><path d="M14.7 6.3a4.7 4.7 0 0 0-5.9 5.9L3.5 17.5a2.1 2.1 0 1 0 3 3l5.3-5.3a4.7 4.7 0 0 0 5.9-5.9l-3 3-3-3 3-3Z"/></>,
+  wrench: <path d="M14.7 6.3a4.7 4.7 0 0 0-5.9 5.9L3.5 17.5a2.1 2.1 0 1 0 3 3l5.3-5.3a4.7 4.7 0 0 0 5.9-5.9l-3 3-3-3 3-3Z"/>,
   calendar: <><rect x="3.5" y="5.5" width="17" height="15" rx="2"/><path d="M7.5 3v5M16.5 3v5M3.5 10h17"/></>,
   flame: <path d="M12 21c4 0 7-2.7 7-6.6 0-2.6-1.4-4.8-4.1-7.2.1 2.2-.8 3.5-2.2 4.5.2-3.6-1.8-6.2-4.9-8.7.2 3.4-2.8 5.4-2.8 9.8C5 17.5 8 21 12 21Z"/>,
-  sliders: <><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M7 14v6"/></>
+  sliders: <><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M7 14v6"/></>,
+  activity: <><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 8h8M8 12h5M8 16h7"/></>,
+  bookmark: <path d="M6 3.5h12v17l-6-3.7-6 3.7v-17Z"/>,
+  wallet: <><path d="M4 6.5h14a2 2 0 0 1 2 2v10H4a2 2 0 0 1-2-2v-10a3 3 0 0 1 3-3h12"/><path d="M15 11h5v4h-5a2 2 0 1 1 0-4Z"/></>,
+  shield: <><path d="M12 3 20 6v5c0 5-3.3 8.2-8 10-4.7-1.8-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></>,
+  settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></>
 };
 
 export default function UiIcon({ name, ...props }: { name: UiIconName } & SVGProps<SVGSVGElement>) {
