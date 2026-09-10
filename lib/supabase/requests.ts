@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { coverSourceForAsset, fetchRecommendedCover, type RequestCoverSource } from './coverImages';
 import { runRequestAiSafety } from './trust';
 
 export type RequestKind =
@@ -16,6 +17,30 @@ export type AiModerationStatus = 'not_scanned' | 'scanning' | 'complete' | 'erro
 export type AiRiskLevel = 'unknown' | 'low' | 'medium' | 'high' | 'critical';
 export type AiRecommendedAction = 'approve' | 'review' | 'block';
 export type TrustBand = 'restricted' | 'caution' | 'new' | 'established' | 'trusted';
+export type RequestLanguageCode = 'en' | 'zh' | 'es' | 'ko' | 'ja' | 'fr' | 'hi' | 'ar' | 'vi' | 'other';
+
+export const requestLanguages: { value: RequestLanguageCode; label: string; shortLabel: string }[] = [
+  { value: 'en', label: 'English', shortLabel: 'English' },
+  { value: 'zh', label: '中文 / Chinese', shortLabel: '中文' },
+  { value: 'es', label: 'Español / Spanish', shortLabel: 'Español' },
+  { value: 'ko', label: '한국어 / Korean', shortLabel: '한국어' },
+  { value: 'ja', label: '日本語 / Japanese', shortLabel: '日本語' },
+  { value: 'fr', label: 'Français / French', shortLabel: 'Français' },
+  { value: 'hi', label: 'हिन्दी / Hindi', shortLabel: 'हिन्दी' },
+  { value: 'ar', label: 'العربية / Arabic', shortLabel: 'العربية' },
+  { value: 'vi', label: 'Tiếng Việt / Vietnamese', shortLabel: 'Tiếng Việt' },
+  { value: 'other', label: 'Other language', shortLabel: 'Other' }
+];
+
+export function requestLanguageLabel(code?: string | null) {
+  return requestLanguages.find((item) => item.value === code)?.shortLabel || 'English';
+}
+
+export function detectRequestLanguage(locale?: string | null): RequestLanguageCode {
+  const base = (locale || '').trim().toLowerCase().split('-')[0];
+  if (requestLanguages.some((item) => item.value === base)) return base as RequestLanguageCode;
+  return 'en';
+}
 
 export type AspireRequest = {
   id: string;
@@ -37,6 +62,10 @@ export type AspireRequest = {
   price_negotiable?: boolean;
   fulfillment_method?: FulfillmentMethod | null;
   quantity?: number;
+  language_code?: RequestLanguageCode;
+  cover_image_url?: string | null;
+  cover_image_source?: RequestCoverSource;
+  cover_image_asset_id?: string | null;
   moderation_status?: RequestModerationStatus;
   moderation_flags?: string[];
   moderation_version?: string;
@@ -70,6 +99,10 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
   price_negotiable?: boolean;
   fulfillment_method?: FulfillmentMethod;
   quantity?: number;
+  language_code?: RequestLanguageCode;
+  cover_image_url?: string | null;
+  cover_image_source?: RequestCoverSource;
+  cover_image_asset_id?: string | null;
 };
 
 function friendlyPolicyError(error: { message?: string; details?: string; hint?: string }, fallback: string) {
@@ -123,6 +156,25 @@ export async function createRequest(input: CreateRequestInput) {
     throw new Error('Verify your school identity in Profile before posting.');
   }
 
+  let coverImageUrl = input.cover_image_url ?? null;
+  let coverImageAssetId = input.cover_image_asset_id ?? null;
+  let coverImageSource: RequestCoverSource = input.cover_image_source ?? 'none';
+
+  // Undefined means "pick one for me". Explicit `none` lets the future composer
+  // offer a real No photo choice without the backend silently adding one back.
+  if (input.cover_image_source === undefined) {
+    try {
+      const recommended = await fetchRecommendedCover(input.campusId, input.category);
+      if (recommended) {
+        coverImageUrl = recommended.image_url;
+        coverImageAssetId = recommended.id;
+        coverImageSource = coverSourceForAsset(recommended);
+      }
+    } catch {
+      // Recommended artwork is presentation-only and must never block posting.
+    }
+  }
+
   const isMarket = input.kind === 'buy_sell';
   const { data, error } = await supabase
     .from('requests')
@@ -142,7 +194,11 @@ export async function createRequest(input: CreateRequestInput) {
       item_condition: isMarket && input.market_intent !== 'wanted' ? input.item_condition || 'good' : null,
       price_negotiable: isMarket ? Boolean(input.price_negotiable) : false,
       fulfillment_method: isMarket ? input.fulfillment_method || 'campus_pickup' : null,
-      quantity: isMarket ? Math.max(1, Math.min(99, input.quantity || 1)) : 1
+      quantity: isMarket ? Math.max(1, Math.min(99, input.quantity || 1)) : 1,
+      language_code: input.language_code || 'en',
+      cover_image_url: coverImageUrl,
+      cover_image_source: coverImageSource,
+      cover_image_asset_id: coverImageAssetId
     })
     .select('*')
     .single();
