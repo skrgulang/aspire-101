@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchDiscoverRequests, DiscoverCategory, DiscoverRequest } from '../lib/supabase/discovery';
+import { fetchCampusFeedRequests, DiscoverCategory, DiscoverRequest } from '../lib/supabase/discovery';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
 import { respondToRequest } from '../lib/supabase/requests';
 import { blockUser, reportSafety, SafetyReason } from '../lib/supabase/safety';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import CampusPicker from './CampusPicker';
+import CampusFeedCard, { campusFeedCardStyles } from './CampusFeedCard';
+import { buildDemoDiscoverRequests, filterDemoDiscoverRequests, isPreviewDemoEnabled } from './demoPreviewPosts';
+import { CAMPUS_FEED_REFRESH_EVENT, CAMPUS_FEED_REFRESH_STORAGE_KEY } from './campusFeedSync';
 
 const categories: DiscoverCategory[] = ['Anything','Get me there','Pick this up','Give me a hand','Study / class','Gaming / duos','Build something','People / community','Buy & sell'];
 const suggestions = ['Math 55','IND rides','Moving help','Valorant','Study group','Photographer'];
@@ -22,52 +25,6 @@ const reportReasons: { value: SafetyReason; label: string }[] = [
   { value: 'other', label: 'Something else' }
 ];
 
-function relativeTime(value: string) {
-  const diff = Math.max(0, Date.now() - new Date(value).getTime());
-  const minutes = Math.max(1, Math.floor(diff / 60000));
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-function moneyAmount(item: DiscoverRequest) {
-  if (item.amount_cents == null) return null;
-  return `$${(item.amount_cents / 100).toFixed(item.amount_cents % 100 === 0 ? 0 : 2)}`;
-}
-
-function priceLabel(item: DiscoverRequest) {
-  const amount = moneyAmount(item);
-  if (item.kind === 'buy_sell') {
-    if (!amount) return item.market_intent === 'wanted' ? 'Budget open' : 'Price after connect';
-    return item.market_intent === 'wanted' ? `Budget ${amount}` : `Asking ${amount}`;
-  }
-  if (item.kind === 'community') return 'Free / community';
-  if (item.kind === 'collaboration') return 'Collaboration';
-  if (!amount) return item.kind === 'split_cost' ? 'Split cost' : 'Agree after connect';
-  return amount;
-}
-
-function intentLabel(item: DiscoverRequest) {
-  if (item.kind === 'paid_help') return 'PAID HELP';
-  if (item.kind === 'split_cost') return 'SPLIT COST';
-  if (item.kind === 'buy_sell') return item.market_intent === 'wanted' ? 'WANTED' : 'FOR SALE';
-  if (item.kind === 'collaboration') return 'COLLAB';
-  return 'COMMUNITY';
-}
-
-function conditionLabel(value: DiscoverRequest['item_condition']) {
-  if (!value) return null;
-  const labels: Record<string, string> = {
-    new: 'New',
-    like_new: 'Like new',
-    good: 'Good condition',
-    fair: 'Fair condition',
-    for_parts: 'For parts'
-  };
-  return labels[value] || null;
-}
-
 function marketActionLabel(item: DiscoverRequest) {
   if (item.kind !== 'buy_sell') return item.kind === 'community' ? 'I’m interested →' : 'I can help →';
   return item.market_intent === 'wanted' ? 'I have this →' : 'I’m interested →';
@@ -80,9 +37,17 @@ function marketResponseMessage(item: DiscoverRequest) {
     : 'I’m interested in buying this item.';
 }
 
+function mergeRequests(primary: DiscoverRequest[], extra: DiscoverRequest[]) {
+  const merged = new Map<string, DiscoverRequest>();
+  primary.forEach((item) => merged.set(item.id, item));
+  extra.forEach((item) => { if (!merged.has(item.id)) merged.set(item.id, item); });
+  return Array.from(merged.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
 export default function DiscoverRequestsV2() {
   const router = useRouter();
   const [bootLoading,setBootLoading] = useState(true);
+  const [currentUserId,setCurrentUserId] = useState<string|null>(null);
   const [homeCampusId,setHomeCampusId] = useState<string|null>(null);
   const [activeCampusId,setActiveCampusId] = useState<string|null>(null);
   const [pendingCampusId,setPendingCampusId] = useState<string|null>(null);
@@ -135,6 +100,7 @@ export default function DiscoverRequestsV2() {
             ? currentId
             : homeId;
       if (requestedCategory && categories.includes(requestedCategory as DiscoverCategory)) setCategory(requestedCategory as DiscoverCategory);
+      setCurrentUserId(data.user.id);
       setUniversities(campusList);
       setHomeCampusId(homeId);
       setActiveCampusId(nextActive);
@@ -150,14 +116,45 @@ export default function DiscoverRequestsV2() {
   }, [router]);
 
   useEffect(() => {
+    const refresh = () => setRetryKey((value) => value + 1);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === CAMPUS_FEED_REFRESH_STORAGE_KEY) refresh();
+    };
+    const onFocus = () => refresh();
+    window.addEventListener(CAMPUS_FEED_REFRESH_EVENT, refresh);
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener(CAMPUS_FEED_REFRESH_EVENT, refresh);
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!activeCampusId) return;
     let alive = true;
     setDataLoading(true);
     setError('');
     setMessage('');
     const skeletonTimer = window.setTimeout(() => { if (alive) setShowSkeleton(true); }, 260);
-    fetchDiscoverRequests({ campusId: activeCampusId, query: debouncedQuery, category, limit: 50 })
-      .then((data) => { if (alive) setItems(data); })
+
+    const campusForPreview = universities.find((campus) => campus.id === activeCampusId) ?? null;
+    fetchCampusFeedRequests({ campusId: activeCampusId, query: debouncedQuery, category, limit: 50 })
+      .then((data) => {
+        if (!alive) return;
+        let next = data;
+        if (currentUserId && campusForPreview && isPreviewDemoEnabled()) {
+          const demos = buildDemoDiscoverRequests(
+            currentUserId,
+            campusForPreview.id,
+            campusForPreview.name,
+            campusForPreview.cover_image
+          );
+          next = mergeRequests(next, filterDemoDiscoverRequests(demos, debouncedQuery, category));
+        }
+        setItems(next);
+      })
       .catch((err) => { if (alive) setError(err instanceof Error ? err.message : 'We couldn’t load campus requests.'); })
       .finally(() => {
         window.clearTimeout(skeletonTimer);
@@ -170,7 +167,7 @@ export default function DiscoverRequestsV2() {
       alive = false;
       window.clearTimeout(skeletonTimer);
     };
-  }, [activeCampusId, debouncedQuery, category, retryKey]);
+  }, [activeCampusId, currentUserId, debouncedQuery, category, retryKey, universities]);
 
   const homeCampus = useMemo(() => universities.find((c) => c.id === homeCampusId) ?? null, [universities, homeCampusId]);
   const activeCampus = useMemo(() => universities.find((c) => c.id === activeCampusId) ?? null, [universities, activeCampusId]);
@@ -272,24 +269,24 @@ export default function DiscoverRequestsV2() {
     {error ? <div className="discoverV2State error" role="alert"><span>DISCOVER UNAVAILABLE</span><h2>We couldn’t load nearby campus requests.</h2><p>{error}</p><button className="button buttonGold" type="button" onClick={() => setRetryKey((value) => value + 1)}>Try again</button></div>
       : showSkeleton ? <div className="discoverV2SkeletonList" aria-label="Loading requests">{[0,1,2].map((item) => <div className="discoverV2Skeleton" key={item}><i /><div><span /><span /><span /></div></div>)}</div>
       : !dataLoading && !items.length ? <div className="discoverV2State empty"><span>NOTHING MATCHED</span><h2>{debouncedQuery ? `No results for “${debouncedQuery}” at ${activeCampus.short_name}.` : `Your ${category === 'Anything' ? 'campus feed' : category} is quiet right now.`}</h2><p>Try another keyword, clear your filters, or start the request yourself.</p><div className="discoverV2EmptyActions">{(query || category !== 'Anything') && <button type="button" onClick={() => { setQuery(''); setCategory('Anything'); }}>Clear filters</button>}<a className="button buttonGold" href="/post">Post what you need →</a></div></div>
-      : <div className={`discoverV2List ${dataLoading ? 'isRefreshing' : ''}`}>{items.map((item) => {
-          const isMarket = item.kind === 'buy_sell';
-          const isWanted = isMarket && item.market_intent === 'wanted';
-          const condition = conditionLabel(item.item_condition);
-          return <article className={`discoverV2Card ${item.media.length ? 'hasMedia' : ''} ${isMarket ? `marketCard ${isWanted ? 'marketWanted' : 'marketForSale'}` : ''}`} key={item.id}>
-            {item.media[0]?.public_url && <div className="discoverV2Media"><img src={item.media[0].public_url} alt={isMarket ? (isWanted ? 'Wanted item reference' : 'Item for sale') : 'Request photo'} />{item.media.length > 1 && <span>+{item.media.length - 1}</span>}<b>{isMarket ? (isWanted ? 'WANTED ITEM' : 'ITEM FOR SALE') : 'REQUEST PHOTO'}</b></div>}
-            <div className="discoverV2CardTop"><div><span>{isMarket ? 'ASPIRE MARKET' : item.category.toUpperCase()}</span><b className={isMarket ? (isWanted ? 'marketWantedBadge' : 'marketForSaleBadge') : ''}>{intentLabel(item)}</b></div><button type="button" aria-label="Safety options" onClick={() => setSafetyItem(item)}>•••</button></div>
-            <h2>{item.title}</h2>
-            {item.details && <p>{item.details}</p>}
-            {isMarket && <div className="discoverMarketFacts">
-              <span className="discoverMarketPrice"><small>{isWanted ? 'BUYER BUDGET' : 'SELLER ASK'}</small><strong>{moneyAmount(item) || (isWanted ? 'Open budget' : 'Price after connect')}</strong></span>
-              {!isWanted && condition && <span><small>CONDITION</small><strong>{condition}</strong></span>}
-              <span><small>PRICE</small><strong>{item.price_negotiable ? 'Negotiable' : 'Firm'}</strong></span>
-              <span><small>HANDOFF</small><strong>{item.fulfillment_method === 'shipping' ? 'Shipping' : 'Campus pickup'}</strong></span>
-            </div>}
-            <div className="discoverV2Meta"><span>{activeCampus.short_name}</span><span>{relativeTime(item.created_at)}</span>{!isMarket && <span>{priceLabel(item)}</span>}{isMarket && <span className="marketProtectionMini">Aspire Protected eligible</span>}</div>
-            <div className="discoverV2CardActions"><button className="discoverV2QuietAction" type="button" onClick={() => setSafetyItem(item)}>Safety</button><button className="button buttonGold" type="button" onClick={() => respond(item)} disabled={busyId === item.id}>{busyId === item.id ? 'Sending…' : marketActionLabel(item)}</button></div>
-          </article>;
+      : <div className={`discoverV2List campusUnifiedFeed ${dataLoading ? 'isRefreshing' : ''}`}>{items.map((item) => {
+          const mine = Boolean(currentUserId && item.poster_id === currentUserId);
+          const demo = item.id.startsWith('demo-preview-');
+          const pending = mine && item.moderation_status && item.moderation_status !== 'approved';
+          return <CampusFeedCard
+            key={item.id}
+            item={item}
+            campusLabel={activeCampus.short_name}
+            currentUserId={currentUserId}
+            authorName="You"
+            fallbackImage={activeCampus.cover_image || undefined}
+            footerLeft={mine
+              ? <span className={campusFeedCardStyles.secondaryAction}>{pending ? 'Pending review' : 'Your post'}</span>
+              : <button className={campusFeedCardStyles.secondaryAction} type="button" onClick={() => setSafetyItem(item)}>Safety</button>}
+            footerRight={mine
+              ? <a className={campusFeedCardStyles.primaryAction} href="/activity">{demo ? 'Manage preview →' : 'Manage post →'}</a>
+              : <button className={campusFeedCardStyles.primaryAction} type="button" onClick={() => respond(item)} disabled={busyId === item.id}>{busyId === item.id ? 'Sending…' : marketActionLabel(item)}</button>}
+          />;
         })}</div>}
 
     {pendingCampus && <div className="discoverV2ModalBackdrop" role="dialog" aria-modal="true" aria-label="Browse another campus"><div className="discoverV2Modal"><span>VISITING CAMPUS</span><h2>Browse {pendingCampus.short_name}?</h2><p>{pendingCampus.name} is different from your home campus, {homeCampus.name}. Requests and campus activity shown here will now be based on {pendingCampus.short_name}. Your verified Aspire identity stays tied to {homeCampus.short_name}.</p><div><button type="button" onClick={() => setPendingCampusId(null)}>Stay at {activeCampus.short_name}</button><button className="button buttonGold" type="button" onClick={confirmCampusSwitch}>Browse {pendingCampus.short_name}</button></div></div></div>}
