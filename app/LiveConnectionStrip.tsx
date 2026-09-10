@@ -12,6 +12,7 @@ import {
   shareConnectionLocation,
   stopConnectionLocationShare
 } from '../lib/supabase/liveConnections';
+import ConnectionEventTimeline from './ConnectionEventTimeline';
 import styles from './LiveConnectionStrip.module.css';
 
 type Data = {
@@ -189,6 +190,7 @@ export default function LiveConnectionStrip() {
           const request = requestMap.get(connection.request_id);
           const otherId = data.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
           const other = profileMap.get(otherId);
+          const otherName = personName(other);
           const timer = timerCopy(connection.scheduled_start_at, now);
           const myShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === data.userId);
           const otherShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === otherId);
@@ -198,8 +200,8 @@ export default function LiveConnectionStrip() {
             <article key={connection.id} className={styles.card}>
               <div className={styles.top}>
                 <div className={styles.identity}>
-                  <div className={styles.avatar}>{personName(other).slice(0, 1).toUpperCase()}</div>
-                  <div><span>WITH</span><strong>{personName(other)}</strong></div>
+                  <div className={styles.avatar}>{otherName.slice(0, 1).toUpperCase()}</div>
+                  <div><span>WITH</span><strong>{otherName}</strong></div>
                 </div>
                 <span className={styles.badge}>{statusLabel(connection.coordination_status)}</span>
               </div>
@@ -231,16 +233,19 @@ export default function LiveConnectionStrip() {
 
               {otherShare && (
                 <div className={styles.locationNotice}>
-                  <span>{personName(other)} shared location temporarily.</span>
+                  <span>{otherName} shared location temporarily.</span>
                   <a href={mapHref} target="_blank" rel="noreferrer">Open map ↗</a>
                 </div>
               )}
+
+              <ConnectionEventTimeline connectionId={connection.id} userId={data.userId} otherName={otherName} />
 
               <div className={styles.actions}>
                 <a className={styles.primary} href="#my-activity">Message</a>
                 <button type="button" onClick={() => beginSchedule(connection)}>Set time</button>
                 <button type="button" disabled={busy === `on_the_way-${connection.id}`} onClick={() => void updateStatus(connection.id, 'on_the_way')}>On my way</button>
                 <button type="button" disabled={busy === `arrived-${connection.id}`} onClick={() => void updateStatus(connection.id, 'arrived')}>I&apos;ve arrived</button>
+                <button type="button" disabled={busy === `in_progress-${connection.id}`} onClick={() => void updateStatus(connection.id, 'in_progress')}>Start task</button>
                 {!myShare ? (
                   <button type="button" disabled={busy === `location-${connection.id}`} onClick={() => void shareLocation(connection.id)}>Share location · 30m</button>
                 ) : (
