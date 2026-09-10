@@ -15,7 +15,7 @@ const items: { key: AppDockTab; label: string; href: string; icon: UiIconName }[
   { key: 'profile', label: 'Profile', href: '/profile', icon: 'user' }
 ];
 
-export default function AppDock({ active }: { active: AppDockTab }) {
+export default function AppDock({ active, preview = false }: { active: AppDockTab; preview?: boolean }) {
   const [theme, setTheme] = useState<Theme>('light');
 
   useEffect(() => {
@@ -36,14 +36,15 @@ export default function AppDock({ active }: { active: AppDockTab }) {
 
   return (
     <nav className={`${styles.dock} signedInDock`} aria-label="Aspire app navigation">
-      <a className={styles.brand} href="/campus" aria-label="Aspire 101 home">A101</a>
+      <a className={styles.brand} href={preview ? '/ui-preview' : '/campus'} aria-label="Aspire 101 home">A101</a>
 
       {items.map((item) => (
         <a
           key={item.key}
-          href={item.href}
+          href={preview ? '/ui-preview' : item.href}
           className={`${styles.navItem} ${item.key === active ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
           aria-current={item.key === active ? 'page' : undefined}
+          onClick={preview ? (event) => event.preventDefault() : undefined}
         >
           <UiIcon name={item.icon} />
           <span>{item.label}</span>
