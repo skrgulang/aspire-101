@@ -12,7 +12,7 @@ const items: { key: AppDockTab; label: string; href: string; icon: UiIconName }[
   { key: 'home', label: 'Home', href: '/campus', icon: 'home' },
   { key: 'discover', label: 'Browse', href: '/discover', icon: 'search' },
   { key: 'post', label: 'Post', href: '/post', icon: 'plus' },
-  { key: 'connections', label: 'Messages', href: '/connections', icon: 'message' },
+  { key: 'connections', label: 'Inbox', href: '/connections', icon: 'message' },
   { key: 'profile', label: 'Profile', href: '/profile', icon: 'user' }
 ];
 
