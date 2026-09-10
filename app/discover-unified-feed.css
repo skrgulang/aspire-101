@@ -1,0 +1,19 @@
+/* Browse uses the exact same compact card component as Home. */
+.discoverPage .discoverV2List.campusUnifiedFeed {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  align-items: start;
+}
+
+@media (max-width: 1320px) {
+  .discoverPage .discoverV2List.campusUnifiedFeed { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+
+@media (max-width: 980px) {
+  .discoverPage .discoverV2List.campusUnifiedFeed { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
+@media (max-width: 620px) {
+  .discoverPage .discoverV2List.campusUnifiedFeed { grid-template-columns: 1fr !important; }
+}
