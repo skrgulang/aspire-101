@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from './client';
 import type { ItemCondition, MarketIntent, RequestKind } from './requests';
+import { inferNavigationIntent } from '../server/aspireBrain.js';
 
 export type AspireAgentAction = 'join_existing' | 'create_request' | 'explore' | 'need_details';
 export type AspireAgentOutcome = 'planned' | 'opened_match' | 'drafted_post' | 'posted' | 'connected' | 'completed' | 'dismissed';
@@ -61,6 +62,20 @@ const draftKey = 'aspire-agent-draft';
 const matchKey = 'aspire-agent-matches';
 
 export async function runAspireAgent(message: string, campusId?: string | null) {
+  const cleanMessage = message.trim();
+  const navigation = inferNavigationIntent(cleanMessage);
+  if (navigation && typeof window !== 'undefined') {
+    window.location.assign(navigation.route);
+    return {
+      ok: true,
+      sessionId: null,
+      status: 'ready',
+      assistantMessage: `Opening ${navigation.target}.`,
+      plan: null,
+      matches: []
+    } as AspireAgentResponse;
+  }
+
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
@@ -70,7 +85,7 @@ export async function runAspireAgent(message: string, campusId?: string | null) 
   const response = await fetch('/api/ai/agent', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: message.trim(), campusId: campusId || undefined })
+    body: JSON.stringify({ message: cleanMessage, campusId: campusId || undefined })
   });
   const payload = await response.json().catch(() => ({})) as AspireAgentResponse & { error?: string };
   if (!response.ok) throw new Error(payload.error || 'Aspire Agent could not finish that plan.');
