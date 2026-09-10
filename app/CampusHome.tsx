@@ -3,12 +3,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
-import { AspireRequest, fetchOpenRequests } from '../lib/supabase/requests';
+import { DiscoverRequest, fetchCampusFeedRequests } from '../lib/supabase/discovery';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
 import { aspireLogo } from './logo';
 import AppDock from './AppDock';
 import AppLoader from './AppLoader';
 import UiIcon, { UiIconName } from './UiIcon';
+import CampusFeedCard, { campusFeedCardStyles } from './CampusFeedCard';
+import { campusFeedHref } from './campusFeedPresentation';
+import { buildDemoDiscoverRequests, isPreviewDemoEnabled } from './demoPreviewPosts';
+import { CAMPUS_FEED_REFRESH_EVENT, CAMPUS_FEED_REFRESH_STORAGE_KEY } from './campusFeedSync';
 import styles from './CampusHomeRefresh.module.css';
 
 type CampusDeck = {
@@ -17,44 +21,10 @@ type CampusDeck = {
   short: string;
   query: string;
   icon: UiIconName;
-  match: (request: AspireRequest) => boolean;
-};
-
-type FeedCategory = {
-  key: string;
-  label: string;
-  query: string;
-  icon: UiIconName;
-  tone: string;
-};
-
-type DemoRecentPost = {
-  id: string;
-  title: string;
-  ageHours: number;
-  image: string | 'campus';
-  price: string;
-  paid?: boolean;
-  popularitySeed: number;
-};
-
-type FeedEntry = {
-  id: string;
-  title: string;
-  category: FeedCategory;
-  href: string;
-  time: string;
-  createdAt: number;
-  image?: string;
-  price: string;
-  paid: boolean;
-  author: string;
-  demo: boolean;
-  popularitySeed: number;
+  match: (request: DiscoverRequest) => boolean;
 };
 
 type FeedMode = 'latest' | 'popular';
-
 type FeedClicks = Record<string, number>;
 
 const FEED_CLICK_KEY = 'aspire:campus-feed-clicks:v1';
@@ -67,136 +37,33 @@ const decks: CampusDeck[] = [
   { key: 'gaming', label: 'Gaming', short: 'Duos + teammates', query: 'Gaming / duos', icon: 'game', match: (r) => /gaming|game|valorant|league|fortnite|duo|queue|cs2|playstation|xbox/i.test(`${r.category} ${r.title}`) },
   { key: 'projects', label: 'Projects', short: 'Builders + collaborators', query: 'Build something', icon: 'code', match: (r) => /project|collab|designer|hackathon|build|startup|code|teammate/i.test(`${r.category} ${r.title}`) },
   { key: 'people', label: 'People', short: 'Friends + campus plans', query: 'People / community', icon: 'users', match: (r) => /community|people|friend|group|club|ski|gym|corec|hang|coffee|meet/i.test(`${r.category} ${r.title}`) },
-  { key: 'services', label: 'Services', short: 'Campus help nearby', query: 'Give me a hand', icon: 'wrench', match: (r) => /service|moving|move|repair|clean|photograph|photographer|assemble|fix|carry/i.test(`${r.category} ${r.title}`) },
+  { key: 'services', label: 'Services', short: 'Campus help nearby', query: 'Give me a hand', icon: 'wrench', match: (r) => /service|moving|move|repair|clean|photograph|photographer|assemble|fix|carry|errand/i.test(`${r.category} ${r.title}`) },
   { key: 'events', label: 'Events', short: 'Meetups + campus events', query: 'People / community', icon: 'calendar', match: (r) => /event|nightshift|buildpurdue|meetup|workshop|callout|concert|party|tabling/i.test(`${r.category} ${r.title}`) }
-];
-
-const feedCategories: FeedCategory[] = [
-  { key: 'events', label: 'Events', query: 'People / community', icon: 'calendar', tone: 'events' },
-  { key: 'rides', label: 'Rides', query: 'Get me there', icon: 'car', tone: 'rides' },
-  { key: 'housing', label: 'Housing', query: 'People / community', icon: 'home', tone: 'housing' },
-  { key: 'market', label: 'Buy & Sell', query: 'Buy & sell', icon: 'tag', tone: 'market' },
-  { key: 'study', label: 'Study Help', query: 'Study / class', icon: 'book', tone: 'study' },
-  { key: 'gaming', label: 'Gaming', query: 'Gaming / duos', icon: 'game', tone: 'gaming' },
-  { key: 'projects', label: 'Projects', query: 'Build something', icon: 'code', tone: 'projects' },
-  { key: 'services', label: 'Services', query: 'Give me a hand', icon: 'wrench', tone: 'services' },
-  { key: 'people', label: 'People', query: 'People / community', icon: 'users', tone: 'people' }
-];
-
-const demoRecentPosts: DemoRecentPost[] = [
-  {
-    id: 'demo-nightshift',
-    title: 'Anyone want to go to BuildPurdue Nightshift together?',
-    ageHours: 1,
-    image: 'https://www.buildpurdue.org/_next/image?q=75&url=%2Flanding%2Fnightshift_sample.JPG&w=3840',
-    price: 'Free',
-    popularitySeed: 5
-  },
-  {
-    id: 'demo-corec',
-    title: 'Anyone want to go to CoRec together later?',
-    ageHours: 2,
-    image: 'https://localist-images.azureedge.net/photos/40101082677033/card/b82ef141532a8b4dc9f48b55bd8fce76f7c633e9.jpg',
-    price: 'Free',
-    popularitySeed: 7
-  },
-  {
-    id: 'demo-gaming',
-    title: 'Anyone want to game tonight?',
-    ageHours: 3,
-    image: 'https://engineering.purdue.edu/AAE/spotlights/2024/2024-0822-Purdue-Dell-Technologies-celebrate-opening-of-Alienware-Purdue-Gaming-Lounge/Purdue-Alienware-Gaming-Lounge-web.jpg',
-    price: 'Free',
-    popularitySeed: 10
-  },
-  {
-    id: 'demo-airport',
-    title: 'Anyone heading to IND? Looking for an airport ride.',
-    ageHours: 5,
-    image: 'campus',
-    price: '$25',
-    paid: true,
-    popularitySeed: 8
-  },
-  {
-    id: 'demo-study',
-    title: 'Math 55 study group later today?',
-    ageHours: 6,
-    image: 'campus',
-    price: 'Free',
-    popularitySeed: 9
-  },
-  {
-    id: 'demo-hangout',
-    title: 'Anyone free to grab coffee on campus?',
-    ageHours: 8,
-    image: 'campus',
-    price: 'Free',
-    popularitySeed: 4
-  }
 ];
 
 const campusImageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1600';
 
-function normalizeCampus(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
-}
-
-function sameCampus(request: AspireRequest, campus: University) {
-  if (!request.campus) return false;
-  const requestCampus = normalizeCampus(request.campus);
-  const campusName = normalizeCampus(campus.name);
-  const campusShort = normalizeCampus(campus.short_name);
-  const campusSlug = normalizeCampus(campus.slug);
-  return requestCampus === campusName || requestCampus === campusShort || requestCampus === campusSlug || requestCampus.includes(campusShort) || campusName.includes(requestCampus);
-}
-
-function relativeTime(value: string) {
-  const diff = Date.now() - new Date(value).getTime();
-  const minutes = Math.max(1, Math.floor(diff / 60000));
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-function compactTitle(title: string, limit = 46) {
-  return title.length <= limit ? title : `${title.slice(0, limit - 1).trim()}…`;
-}
-
-function classifyFeed(title: string, category = '', kind = '') {
-  const text = `${category} ${title}`.toLowerCase();
-  if (/event|nightshift|buildpurdue|meetup|workshop|callout|concert|party|tabling/.test(text)) return feedCategories[0];
-  if (/ride|transport|airport|\bind\b|chicago|indy|pickup|carpool|driver/.test(text)) return feedCategories[1];
-  if (/housing|roommate|sublet|lease|rent|apartment|dorm|room for rent/.test(text)) return feedCategories[2];
-  if (kind === 'buy_sell' || /buy|sell|market|for sale|wanted|airpods|macbook|furniture|lamp/.test(text)) return feedCategories[3];
-  if (/study|class|tutor|math|calc|exam|homework|notes|course|quiz/.test(text)) return feedCategories[4];
-  if (/gaming|game|valorant|league|fortnite|duo|queue|cs2|playstation|xbox/.test(text)) return feedCategories[5];
-  if (/project|collab|designer|hackathon|build|startup|code|teammate/.test(text)) return feedCategories[6];
-  if (/service|moving|move|repair|clean|photograph|photographer|assemble|fix|carry/.test(text)) return feedCategories[7];
-  return feedCategories[8];
-}
-
-function requestPrice(request: AspireRequest) {
-  if (request.amount_cents != null) {
-    const amount = request.amount_cents / 100;
-    return `$${amount.toFixed(Number.isInteger(amount) ? 0 : 2)}`;
-  }
-  if (request.kind === 'community' || request.kind === 'collaboration') return 'Free';
-  return 'Open';
+function mergeRequests(primary: DiscoverRequest[], extra: DiscoverRequest[]) {
+  const merged = new Map<string, DiscoverRequest>();
+  primary.forEach((item) => merged.set(item.id, item));
+  extra.forEach((item) => { if (!merged.has(item.id)) merged.set(item.id, item); });
+  return Array.from(merged.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
 export default function CampusHome() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [universities, setUniversities] = useState<University[]>([]);
   const [homeCampusId, setHomeCampusId] = useState<string | null>(null);
   const [activeCampusId, setActiveCampusId] = useState<string | null>(null);
   const [pendingCampusId, setPendingCampusId] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [requests, setRequests] = useState<AspireRequest[]>([]);
+  const [requests, setRequests] = useState<DiscoverRequest[]>([]);
   const [feedMode, setFeedMode] = useState<FeedMode>('latest');
   const [feedClicks, setFeedClicks] = useState<FeedClicks>({});
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -210,10 +77,9 @@ export default function CampusHome() {
       }
 
       try {
-        const [profileResult, campusList, open] = await Promise.all([
-          supabase.from('profiles').select('display_name,name,full_name,home_campus_id,school').eq('id', data.user.id).maybeSingle(),
-          fetchActiveUniversities(),
-          fetchOpenRequests(60)
+        const [profileResult, campusList] = await Promise.all([
+          supabase.from('profiles').select('display_name,name,full_name,home_campus_id,current_campus_id,school').eq('id', data.user.id).maybeSingle(),
+          fetchActiveUniversities()
         ]);
         if (!alive) return;
 
@@ -221,14 +87,21 @@ export default function CampusHome() {
         const profileRow = profileResult.data;
         const rawName = profileRow?.display_name || profileRow?.full_name || profileRow?.name || (typeof metadata.display_name === 'string' ? metadata.display_name : '');
         const homeId = typeof profileRow?.home_campus_id === 'string' ? profileRow.home_campus_id : null;
+        const currentId = typeof profileRow?.current_campus_id === 'string' ? profileRow.current_campus_id : null;
+        const storedCampus = window.sessionStorage.getItem('aspire-active-campus-id');
+        const validIds = new Set(campusList.map((campus) => campus.id));
+        const nextActive = storedCampus && validIds.has(storedCampus)
+          ? storedCampus
+          : currentId && validIds.has(currentId)
+            ? currentId
+            : homeId;
 
         setName((rawName || '').trim());
+        setCurrentUserId(data.user.id);
         setUniversities(campusList);
         setHomeCampusId(homeId);
-        setActiveCampusId(homeId);
-        setRequests(open);
-      } catch {
-        if (alive) setRequests([]);
+        setActiveCampusId(nextActive);
+        if (nextActive) window.sessionStorage.setItem('aspire-active-campus-id', nextActive);
       } finally {
         if (alive) setLoading(false);
       }
@@ -240,13 +113,49 @@ export default function CampusHome() {
   }, [router]);
 
   useEffect(() => {
+    const refresh = () => setFeedRefreshKey((value) => value + 1);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === CAMPUS_FEED_REFRESH_STORAGE_KEY) refresh();
+    };
+    const onFocus = () => refresh();
+    window.addEventListener(CAMPUS_FEED_REFRESH_EVENT, refresh);
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener(CAMPUS_FEED_REFRESH_EVENT, refresh);
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeCampusId || !currentUserId) return;
+    const campus = universities.find((item) => item.id === activeCampusId);
+    if (!campus) return;
+    let alive = true;
+
+    fetchCampusFeedRequests({ campusId: activeCampusId, category: 'Anything', limit: 60 })
+      .then((data) => {
+        if (!alive) return;
+        let next = data;
+        if (isPreviewDemoEnabled()) {
+          next = mergeRequests(next, buildDemoDiscoverRequests(currentUserId, campus.id, campus.name, campus.cover_image));
+        }
+        setRequests(next);
+      })
+      .catch(() => { if (alive) setRequests([]); });
+
+    return () => { alive = false; };
+  }, [activeCampusId, currentUserId, universities, feedRefreshKey]);
+
+  useEffect(() => {
     try {
       const saved = window.localStorage.getItem(FEED_CLICK_KEY);
       if (!saved) return;
       const parsed = JSON.parse(saved) as FeedClicks;
       if (parsed && typeof parsed === 'object') setFeedClicks(parsed);
     } catch {
-      // Popular sorting still works with the demo engagement seed.
+      // Latest sorting still works without local engagement history.
     }
   }, []);
 
@@ -255,23 +164,33 @@ export default function CampusHome() {
   const pendingCampus = useMemo(() => universities.find((item) => item.id === pendingCampusId) ?? null, [universities, pendingCampusId]);
   const firstName = useMemo(() => name.split(/\s+/).filter(Boolean)[0] || '', [name]);
   const visiting = Boolean(selectedCampus && homeCampus && selectedCampus.id !== homeCampus.id);
-  const campusRequests = useMemo(() => selectedCampus ? requests.filter((request) => sameCampus(request, selectedCampus)) : [], [requests, selectedCampus]);
 
   const sectionData = useMemo(() => decks.map((deck) => {
-    const matches = campusRequests.filter(deck.match);
+    const matches = requests.filter(deck.match);
     return { deck, count: matches.length };
-  }), [campusRequests]);
+  }), [requests]);
+
+  const feedEntries = useMemo(() => [...requests].sort((a, b) => {
+    if (feedMode === 'popular') {
+      const scoreA = feedClicks[a.id] || 0;
+      const scoreB = feedClicks[b.id] || 0;
+      if (scoreA !== scoreB) return scoreB - scoreA;
+    }
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  }).slice(0, 8), [requests, feedMode, feedClicks]);
 
   function chooseCampus(nextId: string) {
     if (nextId === activeCampusId) return;
     if (nextId === homeCampusId) {
       setActiveCampusId(nextId);
+      window.sessionStorage.setItem('aspire-active-campus-id', nextId);
       setPendingCampusId(null);
       return;
     }
     const key = `aspire-campus-confirmed:${nextId}`;
-    if (typeof window !== 'undefined' && window.sessionStorage.getItem(key) === '1') {
+    if (window.sessionStorage.getItem(key) === '1') {
       setActiveCampusId(nextId);
+      window.sessionStorage.setItem('aspire-active-campus-id', nextId);
       return;
     }
     setPendingCampusId(nextId);
@@ -279,7 +198,8 @@ export default function CampusHome() {
 
   function confirmCampusSwitch() {
     if (!pendingCampusId) return;
-    if (typeof window !== 'undefined') window.sessionStorage.setItem(`aspire-campus-confirmed:${pendingCampusId}`, '1');
+    window.sessionStorage.setItem(`aspire-campus-confirmed:${pendingCampusId}`, '1');
+    window.sessionStorage.setItem('aspire-active-campus-id', pendingCampusId);
     setActiveCampusId(pendingCampusId);
     setPendingCampusId(null);
   }
@@ -318,51 +238,6 @@ export default function CampusHome() {
 
   const campusCardImage = selectedCampus.cover_image || campusImageFallback;
   const authorName = name || 'Aspire student';
-  const now = Date.now();
-  const demoCards = demoRecentPosts.slice(0, Math.max(0, 8 - Math.min(campusRequests.length, 8)));
-
-  const feedEntries: FeedEntry[] = [
-    ...campusRequests.slice(0, 12).map((request) => {
-      const category = classifyFeed(request.title, request.category, request.kind);
-      return {
-        id: request.id,
-        title: request.title,
-        category,
-        href: `/discover?category=${encodeURIComponent(category.query)}`,
-        time: relativeTime(request.created_at),
-        createdAt: new Date(request.created_at).getTime(),
-        price: requestPrice(request),
-        paid: request.amount_cents != null,
-        author: 'Purdue student',
-        demo: false,
-        popularitySeed: 0
-      };
-    }),
-    ...demoCards.map((post) => {
-      const category = classifyFeed(post.title);
-      return {
-        id: post.id,
-        title: post.title,
-        category,
-        href: `/discover?category=${encodeURIComponent(category.query)}`,
-        time: `${post.ageHours}h ago`,
-        createdAt: now - post.ageHours * 60 * 60 * 1000,
-        image: post.image === 'campus' ? campusCardImage : post.image,
-        price: post.price,
-        paid: Boolean(post.paid),
-        author: authorName,
-        demo: true,
-        popularitySeed: post.popularitySeed
-      };
-    })
-  ].sort((a, b) => {
-    if (feedMode === 'popular') {
-      const scoreA = a.popularitySeed + (feedClicks[a.id] || 0);
-      const scoreB = b.popularitySeed + (feedClicks[b.id] || 0);
-      if (scoreA !== scoreB) return scoreB - scoreA;
-    }
-    return b.createdAt - a.createdAt;
-  }).slice(0, 8);
 
   return (
     <main className={`campusHome ${styles.page}`}>
@@ -387,10 +262,8 @@ export default function CampusHome() {
             <select className={styles.campusSelect} value={activeCampusId || ''} onChange={(event) => chooseCampus(event.target.value)} aria-label="Choose campus to browse">
               {universities.map((campus) => <option key={campus.id} value={campus.id}>{campus.short_name}</option>)}
             </select>
-            {visiting && <button className={styles.returnButton} type="button" onClick={() => setActiveCampusId(homeCampus.id)}>Home campus</button>}
-            <a className={styles.iconButton} href="/connections" aria-label="Open connections">
-              <UiIcon name="bell" />
-            </a>
+            {visiting && <button className={styles.returnButton} type="button" onClick={() => chooseCampus(homeCampus.id)}>Home campus</button>}
+            <a className={styles.iconButton} href="/connections" aria-label="Open connections"><UiIcon name="bell" /></a>
             <div className={styles.profileWrap}>
               <button type="button" onClick={() => setProfileMenuOpen((value) => !value)} className={styles.avatarButton} aria-label="Open profile menu" aria-expanded={profileMenuOpen}>{firstName ? firstName[0].toUpperCase() : 'A'}</button>
               {profileMenuOpen && (
@@ -428,7 +301,7 @@ export default function CampusHome() {
               </div>
               <div className={styles.categoryGrid}>
                 {sectionData.map(({ deck, count }) => (
-                  <a key={deck.key} href={`/discover?category=${encodeURIComponent(deck.query)}`} className={styles.categoryCard}>
+                  <a key={deck.key} href={`/discover?category=${encodeURIComponent(deck.query)}&campus=${encodeURIComponent(selectedCampus.id)}`} className={styles.categoryCard}>
                     <div className={styles.categoryIcon}><UiIcon name={deck.icon} /></div>
                     <strong>{deck.label}</strong>
                     <span>{count ? `${count} open` : deck.short}</span>
@@ -442,38 +315,35 @@ export default function CampusHome() {
                 <div>
                   <p>Right now</p>
                   <h2>Recent Posts</h2>
-                  <span className="campusFeedSubtitle">{selectedCampus.short_name} · automatically categorized</span>
+                  <span className="campusFeedSubtitle">{selectedCampus.short_name} · same live feed as Browse</span>
                 </div>
                 <div className="campusFeedControls" role="group" aria-label="Sort recent campus posts">
                   <button type="button" className={feedMode === 'latest' ? 'active' : ''} onClick={() => setFeedMode('latest')}>Latest</button>
                   <button type="button" className={feedMode === 'popular' ? 'active' : ''} onClick={() => setFeedMode('popular')}><UiIcon name="flame" />Popular</button>
-                  <a href="/discover" aria-label="Open browse filters"><UiIcon name="sliders" /></a>
+                  <a href={`/discover?campus=${encodeURIComponent(selectedCampus.id)}`} aria-label="Open browse filters"><UiIcon name="sliders" /></a>
                 </div>
               </div>
 
               <div className={styles.feed}>
-                {feedEntries.map((entry) => (
-                  <a key={entry.id} href={entry.href} onClick={() => recordFeedClick(entry.id)} className={`${styles.feedItem} ${entry.image ? 'demoRecentCard' : 'autoRecentCard'}`}>
-                    {entry.image ? (
-                      <div className="demoRecentImageWrap">
-                        <img className="demoRecentImage" src={entry.image} alt="" />
-                        <span className="demoRecentCategory" data-tone={entry.category.tone}>{entry.category.label}</span>
-                      </div>
-                    ) : (
-                      <div className={`${styles.feedIcon} autoRecentVisual`}>
-                        <UiIcon name={entry.category.icon} />
-                        <span className="demoRecentCategory" data-tone={entry.category.tone}>{entry.category.label}</span>
-                      </div>
-                    )}
-                    <div className={`${styles.feedCopy} demoRecentCopy`}>
-                      <strong>{compactTitle(entry.title)}</strong>
-                      <span className="campusFeedPrice" data-paid={entry.paid ? 'true' : 'false'}>{entry.price}</span>
-                      {entry.demo ? <span className="demoRecentAuthor"><b>{firstName ? firstName[0].toUpperCase() : 'A'}</b>{entry.author}</span> : <span className="campusFeedAuthor">{entry.author}</span>}
-                      <span>{selectedCampus.short_name} · {entry.time}</span>
-                    </div>
-                    <span className={styles.feedArrow}><UiIcon name="chevron" /></span>
+                {feedEntries.map((item) => {
+                  const mine = Boolean(currentUserId && item.poster_id === currentUserId);
+                  return <CampusFeedCard
+                    key={item.id}
+                    item={item}
+                    campusLabel={selectedCampus.short_name}
+                    currentUserId={currentUserId}
+                    authorName={authorName}
+                    fallbackImage={campusCardImage}
+                    footerLeft={<span className={campusFeedCardStyles.secondaryAction}>{mine ? 'Your post' : 'Campus post'}</span>}
+                    footerRight={<a className={campusFeedCardStyles.primaryAction} href={campusFeedHref(item, selectedCampus.id)} onClick={() => recordFeedClick(item.id)}>Open →</a>}
+                  />;
+                })}
+                {!feedEntries.length && (
+                  <a className={styles.emptyFeed} href="/post">
+                    <strong>Your campus feed is quiet right now.</strong>
+                    <span>Start the first post for {selectedCampus.short_name} →</span>
                   </a>
-                ))}
+                )}
               </div>
             </section>
           </div>
