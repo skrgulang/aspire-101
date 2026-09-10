@@ -22,8 +22,8 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
 
 const discoverLanguageKey = 'aspire:discover-language';
 const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
-const seededCorecImage = '/api/seeded-post-image?name=corec';
-const seededGamingImage = '/api/seeded-post-image?name=gaming';
+const seededCorecImage = '/seeded/corec.webp';
+const seededGamingImage = '/seeded/gaming.webp';
 
 function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
   if (value) return value;
@@ -45,8 +45,8 @@ function seededMedia(row: Pick<DiscoverRequest, 'id' | 'title' | 'poster_id' | '
     id: `seeded-${row.id}`,
     request_id: row.id,
     uploader_id: row.poster_id,
-    storage_path: `seeded/${row.id}.jpg`,
-    mime_type: 'image/jpeg',
+    storage_path: `seeded/${row.id}.webp`,
+    mime_type: 'image/webp',
     sort_order: 0,
     created_at: row.created_at,
     public_url: image
