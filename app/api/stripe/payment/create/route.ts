@@ -4,10 +4,23 @@ import {
   getAuthenticatedUser,
   getSupabaseServiceClient,
   publicOrigin,
-  stripeFormRequest
+  stripeFormRequest,
+  stripeGet
 } from '../../../../../lib/server/aspireServer';
 
 type CheckoutSession = { id: string; url: string | null };
+
+type StripeConnectAccount = {
+  capabilities?: { transfers?: string | null };
+  payouts_enabled?: boolean;
+  details_submitted?: boolean;
+  requirements?: {
+    currently_due?: string[];
+    past_due?: string[];
+    pending_verification?: string[];
+    disabled_reason?: string | null;
+  };
+};
 
 type PaymentRow = {
   id: string;
@@ -53,6 +66,25 @@ type FeeQuote = {
   minimum_paid_order_cents: number;
   standard_payout_cadence: string;
 };
+
+function stripePayoutState(account: StripeConnectAccount) {
+  const transferActive = account.capabilities?.transfers === 'active';
+  const payoutsEnabled = account.payouts_enabled === true;
+  const currentlyDue = account.requirements?.currently_due ?? [];
+  const pastDue = account.requirements?.past_due ?? [];
+  const disabledReason = account.requirements?.disabled_reason || '';
+  const requirementsDue = new Set([...currentlyDue, ...pastDue]).size;
+  const ready = transferActive && payoutsEnabled;
+  const status = ready
+    ? 'READY'
+    : pastDue.length > 0 || disabledReason.includes('past_due')
+      ? 'RESTRICTED'
+      : currentlyDue.length > 0 || account.details_submitted === false
+        ? 'ACTION_REQUIRED'
+        : 'UNDER_REVIEW';
+
+  return { ready, status, requirementsDue };
+}
 
 function quoteFromPayment(payment: PaymentRow): FeeQuote | null {
   if (
@@ -134,9 +166,23 @@ export async function POST(request: Request) {
       .eq('user_id', payeeId)
       .maybeSingle();
 
-    if (!payoutAccount?.stripe_account_id || payoutAccount.status !== 'READY' || payoutAccount.transfers_enabled !== true) {
-      throw new Error('PAYOUT_NOT_READY');
-    }
+    if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
+
+    // Do not trust a stale local READY/RESTRICTED flag. Stripe's stable Connect
+    // account endpoint is the source of truth immediately before checkout.
+    const stripeAccount = await stripeGet<StripeConnectAccount>(
+      `/v1/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}`
+    );
+    const payoutState = stripePayoutState(stripeAccount);
+    await supabase.from('payment_accounts').update({
+      status: payoutState.status,
+      transfers_enabled: payoutState.ready,
+      requirements_due: payoutState.requirementsDue,
+      last_synced_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }).eq('user_id', payeeId);
+    if (!payoutState.ready) throw new Error('PAYOUT_NOT_READY');
+
     if (existingPayment && ['secured', 'released'].includes(existingPayment.status)) throw new Error('PAYMENT_ALREADY_SECURED');
 
     const baseAmount = Number(connection.agreed_amount_cents ?? aspireRequest.amount_cents ?? 0);
