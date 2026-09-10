@@ -1,0 +1,497 @@
+/* Signed-in Create Post refresh. Presentation only: keep posting/auth/payment logic intact. */
+body:has(.postPageRefreshed) { background: #f7f7f5; }
+html[data-aspire-theme='dark'] body:has(.postPageRefreshed) { background: #0b0b0a; }
+
+.postPageRefreshed {
+  --post-bg: #f7f7f5;
+  --post-surface: #ffffff;
+  --post-surface-2: #fafaf8;
+  --post-text: #171717;
+  --post-muted: #777772;
+  --post-border: #e5e5e0;
+  --post-soft: #f1f1ed;
+  --post-gold: #ffc72c;
+  min-height: 100vh;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: var(--post-bg) !important;
+  color: var(--post-text) !important;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+html[data-aspire-theme='dark'] .postPageRefreshed {
+  --post-bg: #0b0b0a;
+  --post-surface: #111110;
+  --post-surface-2: #151513;
+  --post-text: #f5f1e7;
+  --post-muted: #99938a;
+  --post-border: rgba(255,255,255,.11);
+  --post-soft: rgba(255,255,255,.045);
+  background:
+    radial-gradient(circle at 72% 0%, rgba(255,199,44,.055), transparent 30rem),
+    #0b0b0a !important;
+}
+
+.postPageRefreshed::before,
+.postPageRefreshed .postPageGlow,
+.postPageRefreshed .postDoodle,
+.postPageRefreshed .postSide { display: none !important; }
+
+.postWorkspace {
+  width: auto;
+  max-width: none;
+  margin-left: 92px;
+  padding: 30px 28px 100px;
+}
+
+.postWorkspaceHeader {
+  width: min(1480px, 100%);
+  margin: 0 auto 26px;
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(440px, 560px);
+  gap: 34px;
+  align-items: end;
+  border-bottom: 1px solid var(--post-border);
+  padding-bottom: 22px;
+}
+.postWorkspaceHeader h1 {
+  margin: 0;
+  font-size: clamp(34px, 3vw, 46px);
+  line-height: 1;
+  letter-spacing: -.045em;
+  color: var(--post-text);
+}
+.postWorkspaceHeader p {
+  margin: 7px 0 0;
+  color: var(--post-muted);
+  font-size: 14px;
+}
+
+.postProgress {
+  margin: 0;
+  padding: 0 0 4px;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.postProgress li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: var(--post-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.postProgress li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: calc(50% + 17px);
+  right: calc(-50% + 17px);
+  height: 1px;
+  background: var(--post-border);
+}
+.postProgress b {
+  position: relative;
+  z-index: 2;
+  width: 31px;
+  height: 31px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--post-border);
+  border-radius: 50%;
+  background: var(--post-surface);
+  color: var(--post-muted);
+  font-size: 11px;
+}
+.postProgress .active { color: #9b7300; }
+.postProgress .active b {
+  border-color: var(--post-gold);
+  background: var(--post-gold);
+  color: #18130a;
+}
+html[data-aspire-theme='dark'] .postProgress .active { color: var(--post-gold); }
+
+.postWorkspaceGrid {
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 28px;
+  align-items: start;
+}
+.postMainColumn { min-width: 0; }
+.postPageRefreshed .postPanel {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+/* Form hierarchy: compact product UI instead of the legacy landing-page card. */
+.postPageRefreshed .postForm {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.postPageRefreshed .postFormHeading {
+  order: 0;
+  margin: 0 0 18px;
+}
+.postPageRefreshed .postFormHeading > .eyebrow,
+.postPageRefreshed .postFormHeading > h1,
+.postPageRefreshed .postFormHeading > p:last-child { display: none; }
+
+.postPageRefreshed .postModeSwitch {
+  width: 100%;
+  margin: 0;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  border: 1px solid var(--post-border);
+  border-radius: 16px;
+  background: var(--post-surface);
+}
+.postPageRefreshed .postModeSwitch a {
+  min-height: 42px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  color: var(--post-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+.postPageRefreshed .postModeSwitch a.active {
+  background: var(--post-gold);
+  color: #18130a;
+  box-shadow: 0 4px 14px rgba(255,199,44,.17);
+}
+
+.postPageRefreshed .agentDraftBanner { order: 1; }
+.postPageRefreshed .postCategoryPicker {
+  order: 2;
+  margin-top: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.postPageRefreshed .postCategoryPicker::before {
+  content: '1. Choose a category';
+  grid-column: 1 / -1;
+  margin: 0 0 2px;
+  color: var(--post-text);
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: -.02em;
+}
+.postPageRefreshed .postCategoryPicker button {
+  min-height: 118px;
+  padding: 15px 14px;
+  border: 1px solid var(--post-border);
+  border-radius: 15px;
+  background: var(--post-surface);
+  color: var(--post-text);
+  box-shadow: none;
+}
+.postPageRefreshed .postCategoryPicker button:hover {
+  transform: translateY(-1px);
+  border-color: #d4d4ce;
+  background: var(--post-surface-2);
+}
+.postPageRefreshed .postCategoryPicker button i {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--post-soft);
+  color: #8a6500;
+  font-size: 16px;
+}
+.postPageRefreshed .postCategoryPicker button strong {
+  margin-top: 11px;
+  color: var(--post-text);
+  font-size: 13px;
+}
+.postPageRefreshed .postCategoryPicker button span {
+  margin-top: 5px;
+  color: var(--post-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+.postPageRefreshed .postCategoryPicker button.active {
+  border-color: var(--post-gold);
+  background: linear-gradient(145deg, rgba(255,199,44,.15), rgba(255,199,44,.045));
+  box-shadow: inset 0 0 0 1px rgba(255,199,44,.10);
+}
+.postPageRefreshed .postCategoryPicker button.active i {
+  background: var(--post-gold);
+  color: #18130a;
+}
+html[data-aspire-theme='dark'] .postPageRefreshed .postCategoryPicker button:hover { border-color: rgba(255,255,255,.20); }
+
+.postPageRefreshed .postQuickStarts { order: 3; margin-top: 12px; }
+.postPageRefreshed .postQuickStarts > span { color: var(--post-muted); }
+.postPageRefreshed .postQuickStarts button {
+  border-color: var(--post-border);
+  background: var(--post-surface);
+  color: var(--post-muted);
+}
+.postPageRefreshed .postQuickStarts button:hover { color: var(--post-text); border-color: var(--post-gold); }
+
+.postPageRefreshed .postComposerField {
+  order: 4;
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid var(--post-border);
+  border-radius: 17px;
+  background: var(--post-surface);
+}
+.postPageRefreshed .postComposerField::before {
+  content: '2. Add the details';
+  color: var(--post-text);
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: -.02em;
+}
+.postPageRefreshed .postField > span,
+.postPageRefreshed .postKinds legend {
+  color: var(--post-muted);
+  font-size: 10px;
+  letter-spacing: .06em;
+}
+.postPageRefreshed .postField input,
+.postPageRefreshed .postField textarea,
+.postPageRefreshed .postField select {
+  border-color: var(--post-border);
+  border-radius: 12px;
+  background: var(--post-surface-2);
+  color: var(--post-text);
+}
+.postPageRefreshed .postField input:focus,
+.postPageRefreshed .postField textarea:focus,
+.postPageRefreshed .postField select:focus {
+  border-color: var(--post-gold);
+  background: var(--post-surface);
+  box-shadow: 0 0 0 3px rgba(255,199,44,.08);
+}
+.postPageRefreshed .postFieldLarge textarea {
+  min-height: 82px;
+  font-size: 16px;
+}
+
+.postPageRefreshed .postEssentials {
+  order: 5;
+  margin-top: 12px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(220px,.75fr) minmax(0,1.25fr);
+  gap: 16px;
+  border: 1px solid var(--post-border);
+  border-radius: 17px;
+  background: var(--post-surface);
+}
+.postPageRefreshed .postEssentials .postField,
+.postPageRefreshed .postEssentials .postKinds { margin-top: 0; }
+.postPageRefreshed .postKind {
+  border-color: var(--post-border);
+  background: var(--post-surface-2);
+  color: var(--post-text);
+}
+.postPageRefreshed .postKind span { color: var(--post-muted); }
+.postPageRefreshed .postKind.active {
+  border-color: var(--post-gold);
+  background: rgba(255,199,44,.11);
+}
+.postPageRefreshed .postKind.active strong { color: #8b6700; }
+html[data-aspire-theme='dark'] .postPageRefreshed .postKind.active strong { color: var(--post-gold); }
+
+.postPageRefreshed .postMoney,
+.postPageRefreshed .marketComposer,
+.postPageRefreshed .marketPaymentChoice { order: 6; }
+.postPageRefreshed .postMoneyFresh,
+.postPageRefreshed .marketComposer,
+.postPageRefreshed .marketPaymentChoice {
+  margin-top: 12px;
+  border-color: var(--post-border);
+  background: var(--post-surface);
+}
+.postPageRefreshed .moneyInput {
+  border-color: var(--post-border);
+  background: var(--post-surface-2);
+}
+.postPageRefreshed .moneyInput input { color: var(--post-text); }
+
+.postPageRefreshed .postDetailsField {
+  order: 7;
+  margin-top: 12px;
+  padding: 18px;
+  border: 1px solid var(--post-border);
+  border-radius: 17px;
+  background: var(--post-surface);
+}
+
+.postPageRefreshed .requestMediaComposer {
+  order: 8;
+  margin-top: 12px;
+  padding: 18px;
+  border: 1px dashed #cfcfc8;
+  border-radius: 17px;
+  background: var(--post-surface);
+}
+html[data-aspire-theme='dark'] .postPageRefreshed .requestMediaComposer { border-color: rgba(255,255,255,.18); }
+.postPageRefreshed .requestMediaHead::before {
+  content: '3. Add photos';
+  display: block;
+  margin-bottom: 8px;
+  color: var(--post-text);
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: -.02em;
+}
+
+.postPageRefreshed .postContextCard {
+  order: 9;
+  margin-top: 12px;
+  border-color: rgba(255,199,44,.28);
+  background: rgba(255,199,44,.07);
+}
+.postPageRefreshed .postContextCard strong { color: var(--post-text); }
+.postPageRefreshed .postContextCard p { color: var(--post-muted); }
+.postPageRefreshed .postContextCard a { color: #8c6900; }
+html[data-aspire-theme='dark'] .postPageRefreshed .postContextCard a { color: var(--post-gold); }
+.postPageRefreshed .postError { order: 10; }
+.postPageRefreshed .postSubmitRow {
+  order: 11;
+  margin-top: 14px;
+  padding: 16px 0 0;
+  border-top-color: var(--post-border);
+}
+.postPageRefreshed .postSubmitRow p { color: var(--post-muted); }
+.postPageRefreshed .postSubmitRow .buttonGold {
+  min-height: 44px;
+  border-radius: 12px;
+  background: var(--post-gold);
+  color: #18130a;
+}
+
+/* Right-side helper column, matching the reference without touching backend logic. */
+.postRightRail {
+  position: sticky;
+  top: 22px;
+  display: grid;
+  gap: 12px;
+}
+.postVerifiedCard,
+.postRailCard,
+.postPreviewPanel {
+  border: 1px solid var(--post-border);
+  border-radius: 16px;
+  background: var(--post-surface);
+}
+.postVerifiedCard {
+  padding: 15px;
+  display: grid;
+  grid-template-columns: 36px minmax(0,1fr);
+  gap: 11px;
+  align-items: center;
+  border-color: rgba(255,199,44,.27);
+  background: linear-gradient(145deg, rgba(255,199,44,.13), rgba(255,199,44,.045));
+}
+.postVerifiedIcon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--post-gold);
+  color: #171109;
+}
+.postVerifiedIcon svg { width: 18px; height: 18px; }
+.postVerifiedCard strong { display: block; color: #8c6700; font-size: 12px; }
+html[data-aspire-theme='dark'] .postVerifiedCard strong { color: var(--post-gold); }
+.postVerifiedCard span { display: block; margin-top: 3px; color: var(--post-muted); font-size: 9px; line-height: 1.4; }
+
+.postRailCard { padding: 18px; }
+.postRailHeading,
+.postPreviewTitle { display: flex; align-items: center; gap: 9px; }
+.postRailHeading svg,
+.postPreviewTitle svg { width: 19px; height: 19px; color: #977000; }
+html[data-aspire-theme='dark'] .postRailHeading svg,
+html[data-aspire-theme='dark'] .postPreviewTitle svg { color: var(--post-gold); }
+.postRailHeading h2,
+.postPreviewTitle h2 { margin: 0; font-size: 14px; letter-spacing: -.015em; }
+.postTipList { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.postTipList li { display: grid; grid-template-columns: 21px minmax(0,1fr); gap: 8px; align-items: start; color: var(--post-muted); font-size: 10px; line-height: 1.45; }
+.postTipList i { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #e7f4df; color: #4a7d36; }
+.postTipList i svg { width: 12px; height: 12px; }
+html[data-aspire-theme='dark'] .postTipList i { background: rgba(92,157,66,.22); color: #9bd47e; }
+.postSafetyLink { margin-top: 14px; display: inline-flex; align-items: center; gap: 5px; color: #8d6900; font-size: 10px; font-weight: 800; }
+.postSafetyLink svg { width: 13px; height: 13px; }
+html[data-aspire-theme='dark'] .postSafetyLink { color: var(--post-gold); }
+
+.postPreviewPanel { padding: 18px; }
+.postPreviewCard {
+  margin-top: 13px;
+  padding: 16px;
+  border: 1px solid var(--post-border);
+  border-radius: 14px;
+  background: var(--post-surface-2);
+}
+.postPreviewMeta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.postPreviewMeta span { color: #9a7300; font-size: 8px; font-weight: 900; letter-spacing: .09em; }
+.postPreviewMeta small { color: var(--post-muted); font-size: 8px; }
+.postPreviewCard > strong { display: block; margin-top: 14px; font-size: 16px; line-height: 1.25; }
+.postPreviewCard > p { margin: 8px 0 0; color: var(--post-muted); font-size: 10px; line-height: 1.5; }
+.postPreviewFooter { margin-top: 15px; padding-top: 12px; display: flex; align-items: center; gap: 7px; border-top: 1px solid var(--post-border); color: var(--post-muted); font-size: 9px; }
+.postPreviewFooter svg { width: 14px; height: 14px; }
+
+/* Gate/success states use the same workspace visual language. */
+.postPageRefreshed .postVerificationGate,
+.postPageRefreshed .postSuccess,
+.postPageRefreshed .postGateLoading {
+  border: 1px solid var(--post-border);
+  border-radius: 18px;
+  background: var(--post-surface);
+  color: var(--post-text);
+}
+
+@media (max-width: 1180px) {
+  .postWorkspaceGrid { grid-template-columns: minmax(0,1fr) 285px; gap: 18px; }
+  .postWorkspaceHeader { grid-template-columns: minmax(0,1fr) 430px; }
+  .postPageRefreshed .postCategoryPicker { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
+
+@media (max-width: 980px) {
+  .postWorkspace { margin-left: 0; padding: 22px 18px 110px; }
+  .postWorkspaceHeader { grid-template-columns: 1fr; gap: 20px; }
+  .postProgress { max-width: 520px; }
+  .postWorkspaceGrid { grid-template-columns: 1fr; }
+  .postRightRail { position: static; grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .postVerifiedCard, .postPreviewPanel { grid-column: 1 / -1; }
+}
+
+@media (max-width: 700px) {
+  .postWorkspace { padding: 18px 14px 104px; }
+  .postWorkspaceHeader { margin-bottom: 18px; padding-bottom: 16px; }
+  .postWorkspaceHeader h1 { font-size: 31px; }
+  .postWorkspaceHeader p { font-size: 12px; }
+  .postProgress { width: 100%; }
+  .postProgress span { font-size: 8px; }
+  .postProgress b { width: 27px; height: 27px; }
+  .postProgress li:not(:last-child)::after { top: 13px; }
+  .postPageRefreshed .postCategoryPicker { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .postPageRefreshed .postCategoryPicker button { min-height: 108px; }
+  .postPageRefreshed .postEssentials { grid-template-columns: 1fr; }
+  .postPageRefreshed .postMoney { grid-template-columns: 1fr; }
+  .postPageRefreshed .postContextCard { grid-template-columns: 1fr; }
+  .postPageRefreshed .postSubmitRow { align-items: stretch; flex-direction: column; gap: 12px; }
+  .postPageRefreshed .postSubmitRow .buttonGold { width: 100%; }
+  .postRightRail { grid-template-columns: 1fr; }
+  .postVerifiedCard, .postPreviewPanel { grid-column: auto; }
+}

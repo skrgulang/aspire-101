@@ -1,0 +1,34 @@
+/* Desktop signed-in navigation behaves as a compact rail that expands over content on hover. */
+@media (min-width: 901px) {
+  .campusHome {
+    padding-left: 108px !important;
+  }
+
+  .profilePagePolished {
+    padding-left: 112px !important;
+  }
+
+  .connectionsPage .connectionsShell {
+    margin-left: 96px !important;
+  }
+
+  .discoverPage .discoverShell,
+  .postPage .postShell {
+    margin-left: 96px !important;
+    margin-right: 24px;
+  }
+}
+
+@media (max-width: 900px) {
+  .campusHome,
+  .profilePagePolished {
+    padding-left: initial;
+  }
+
+  .connectionsPage .connectionsShell,
+  .discoverPage .discoverShell,
+  .postPage .postShell {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}

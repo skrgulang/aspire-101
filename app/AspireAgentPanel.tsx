@@ -9,13 +9,25 @@ import {
   saveAspireAgentDraft,
   saveAspireAgentMatches
 } from '../lib/supabase/aspireAi';
+import UiIcon, { UiIconName } from './UiIcon';
 
-const quickPrompts = [
-  'Get to the airport tomorrow',
-  'Find a study partner',
-  'Sell something on campus',
-  'I need help moving',
-  'Find a project teammate'
+type QuickPrompt = { label: string; value: string; icon: UiIconName };
+type BrainAbility = { title: string; description: string; icon: UiIconName };
+
+const quickPrompts: QuickPrompt[] = [
+  { label: 'Need a ride from IND', value: 'I land at IND and need a ride back to campus.', icon: 'car' },
+  { label: 'Find a study partner', value: 'Find a study partner on campus.', icon: 'book' },
+  { label: 'Sell an item', value: 'I want to sell something on campus.', icon: 'tag' },
+  { label: 'Need help moving', value: 'I need help moving something near campus.', icon: 'wrench' },
+  { label: 'Find project teammates', value: 'Find a project teammate on campus.', icon: 'code' },
+  { label: 'Meet people on campus', value: 'I want to meet people on campus.', icon: 'users' }
+];
+
+const abilities: BrainAbility[] = [
+  { title: 'Draft a post', description: 'Turn what you need into a clear, ready-to-edit campus post.', icon: 'activity' },
+  { title: 'Find matching requests', description: 'Search relevant posts and possibilities already on campus.', icon: 'search' },
+  { title: 'Suggest a category', description: 'Choose the best place for your request so people can find it.', icon: 'sliders' },
+  { title: 'Improve wording', description: 'Make your message clearer, more specific, and easier to respond to.', icon: 'message' }
 ];
 
 function money(value: number | null | undefined) {
@@ -33,14 +45,14 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   async function run(event?: FormEvent<HTMLFormElement>) {
     event?.preventDefault();
     const clean = message.trim();
-    if (clean.length < 3) return setError('Tell Aspire what you are trying to make happen.');
+    if (clean.length < 3) return setError('Tell Aspire what you need help with.');
     setBusy(true);
     setError('');
     try {
       const next = await runAspireAgent(clean, campusId);
       setResult(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Aspire Agent could not finish that plan.');
+      setError(err instanceof Error ? err.message : 'Aspire Brain could not finish that plan.');
     } finally {
       setBusy(false);
     }
@@ -67,33 +79,62 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
   }
 
   return (
-    <section className="aspireAgent" aria-label="Aspire Agent">
+    <section className="aspireAgent" aria-label="Aspire Brain">
       <div className="aspireAgentHalo" aria-hidden="true" />
       <div className="aspireAgentHead">
         <div>
-          <span className="aspireAgentKicker"><i>✦</i> ASPIRE AGENT</span>
-          <h2>What are you trying to <em>make happen?</em></h2>
-          <p>Describe the outcome. Aspire can understand the need, look across {campusName}, and prepare the next step.</p>
+          <h2>What do you need help with today?</h2>
+          <p>Aspire Brain can turn your need into a post, find relevant matches, or suggest the next step across {campusName}.</p>
         </div>
-        <b>AI DRIVE · BETA</b>
       </div>
 
       <form className="aspireAgentComposer" onSubmit={run}>
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder={`Try “My flight lands late and I need to get back to ${campusName}.”`}
-          rows={3}
+          placeholder={`Try “I land at IND at 11 PM and need a ride back to ${campusName}.”`}
+          rows={4}
           maxLength={1200}
-          aria-label="Tell Aspire Agent what you need"
+          aria-label="Tell Aspire Brain what you need"
         />
         <div>
-          <span>{message.length ? `${message.length}/1200` : 'Need → understand → match → act'}</span>
-          <button type="submit" disabled={busy}>{busy ? 'Thinking…' : 'Ask Aspire'} <i>✦</i></button>
+          <span>{message.length ? `${message.length}/1200` : 'Describe what you need in your own words.'}</span>
+          <button type="submit" disabled={busy}>{busy ? 'Thinking…' : 'Ask Aspire'} <span aria-hidden="true">→</span></button>
         </div>
       </form>
 
-      {!result && <div className="aspireAgentQuick"><span>TRY</span>{quickPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => usePrompt(prompt)}>{prompt}</button>)}</div>}
+      {!result && (
+        <>
+          <div className="aspireAgentQuick">
+            <span>Try a quick prompt:</span>
+            <div>
+              {quickPrompts.map((prompt) => (
+                <button type="button" key={prompt.label} onClick={() => usePrompt(prompt.value)}>
+                  <UiIcon name={prompt.icon} />
+                  {prompt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <section className="aspireBrainAbilities" aria-label="What Aspire Brain can do">
+            <div className="aspireBrainSectionHead">
+              <div><h3>What Aspire Brain can do</h3><p>Turn your needs into action without making the process feel complicated.</p></div>
+              <a href="/intelligence">Learn more <span>→</span></a>
+            </div>
+            <div className="aspireBrainAbilityGrid">
+              {abilities.map((ability) => (
+                <article key={ability.title}>
+                  <span><UiIcon name={ability.icon} /></span>
+                  <strong>{ability.title}</strong>
+                  <p>{ability.description}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
       {error && <p className="aspireAgentError" role="alert">{error}</p>}
 
       {result && (
@@ -134,11 +175,11 @@ export default function AspireAgentPanel({ campusId, campusName }: { campusId: s
                 {result.matches.length > 0 && <button type="button" className="button buttonGold" onClick={openMatches}>View best matches <span>→</span></button>}
                 <button type="button" className={result.matches.length ? 'aspireAgentSecondary' : 'button buttonGold'} onClick={buildRequest}>{result.plan.status === 'needs_details' ? 'Open editable draft' : 'Create request draft'} <span>↗</span></button>
               </div>
-              <small className="aspireAgentFine">Aspire Agent proposes actions; you stay in control. Any post still passes Safety Intelligence and human review before it can appear publicly.</small>
+              <small className="aspireAgentFine">Aspire Brain proposes actions; you stay in control. Any post still passes Safety Intelligence and human review before it can appear publicly.</small>
             </>
           )}
 
-          {result.status === 'blocked' && <small className="aspireAgentFine">Safety by design: Aspire Agent will not turn prohibited activity into a campus action.</small>}
+          {result.status === 'blocked' && <small className="aspireAgentFine">Safety by design: Aspire Brain will not turn prohibited activity into a campus action.</small>}
         </div>
       )}
     </section>
