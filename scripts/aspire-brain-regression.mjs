@@ -1,4 +1,4 @@
-import { inferIntentHints, rankCandidatesForIntent } from '../lib/server/aspireBrain.js';
+import { inferIntentHints, inferNavigationIntent, rankCandidatesForIntent } from '../lib/server/aspireBrain.js';
 
 const classificationCases = [
   ['Need a ride to SFO Friday, can split $30', { category: 'Ride', kind: 'split_cost', amount_cents: 3000 }],
@@ -24,4 +24,31 @@ const candidates = [
 const ranked = rankCandidatesForIntent('ride to airport Friday', candidates, 2);
 if (ranked[0]?.id !== 'ride') throw new Error(`ranking failed: ${ranked.map((item) => item.id).join(',')}`);
 
-console.log('Aspire Brain regression: 6/6 passed');
+const navigationCases = [
+  ['open connections', '/connections'],
+  ['show me saved', '/saved'],
+  ['go to profile', '/profile'],
+  ['payments', '/money'],
+  ['take me to discover', '/discover'],
+  ['create post', '/post'],
+  ['view activity', '/activity'],
+  ['open safety', '/safety']
+];
+
+for (const [input, expectedRoute] of navigationCases) {
+  const actual = inferNavigationIntent(input);
+  if (actual?.route !== expectedRoute) throw new Error(`${input}: route=${actual?.route} expected ${expectedRoute}`);
+}
+
+const negativeNavigationCases = [
+  'show me people who can help with math',
+  'find a study partner',
+  'I need help with a payment for a ride',
+  'post a request for moving help'
+];
+
+for (const input of negativeNavigationCases) {
+  if (inferNavigationIntent(input)) throw new Error(`${input}: should not be treated as direct navigation`);
+}
+
+console.log('Aspire Brain regression: 18/18 passed');
