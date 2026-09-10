@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import type { AspireRequest } from '../lib/supabase/requests';
 import UiIcon from './UiIcon';
+import { buildDemoAspireRequests, isDemoPreviewPostId, isPreviewDemoEnabled, setDemoPreviewPostStatus } from './demoPreviewPosts';
 import styles from './MyActivityManager.module.css';
 
 type ConnectionRow = { request_id: string; status: string };
@@ -50,10 +51,11 @@ export default function MyActivityManager() {
         .order('created_at', { ascending: false });
       if (error) throw error;
 
-      const nextRequests = (rows ?? []) as AspireRequest[];
-      setRequests(nextRequests);
+      const realRequests = (rows ?? []) as AspireRequest[];
+      const previewRequests = isPreviewDemoEnabled() ? buildDemoAspireRequests(auth.user.id, 'Purdue University') : [];
+      setRequests([...previewRequests, ...realRequests].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
 
-      if (!nextRequests.length) {
+      if (!realRequests.length) {
         setConnections([]);
         return;
       }
@@ -61,7 +63,7 @@ export default function MyActivityManager() {
       const { data: connectionRows, error: connectionError } = await supabase
         .from('connections')
         .select('request_id,status')
-        .in('request_id', nextRequests.map((request) => request.id));
+        .in('request_id', realRequests.map((request) => request.id));
       if (connectionError) throw connectionError;
       setConnections((connectionRows ?? []) as ConnectionRow[]);
     } catch (error) {
@@ -86,6 +88,7 @@ export default function MyActivityManager() {
   }), [requests]);
 
   function hasActiveConnection(requestId: string) {
+    if (isDemoPreviewPostId(requestId)) return false;
     return connections.some((connection) => connection.request_id === requestId && connection.status !== 'cancelled');
   }
 
@@ -94,6 +97,12 @@ export default function MyActivityManager() {
     setBusyId(request.id);
     setNotice('');
     try {
+      if (isDemoPreviewPostId(request.id)) {
+        setDemoPreviewPostStatus(request.id, 'cancelled');
+        setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status: 'cancelled' } : item));
+        setNotice('Preview post closed. It is now hidden from Home and Browse.');
+        return;
+      }
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.from('requests').update({ status: 'cancelled' }).eq('id', request.id);
       if (error) throw error;
@@ -116,6 +125,12 @@ export default function MyActivityManager() {
     setBusyId(request.id);
     setNotice('');
     try {
+      if (isDemoPreviewPostId(request.id)) {
+        setDemoPreviewPostStatus(request.id, 'deleted');
+        setRequests((current) => current.filter((item) => item.id !== request.id));
+        setNotice('Preview post deleted.');
+        return;
+      }
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.from('requests').delete().eq('id', request.id);
       if (error) throw error;
@@ -168,10 +183,11 @@ export default function MyActivityManager() {
         <div className={styles.list}>
           {visible.map((request) => {
             const protectedHistory = hasActiveConnection(request.id);
+            const preview = isDemoPreviewPostId(request.id);
             return (
               <article className={styles.card} key={request.id}>
                 <div className={styles.cardMain}>
-                  <div className={styles.category}>{request.category}</div>
+                  <div className={styles.category}>{preview ? 'Preview · ' : ''}{request.category}</div>
                   <h2>{request.title}</h2>
                   <p>{request.details || 'No description added.'}</p>
                   <div className={styles.meta}>
@@ -183,6 +199,7 @@ export default function MyActivityManager() {
 
                 <div className={styles.cardSide}>
                   <span className={`${styles.status} ${styles[`status_${request.status}`] || ''}`}>{request.status.replace('_', ' ')}</span>
+                  {preview && <small>Posted by your current preview account</small>}
                   {protectedHistory && <small><UiIcon name="shield" /> Activity history protected</small>}
                   <div className={styles.actions}>
                     {request.status === 'open' && (
