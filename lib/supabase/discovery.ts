@@ -20,6 +20,17 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
   media: RequestMedia[];
 };
 
+const discoverLanguageKey = 'aspire:discover-language';
+const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
+
+function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
+  if (value) return value;
+  if (typeof window === 'undefined') return 'all';
+  const stored = window.localStorage.getItem(discoverLanguageKey);
+  if (!stored || stored === 'all') return 'all';
+  return supportedLanguages.has(stored as RequestLanguageCode) ? stored as RequestLanguageCode : 'all';
+}
+
 async function attachMedia(rows: Omit<DiscoverRequest, 'latitude' | 'longitude' | 'media'>[]) {
   let media: RequestMedia[] = [];
   try {
@@ -71,12 +82,13 @@ export async function fetchDiscoverRequests(input: {
   limit?: number;
 }) {
   const supabase = getSupabaseBrowserClient();
+  const language = resolveLanguageFilter(input.language);
   const { data, error } = await supabase.rpc('discover_requests', {
     p_campus_id: input.campusId,
     p_query: input.query?.trim() || null,
     p_category: input.category || 'Anything',
     p_limit: input.limit ?? 40,
-    p_language: input.language && input.language !== 'all' ? input.language : null
+    p_language: language !== 'all' ? language : null
   });
   if (error) throw error;
 
@@ -93,10 +105,11 @@ export async function fetchCampusFeedRequests(input: {
 }) {
   const supabase = getSupabaseBrowserClient();
   const limit = input.limit ?? 40;
+  const language = resolveLanguageFilter(input.language);
 
   const [{ data: authData }, publicItems] = await Promise.all([
     supabase.auth.getUser(),
-    fetchDiscoverRequests(input)
+    fetchDiscoverRequests({ ...input, language })
   ]);
 
   if (!authData.user) return publicItems;
@@ -119,7 +132,7 @@ export async function fetchCampusFeedRequests(input: {
     // Public discovery should still render even if the user's private rows cannot be loaded.
   }
 
-  const ownItems = (await attachMedia(ownRows)).filter((item) => matchesLocalFilters(item, input.query, input.category, input.language));
+  const ownItems = (await attachMedia(ownRows)).filter((item) => matchesLocalFilters(item, input.query, input.category, language));
   const merged = new Map<string, DiscoverRequest>();
   publicItems.forEach((item) => merged.set(item.id, item));
   ownItems.forEach((item) => merged.set(item.id, item));
