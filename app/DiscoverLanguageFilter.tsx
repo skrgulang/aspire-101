@@ -9,10 +9,22 @@ const languageStorageKey = 'aspire:discover-language';
 const keywordStorageKey = 'aspire:discover-keywords';
 const priceStorageKey = 'aspire:discover-price';
 const photoStorageKey = 'aspire:discover-photo-only';
+const timeStorageKey = 'aspire:discover-time';
+const sortStorageKey = 'aspire:discover-sort';
 const refreshEvent = 'aspire:campus-feed-refresh';
 const suggestedKeywords = ['Airport', 'IND', 'Ride', 'Math 55', 'Study', 'Valorant', 'Gaming', 'Moving', 'Photographer', 'BuildPurdue'];
 
 type PriceFilter = 'any' | 'free' | 'paid';
+type TimeFilter = 'any' | 'today' | 'tonight' | 'tomorrow' | 'week';
+type SortMode = 'best' | 'soonest' | 'newest' | 'highest';
+
+const timeOptions: { value: TimeFilter; label: string }[] = [
+  { value: 'any', label: 'Any time' },
+  { value: 'today', label: 'Today' },
+  { value: 'tonight', label: 'Tonight' },
+  { value: 'tomorrow', label: 'Tomorrow' },
+  { value: 'week', label: 'This week' }
+];
 
 function readStoredKeywords() {
   try {
@@ -29,6 +41,8 @@ export default function DiscoverLanguageFilter() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [price, setPrice] = useState<PriceFilter>('any');
   const [photoOnly, setPhotoOnly] = useState(false);
+  const [time, setTime] = useState<TimeFilter>('any');
+  const [sort, setSort] = useState<SortMode>('best');
   const [draft, setDraft] = useState('');
   const [open, setOpen] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
@@ -39,9 +53,20 @@ export default function DiscoverLanguageFilter() {
       setLanguage(storedLanguage || 'all');
     }
     setKeywords(readStoredKeywords());
+
     const storedPrice = window.localStorage.getItem(priceStorageKey);
     if (storedPrice === 'free' || storedPrice === 'paid' || storedPrice === 'any') setPrice(storedPrice);
     setPhotoOnly(window.localStorage.getItem(photoStorageKey) === '1');
+
+    const storedTime = window.localStorage.getItem(timeStorageKey);
+    if (storedTime === 'today' || storedTime === 'tonight' || storedTime === 'tomorrow' || storedTime === 'week' || storedTime === 'any') {
+      setTime(storedTime);
+    }
+
+    const storedSort = window.localStorage.getItem(sortStorageKey);
+    if (storedSort === 'best' || storedSort === 'soonest' || storedSort === 'newest' || storedSort === 'highest') {
+      setSort(storedSort);
+    }
 
     let frame = 0;
     const findTarget = () => {
@@ -76,8 +101,8 @@ export default function DiscoverLanguageFilter() {
   }, [open]);
 
   const activeCount = useMemo(
-    () => keywords.length + (language === 'all' ? 0 : 1) + (price === 'any' ? 0 : 1) + (photoOnly ? 1 : 0),
-    [keywords, language, price, photoOnly]
+    () => keywords.length + (language === 'all' ? 0 : 1) + (price === 'any' ? 0 : 1) + (photoOnly ? 1 : 0) + (time === 'any' ? 0 : 1),
+    [keywords, language, price, photoOnly, time]
   );
 
   function notifyFeed() {
@@ -99,6 +124,18 @@ export default function DiscoverLanguageFilter() {
   function choosePhotoOnly(next: boolean) {
     setPhotoOnly(next);
     window.localStorage.setItem(photoStorageKey, next ? '1' : '0');
+    notifyFeed();
+  }
+
+  function chooseTime(next: TimeFilter) {
+    setTime(next);
+    window.localStorage.setItem(timeStorageKey, next);
+    notifyFeed();
+  }
+
+  function chooseSort(next: SortMode) {
+    setSort(next);
+    window.localStorage.setItem(sortStorageKey, next);
     notifyFeed();
   }
 
@@ -131,11 +168,15 @@ export default function DiscoverLanguageFilter() {
     setKeywords([]);
     setPrice('any');
     setPhotoOnly(false);
+    setTime('any');
+    setSort('best');
     setDraft('');
     window.localStorage.setItem(languageStorageKey, 'all');
     window.localStorage.removeItem(keywordStorageKey);
     window.localStorage.setItem(priceStorageKey, 'any');
     window.localStorage.removeItem(photoStorageKey);
+    window.localStorage.setItem(timeStorageKey, 'any');
+    window.localStorage.setItem(sortStorageKey, 'best');
     notifyFeed();
   }
 
@@ -164,6 +205,11 @@ export default function DiscoverLanguageFilter() {
             <button type="button" onClick={() => setOpen(false)} aria-label="Close filters">×</button>
           </div>
 
+          <div className={styles.searchExample}>
+            <span>Try a natural search</span>
+            <code>ride to IND tonight under $25</code>
+          </div>
+
           <section className={styles.section}>
             <div className={styles.sectionHead}><strong>Keywords</strong><span>Combine interests, places, classes, or activities</span></div>
             <div className={styles.chips}>
@@ -186,6 +232,17 @@ export default function DiscoverLanguageFilter() {
           </section>
 
           <section className={styles.section}>
+            <div className={styles.sectionHead}><strong>When</strong><span>Only scheduled posts match a time filter</span></div>
+            <div className={styles.timeGrid} role="group" aria-label="Time filter">
+              {timeOptions.map((option) => (
+                <button key={option.value} type="button" className={time === option.value ? styles.selected : ''} onClick={() => chooseTime(option.value)}>
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.section}>
             <div className={styles.sectionHead}><strong>Price</strong><span>Free hangouts or paid requests</span></div>
             <div className={styles.segmented} role="group" aria-label="Price filter">
               {(['any','free','paid'] as PriceFilter[]).map((option) => (
@@ -194,6 +251,16 @@ export default function DiscoverLanguageFilter() {
                 </button>
               ))}
             </div>
+          </section>
+
+          <section className={styles.section}>
+            <div className={styles.sectionHead}><strong>Sort</strong><span>Choose what should rise to the top</span></div>
+            <select value={sort} onChange={(event) => chooseSort(event.target.value as SortMode)} aria-label="Sort campus search results">
+              <option value="best">Best match</option>
+              <option value="soonest">Soonest</option>
+              <option value="newest">Newest</option>
+              <option value="highest">Highest pay</option>
+            </select>
           </section>
 
           <section className={styles.section}>
@@ -213,7 +280,7 @@ export default function DiscoverLanguageFilter() {
           </section>
 
           <div className={styles.footer}>
-            <button type="button" className={styles.clear} onClick={clearAll} disabled={!activeCount}>Clear all</button>
+            <button type="button" className={styles.clear} onClick={clearAll} disabled={!activeCount && sort === 'best'}>Clear all</button>
             <button type="button" className={styles.done} onClick={() => setOpen(false)}>Show results</button>
           </div>
         </div>
