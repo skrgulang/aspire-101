@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react';
+import type { ReactNode, SVGProps } from 'react';
 
 export type UiIconName =
   | 'home'
@@ -20,7 +20,7 @@ export type UiIconName =
   | 'chevron'
   | 'compass';
 
-const paths: Record<UiIconName, React.ReactNode> = {
+const paths: Record<UiIconName, ReactNode> = {
   home: <><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V21h13V9.5"/><path d="M9.5 21v-6h5v6"/></>,
   search: <><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></>,
   plus: <><path d="M12 5v14"/><path d="M5 12h14"/></>,
