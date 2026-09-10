@@ -21,9 +21,27 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
 };
 
 const discoverLanguageKey = 'aspire:discover-language';
+const discoverKeywordKey = 'aspire:discover-keywords';
 const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
 const seededCorecImage = '/seeded/corec.webp?v=5';
 const seededGamingImage = '/seeded/gaming.webp?v=5';
+
+const smartSearchAliases: Record<string, string[]> = {
+  airport: ['airport', 'ind', 'flight', 'terminal'],
+  ind: ['airport', 'ind', 'flight', 'terminal'],
+  ride: ['ride', 'rideshare', 'carpool', 'driver', 'transport'],
+  rides: ['ride', 'rideshare', 'carpool', 'driver', 'transport'],
+  study: ['study', 'tutor', 'class', 'homework', 'exam', 'quiz', 'course'],
+  tutor: ['study', 'tutor', 'class', 'homework', 'exam', 'quiz', 'course'],
+  gaming: ['gaming', 'game', 'valorant', 'league', 'fortnite', 'duo', 'cs2', 'overwatch', 'minecraft'],
+  game: ['gaming', 'game', 'valorant', 'league', 'fortnite', 'duo', 'cs2', 'overwatch', 'minecraft'],
+  moving: ['moving', 'move', 'carry', 'furniture', 'desk', 'chair'],
+  move: ['moving', 'move', 'carry', 'furniture', 'desk', 'chair'],
+  photographer: ['photographer', 'photography', 'photo', 'camera'],
+  photography: ['photographer', 'photography', 'photo', 'camera'],
+  project: ['project', 'collab', 'hackathon', 'startup', 'developer', 'designer', 'build'],
+  projects: ['project', 'collab', 'hackathon', 'startup', 'developer', 'designer', 'build']
+};
 
 function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
   if (value) return value;
@@ -31,6 +49,20 @@ function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLang
   const stored = window.localStorage.getItem(discoverLanguageKey);
   if (!stored || stored === 'all') return 'all';
   return supportedLanguages.has(stored as RequestLanguageCode) ? stored as RequestLanguageCode : 'all';
+}
+
+function resolveKeywordFilters() {
+  if (typeof window === 'undefined') return [] as string[];
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(discoverKeywordKey) || '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+      .map((item) => item.trim())
+      .slice(0, 8);
+  } catch {
+    return [];
+  }
 }
 
 function seededMedia(row: Pick<DiscoverRequest, 'id' | 'title' | 'poster_id' | 'created_at'>): RequestMedia[] {
@@ -88,12 +120,65 @@ function localCategory(item: Pick<DiscoverRequest, 'title' | 'category' | 'kind'
   return 'People / community';
 }
 
+function searchableText(item: Pick<DiscoverRequest, 'title' | 'details' | 'category' | 'kind'>) {
+  return `${item.title || ''} ${item.details || ''} ${item.category || ''} ${item.kind || ''}`.toLowerCase();
+}
+
+function queryNeedles(query?: string) {
+  const normalized = query?.trim().toLowerCase();
+  if (!normalized) return [];
+  return smartSearchAliases[normalized] ?? [normalized];
+}
+
+function smartServerQuery(query?: string) {
+  const normalized = query?.trim().toLowerCase();
+  if (!normalized) return null;
+  const aliases = smartSearchAliases[normalized];
+  if (!aliases) return query!.trim();
+  return aliases.join(' OR ');
+}
+
+function matchesQuery(item: DiscoverRequest, query?: string) {
+  const needles = queryNeedles(query);
+  if (!needles.length) return true;
+  const text = searchableText(item);
+  return needles.some((needle) => text.includes(needle));
+}
+
+function matchesSmartKeyword(item: DiscoverRequest, keyword: string) {
+  const normalized = keyword.trim().toLowerCase();
+  if (!normalized) return true;
+
+  if (normalized === 'free') {
+    return item.amount_cents == null || item.amount_cents === 0 || item.kind === 'community' || item.kind === 'collaboration';
+  }
+  if (normalized === 'paid') {
+    return typeof item.amount_cents === 'number' && item.amount_cents > 0;
+  }
+  if (normalized === 'buildpurdue') {
+    return /buildpurdue|nightshift/.test(searchableText(item));
+  }
+  if (normalized === 'math 55') {
+    return /math\s*55/.test(searchableText(item));
+  }
+  if (normalized === 'valorant') {
+    return /valorant/.test(searchableText(item));
+  }
+
+  const aliases = smartSearchAliases[normalized] ?? [normalized];
+  const text = searchableText(item);
+  return aliases.some((alias) => text.includes(alias));
+}
+
+function matchesSmartKeywordFilters(item: DiscoverRequest, keywords: string[]) {
+  if (!keywords.length) return true;
+  return keywords.every((keyword) => matchesSmartKeyword(item, keyword));
+}
+
 function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: DiscoverCategory, language?: RequestLanguageCode | 'all') {
   if (category && category !== 'Anything' && localCategory(item) !== category) return false;
   if (language && language !== 'all' && (item.language_code || 'en') !== language) return false;
-  const needle = query?.trim().toLowerCase();
-  if (!needle) return true;
-  return `${item.title} ${item.details || ''} ${item.category || ''}`.toLowerCase().includes(needle);
+  return matchesQuery(item, query);
 }
 
 export async function fetchDiscoverRequests(input: {
@@ -107,7 +192,7 @@ export async function fetchDiscoverRequests(input: {
   const language = resolveLanguageFilter(input.language);
   const { data, error } = await supabase.rpc('discover_requests', {
     p_campus_id: input.campusId,
-    p_query: input.query?.trim() || null,
+    p_query: smartServerQuery(input.query),
     p_category: input.category || 'Anything',
     p_limit: input.limit ?? 40,
     p_language: language !== 'all' ? language : null
@@ -128,13 +213,19 @@ export async function fetchCampusFeedRequests(input: {
   const supabase = getSupabaseBrowserClient();
   const limit = input.limit ?? 40;
   const language = resolveLanguageFilter(input.language);
+  const keywords = resolveKeywordFilters();
+  const publicFetchLimit = keywords.length ? Math.max(limit, 80) : limit;
 
   const [{ data: authData }, publicItems] = await Promise.all([
     supabase.auth.getUser(),
-    fetchDiscoverRequests({ ...input, language })
+    fetchDiscoverRequests({ ...input, limit: publicFetchLimit, language })
   ]);
 
-  if (!authData.user) return publicItems;
+  if (!authData.user) {
+    return publicItems
+      .filter((item) => matchesSmartKeywordFilters(item, keywords))
+      .slice(0, limit);
+  }
 
   let ownRows: Omit<DiscoverRequest, 'latitude' | 'longitude' | 'media'>[] = [];
   try {
@@ -145,7 +236,7 @@ export async function fetchCampusFeedRequests(input: {
       .eq('campus_id', input.campusId)
       .eq('status', 'open')
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(publicFetchLimit);
     if (error) throw error;
     ownRows = ((data ?? []) as AspireRequest[])
       .filter((item) => item.moderation_status !== 'rejected' && item.moderation_status !== 'blocked')
@@ -160,6 +251,7 @@ export async function fetchCampusFeedRequests(input: {
   ownItems.forEach((item) => merged.set(item.id, item));
 
   return Array.from(merged.values())
+    .filter((item) => matchesSmartKeywordFilters(item, keywords))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit);
 }
