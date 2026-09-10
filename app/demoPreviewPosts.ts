@@ -109,7 +109,13 @@ export function isDemoPreviewPostId(id: string) {
   return id.startsWith('demo-preview-');
 }
 
+function isPurdueDemoCampus(campusName?: string | null) {
+  return /\bpurdue\b/i.test(campusName || '');
+}
+
 export function buildDemoAspireRequests(userId: string, campusName = 'Purdue University') {
+  if (!isPurdueDemoCampus(campusName)) return [];
+
   const state = readState();
   return demoPreviewPostDefinitions
     .filter((definition) => state[definition.id] !== 'deleted')
@@ -138,6 +144,8 @@ export function buildDemoAspireRequests(userId: string, campusName = 'Purdue Uni
 }
 
 export function buildDemoDiscoverRequests(userId: string, campusId: string, campusName = 'Purdue University', campusCover?: string | null) {
+  if (!isPurdueDemoCampus(campusName)) return [];
+
   const requests = buildDemoAspireRequests(userId, campusName).filter((request) => request.status === 'open');
   return requests.map((request) => {
     const definition = demoPreviewPostDefinitions.find((item) => item.id === request.id)!;
