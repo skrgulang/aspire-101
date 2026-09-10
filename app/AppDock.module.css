@@ -23,6 +23,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  gap: 11px;
   border-radius: 13px;
   background: transparent;
   color: #111;
@@ -30,6 +31,8 @@
   font-weight: 900;
   letter-spacing: -.035em;
 }
+.brand img { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 10px; object-fit: cover; }
+.brand span { white-space: nowrap; }
 
 .navItem {
   min-height: 50px;
