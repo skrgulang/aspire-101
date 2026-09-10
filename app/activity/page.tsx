@@ -1,12 +1,10 @@
-import ConnectionsHub from '../ConnectionsHub';
 import AppDock from '../AppDock';
+import MyActivityManager from '../MyActivityManager';
 
 export default function ActivityPage() {
   return (
     <main className="connectionsPage">
-      <div className="connectionsShell shell">
-        <ConnectionsHub />
-      </div>
+      <MyActivityManager />
       <AppDock active="activity" />
     </main>
   );
