@@ -5,7 +5,6 @@ import type { DiscoverRequest } from '../lib/supabase/discovery';
 import { requestLanguageLabel } from '../lib/supabase/requests';
 import UiIcon from './UiIcon';
 import { campusFeedCategory, campusFeedPrice, campusFeedRelativeTime } from './campusFeedPresentation';
-import { demoRecentImages } from './demoRecentImages';
 import styles from './CampusFeedCard.module.css';
 
 type Props = {
@@ -19,8 +18,8 @@ type Props = {
 };
 
 const curatedSeedImages: Record<string, string> = {
-  '31953690-e181-41d1-ac64-868ac3935d92': demoRecentImages.corec,
-  '32681530-eba3-4154-931b-442038cab1e2': demoRecentImages.gaming
+  '31953690-e181-41d1-ac64-868ac3935d92': '/seeded/corec.webp?v=6',
+  '32681530-eba3-4154-931b-442038cab1e2': '/seeded/gaming.webp?v=6'
 };
 
 function initialFor(name: string) {
@@ -41,7 +40,9 @@ export default function CampusFeedCard({
   if (item.id.startsWith('demo-preview-') && !/\bpurdue\b/i.test(campusLabel)) return null;
 
   const category = campusFeedCategory(item);
-  const image = item.media?.[0]?.public_url || curatedSeedImages[item.id] || fallbackImage || '';
+  // The two seeded Purdue launch posts intentionally use the exact bundled images
+  // requested for those posts. This takes precedence over any stale/fallback media.
+  const image = curatedSeedImages[item.id] || item.media?.[0]?.public_url || fallbackImage || '';
   const mine = Boolean(currentUserId && item.poster_id === currentUserId);
   const displayAuthor = mine ? (authorName || 'You') : 'Campus student';
   const price = campusFeedPrice(item);
