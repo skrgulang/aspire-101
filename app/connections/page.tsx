@@ -1,5 +1,6 @@
 import ConnectionsHub from '../ConnectionsHub';
 import ConnectionCopilotPanel from '../ConnectionCopilotPanel';
+import LiveConnectionStrip from '../LiveConnectionStrip';
 import AppDock from '../AppDock';
 import UiIcon from '../UiIcon';
 import styles from './ConnectionsRefresh.module.css';
@@ -11,6 +12,7 @@ export default function ConnectionsPage() {
 
       <div className={styles.workspace}>
         <section className={styles.primary} id="my-activity">
+          <LiveConnectionStrip />
           <ConnectionsHub />
         </section>
 
