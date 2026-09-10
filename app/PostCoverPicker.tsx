@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import {
   coverSourceForAsset,
@@ -10,6 +11,7 @@ import {
   type CampusCoverImage
 } from '../lib/supabase/coverImages';
 import { fetchActiveUniversities, type University } from '../lib/supabase/universities';
+import styles from './PostCoverPicker.module.css';
 
 export default function PostCoverPicker() {
   const [campusId, setCampusId] = useState('');
@@ -17,6 +19,19 @@ export default function PostCoverPicker() {
   const [covers, setCovers] = useState<CampusCoverImage[]>([]);
   const [selected, setSelected] = useState<'auto' | 'none' | string>('auto');
   const [loading, setLoading] = useState(true);
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const resolveTarget = () => {
+      const target = document.querySelector<HTMLElement>('.requestMediaComposer');
+      setPortalTarget((current) => current === target ? current : target);
+    };
+
+    resolveTarget();
+    const observer = new MutationObserver(resolveTarget);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -81,37 +96,44 @@ export default function PostCoverPicker() {
     });
   }
 
-  if (loading || !campusId) return null;
+  if (loading || !campusId || !portalTarget) return null;
 
-  return (
-    <section style={{ marginBottom: 18, padding: 18, border: '1px solid rgba(255,190,30,.25)', borderRadius: 18, background: 'rgba(255,190,30,.035)' }} aria-label="Recommended campus cover">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 18, marginBottom: 14, flexWrap: 'wrap' }}>
-        <div>
-          <span style={{ display: 'block', color: '#f7b916', fontSize: 11, fontWeight: 900, letterSpacing: '.1em', marginBottom: 4 }}>RECOMMENDED COVER</span>
-          <strong style={{ display: 'block', fontSize: 18 }}>No photo? Aspire can pick one for you.</strong>
-          <small style={{ display: 'block', marginTop: 4, opacity: .68 }}>Auto matches your {campus?.short_name || 'campus'} + post category. Or choose a campus image now. Your own upload always wins.</small>
+  return createPortal(
+    <div className={styles.root} aria-label="Recommended campus photos">
+      <div className={styles.header}>
+        <div className={styles.copy}>
+          <span className={styles.eyebrow}>RECOMMENDED PHOTOS · OPTIONAL</span>
+          <strong>Need a cover? Pick one from {campus?.short_name || 'your campus'}.</strong>
+          <small>Choose a campus photo below, or leave it on Auto. If you upload your own photo above, your upload is used instead.</small>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button type="button" onClick={chooseAuto} aria-pressed={selected === 'auto'} style={{ borderRadius: 999, border: selected === 'auto' ? '1px solid #f7b916' : '1px solid rgba(255,255,255,.16)', background: selected === 'auto' ? 'rgba(247,185,22,.16)' : 'transparent', color: 'inherit', padding: '9px 13px', fontWeight: 800, cursor: 'pointer' }}>Auto</button>
-          <button type="button" onClick={chooseNone} aria-pressed={selected === 'none'} style={{ borderRadius: 999, border: selected === 'none' ? '1px solid #f7b916' : '1px solid rgba(255,255,255,.16)', background: selected === 'none' ? 'rgba(247,185,22,.16)' : 'transparent', color: 'inherit', padding: '9px 13px', fontWeight: 800, cursor: 'pointer' }}>No photo</button>
+        <div className={styles.modeButtons}>
+          <button type="button" onClick={chooseAuto} aria-pressed={selected === 'auto'} className={selected === 'auto' ? styles.activeMode : ''}>Auto pick</button>
+          <button type="button" onClick={chooseNone} aria-pressed={selected === 'none'} className={selected === 'none' ? styles.activeMode : ''}>No photo</button>
         </div>
       </div>
 
       {visibleCovers.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(135px, 1fr))', gap: 10 }}>
+        <div className={styles.grid}>
           {visibleCovers.map((item) => {
             const active = selected === item.id;
             return (
-              <button key={item.id} type="button" onClick={() => chooseAsset(item)} aria-pressed={active} style={{ position: 'relative', overflow: 'hidden', minHeight: 105, padding: 0, borderRadius: 14, border: active ? '2px solid #f7b916' : '1px solid rgba(255,255,255,.13)', background: '#171714', cursor: 'pointer', textAlign: 'left', color: 'white' }}>
-                <img src={item.image_url} alt={item.alt_text || item.title || 'Campus cover'} style={{ width: '100%', height: 105, objectFit: 'cover', display: 'block', opacity: active ? 1 : .82 }} />
-                <span style={{ position: 'absolute', left: 8, right: 8, bottom: 8, padding: '5px 7px', borderRadius: 8, background: 'rgba(0,0,0,.68)', fontSize: 11, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{active ? '✓ ' : ''}{item.title || campus?.short_name || 'Campus cover'}</span>
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => chooseAsset(item)}
+                aria-pressed={active}
+                className={`${styles.coverCard} ${active ? styles.selectedCard : ''}`}
+              >
+                <img src={item.image_url} alt={item.alt_text || item.title || 'Campus cover'} />
+                <span>{active ? '✓ ' : ''}{item.title || campus?.short_name || 'Campus photo'}</span>
               </button>
             );
           })}
         </div>
       ) : (
-        <p style={{ margin: 0, opacity: .62, fontSize: 13 }}>Auto is on. We&apos;ll use a campus cover when one is available; you can also upload your own photo in the form below.</p>
+        <div className={styles.empty}>Auto is on. Aspire will use a campus cover when one is available.</div>
       )}
-    </section>
+    </div>,
+    portalTarget
   );
 }
