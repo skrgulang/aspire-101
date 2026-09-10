@@ -7,8 +7,12 @@ import styles from './DiscoverSmartFilter.module.css';
 
 const languageStorageKey = 'aspire:discover-language';
 const keywordStorageKey = 'aspire:discover-keywords';
+const priceStorageKey = 'aspire:discover-price';
+const photoStorageKey = 'aspire:discover-photo-only';
 const refreshEvent = 'aspire:campus-feed-refresh';
-const suggestedKeywords = ['Airport', 'IND', 'Ride', 'Math 55', 'Study', 'Valorant', 'Gaming', 'Moving', 'Photographer', 'BuildPurdue', 'Free', 'Paid'];
+const suggestedKeywords = ['Airport', 'IND', 'Ride', 'Math 55', 'Study', 'Valorant', 'Gaming', 'Moving', 'Photographer', 'BuildPurdue'];
+
+type PriceFilter = 'any' | 'free' | 'paid';
 
 function readStoredKeywords() {
   try {
@@ -23,6 +27,8 @@ function readStoredKeywords() {
 export default function DiscoverLanguageFilter() {
   const [language, setLanguage] = useState('all');
   const [keywords, setKeywords] = useState<string[]>([]);
+  const [price, setPrice] = useState<PriceFilter>('any');
+  const [photoOnly, setPhotoOnly] = useState(false);
   const [draft, setDraft] = useState('');
   const [open, setOpen] = useState(false);
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
@@ -33,6 +39,9 @@ export default function DiscoverLanguageFilter() {
       setLanguage(storedLanguage || 'all');
     }
     setKeywords(readStoredKeywords());
+    const storedPrice = window.localStorage.getItem(priceStorageKey);
+    if (storedPrice === 'free' || storedPrice === 'paid' || storedPrice === 'any') setPrice(storedPrice);
+    setPhotoOnly(window.localStorage.getItem(photoStorageKey) === '1');
 
     let frame = 0;
     const findTarget = () => {
@@ -52,11 +61,24 @@ export default function DiscoverLanguageFilter() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
     };
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      const panel = document.querySelector('[data-aspire-smart-filter-panel]');
+      const trigger = document.querySelector('[data-aspire-smart-filter-trigger]');
+      if (target && panel && trigger && !panel.contains(target) && !trigger.contains(target)) setOpen(false);
+    };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('pointerdown', onPointerDown);
+    };
   }, [open]);
 
-  const activeCount = useMemo(() => keywords.length + (language === 'all' ? 0 : 1), [keywords, language]);
+  const activeCount = useMemo(
+    () => keywords.length + (language === 'all' ? 0 : 1) + (price === 'any' ? 0 : 1) + (photoOnly ? 1 : 0),
+    [keywords, language, price, photoOnly]
+  );
 
   function notifyFeed() {
     window.dispatchEvent(new Event(refreshEvent));
@@ -65,6 +87,18 @@ export default function DiscoverLanguageFilter() {
   function chooseLanguage(next: string) {
     setLanguage(next);
     window.localStorage.setItem(languageStorageKey, next);
+    notifyFeed();
+  }
+
+  function choosePrice(next: PriceFilter) {
+    setPrice(next);
+    window.localStorage.setItem(priceStorageKey, next);
+    notifyFeed();
+  }
+
+  function choosePhotoOnly(next: boolean) {
+    setPhotoOnly(next);
+    window.localStorage.setItem(photoStorageKey, next ? '1' : '0');
     notifyFeed();
   }
 
@@ -95,9 +129,13 @@ export default function DiscoverLanguageFilter() {
   function clearAll() {
     setLanguage('all');
     setKeywords([]);
+    setPrice('any');
+    setPhotoOnly(false);
     setDraft('');
     window.localStorage.setItem(languageStorageKey, 'all');
     window.localStorage.removeItem(keywordStorageKey);
+    window.localStorage.setItem(priceStorageKey, 'any');
+    window.localStorage.removeItem(photoStorageKey);
     notifyFeed();
   }
 
@@ -112,6 +150,7 @@ export default function DiscoverLanguageFilter() {
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={activeCount ? `Search filters, ${activeCount} active` : 'Search filters'}
+        data-aspire-smart-filter-trigger
       >
         <span className={styles.sliders} aria-hidden="true"><i /><i /><i /></span>
         <span>Filters</span>
@@ -119,14 +158,14 @@ export default function DiscoverLanguageFilter() {
       </button>
 
       {open && (
-        <div className={styles.panel} role="dialog" aria-label="Smart search filters">
+        <div className={styles.panel} role="dialog" aria-label="Smart search filters" data-aspire-smart-filter-panel>
           <div className={styles.panelHead}>
             <div><span>SMART SEARCH</span><strong>Filter campus</strong></div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close filters">×</button>
           </div>
 
           <section className={styles.section}>
-            <div className={styles.sectionHead}><strong>Keywords</strong><span>Choose a few or add your own</span></div>
+            <div className={styles.sectionHead}><strong>Keywords</strong><span>Combine interests, places, classes, or activities</span></div>
             <div className={styles.chips}>
               {suggestedKeywords.map((keyword) => {
                 const selected = keywords.some((item) => item.toLowerCase() === keyword.toLowerCase());
@@ -147,11 +186,30 @@ export default function DiscoverLanguageFilter() {
           </section>
 
           <section className={styles.section}>
+            <div className={styles.sectionHead}><strong>Price</strong><span>Free hangouts or paid requests</span></div>
+            <div className={styles.segmented} role="group" aria-label="Price filter">
+              {(['any','free','paid'] as PriceFilter[]).map((option) => (
+                <button key={option} type="button" className={price === option ? styles.segmentedActive : ''} onClick={() => choosePrice(option)}>
+                  {option === 'any' ? 'Any' : option === 'free' ? 'Free' : 'Paid'}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.section}>
             <div className={styles.sectionHead}><strong>Language</strong><span>Only show posts in this language</span></div>
             <select value={language} onChange={(event) => chooseLanguage(event.target.value)} aria-label="Filter campus posts by language">
               <option value="all">All languages</option>
               {requestLanguages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
+          </section>
+
+          <section className={styles.section}>
+            <label className={styles.toggleRow}>
+              <span><strong>Photos only</strong><small>Show requests that include an image</small></span>
+              <input type="checkbox" checked={photoOnly} onChange={(event) => choosePhotoOnly(event.target.checked)} />
+              <i aria-hidden="true" />
+            </label>
           </section>
 
           <div className={styles.footer}>
