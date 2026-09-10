@@ -12,9 +12,6 @@
   color: #f7f4ed;
 }
 
-:global(body:has(.campusHome)) { background: #f6f7f5; }
-:global(html[data-aspire-theme='dark'] body:has(.campusHome)) { background: #0b0b0a; }
-
 .shell { width: min(1480px, 100%); margin: 0 auto; }
 
 .topbar {
