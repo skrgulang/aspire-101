@@ -20,6 +20,16 @@ type CampusDeck = {
   match: (request: AspireRequest) => boolean;
 };
 
+type DemoRecentPost = {
+  id: string;
+  title: string;
+  label: string;
+  query: string;
+  icon: UiIconName;
+  time: string;
+  image: string | 'campus';
+};
+
 const decks: CampusDeck[] = [
   { key: 'rides', label: 'Rides', short: 'Rides + pickups', query: 'Get me there', icon: 'car', match: (r) => /ride|transport|airport|chicago|indy|pickup|errand/i.test(`${r.category} ${r.title}`) },
   { key: 'study', label: 'Study', short: 'Classmates + tutoring', query: 'Study / class', icon: 'book', match: (r) => /study|class|tutor|math|calc|econ|exam/i.test(`${r.category} ${r.title}`) },
@@ -27,6 +37,63 @@ const decks: CampusDeck[] = [
   { key: 'projects', label: 'Projects', short: 'Builders + collaborators', query: 'Build something', icon: 'code', match: (r) => /project|collab|designer|hackathon|build|startup|code/i.test(`${r.category} ${r.title}`) },
   { key: 'people', label: 'People', short: 'Friends + campus plans', query: 'People / community', icon: 'users', match: (r) => /community|people|friend|group|club|ski|gym|hang|meet/i.test(`${r.category} ${r.title}`) },
   { key: 'market', label: 'Buy & Sell', short: 'Marketplace nearby', query: 'Buy & sell', icon: 'tag', match: (r) => r.kind === 'buy_sell' || /market|sell|buy|fridge|lamp/i.test(`${r.category} ${r.title}`) }
+];
+
+const demoRecentPosts: DemoRecentPost[] = [
+  {
+    id: 'demo-nightshift',
+    title: 'Anyone want to go to BuildPurdue Nightshift together?',
+    label: 'Events',
+    query: 'People / community',
+    icon: 'users',
+    time: '1h ago',
+    image: 'https://www.buildpurdue.org/_next/image?q=75&url=%2Flanding%2Fnightshift_sample.JPG&w=3840'
+  },
+  {
+    id: 'demo-corec',
+    title: 'Anyone want to go to CoRec together later?',
+    label: 'People',
+    query: 'People / community',
+    icon: 'users',
+    time: '2h ago',
+    image: 'https://localist-images.azureedge.net/photos/40101082677033/card/b82ef141532a8b4dc9f48b55bd8fce76f7c633e9.jpg'
+  },
+  {
+    id: 'demo-gaming',
+    title: 'Anyone want to game tonight?',
+    label: 'Gaming',
+    query: 'Gaming / duos',
+    icon: 'game',
+    time: '3h ago',
+    image: 'https://engineering.purdue.edu/AAE/spotlights/2024/2024-0822-Purdue-Dell-Technologies-celebrate-opening-of-Alienware-Purdue-Gaming-Lounge/Purdue-Alienware-Gaming-Lounge-web.jpg'
+  },
+  {
+    id: 'demo-airport',
+    title: 'Anyone heading to IND? Looking for an airport ride.',
+    label: 'Rides',
+    query: 'Get me there',
+    icon: 'car',
+    time: '5h ago',
+    image: 'campus'
+  },
+  {
+    id: 'demo-study',
+    title: 'Math 55 study group later today?',
+    label: 'Study',
+    query: 'Study / class',
+    icon: 'book',
+    time: '6h ago',
+    image: 'campus'
+  },
+  {
+    id: 'demo-hangout',
+    title: 'Anyone free to grab coffee on campus?',
+    label: 'People',
+    query: 'People / community',
+    icon: 'users',
+    time: '8h ago',
+    image: 'campus'
+  }
 ];
 
 const campusImageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1600';
@@ -119,6 +186,7 @@ export default function CampusHome() {
   const firstName = useMemo(() => name.split(/\s+/).filter(Boolean)[0] || '', [name]);
   const visiting = Boolean(selectedCampus && homeCampus && selectedCampus.id !== homeCampus.id);
   const campusRequests = useMemo(() => selectedCampus ? requests.filter((request) => sameCampus(request, selectedCampus)) : [], [requests, selectedCampus]);
+  const demoCards = useMemo(() => demoRecentPosts.slice(0, Math.max(0, 6 - Math.min(campusRequests.length, 6))), [campusRequests.length]);
 
   const sectionData = useMemo(() => decks.map((deck) => {
     const matches = campusRequests.filter(deck.match);
@@ -171,6 +239,9 @@ export default function CampusHome() {
     );
   }
 
+  const campusCardImage = selectedCampus.cover_image || campusImageFallback;
+  const authorName = name || 'Aspire student';
+
   return (
     <main className={`campusHome ${styles.page}`}>
       <AppDock active="home" />
@@ -202,7 +273,7 @@ export default function CampusHome() {
               <button type="button" onClick={() => setProfileMenuOpen((value) => !value)} className={styles.avatarButton} aria-label="Open profile menu" aria-expanded={profileMenuOpen}>{firstName ? firstName[0].toUpperCase() : 'A'}</button>
               {profileMenuOpen && (
                 <div className={styles.profileMenu}>
-                  <strong>{name || 'Aspire student'}</strong>
+                  <strong>{authorName}</strong>
                   <span>{homeCampus.name}</span>
                   <a href="/profile">View profile</a>
                   <button type="button" onClick={signOut}>Log out</button>
@@ -215,7 +286,7 @@ export default function CampusHome() {
         <div className={styles.mainGrid}>
           <div className={styles.mainColumn}>
             <section className={styles.hero}>
-              <img className={styles.heroImage} src={selectedCampus.cover_image || campusImageFallback} alt="" />
+              <img className={styles.heroImage} src={campusCardImage} alt="" />
               <div className={styles.heroOverlay} aria-hidden="true" />
               <div className={styles.heroContent}>
                 <p className={styles.eyebrow}>{selectedCampus.short_name} · Community</p>
@@ -264,12 +335,21 @@ export default function CampusHome() {
                     </a>
                   );
                 })}
-                {!campusRequests.length && (
-                  <a className={styles.emptyFeed} href="/post">
-                    <strong>Your campus feed is quiet right now.</strong>
-                    <span>Be the first to post something on {selectedCampus.short_name} →</span>
+
+                {demoCards.map((post) => (
+                  <a key={post.id} href={`/discover?category=${encodeURIComponent(post.query)}`} className={`${styles.feedItem} demoRecentCard`}>
+                    <div className="demoRecentImageWrap">
+                      <img className="demoRecentImage" src={post.image === 'campus' ? campusCardImage : post.image} alt="" />
+                      <span className="demoRecentCategory">{post.label}</span>
+                    </div>
+                    <div className={`${styles.feedCopy} demoRecentCopy`}>
+                      <strong>{post.title}</strong>
+                      <span className="demoRecentAuthor"><b>{firstName ? firstName[0].toUpperCase() : 'A'}</b>{authorName}</span>
+                      <span>{selectedCampus.short_name} · {post.time}</span>
+                    </div>
+                    <span className={styles.feedArrow}><UiIcon name="chevron" /></span>
                   </a>
-                )}
+                ))}
               </div>
             </section>
           </div>
@@ -278,7 +358,7 @@ export default function CampusHome() {
             <section className={styles.sideCard}>
               <div className={styles.welcomeTop}>
                 <div className={styles.welcomeAvatar}>{firstName ? firstName[0].toUpperCase() : 'A'}</div>
-                <div><span>Welcome</span><strong>{name || 'Aspire student'}</strong></div>
+                <div><span>Welcome</span><strong>{authorName}</strong></div>
               </div>
               <div className={styles.statusRow}>
                 <span className={styles.statusIcon}><UiIcon name="check" /></span>
