@@ -3,21 +3,70 @@ import MarketOrdersPanel from '../MarketOrdersPanel';
 import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
 import ConnectionCopilotPanel from '../ConnectionCopilotPanel';
 import AppDock from '../AppDock';
+import UiIcon from '../UiIcon';
+import styles from './ConnectionsRefresh.module.css';
 
 export default function ConnectionsPage() {
   return (
-    <main className="connectionsPage">
-      <div className="connectionsShell shell">
-        <section id="my-activity">
+    <main className={`${styles.page} connectionsPage`}>
+      <AppDock active="connections" />
+
+      <div className={styles.workspace}>
+        <section className={styles.primary} id="my-activity">
           <ConnectionsHub />
         </section>
+
+        <aside className={styles.rail} aria-label="Inbox shortcuts">
+          <section className={styles.railCard}>
+            <div className={styles.railHeading}>
+              <span>Quick Actions</span>
+            </div>
+            <a href="/post" className={styles.quickAction}>
+              <i className={styles.yellowIcon}><UiIcon name="plus" /></i>
+              <div><strong>Post a request</strong><span>Find help or offer something</span></div>
+              <UiIcon name="chevron" />
+            </a>
+            <a href="/discover" className={styles.quickAction}>
+              <i><UiIcon name="search" /></i>
+              <div><strong>Browse campus</strong><span>See what students need</span></div>
+              <UiIcon name="chevron" />
+            </a>
+            <a href="/connections#my-activity" className={styles.quickAction}>
+              <i><UiIcon name="users" /></i>
+              <div><strong>View connections</strong><span>Your campus network</span></div>
+              <UiIcon name="chevron" />
+            </a>
+          </section>
+
+          <section className={styles.railCard}>
+            <div className={styles.railHeading}>
+              <span>Trust & Safety</span>
+            </div>
+            <div className={styles.trustLead}>
+              <i><UiIcon name="shield" /></i>
+              <div><strong>Verified campus community</strong><span>Chat and transact only after both sides agree.</span></div>
+            </div>
+            <div className={styles.trustRow}><UiIcon name="check" /><span>Purdue email verification</span></div>
+            <div className={styles.trustRow}><UiIcon name="users" /><span>Mutual choice before private chat</span></div>
+            <div className={styles.trustRow}><UiIcon name="shield" /><span>Report, block, and safety support</span></div>
+            <a className={styles.learnLink} href="/safety">Safety center →</a>
+          </section>
+
+          <section className={`${styles.railCard} ${styles.tipCard}`}>
+            <span>INBOX TIP</span>
+            <strong>Keep the important details in one thread.</strong>
+            <p>Confirm time, place, scope, and payment before meeting.</p>
+          </section>
+        </aside>
+      </div>
+
+      <div className={styles.secondary}>
         <ConnectionCopilotPanel />
-        <section id="transactions">
+        <section id="transactions" className={styles.transactions}>
           <MarketOrdersPanel />
           <ConnectionPaymentsPanel />
         </section>
       </div>
-      <AppDock active="connections" />
     </main>
   );
 }
