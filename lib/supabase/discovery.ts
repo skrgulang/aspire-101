@@ -1,5 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
-import type { AspireRequest } from './requests';
+import type { AspireRequest, RequestLanguageCode } from './requests';
 import { fetchRequestMedia, RequestMedia } from './requestMedia';
 
 export type DiscoverCategory =
@@ -55,8 +55,9 @@ function localCategory(item: Pick<DiscoverRequest, 'title' | 'category' | 'kind'
   return 'People / community';
 }
 
-function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: DiscoverCategory) {
+function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: DiscoverCategory, language?: RequestLanguageCode | 'all') {
   if (category && category !== 'Anything' && localCategory(item) !== category) return false;
+  if (language && language !== 'all' && (item.language_code || 'en') !== language) return false;
   const needle = query?.trim().toLowerCase();
   if (!needle) return true;
   return `${item.title} ${item.details || ''} ${item.category || ''}`.toLowerCase().includes(needle);
@@ -66,6 +67,7 @@ export async function fetchDiscoverRequests(input: {
   campusId: string;
   query?: string;
   category?: DiscoverCategory;
+  language?: RequestLanguageCode | 'all';
   limit?: number;
 }) {
   const supabase = getSupabaseBrowserClient();
@@ -73,7 +75,8 @@ export async function fetchDiscoverRequests(input: {
     p_campus_id: input.campusId,
     p_query: input.query?.trim() || null,
     p_category: input.category || 'Anything',
-    p_limit: input.limit ?? 40
+    p_limit: input.limit ?? 40,
+    p_language: input.language && input.language !== 'all' ? input.language : null
   });
   if (error) throw error;
 
@@ -85,6 +88,7 @@ export async function fetchCampusFeedRequests(input: {
   campusId: string;
   query?: string;
   category?: DiscoverCategory;
+  language?: RequestLanguageCode | 'all';
   limit?: number;
 }) {
   const supabase = getSupabaseBrowserClient();
@@ -115,7 +119,7 @@ export async function fetchCampusFeedRequests(input: {
     // Public discovery should still render even if the user's private rows cannot be loaded.
   }
 
-  const ownItems = (await attachMedia(ownRows)).filter((item) => matchesLocalFilters(item, input.query, input.category));
+  const ownItems = (await attachMedia(ownRows)).filter((item) => matchesLocalFilters(item, input.query, input.category, input.language));
   const merged = new Map<string, DiscoverRequest>();
   publicItems.forEach((item) => merged.set(item.id, item));
   ownItems.forEach((item) => merged.set(item.id, item));
