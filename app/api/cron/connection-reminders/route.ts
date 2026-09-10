@@ -7,6 +7,7 @@ type ScheduledConnection = {
   requester_id: string;
   responder_id: string;
   scheduled_start_at: string;
+  timezone: string | null;
   meeting_label: string | null;
 };
 
@@ -32,6 +33,21 @@ function authorized(request: Request) {
   return request.headers.get('authorization') === `Bearer ${secret}`;
 }
 
+function formatStart(start: Date, timezone: string | null) {
+  try {
+    return start.toLocaleString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      ...(timezone ? { timeZone: timezone, timeZoneName: 'short' as const } : {})
+    });
+  } catch {
+    return start.toISOString();
+  }
+}
+
 export async function GET(request: Request) {
   if (!process.env.CRON_SECRET) {
     return NextResponse.json({ error: 'CRON_SECRET is not configured.' }, { status: 503 });
@@ -46,7 +62,7 @@ export async function GET(request: Request) {
 
   const { data: rows, error } = await supabase
     .from('connections')
-    .select('id,request_id,requester_id,responder_id,scheduled_start_at,meeting_label')
+    .select('id,request_id,requester_id,responder_id,scheduled_start_at,timezone,meeting_label')
     .in('status', ['confirmed', 'active'])
     .not('scheduled_start_at', 'is', null)
     .gt('scheduled_start_at', now.toISOString())
@@ -77,15 +93,7 @@ export async function GET(request: Request) {
     const copy = reminderCopy(milestone);
     const title = requestTitles.get(connection.request_id) || 'Aspire connection';
     const eventKey = `connection-reminder:${connection.id}:${milestone}`;
-    const when = start.toLocaleString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZone: 'UTC',
-      timeZoneName: 'short'
-    });
+    const when = formatStart(start, connection.timezone);
     const eventBody = `${copy.title}. ${title} · ${when}${connection.meeting_label ? ` · ${connection.meeting_label}` : ''}`;
 
     const { data: eventRow, error: eventError } = await supabase
@@ -100,6 +108,7 @@ export async function GET(request: Request) {
           reminder_key: eventKey,
           milestone,
           scheduled_start_at: connection.scheduled_start_at,
+          timezone: connection.timezone,
           meeting_label: connection.meeting_label
         }
       }, { onConflict: 'event_key', ignoreDuplicates: true })
@@ -119,7 +128,7 @@ export async function GET(request: Request) {
           connection_id: connection.id,
           event_key: notificationKey,
           title: copy.title,
-          body: `${title}${connection.meeting_label ? ` · ${connection.meeting_label}` : ''}`.slice(0, 360)
+          body: `${title} · ${when}${connection.meeting_label ? ` · ${connection.meeting_label}` : ''}`.slice(0, 360)
         }, { onConflict: 'user_id,event_key', ignoreDuplicates: true })
         .select('id');
       if (!notificationError && notificationRow?.length) createdNotifications += 1;
