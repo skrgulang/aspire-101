@@ -1,6 +1,7 @@
 import { getSupabaseBrowserClient } from './client';
 import type { AspireRequest, RequestLanguageCode } from './requests';
 import { fetchRequestMedia, RequestMedia } from './requestMedia';
+import { demoRecentImages } from '../../app/demoRecentImages';
 
 export type DiscoverCategory =
   | 'Anything'
@@ -31,6 +32,26 @@ function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLang
   return supportedLanguages.has(stored as RequestLanguageCode) ? stored as RequestLanguageCode : 'all';
 }
 
+function seededMedia(row: Pick<DiscoverRequest, 'id' | 'title' | 'poster_id' | 'created_at'>): RequestMedia[] {
+  const normalized = row.title.trim().toLowerCase();
+  const image = normalized === 'anyone want to go to corec together?'
+    ? demoRecentImages.corec
+    : normalized === 'anyone want to game tonight?'
+      ? demoRecentImages.gaming
+      : null;
+  if (!image) return [];
+  return [{
+    id: `seeded-${row.id}`,
+    request_id: row.id,
+    uploader_id: row.poster_id,
+    storage_path: `seeded/${row.id}.webp`,
+    mime_type: 'image/webp',
+    sort_order: 0,
+    created_at: row.created_at,
+    public_url: image
+  }];
+}
+
 async function attachMedia(rows: Omit<DiscoverRequest, 'latitude' | 'longitude' | 'media'>[]) {
   let media: RequestMedia[] = [];
   try {
@@ -50,7 +71,7 @@ async function attachMedia(rows: Omit<DiscoverRequest, 'latitude' | 'longitude' 
     ...row,
     latitude: null,
     longitude: null,
-    media: byRequest.get(row.id) ?? []
+    media: byRequest.get(row.id)?.length ? byRequest.get(row.id)! : seededMedia(row as DiscoverRequest)
   })) as DiscoverRequest[];
 }
 
