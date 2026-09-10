@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { DiscoverRequest } from '../lib/supabase/discovery';
+import { requestLanguageLabel } from '../lib/supabase/requests';
 import UiIcon from './UiIcon';
 import { campusFeedCategory, campusFeedPrice, campusFeedRelativeTime } from './campusFeedPresentation';
 import { demoRecentImages } from './demoRecentImages';
@@ -46,6 +47,7 @@ export default function CampusFeedCard({
   const price = campusFeedPrice(item);
   const paid = item.amount_cents != null;
   const pending = mine && item.moderation_status && item.moderation_status !== 'approved';
+  const language = requestLanguageLabel(item.language_code);
 
   return (
     <article className={styles.card} data-request-id={item.id}>
@@ -59,7 +61,7 @@ export default function CampusFeedCard({
         <h3>{item.title}</h3>
         <span className={styles.price} data-paid={paid ? 'true' : 'false'}>{price}</span>
         <span className={styles.author}><b className={styles.avatar}>{initialFor(displayAuthor)}</b>{mine ? 'Posted by you' : displayAuthor}</span>
-        <span className={styles.meta}>{campusLabel} · {campusFeedRelativeTime(item.created_at)}</span>
+        <span className={styles.meta}>{campusLabel} · {language} · {campusFeedRelativeTime(item.created_at)}</span>
         {pending && <span className={styles.pending}>Pending review · visible to you</span>}
       </div>
 
