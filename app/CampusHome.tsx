@@ -20,79 +20,118 @@ type CampusDeck = {
   match: (request: AspireRequest) => boolean;
 };
 
-type DemoRecentPost = {
-  id: string;
-  title: string;
+type FeedCategory = {
+  key: string;
   label: string;
   query: string;
   icon: UiIconName;
-  time: string;
-  image: string | 'campus';
+  tone: string;
 };
+
+type DemoRecentPost = {
+  id: string;
+  title: string;
+  ageHours: number;
+  image: string | 'campus';
+  price: string;
+  paid?: boolean;
+  popularitySeed: number;
+};
+
+type FeedEntry = {
+  id: string;
+  title: string;
+  category: FeedCategory;
+  href: string;
+  time: string;
+  createdAt: number;
+  image?: string;
+  price: string;
+  paid: boolean;
+  author: string;
+  demo: boolean;
+  popularitySeed: number;
+};
+
+type FeedMode = 'latest' | 'popular';
+
+type FeedClicks = Record<string, number>;
+
+const FEED_CLICK_KEY = 'aspire:campus-feed-clicks:v1';
 
 const decks: CampusDeck[] = [
   { key: 'rides', label: 'Rides', short: 'Rides + pickups', query: 'Get me there', icon: 'car', match: (r) => /ride|transport|airport|chicago|indy|pickup|errand/i.test(`${r.category} ${r.title}`) },
-  { key: 'study', label: 'Study', short: 'Classmates + tutoring', query: 'Study / class', icon: 'book', match: (r) => /study|class|tutor|math|calc|econ|exam/i.test(`${r.category} ${r.title}`) },
-  { key: 'gaming', label: 'Gaming', short: 'Duos + teammates', query: 'Gaming / duos', icon: 'game', match: (r) => /gaming|game|valorant|league|fortnite|duo|queue|cs2/i.test(`${r.category} ${r.title}`) },
-  { key: 'projects', label: 'Projects', short: 'Builders + collaborators', query: 'Build something', icon: 'code', match: (r) => /project|collab|designer|hackathon|build|startup|code/i.test(`${r.category} ${r.title}`) },
-  { key: 'people', label: 'People', short: 'Friends + campus plans', query: 'People / community', icon: 'users', match: (r) => /community|people|friend|group|club|ski|gym|hang|meet/i.test(`${r.category} ${r.title}`) },
-  { key: 'market', label: 'Buy & Sell', short: 'Marketplace nearby', query: 'Buy & sell', icon: 'tag', match: (r) => r.kind === 'buy_sell' || /market|sell|buy|fridge|lamp/i.test(`${r.category} ${r.title}`) }
+  { key: 'housing', label: 'Housing', short: 'Rooms + roommates', query: 'People / community', icon: 'home', match: (r) => /housing|roommate|sublet|lease|rent|apartment|dorm|room for rent/i.test(`${r.category} ${r.title}`) },
+  { key: 'market', label: 'Buy & Sell', short: 'Marketplace nearby', query: 'Buy & sell', icon: 'tag', match: (r) => r.kind === 'buy_sell' || /market|sell|buy|for sale|wanted|airpods|macbook|fridge|lamp/i.test(`${r.category} ${r.title}`) },
+  { key: 'study', label: 'Study Help', short: 'Classmates + tutoring', query: 'Study / class', icon: 'book', match: (r) => /study|class|tutor|math|calc|econ|exam|homework|notes/i.test(`${r.category} ${r.title}`) },
+  { key: 'gaming', label: 'Gaming', short: 'Duos + teammates', query: 'Gaming / duos', icon: 'game', match: (r) => /gaming|game|valorant|league|fortnite|duo|queue|cs2|playstation|xbox/i.test(`${r.category} ${r.title}`) },
+  { key: 'projects', label: 'Projects', short: 'Builders + collaborators', query: 'Build something', icon: 'code', match: (r) => /project|collab|designer|hackathon|build|startup|code|teammate/i.test(`${r.category} ${r.title}`) },
+  { key: 'people', label: 'People', short: 'Friends + campus plans', query: 'People / community', icon: 'users', match: (r) => /community|people|friend|group|club|ski|gym|corec|hang|coffee|meet/i.test(`${r.category} ${r.title}`) },
+  { key: 'services', label: 'Services', short: 'Campus help nearby', query: 'Give me a hand', icon: 'wrench', match: (r) => /service|moving|move|repair|clean|photograph|photographer|assemble|fix|carry/i.test(`${r.category} ${r.title}`) },
+  { key: 'events', label: 'Events', short: 'Meetups + campus events', query: 'People / community', icon: 'calendar', match: (r) => /event|nightshift|buildpurdue|meetup|workshop|callout|concert|party|tabling/i.test(`${r.category} ${r.title}`) }
+];
+
+const feedCategories: FeedCategory[] = [
+  { key: 'events', label: 'Events', query: 'People / community', icon: 'calendar', tone: 'events' },
+  { key: 'rides', label: 'Rides', query: 'Get me there', icon: 'car', tone: 'rides' },
+  { key: 'housing', label: 'Housing', query: 'People / community', icon: 'home', tone: 'housing' },
+  { key: 'market', label: 'Buy & Sell', query: 'Buy & sell', icon: 'tag', tone: 'market' },
+  { key: 'study', label: 'Study Help', query: 'Study / class', icon: 'book', tone: 'study' },
+  { key: 'gaming', label: 'Gaming', query: 'Gaming / duos', icon: 'game', tone: 'gaming' },
+  { key: 'projects', label: 'Projects', query: 'Build something', icon: 'code', tone: 'projects' },
+  { key: 'services', label: 'Services', query: 'Give me a hand', icon: 'wrench', tone: 'services' },
+  { key: 'people', label: 'People', query: 'People / community', icon: 'users', tone: 'people' }
 ];
 
 const demoRecentPosts: DemoRecentPost[] = [
   {
     id: 'demo-nightshift',
     title: 'Anyone want to go to BuildPurdue Nightshift together?',
-    label: 'Events',
-    query: 'People / community',
-    icon: 'users',
-    time: '1h ago',
-    image: 'https://www.buildpurdue.org/_next/image?q=75&url=%2Flanding%2Fnightshift_sample.JPG&w=3840'
+    ageHours: 1,
+    image: 'https://www.buildpurdue.org/_next/image?q=75&url=%2Flanding%2Fnightshift_sample.JPG&w=3840',
+    price: 'Free',
+    popularitySeed: 5
   },
   {
     id: 'demo-corec',
     title: 'Anyone want to go to CoRec together later?',
-    label: 'People',
-    query: 'People / community',
-    icon: 'users',
-    time: '2h ago',
-    image: 'https://localist-images.azureedge.net/photos/40101082677033/card/b82ef141532a8b4dc9f48b55bd8fce76f7c633e9.jpg'
+    ageHours: 2,
+    image: 'https://localist-images.azureedge.net/photos/40101082677033/card/b82ef141532a8b4dc9f48b55bd8fce76f7c633e9.jpg',
+    price: 'Free',
+    popularitySeed: 7
   },
   {
     id: 'demo-gaming',
     title: 'Anyone want to game tonight?',
-    label: 'Gaming',
-    query: 'Gaming / duos',
-    icon: 'game',
-    time: '3h ago',
-    image: 'https://engineering.purdue.edu/AAE/spotlights/2024/2024-0822-Purdue-Dell-Technologies-celebrate-opening-of-Alienware-Purdue-Gaming-Lounge/Purdue-Alienware-Gaming-Lounge-web.jpg'
+    ageHours: 3,
+    image: 'https://engineering.purdue.edu/AAE/spotlights/2024/2024-0822-Purdue-Dell-Technologies-celebrate-opening-of-Alienware-Purdue-Gaming-Lounge/Purdue-Alienware-Gaming-Lounge-web.jpg',
+    price: 'Free',
+    popularitySeed: 10
   },
   {
     id: 'demo-airport',
     title: 'Anyone heading to IND? Looking for an airport ride.',
-    label: 'Rides',
-    query: 'Get me there',
-    icon: 'car',
-    time: '5h ago',
-    image: 'campus'
+    ageHours: 5,
+    image: 'campus',
+    price: '$25',
+    paid: true,
+    popularitySeed: 8
   },
   {
     id: 'demo-study',
     title: 'Math 55 study group later today?',
-    label: 'Study',
-    query: 'Study / class',
-    icon: 'book',
-    time: '6h ago',
-    image: 'campus'
+    ageHours: 6,
+    image: 'campus',
+    price: 'Free',
+    popularitySeed: 9
   },
   {
     id: 'demo-hangout',
     title: 'Anyone free to grab coffee on campus?',
-    label: 'People',
-    query: 'People / community',
-    icon: 'users',
-    time: '8h ago',
-    image: 'campus'
+    ageHours: 8,
+    image: 'campus',
+    price: 'Free',
+    popularitySeed: 4
   }
 ];
 
@@ -124,8 +163,26 @@ function compactTitle(title: string, limit = 46) {
   return title.length <= limit ? title : `${title.slice(0, limit - 1).trim()}…`;
 }
 
-function deckForRequest(request: AspireRequest) {
-  return decks.find((deck) => deck.match(request)) ?? decks[4];
+function classifyFeed(title: string, category = '', kind = '') {
+  const text = `${category} ${title}`.toLowerCase();
+  if (/event|nightshift|buildpurdue|meetup|workshop|callout|concert|party|tabling/.test(text)) return feedCategories[0];
+  if (/ride|transport|airport|\bind\b|chicago|indy|pickup|carpool|driver/.test(text)) return feedCategories[1];
+  if (/housing|roommate|sublet|lease|rent|apartment|dorm|room for rent/.test(text)) return feedCategories[2];
+  if (kind === 'buy_sell' || /buy|sell|market|for sale|wanted|airpods|macbook|furniture|lamp/.test(text)) return feedCategories[3];
+  if (/study|class|tutor|math|calc|exam|homework|notes|course|quiz/.test(text)) return feedCategories[4];
+  if (/gaming|game|valorant|league|fortnite|duo|queue|cs2|playstation|xbox/.test(text)) return feedCategories[5];
+  if (/project|collab|designer|hackathon|build|startup|code|teammate/.test(text)) return feedCategories[6];
+  if (/service|moving|move|repair|clean|photograph|photographer|assemble|fix|carry/.test(text)) return feedCategories[7];
+  return feedCategories[8];
+}
+
+function requestPrice(request: AspireRequest) {
+  if (request.amount_cents != null) {
+    const amount = request.amount_cents / 100;
+    return `$${amount.toFixed(Number.isInteger(amount) ? 0 : 2)}`;
+  }
+  if (request.kind === 'community' || request.kind === 'collaboration') return 'Free';
+  return 'Open';
 }
 
 export default function CampusHome() {
@@ -138,6 +195,8 @@ export default function CampusHome() {
   const [pendingCampusId, setPendingCampusId] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [requests, setRequests] = useState<AspireRequest[]>([]);
+  const [feedMode, setFeedMode] = useState<FeedMode>('latest');
+  const [feedClicks, setFeedClicks] = useState<FeedClicks>({});
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -180,13 +239,23 @@ export default function CampusHome() {
     return () => { alive = false; };
   }, [router]);
 
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(FEED_CLICK_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as FeedClicks;
+      if (parsed && typeof parsed === 'object') setFeedClicks(parsed);
+    } catch {
+      // Popular sorting still works with the demo engagement seed.
+    }
+  }, []);
+
   const homeCampus = useMemo(() => universities.find((item) => item.id === homeCampusId) ?? null, [universities, homeCampusId]);
   const selectedCampus = useMemo(() => universities.find((item) => item.id === activeCampusId) ?? null, [universities, activeCampusId]);
   const pendingCampus = useMemo(() => universities.find((item) => item.id === pendingCampusId) ?? null, [universities, pendingCampusId]);
   const firstName = useMemo(() => name.split(/\s+/).filter(Boolean)[0] || '', [name]);
   const visiting = Boolean(selectedCampus && homeCampus && selectedCampus.id !== homeCampus.id);
   const campusRequests = useMemo(() => selectedCampus ? requests.filter((request) => sameCampus(request, selectedCampus)) : [], [requests, selectedCampus]);
-  const demoCards = useMemo(() => demoRecentPosts.slice(0, Math.max(0, 6 - Math.min(campusRequests.length, 6))), [campusRequests.length]);
 
   const sectionData = useMemo(() => decks.map((deck) => {
     const matches = campusRequests.filter(deck.match);
@@ -215,6 +284,14 @@ export default function CampusHome() {
     setPendingCampusId(null);
   }
 
+  function recordFeedClick(id: string) {
+    setFeedClicks((current) => {
+      const next = { ...current, [id]: (current[id] || 0) + 1 };
+      try { window.localStorage.setItem(FEED_CLICK_KEY, JSON.stringify(next)); } catch { /* ignore storage errors */ }
+      return next;
+    });
+  }
+
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
@@ -241,6 +318,51 @@ export default function CampusHome() {
 
   const campusCardImage = selectedCampus.cover_image || campusImageFallback;
   const authorName = name || 'Aspire student';
+  const now = Date.now();
+  const demoCards = demoRecentPosts.slice(0, Math.max(0, 8 - Math.min(campusRequests.length, 8)));
+
+  const feedEntries: FeedEntry[] = [
+    ...campusRequests.slice(0, 12).map((request) => {
+      const category = classifyFeed(request.title, request.category, request.kind);
+      return {
+        id: request.id,
+        title: request.title,
+        category,
+        href: `/discover?category=${encodeURIComponent(category.query)}`,
+        time: relativeTime(request.created_at),
+        createdAt: new Date(request.created_at).getTime(),
+        price: requestPrice(request),
+        paid: request.amount_cents != null,
+        author: 'Purdue student',
+        demo: false,
+        popularitySeed: 0
+      };
+    }),
+    ...demoCards.map((post) => {
+      const category = classifyFeed(post.title);
+      return {
+        id: post.id,
+        title: post.title,
+        category,
+        href: `/discover?category=${encodeURIComponent(category.query)}`,
+        time: `${post.ageHours}h ago`,
+        createdAt: now - post.ageHours * 60 * 60 * 1000,
+        image: post.image === 'campus' ? campusCardImage : post.image,
+        price: post.price,
+        paid: Boolean(post.paid),
+        author: authorName,
+        demo: true,
+        popularitySeed: post.popularitySeed
+      };
+    })
+  ].sort((a, b) => {
+    if (feedMode === 'popular') {
+      const scoreA = a.popularitySeed + (feedClicks[a.id] || 0);
+      const scoreB = b.popularitySeed + (feedClicks[b.id] || 0);
+      if (scoreA !== scoreB) return scoreB - scoreA;
+    }
+    return b.createdAt - a.createdAt;
+  }).slice(0, 8);
 
   return (
     <main className={`campusHome ${styles.page}`}>
@@ -316,36 +438,38 @@ export default function CampusHome() {
             </section>
 
             <section className={styles.sectionCard}>
-              <div className={styles.sectionHead}>
-                <div><p>Right now</p><h2>Recent around {selectedCampus.short_name}</h2></div>
-                <a href="/discover">See all →</a>
+              <div className={`${styles.sectionHead} campusFeedHead`}>
+                <div>
+                  <p>Right now</p>
+                  <h2>Recent Posts</h2>
+                  <span className="campusFeedSubtitle">{selectedCampus.short_name} · automatically categorized</span>
+                </div>
+                <div className="campusFeedControls" role="group" aria-label="Sort recent campus posts">
+                  <button type="button" className={feedMode === 'latest' ? 'active' : ''} onClick={() => setFeedMode('latest')}>Latest</button>
+                  <button type="button" className={feedMode === 'popular' ? 'active' : ''} onClick={() => setFeedMode('popular')}><UiIcon name="flame" />Popular</button>
+                  <a href="/discover" aria-label="Open browse filters"><UiIcon name="sliders" /></a>
+                </div>
               </div>
 
               <div className={styles.feed}>
-                {campusRequests.slice(0, 6).map((request) => {
-                  const deck = deckForRequest(request);
-                  return (
-                    <a key={request.id} href={`/discover?category=${encodeURIComponent(deck.query)}`} className={styles.feedItem}>
-                      <div className={styles.feedIcon}><UiIcon name={deck.icon} /></div>
-                      <div className={styles.feedCopy}>
-                        <strong>{compactTitle(request.title)}</strong>
-                        <span>{deck.label} · {relativeTime(request.created_at)} · {selectedCampus.short_name}</span>
+                {feedEntries.map((entry) => (
+                  <a key={entry.id} href={entry.href} onClick={() => recordFeedClick(entry.id)} className={`${styles.feedItem} ${entry.image ? 'demoRecentCard' : 'autoRecentCard'}`}>
+                    {entry.image ? (
+                      <div className="demoRecentImageWrap">
+                        <img className="demoRecentImage" src={entry.image} alt="" />
+                        <span className="demoRecentCategory" data-tone={entry.category.tone}>{entry.category.label}</span>
                       </div>
-                      <span className={styles.feedArrow}><UiIcon name="chevron" /></span>
-                    </a>
-                  );
-                })}
-
-                {demoCards.map((post) => (
-                  <a key={post.id} href={`/discover?category=${encodeURIComponent(post.query)}`} className={`${styles.feedItem} demoRecentCard`}>
-                    <div className="demoRecentImageWrap">
-                      <img className="demoRecentImage" src={post.image === 'campus' ? campusCardImage : post.image} alt="" />
-                      <span className="demoRecentCategory">{post.label}</span>
-                    </div>
+                    ) : (
+                      <div className={`${styles.feedIcon} autoRecentVisual`}>
+                        <UiIcon name={entry.category.icon} />
+                        <span className="demoRecentCategory" data-tone={entry.category.tone}>{entry.category.label}</span>
+                      </div>
+                    )}
                     <div className={`${styles.feedCopy} demoRecentCopy`}>
-                      <strong>{post.title}</strong>
-                      <span className="demoRecentAuthor"><b>{firstName ? firstName[0].toUpperCase() : 'A'}</b>{authorName}</span>
-                      <span>{selectedCampus.short_name} · {post.time}</span>
+                      <strong>{compactTitle(entry.title)}</strong>
+                      <span className="campusFeedPrice" data-paid={entry.paid ? 'true' : 'false'}>{entry.price}</span>
+                      {entry.demo ? <span className="demoRecentAuthor"><b>{firstName ? firstName[0].toUpperCase() : 'A'}</b>{entry.author}</span> : <span className="campusFeedAuthor">{entry.author}</span>}
+                      <span>{selectedCampus.short_name} · {entry.time}</span>
                     </div>
                     <span className={styles.feedArrow}><UiIcon name="chevron" /></span>
                   </a>
