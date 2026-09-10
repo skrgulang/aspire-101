@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '../../../../../lib/server/aspireServer';
+import { getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
 
 type ScheduledConnection = {
   id: string;
