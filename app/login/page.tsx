@@ -1,5 +1,23 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AuthForm from '../AuthForm';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('next')) {
+      params.set('next', '/post');
+      router.replace(`/login?${params.toString()}`);
+      return;
+    }
+    setReady(true);
+  }, [router]);
+
+  if (!ready) return null;
   return <AuthForm mode="login" />;
 }
