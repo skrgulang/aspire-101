@@ -83,6 +83,18 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
     created.push({ ...(row as RequestMedia), public_url: signed?.signedUrl });
   }
 
+  // User photos always win. Keep the actual media in request_media (signed URLs
+  // are generated when the feed loads) and clear any temporary system cover.
+  try {
+    await supabase
+      .from('requests')
+      .update({ cover_image_source: 'user', cover_image_url: null, cover_image_asset_id: null })
+      .eq('id', requestId)
+      .eq('poster_id', user.id);
+  } catch {
+    // Media upload succeeded; a presentation metadata update must not undo it.
+  }
+
   // Text is scanned when the request is created. Run again now so the final
   // assessment includes every uploaded image before a moderator approves it.
   await runRequestAiSafety(requestId).catch(() => undefined);
