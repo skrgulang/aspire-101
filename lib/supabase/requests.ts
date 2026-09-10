@@ -1,5 +1,11 @@
 import { getSupabaseBrowserClient } from './client';
-import { coverSourceForAsset, fetchRecommendedCover, type RequestCoverSource } from './coverImages';
+import {
+  clearPostCoverPreference,
+  coverSourceForAsset,
+  fetchRecommendedCover,
+  readPostCoverPreference,
+  type RequestCoverSource
+} from './coverImages';
 import { runRequestAiSafety } from './trust';
 
 export type RequestKind =
@@ -168,15 +174,26 @@ export async function createRequest(input: CreateRequestInput) {
   let coverImageSource: RequestCoverSource = input.cover_image_source ?? 'none';
 
   if (input.cover_image_source === undefined) {
-    try {
-      const recommended = await fetchRecommendedCover(input.campusId, input.category);
-      if (recommended) {
-        coverImageUrl = recommended.image_url;
-        coverImageAssetId = recommended.id;
-        coverImageSource = coverSourceForAsset(recommended);
+    const preference = readPostCoverPreference(input.campusId);
+    if (preference?.mode === 'none') {
+      coverImageUrl = null;
+      coverImageAssetId = null;
+      coverImageSource = 'none';
+    } else if (preference?.mode === 'asset') {
+      coverImageUrl = preference.image_url;
+      coverImageAssetId = preference.asset_id;
+      coverImageSource = preference.source;
+    } else {
+      try {
+        const recommended = await fetchRecommendedCover(input.campusId, input.category);
+        if (recommended) {
+          coverImageUrl = recommended.image_url;
+          coverImageAssetId = recommended.id;
+          coverImageSource = coverSourceForAsset(recommended);
+        }
+      } catch {
+        // Recommended artwork is presentation-only and must never block posting.
       }
-    } catch {
-      // Recommended artwork is presentation-only and must never block posting.
     }
   }
 
@@ -209,6 +226,7 @@ export async function createRequest(input: CreateRequestInput) {
     .single();
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
+  clearPostCoverPreference();
   notifyCampusFeedChanged();
   await runRequestAiSafety(data.id).catch(() => undefined);
   return data as AspireRequest;
