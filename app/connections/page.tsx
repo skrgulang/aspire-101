@@ -1,6 +1,4 @@
 import ConnectionsHub from '../ConnectionsHub';
-import MarketOrdersPanel from '../MarketOrdersPanel';
-import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
 import ConnectionCopilotPanel from '../ConnectionCopilotPanel';
 import AppDock from '../AppDock';
 import UiIcon from '../UiIcon';
@@ -31,9 +29,9 @@ export default function ConnectionsPage() {
               <div><strong>Browse campus</strong><span>See what students need</span></div>
               <UiIcon name="chevron" />
             </a>
-            <a href="/connections#my-activity" className={styles.quickAction}>
+            <a href="/activity" className={styles.quickAction}>
               <i><UiIcon name="users" /></i>
-              <div><strong>View connections</strong><span>Your campus network</span></div>
+              <div><strong>View activity</strong><span>Your requests and connections</span></div>
               <UiIcon name="chevron" />
             </a>
           </section>
@@ -62,10 +60,6 @@ export default function ConnectionsPage() {
 
       <div className={styles.secondary}>
         <ConnectionCopilotPanel />
-        <section id="transactions" className={styles.transactions}>
-          <MarketOrdersPanel />
-          <ConnectionPaymentsPanel />
-        </section>
       </div>
     </main>
   );
