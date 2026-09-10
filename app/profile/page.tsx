@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 import { fetchMyRole } from '../../lib/supabase/trust';
 import type { AppRole } from '../../lib/supabase/trust';
-import { aspireLogo } from '../logo';
 import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
 import SchoolVerificationCard from '../SchoolVerificationCard';
@@ -14,6 +13,7 @@ import IdentityVerificationCard from '../IdentityVerificationCard';
 import MfaSecurityCard from '../MfaSecurityCard';
 import PaymentConnectRow from '../PaymentConnectRow';
 import ProfileAvatar from '../ProfileAvatar';
+import UiIcon from '../UiIcon';
 
 type ProfileView = {
   name: string;
@@ -82,35 +82,60 @@ export default function ProfilePage() {
 
   const staff = role === 'moderator' || role === 'admin';
   const initials = profile.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'A';
+  const verifiedSignals = [profile.schoolVerified, profile.idVerified, profile.phoneVerified, profile.emailVerified].filter(Boolean).length;
 
   return (
     <main className="profilePage profilePagePolished">
+      <AppDock active="profile" />
+
       <div className="profileShell profileShellPolished">
         <header className="profileTop profileTopPolished">
-          <a className="profileBrand" href="/campus"><img src={aspireLogo} alt="" /><strong>Aspire 101</strong></a>
-          <a className="profileBack" href="/campus">Back to your circle →</a>
+          <div className="profilePageHeading">
+            <span>ACCOUNT</span>
+            <h1>Profile</h1>
+            <p>Manage your campus identity, verification, security, and payments in one place.</p>
+          </div>
+          <a className="profileBack" href="/campus"><UiIcon name="home" />Back home</a>
         </header>
 
         <section className="profileHero profileHeroPolished">
           <ProfileAvatar initialUrl={profile.avatarUrl} initials={initials} name={profile.name} />
+
           <div className="profileHeroCopy">
-            <div className="profileHeroMeta"><span>YOUR ASPIRE</span>{role !== 'member' && <b>{role.toUpperCase()}</b>}</div>
-            <h1>{profile.name}</h1>
+            <div className="profileHeroMeta">
+              <span>PURDUE COMMUNITY</span>
+              {role !== 'member' && <b>{role.toUpperCase()}</b>}
+            </div>
+            <h2>{profile.name}</h2>
             <p>{profile.school}</p>
             <div className="profileTrustChips" aria-label="Trust status">
               <span className={profile.schoolVerified ? 'verified' : ''}>{profile.schoolVerified ? '✓ Campus Verified' : 'Campus verification needed'}</span>
-              <span className={profile.idVerified ? 'verified' : ''}>{profile.idVerified ? '✓ ID Verified' : 'ID verification optional'}</span>
+              <span className={profile.idVerified ? 'verified' : ''}>{profile.idVerified ? '✓ ID Verified' : 'ID optional'}</span>
               <span className={profile.phoneVerified ? 'verified' : ''}>{profile.phoneVerified ? '✓ Phone Verified' : 'Phone optional'}</span>
               <span className={profile.emailVerified ? 'verified' : ''}>{profile.emailVerified ? '✓ Email confirmed' : 'Email not confirmed'}</span>
             </div>
+            <div className="profileHeroActions">
+              <a href="#trust-passport">Manage verification</a>
+              <a href="/connections"><UiIcon name="message" />Messages</a>
+            </div>
+          </div>
+
+          <div className="profileSetupCard" aria-label={`${verifiedSignals} of 4 trust signals complete`}>
+            <div className="profileSetupTop">
+              <div><span>VERIFICATION SETUP</span><strong>{verifiedSignals} of 4</strong></div>
+              <div className="profileSetupBadge"><UiIcon name="check" /></div>
+            </div>
+            <p>Complete the trust signals you want to use for higher-trust campus activity.</p>
+            <div className={`profileSetupMeter level${verifiedSignals}`}><i /></div>
+            <a href="#trust-passport">Review trust signals <UiIcon name="chevron" /></a>
           </div>
         </section>
 
         <section className="profileOverview">
-          <div className="profileTrustPanel">
+          <div className="profileTrustPanel" id="trust-passport">
             <div className="profileSectionHeading">
-              <div><span>TRUST PASSPORT</span><h2>Verify what matters.</h2></div>
-              <p>Campus identity, government ID, phone, account security, and payment readiness stay separate so people can see what is actually verified.</p>
+              <div><span>TRUST & VERIFICATION</span><h2>Build a trusted campus profile.</h2></div>
+              <p>Each signal is separate. Students can see what is verified without exposing the sensitive information behind it.</p>
             </div>
 
             <div className="profileTrustCards profileTrustCardsExpanded">
@@ -122,22 +147,40 @@ export default function ProfilePage() {
           </div>
 
           <aside className="profileQuickPanel">
-            <div className="profileSectionHeading compact"><div><span>ACCOUNT</span><h2>Your Aspire.</h2></div></div>
+            <div className="profileSectionHeading compact"><div><span>ACCOUNT</span><h2>Account & activity</h2></div></div>
 
             <div className="profileMenuList">
               <div className="profileMenuRow">
-                <i>⌂</i><div><strong>Home campus</strong><span>{profile.school}</span></div><b>Verified identity</b>
+                <i><UiIcon name="home" /></i>
+                <div><strong>Home campus</strong><span>{profile.school}</span></div>
+                <b>{profile.schoolVerified ? 'Verified' : 'Review'}</b>
               </div>
+
               <a className="profileMenuRow" href="/connections">
-                <i>♧</i><div><strong>Connections</strong><span>Mutual connections and messages</span></div><b>→</b>
+                <i><UiIcon name="message" /></i>
+                <div><strong>Messages</strong><span>Campus conversations and connections</span></div>
+                <b><UiIcon name="chevron" /></b>
               </a>
+
               <PaymentConnectRow phoneVerified={profile.phoneVerified} schoolVerified={profile.schoolVerified} />
+
               <a className="profileMenuRow" href="/safety">
-                <i>◇</i><div><strong>Safety & privacy</strong><span>Reporting, blocking, verification, and privacy</span></div><b>→</b>
+                <i><UiIcon name="check" /></i>
+                <div><strong>Safety & privacy</strong><span>Reporting, blocking, verification, and privacy</span></div>
+                <b><UiIcon name="chevron" /></b>
               </a>
+
+              <a className="profileMenuRow" href="/marketplace-rules">
+                <i><UiIcon name="tag" /></i>
+                <div><strong>Marketplace rules</strong><span>Review expectations for campus exchanges</span></div>
+                <b><UiIcon name="chevron" /></b>
+              </a>
+
               {staff && (
                 <a className="profileMenuRow moderator" href="/moderator">
-                  <i>✦</i><div><strong>{role === 'admin' ? 'Admin console' : 'Moderation tools'}</strong><span>Review trust & safety queues</span></div><b>→</b>
+                  <i><UiIcon name="user" /></i>
+                  <div><strong>{role === 'admin' ? 'Admin console' : 'Moderation tools'}</strong><span>Review trust & safety queues</span></div>
+                  <b><UiIcon name="chevron" /></b>
                 </a>
               )}
             </div>
@@ -151,7 +194,6 @@ export default function ProfilePage() {
 
         <footer className="profileOperator">Aspire 101 is a product operated by Cloudora Labs, Inc.</footer>
       </div>
-      <AppDock active="profile" />
     </main>
   );
 }
