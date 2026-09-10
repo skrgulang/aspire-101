@@ -1,4 +1,5 @@
 import PostAccessGate from '../PostAccessGate';
+import PostLanguagePicker from '../PostLanguagePicker';
 import AspireAgentLauncher from '../AspireAgentLauncher';
 import AppDock from '../AppDock';
 import UiIcon from '../UiIcon';
@@ -26,6 +27,7 @@ export default function PostPage() {
         <div className="postWorkspaceGrid">
           <div className="postMainColumn">
             <div className="postPanel">
+              <PostLanguagePicker />
               <PostAccessGate />
             </div>
           </div>
