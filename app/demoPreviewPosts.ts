@@ -85,8 +85,15 @@ type DemoState = Record<string, 'open' | 'cancelled' | 'deleted'>;
 
 export function isPreviewDemoEnabled() {
   if (typeof window === 'undefined') return false;
+
   const params = new URLSearchParams(window.location.search);
-  return params.get('demo') === '1' || (window.location.hostname.endsWith('.vercel.app') && window.location.hostname.includes('aspire-101'));
+  if (params.get('demo') === '1') return true;
+
+  const hostname = window.location.hostname.toLowerCase();
+  const isVercelPreview = hostname.endsWith('.vercel.app') && hostname.includes('-git-');
+
+  // Never inject fake/demo campus posts on the production hostname or custom domain.
+  return isVercelPreview;
 }
 
 function readState(): DemoState {
