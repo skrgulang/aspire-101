@@ -1,0 +1,292 @@
+/* Mobile-first product overrides.
+   Keep desktop personality, but make signed-in flows behave like an app on phones. */
+
+:root {
+  --mobile-page-gutter: 16px;
+  --mobile-dock-height: 72px;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 760px) {
+  html { scroll-padding-bottom: calc(var(--mobile-dock-height) + env(safe-area-inset-bottom)); }
+
+  body:has(.campusHome),
+  body:has(.discoverPage),
+  body:has(.connectionsPage),
+  body:has(.postPage),
+  body:has(.profilePage),
+  body:has(.aspireMoneyPage) {
+    overflow-x: hidden;
+  }
+
+  /* App navigation: thumb friendly and safe-area aware. */
+  .appDock {
+    left: var(--mobile-page-gutter);
+    right: var(--mobile-page-gutter);
+    bottom: max(8px, env(safe-area-inset-bottom));
+    width: auto;
+    min-height: 64px;
+    padding: 6px;
+    transform: none;
+    border-radius: 22px;
+  }
+  .appDock a {
+    min-height: 50px;
+    border-radius: 16px;
+    gap: 4px;
+  }
+  .appDock a i { font-size: 18px; }
+  .appDock a span { font-size: 9px; }
+  .appDock .appDockPost i { font-size: 24px; }
+
+  .discoverPage,
+  .connectionsPage,
+  .postPage,
+  .profilePage,
+  .aspireMoneyPage {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* Auth becomes a focused one-column onboarding screen. */
+  .authPage { min-height: 100dvh; }
+  .authTopbar {
+    min-height: 64px;
+    padding: 12px var(--mobile-page-gutter);
+  }
+  .authTopbar .authBack { font-size: 10px; }
+  .authShell {
+    width: 100%;
+    min-height: auto;
+    display: block;
+    padding: 10px var(--mobile-page-gutter) 36px;
+  }
+  .authVisual {
+    min-height: 150px;
+    margin-bottom: 12px;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+  .authVisualHeadline {
+    position: relative;
+    z-index: 3;
+    padding: 22px 20px;
+  }
+  .authVisualHeadline h1 {
+    max-width: 290px;
+    margin-top: 7px;
+    font-size: clamp(34px, 10vw, 46px);
+    line-height: .94;
+  }
+  .authCampusPhoto,
+  .authPeoplePhoto,
+  .authSticker,
+  .authDoodle,
+  .authRequestBits { display: none !important; }
+  .authCard {
+    width: 100%;
+    min-width: 0;
+    padding: 22px 18px;
+    border-radius: 24px;
+  }
+  .authCardTop { align-items: flex-start; }
+  .authCardTop h2 { font-size: clamp(28px, 8vw, 38px); }
+  .authCard label input,
+  .authMfaInput {
+    min-height: 50px;
+    font-size: 16px;
+  }
+  .authSubmit {
+    min-height: 52px;
+    width: 100%;
+  }
+  .authTrustRow {
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .authTrustRow::-webkit-scrollbar { display: none; }
+  .authTrustRow span { flex: 0 0 auto; }
+
+  /* Post: composer is the product. Put it first and reduce decorative weight. */
+  .postPage {
+    overflow: visible;
+    min-height: 100dvh;
+  }
+  .postPageGlow,
+  .postDoodle { display: none !important; }
+  .postPage .postShell,
+  .postShell {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px var(--mobile-page-gutter) 28px;
+  }
+  .postPanel {
+    order: 1;
+    width: 100%;
+    border-radius: 24px;
+    overflow: visible;
+  }
+  .postSide {
+    order: 2;
+    position: static;
+    padding: 12px 2px 0;
+  }
+  .postSide h2 {
+    margin: 10px 0 10px;
+    font-size: 34px;
+  }
+  .postSide > p:not(.eyebrow) { font-size: 12px; }
+  .postLiveStack { display: none; }
+  .postNavChoices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 10px;
+  }
+  .postDiscoverLink {
+    min-height: 44px;
+    margin: 0;
+    align-items: center;
+  }
+  .postForm { padding: 20px 16px 22px; }
+  .postFormHeading h1 {
+    font-size: 36px;
+    line-height: .98;
+  }
+  .postCategoryPicker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .postCategoryPicker button {
+    min-height: 92px;
+    padding: 12px;
+  }
+  .postQuickStarts {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .postQuickStarts::-webkit-scrollbar { display: none; }
+  .postQuickStarts > span,
+  .postQuickStarts button { flex: 0 0 auto; }
+  .postField input,
+  .postField textarea,
+  .postField select,
+  .moneyInput input {
+    min-height: 50px;
+    font-size: 16px;
+  }
+  .postField textarea { min-height: 120px; }
+  .postFieldLarge textarea { font-size: 18px; }
+  .postEssentials,
+  .postMoney,
+  .postContextCard {
+    grid-template-columns: 1fr;
+  }
+  .postKind { min-height: 58px; }
+  .postSubmitRow {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .postSubmitRow .button,
+  .postSubmitRow button[type='submit'] {
+    min-height: 52px;
+    width: 100%;
+  }
+
+  /* Discover and connections: app scale, not landing-page scale. */
+  .discoverPage .discoverShell,
+  .connectionsPage .connectionsShell {
+    width: 100%;
+    padding: 20px var(--mobile-page-gutter) 24px;
+  }
+  .discoverPage .discoverTopline h1,
+  .connectionsPage .connectionsHero h1 {
+    font-size: clamp(38px, 12vw, 50px);
+    line-height: .95;
+  }
+  .discoverPage .discoverTopline > p:last-child,
+  .connectionsPage .connectionsHero > div:first-child > p:last-child {
+    font-size: 12px;
+  }
+  .discoverPage .discoverCategories,
+  .connectionsPage .connectionsTabs {
+    margin-left: calc(var(--mobile-page-gutter) * -1);
+    margin-right: calc(var(--mobile-page-gutter) * -1);
+    padding-left: var(--mobile-page-gutter);
+    padding-right: var(--mobile-page-gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .discoverPage .discoverCategories::-webkit-scrollbar,
+  .connectionsPage .connectionsTabs::-webkit-scrollbar { display: none; }
+  .discoverPage .discoverCard { min-height: 0; }
+  .connectionsPage .connectionsStats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .connectionsPage .connectionsStats article {
+    min-width: 0;
+    min-height: 72px;
+    padding: 10px;
+  }
+
+  /* Profile: stack everything and keep destructive/account actions reachable. */
+  .profilePage,
+  .profilePagePolished {
+    padding: 18px var(--mobile-page-gutter) calc(112px + env(safe-area-inset-bottom)) !important;
+  }
+  .profileTopPolished { margin-bottom: 16px; }
+  .profileOverview { grid-template-columns: 1fr !important; }
+  .profileQuickPanel { position: static !important; }
+  .profileHeroPolished {
+    grid-template-columns: 68px minmax(0, 1fr) !important;
+    gap: 14px !important;
+  }
+  .profileAvatar {
+    width: 68px !important;
+    height: 68px !important;
+    border-radius: 20px !important;
+  }
+  .profileHeroPolished h1 { font-size: clamp(34px, 11vw, 48px) !important; }
+  .profileTrustCards .profileCard,
+  .profileMenuRow { min-width: 0; }
+  .profileMenuRow {
+    min-height: 64px;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+  }
+  .profileAccountFoot {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .profileAccountFoot button {
+    min-height: 44px;
+    text-align: left;
+  }
+
+  /* Common form behavior on iOS. */
+  input,
+  textarea,
+  select { font-size: 16px; }
+  button,
+  [role='button'] { touch-action: manipulation; }
+}
+
+@media (max-width: 390px) {
+  :root { --mobile-page-gutter: 13px; }
+  .appDock a span { font-size: 8px; }
+  .postCategoryPicker { grid-template-columns: 1fr 1fr; }
+  .authCard { padding-left: 15px; padding-right: 15px; }
+}
