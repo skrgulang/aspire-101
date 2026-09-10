@@ -62,6 +62,7 @@ import './sidebar-popout.css';
 import './post-refresh.css';
 import './discover-reference.css';
 import './campus-demo-feed.css';
+import './campus-demo-feed-fix.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
