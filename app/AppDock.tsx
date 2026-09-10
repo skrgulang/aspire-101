@@ -18,9 +18,9 @@ const discoverItems: DockItem[] = [
 
 const personalItems: DockItem[] = [
   { key: 'connections', label: 'Inbox', href: '/connections', icon: 'message', mobile: true },
-  { key: 'activity', label: 'My Activity', href: '/connections#my-activity', icon: 'activity' },
+  { key: 'activity', label: 'My Activity', href: '/activity', icon: 'activity' },
   { key: 'saved', label: 'Saved', href: '/saved', icon: 'bookmark' },
-  { key: 'transactions', label: 'Transactions', href: '/connections#transactions', icon: 'wallet' }
+  { key: 'transactions', label: 'Transactions', href: '/activity#transactions', icon: 'wallet' }
 ];
 
 const accountItems: DockItem[] = [
