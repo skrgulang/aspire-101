@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchCampusFeedRequests, DiscoverCategory, DiscoverRequest } from '../lib/supabase/discovery';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
-import { requestLanguageLabel, requestLanguages, RequestLanguageCode, respondToRequest } from '../lib/supabase/requests';
+import { respondToRequest } from '../lib/supabase/requests';
 import { blockUser, reportSafety, SafetyReason } from '../lib/supabase/safety';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import CampusPicker from './CampusPicker';
@@ -55,7 +55,6 @@ export default function DiscoverRequestsV2() {
   const [query,setQuery] = useState('');
   const [debouncedQuery,setDebouncedQuery] = useState('');
   const [category,setCategory] = useState<DiscoverCategory>('Anything');
-  const [language,setLanguage] = useState<RequestLanguageCode | 'all'>('all');
   const [items,setItems] = useState<DiscoverRequest[]>([]);
   const [dataLoading,setDataLoading] = useState(false);
   const [showSkeleton,setShowSkeleton] = useState(false);
@@ -91,7 +90,6 @@ export default function DiscoverRequestsV2() {
       const params = new URLSearchParams(window.location.search);
       const requestedCategory = params.get('category');
       const requestedCampus = params.get('campus');
-      const requestedLanguage = params.get('language');
       const storedCampus = window.sessionStorage.getItem('aspire-active-campus-id');
       const validIds = new Set(campusList.map((campus) => campus.id));
       const nextActive = requestedCampus && validIds.has(requestedCampus)
@@ -102,7 +100,6 @@ export default function DiscoverRequestsV2() {
             ? currentId
             : homeId;
       if (requestedCategory && categories.includes(requestedCategory as DiscoverCategory)) setCategory(requestedCategory as DiscoverCategory);
-      if (requestedLanguage && (requestedLanguage === 'all' || requestLanguages.some((item) => item.value === requestedLanguage))) setLanguage(requestedLanguage as RequestLanguageCode | 'all');
       setCurrentUserId(data.user.id);
       setUniversities(campusList);
       setHomeCampusId(homeId);
@@ -143,20 +140,18 @@ export default function DiscoverRequestsV2() {
     const skeletonTimer = window.setTimeout(() => { if (alive) setShowSkeleton(true); }, 260);
 
     const campusForPreview = universities.find((campus) => campus.id === activeCampusId) ?? null;
-    fetchCampusFeedRequests({ campusId: activeCampusId, query: debouncedQuery, category, language, limit: 50 })
+    fetchCampusFeedRequests({ campusId: activeCampusId, query: debouncedQuery, category, limit: 50 })
       .then((data) => {
         if (!alive) return;
         let next = data;
         if (currentUserId && campusForPreview && isPreviewDemoEnabled()) {
-          let demos = buildDemoDiscoverRequests(
+          const demos = buildDemoDiscoverRequests(
             currentUserId,
             campusForPreview.id,
             campusForPreview.name,
             campusForPreview.cover_image
           );
-          demos = filterDemoDiscoverRequests(demos, debouncedQuery, category);
-          if (language !== 'all') demos = demos.filter((item) => (item.language_code || 'en') === language);
-          next = mergeRequests(next, demos);
+          next = mergeRequests(next, filterDemoDiscoverRequests(demos, debouncedQuery, category));
         }
         setItems(next);
       })
@@ -172,7 +167,7 @@ export default function DiscoverRequestsV2() {
       alive = false;
       window.clearTimeout(skeletonTimer);
     };
-  }, [activeCampusId, currentUserId, debouncedQuery, category, language, retryKey, universities]);
+  }, [activeCampusId, currentUserId, debouncedQuery, category, retryKey, universities]);
 
   const homeCampus = useMemo(() => universities.find((c) => c.id === homeCampusId) ?? null, [universities, homeCampusId]);
   const activeCampus = useMemo(() => universities.find((c) => c.id === activeCampusId) ?? null, [universities, activeCampusId]);
@@ -268,22 +263,12 @@ export default function DiscoverRequestsV2() {
 
     <div className="discoverV2SearchWrap"><div className="discoverV2SearchBox"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${activeCampus.short_name} — Math 55, ride to IND, Valorant...`} aria-label={`Search ${activeCampus.short_name} requests`} />{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}</div>{!query && <div className="discoverV2Suggestions" aria-label="Suggested searches"><span>TRY</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setQuery(suggestion)}>{suggestion}</button>)}</div>}</div>
     <div className="discoverV2Categories" aria-label="Request categories">{categories.map((item) => <button key={item} className={category === item ? 'active' : ''} type="button" onClick={() => setCategory(item)}>{item}</button>)}</div>
-    <div className="discoverV2ResultMeta">
-      <div><strong>{dataLoading && !items.length ? 'Searching campus…' : `${items.length} open ${items.length === 1 ? 'request' : 'requests'}`}</strong><span>{debouncedQuery ? `for “${debouncedQuery}” · ` : ''}{activeCampus.name}</span></div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 700 }}>
-        <span>Language</span>
-        <select value={language} onChange={(event) => setLanguage(event.target.value as RequestLanguageCode | 'all')} aria-label="Filter posts by language" style={{ background: '#171714', color: 'inherit', border: '1px solid rgba(255,255,255,.14)', borderRadius: 12, padding: '9px 12px' }}>
-          <option value="all">All languages</option>
-          {requestLanguages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-        </select>
-      </label>
-      <span>Newest first · {language === 'all' ? 'All languages' : requestLanguageLabel(language)}</span>
-    </div>
+    <div className="discoverV2ResultMeta"><div><strong>{dataLoading && !items.length ? 'Searching campus…' : `${items.length} open ${items.length === 1 ? 'request' : 'requests'}`}</strong><span>{debouncedQuery ? `for “${debouncedQuery}” · ` : ''}{activeCampus.name}</span></div><span>Newest first</span></div>
     {message && <div className="discoverV2Notice" role="status">{message}</div>}
 
     {error ? <div className="discoverV2State error" role="alert"><span>DISCOVER UNAVAILABLE</span><h2>We couldn’t load nearby campus requests.</h2><p>{error}</p><button className="button buttonGold" type="button" onClick={() => setRetryKey((value) => value + 1)}>Try again</button></div>
       : showSkeleton ? <div className="discoverV2SkeletonList" aria-label="Loading requests">{[0,1,2].map((item) => <div className="discoverV2Skeleton" key={item}><i /><div><span /><span /><span /></div></div>)}</div>
-      : !dataLoading && !items.length ? <div className="discoverV2State empty"><span>NOTHING MATCHED</span><h2>{debouncedQuery ? `No results for “${debouncedQuery}” at ${activeCampus.short_name}.` : `Your ${category === 'Anything' ? 'campus feed' : category} is quiet right now.`}</h2><p>Try another keyword, language, category, or start the request yourself.</p><div className="discoverV2EmptyActions">{(query || category !== 'Anything' || language !== 'all') && <button type="button" onClick={() => { setQuery(''); setCategory('Anything'); setLanguage('all'); }}>Clear filters</button>}<a className="button buttonGold" href="/post">Post what you need →</a></div></div>
+      : !dataLoading && !items.length ? <div className="discoverV2State empty"><span>NOTHING MATCHED</span><h2>{debouncedQuery ? `No results for “${debouncedQuery}” at ${activeCampus.short_name}.` : `Your ${category === 'Anything' ? 'campus feed' : category} is quiet right now.`}</h2><p>Try another keyword, clear your filters, or start the request yourself.</p><div className="discoverV2EmptyActions">{(query || category !== 'Anything') && <button type="button" onClick={() => { setQuery(''); setCategory('Anything'); }}>Clear filters</button>}<a className="button buttonGold" href="/post">Post what you need →</a></div></div>
       : <div className={`discoverV2List campusUnifiedFeed ${dataLoading ? 'isRefreshing' : ''}`}>{items.map((item) => {
           const mine = Boolean(currentUserId && item.poster_id === currentUserId);
           const demo = item.id.startsWith('demo-preview-');
