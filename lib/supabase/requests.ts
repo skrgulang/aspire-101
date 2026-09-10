@@ -42,6 +42,13 @@ export function detectRequestLanguage(locale?: string | null): RequestLanguageCo
   return 'en';
 }
 
+function readPreferredPostLanguage(): RequestLanguageCode {
+  if (typeof window === 'undefined') return 'en';
+  const stored = window.localStorage.getItem('aspire:post-language');
+  if (stored && requestLanguages.some((item) => item.value === stored)) return stored as RequestLanguageCode;
+  return detectRequestLanguage(window.navigator.language);
+}
+
 export type AspireRequest = {
   id: string;
   poster_id: string;
@@ -160,8 +167,6 @@ export async function createRequest(input: CreateRequestInput) {
   let coverImageAssetId = input.cover_image_asset_id ?? null;
   let coverImageSource: RequestCoverSource = input.cover_image_source ?? 'none';
 
-  // Undefined means "pick one for me". Explicit `none` lets the future composer
-  // offer a real No photo choice without the backend silently adding one back.
   if (input.cover_image_source === undefined) {
     try {
       const recommended = await fetchRecommendedCover(input.campusId, input.category);
@@ -195,7 +200,7 @@ export async function createRequest(input: CreateRequestInput) {
       price_negotiable: isMarket ? Boolean(input.price_negotiable) : false,
       fulfillment_method: isMarket ? input.fulfillment_method || 'campus_pickup' : null,
       quantity: isMarket ? Math.max(1, Math.min(99, input.quantity || 1)) : 1,
-      language_code: input.language_code || 'en',
+      language_code: input.language_code || readPreferredPostLanguage(),
       cover_image_url: coverImageUrl,
       cover_image_source: coverImageSource,
       cover_image_asset_id: coverImageAssetId
