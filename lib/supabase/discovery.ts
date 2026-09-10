@@ -1,7 +1,6 @@
 import { getSupabaseBrowserClient } from './client';
 import type { AspireRequest, RequestLanguageCode } from './requests';
 import { fetchRequestMedia, RequestMedia } from './requestMedia';
-import { demoRecentImages } from '../../app/demoRecentImages';
 
 export type DiscoverCategory =
   | 'Anything'
@@ -23,6 +22,8 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
 
 const discoverLanguageKey = 'aspire:discover-language';
 const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
+const seededCorecImage = 'https://img.athleticbusiness.com/files/base/abmedia/all/image/projects/2014/03/arch_FOM/2014/large/1024A-614-AB_Purdue.jpg';
+const seededGamingImage = 'https://esports.purdue.edu/images/_banners/game-room-2.jpg';
 
 function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
   if (value) return value;
@@ -35,17 +36,17 @@ function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLang
 function seededMedia(row: Pick<DiscoverRequest, 'id' | 'title' | 'poster_id' | 'created_at'>): RequestMedia[] {
   const normalized = row.title.trim().toLowerCase();
   const image = normalized === 'anyone want to go to corec together?'
-    ? demoRecentImages.corec
+    ? seededCorecImage
     : normalized === 'anyone want to game tonight?'
-      ? demoRecentImages.gaming
+      ? seededGamingImage
       : null;
   if (!image) return [];
   return [{
     id: `seeded-${row.id}`,
     request_id: row.id,
     uploader_id: row.poster_id,
-    storage_path: `seeded/${row.id}.webp`,
-    mime_type: 'image/webp',
+    storage_path: `seeded/${row.id}.jpg`,
+    mime_type: 'image/jpeg',
     sort_order: 0,
     created_at: row.created_at,
     public_url: image
