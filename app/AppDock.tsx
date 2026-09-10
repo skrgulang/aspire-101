@@ -5,6 +5,7 @@ import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
 import DemoCampusRecentInjector from './DemoCampusRecentInjector';
+import DemoDiscoverInjector from './DemoDiscoverInjector';
 
 type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'profile';
 type Theme = 'light' | 'dark';
@@ -94,6 +95,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
         </button>
       </nav>
       {!preview && <DemoCampusRecentInjector />}
+      {!preview && <DemoDiscoverInjector />}
     </>
   );
 }
