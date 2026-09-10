@@ -22,8 +22,8 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
 
 const discoverLanguageKey = 'aspire:discover-language';
 const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
-const seededCorecImage = 'https://img.athleticbusiness.com/files/base/abmedia/all/image/projects/2014/03/arch_FOM/2014/large/1024A-614-AB_Purdue.jpg';
-const seededGamingImage = 'https://esports.purdue.edu/images/_banners/game-room-2.jpg';
+const seededCorecImage = '/api/seeded-post-image?name=corec';
+const seededGamingImage = '/api/seeded-post-image?name=gaming';
 
 function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
   if (value) return value;
