@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
-import DemoCampusRecentInjector from './DemoCampusRecentInjector';
-import DemoDiscoverInjector from './DemoDiscoverInjector';
 
 type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'profile';
 type Theme = 'light' | 'dark';
@@ -64,38 +62,34 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
   }
 
   return (
-    <>
-      <nav className={`${styles.dock} signedInDock`} aria-label="Aspire app navigation">
-        <a className={styles.brand} href={preview ? '/ui-preview' : '/campus'} aria-label="Aspire 101 home">
-          <img src={aspireLogo} alt="" />
-          <span>Aspire 101</span>
-        </a>
+    <nav className={`${styles.dock} signedInDock`} aria-label="Aspire app navigation">
+      <a className={styles.brand} href={preview ? '/ui-preview' : '/campus'} aria-label="Aspire 101 home">
+        <img src={aspireLogo} alt="" />
+        <span>Aspire 101</span>
+      </a>
 
-        <div className={styles.groupLabel}>Discover</div>
-        {discoverItems.map(renderItem)}
+      <div className={styles.groupLabel}>Discover</div>
+      {discoverItems.map(renderItem)}
 
-        <div className={styles.groupLabel}>Your stuff</div>
-        {personalItems.map(renderItem)}
+      <div className={styles.groupLabel}>Your stuff</div>
+      {personalItems.map(renderItem)}
 
-        <div className={styles.groupLabel}>Account</div>
-        {accountItems.map(renderItem)}
+      <div className={styles.groupLabel}>Account</div>
+      {accountItems.map(renderItem)}
 
-        <span className={styles.spacer} aria-hidden="true" />
+      <span className={styles.spacer} aria-hidden="true" />
 
-        <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/safety'} title="Safety & Help" onClick={preview ? (event) => event.preventDefault() : undefined}>
-          <UiIcon name="shield" />
-          <span>Safety & Help</span>
-        </a>
-        <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/profile#account-settings'} title="Settings" onClick={preview ? (event) => event.preventDefault() : undefined}>
-          <UiIcon name="settings" />
-          <span>Settings</span>
-        </a>
-        <button className={styles.themeButton} type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'Black & Gold' : 'Light'} mode`}>
-          <UiIcon name={theme === 'light' ? 'moon' : 'sun'} />
-        </button>
-      </nav>
-      {!preview && <DemoCampusRecentInjector />}
-      {!preview && <DemoDiscoverInjector />}
-    </>
+      <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/safety'} title="Safety & Help" onClick={preview ? (event) => event.preventDefault() : undefined}>
+        <UiIcon name="shield" />
+        <span>Safety & Help</span>
+      </a>
+      <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/profile#account-settings'} title="Settings" onClick={preview ? (event) => event.preventDefault() : undefined}>
+        <UiIcon name="settings" />
+        <span>Settings</span>
+      </a>
+      <button className={styles.themeButton} type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'Black & Gold' : 'Light'} mode`}>
+        <UiIcon name={theme === 'light' ? 'moon' : 'sun'} />
+      </button>
+    </nav>
   );
 }
