@@ -20,9 +20,11 @@ alter table public.notifications
 alter table public.connection_events
   add column if not exists event_key text;
 
-create unique index if not exists connection_events_event_key_unique_idx
-  on public.connection_events(event_key)
-  where event_key is not null;
+drop index if exists public.connection_events_event_key_unique_idx;
+alter table public.connection_events
+  drop constraint if exists connection_events_event_key_unique;
+alter table public.connection_events
+  add constraint connection_events_event_key_unique unique (event_key);
 
 alter table public.connection_events
   drop constraint if exists connection_events_event_key_length_check;
