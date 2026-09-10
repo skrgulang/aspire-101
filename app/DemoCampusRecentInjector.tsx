@@ -1,31 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { demoRecentImages } from './demoRecentImages';
+import { buildDemoAspireRequests, demoPreviewPostDefinitions, isPreviewDemoEnabled } from './demoPreviewPosts';
 import styles from './DemoCampusRecentInjector.module.css';
-
-type DemoCard = {
-  id: string;
-  title: string;
-  category: string;
-  tone: 'events' | 'people' | 'gaming' | 'rides';
-  image: string;
-  price: string;
-  paid?: boolean;
-  time: string;
-  href: string;
-};
 
 export default function DemoCampusRecentInjector() {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [campusLabel, setCampusLabel] = useState('Purdue');
   const [campusPhoto, setCampusPhoto] = useState('');
+  const [userId] = useState('preview-user');
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (window.location.pathname !== '/campus' || params.get('demo') !== '1') return;
+    if (typeof window === 'undefined' || window.location.pathname !== '/campus' || !isPreviewDemoEnabled()) return;
 
     const heading = Array.from(document.querySelectorAll<HTMLElement>('main.campusHome h2'))
       .find((node) => node.textContent?.trim().startsWith('Recent around'));
@@ -53,69 +41,34 @@ export default function DemoCampusRecentInjector() {
     };
   }, []);
 
+  const cards = useMemo(() => buildDemoAspireRequests(userId, campusLabel)
+    .filter((request) => request.status === 'open')
+    .map((request) => {
+      const definition = demoPreviewPostDefinitions.find((item) => item.id === request.id)!;
+      return {
+        ...request,
+        displayCategory: definition.displayCategory,
+        image: definition.imageKey ? demoRecentImages[definition.imageKey] : campusPhoto || demoRecentImages.corec,
+        time: `${definition.hoursAgo}h ago`,
+        price: request.kind === 'split_cost' && request.amount_cents != null ? `$${request.amount_cents / 100}` : 'Free',
+        href: `/discover?category=${encodeURIComponent(request.category)}`
+      };
+    }), [campusLabel, campusPhoto, userId]);
+
   if (!target) return null;
 
-  const cards: DemoCard[] = [
-    {
-      id: 'nightshift',
-      title: 'Anyone want to go to BuildPurdue Nightshift together?',
-      category: 'Events',
-      tone: 'events',
-      image: demoRecentImages.nightshift,
-      price: 'Free',
-      time: '1h ago',
-      href: '/discover?category=People%20%2F%20community'
-    },
-    {
-      id: 'corec',
-      title: 'Anyone want to go to CoRec together?',
-      category: 'People',
-      tone: 'people',
-      image: demoRecentImages.corec,
-      price: 'Free',
-      time: '2h ago',
-      href: '/discover?category=People%20%2F%20community'
-    },
-    {
-      id: 'gaming',
-      title: 'Anyone want to game tonight?',
-      category: 'Gaming',
-      tone: 'gaming',
-      image: demoRecentImages.gaming,
-      price: 'Free',
-      time: '3h ago',
-      href: '/discover?category=Gaming%20%2F%20duos'
-    },
-    {
-      id: 'airport',
-      title: 'Airport pickup / ride to IND',
-      category: 'Rides',
-      tone: 'rides',
-      image: campusPhoto || demoRecentImages.corec,
-      price: '$25',
-      paid: true,
-      time: '5h ago',
-      href: '/discover?category=Get%20me%20there'
-    }
-  ];
-
-  return createPortal(
-    <>
-      {cards.map((card) => (
-        <a key={card.id} href={card.href} className={styles.card} aria-label={`${card.title}, preview post by you`}>
-          <div className={styles.imageWrap}>
-            <img className={styles.image} src={card.image} alt="" />
-            <span className={styles.favorite} aria-hidden="true">♡</span>
-            <span className={styles.badge} data-tone={card.tone}>{card.category}</span>
-          </div>
-          <div className={styles.copy}>
-            <strong>{card.title}</strong>
-            <span className={styles.price} data-paid={card.paid ? 'true' : 'false'}>{card.price}</span>
-            <span className={styles.meta}><span className={styles.you}>Posted by you</span> · {campusLabel} · {card.time}</span>
-          </div>
-        </a>
-      ))}
-    </>,
-    target
-  );
+  return createPortal(<>{cards.map((card) => (
+    <a key={card.id} href={card.href} className={styles.card} aria-label={`${card.title}, preview post by you`}>
+      <div className={styles.imageWrap}>
+        <img className={styles.image} src={card.image} alt="" />
+        <span className={styles.favorite} aria-hidden="true">♡</span>
+        <span className={styles.badge}>{card.displayCategory}</span>
+      </div>
+      <div className={styles.copy}>
+        <strong>{card.title}</strong>
+        <span className={styles.price} data-paid={card.kind === 'split_cost' ? 'true' : 'false'}>{card.price}</span>
+        <span className={styles.meta}><span className={styles.you}>Posted by you</span> · {campusLabel} · {card.time}</span>
+      </div>
+    </a>
+  ))}</>, target);
 }
