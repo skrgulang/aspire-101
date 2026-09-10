@@ -3,15 +3,16 @@
 import { useEffect, useState } from 'react';
 import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
+import { aspireLogo } from './logo';
 
 type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'profile';
 type Theme = 'light' | 'dark';
 
 const items: { key: AppDockTab; label: string; href: string; icon: UiIconName }[] = [
   { key: 'home', label: 'Home', href: '/campus', icon: 'home' },
-  { key: 'discover', label: 'Browse', href: '/discover', icon: 'compass' },
+  { key: 'discover', label: 'Browse', href: '/discover', icon: 'search' },
   { key: 'post', label: 'Post', href: '/post', icon: 'plus' },
-  { key: 'connections', label: 'Connections', href: '/connections', icon: 'message' },
+  { key: 'connections', label: 'Messages', href: '/connections', icon: 'message' },
   { key: 'profile', label: 'Profile', href: '/profile', icon: 'user' }
 ];
 
@@ -36,7 +37,10 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
 
   return (
     <nav className={`${styles.dock} signedInDock`} aria-label="Aspire app navigation">
-      <a className={styles.brand} href={preview ? '/ui-preview' : '/campus'} aria-label="Aspire 101 home">A101</a>
+      <a className={styles.brand} href={preview ? '/ui-preview' : '/campus'} aria-label="Aspire 101 home">
+        <img src={aspireLogo} alt="" />
+        <span>Aspire 101</span>
+      </a>
 
       {items.map((item) => (
         <a
@@ -52,7 +56,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
       ))}
 
       <span className={styles.spacer} aria-hidden="true" />
-      <button className={styles.themeButton} type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
+      <button className={styles.themeButton} type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'Black & Gold' : 'Light'} mode`}>
         <UiIcon name={theme === 'light' ? 'moon' : 'sun'} />
       </button>
     </nav>
