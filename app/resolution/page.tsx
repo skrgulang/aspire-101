@@ -4,7 +4,7 @@ import ResolutionHistory from '../ResolutionHistory';
 export default function ResolutionPage() {
   return (
     <main className="connectionsPage">
-      <AppDock active="connections" />
+      <AppDock active="resolution" />
       <div className="connectionsShell shell">
         <header style={{ marginBottom: 28 }}>
           <p className="eyebrow">ASPIRE PROTECTION</p>
