@@ -40,15 +40,66 @@ export type ConnectionLocationShare = {
   updated_at: string;
 };
 
+export type ConnectionScheduleProposal = {
+  id: string;
+  connection_id: string;
+  proposed_by: string;
+  start_at: string;
+  end_at: string | null;
+  timezone: string | null;
+  meeting_label: string | null;
+  status: 'pending' | 'accepted' | 'declined' | 'superseded';
+  responded_by: string | null;
+  responded_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ConnectionCancellationResult = {
+  status: 'cancelled';
+  resolution_case_id: string | null;
+  review_required: boolean;
+  payment_status: string | null;
+};
+
 export type ConnectionEvent = {
   id: number;
   connection_id: string;
   actor_id: string | null;
-  event_type: 'schedule_set' | 'on_the_way' | 'arrived' | 'in_progress' | 'location_shared' | 'location_stopped' | 'reminder';
+  event_type:
+    | 'schedule_set'
+    | 'schedule_proposed'
+    | 'schedule_declined'
+    | 'on_the_way'
+    | 'arrived'
+    | 'in_progress'
+    | 'location_shared'
+    | 'location_stopped'
+    | 'reminder'
+    | 'running_late'
+    | 'cannot_make_it'
+    | 'connection_cancelled'
+    | 'issue_opened'
+    | 'issue_reviewing'
+    | 'issue_response'
+    | 'issue_resolved';
   body: string;
   metadata: Record<string, unknown>;
   created_at: string;
 };
+
+function missingPreviewRelation(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return error.code === '42P01'
+    || error.code === 'PGRST205'
+    || /could not find the table|relation .* does not exist/i.test(error.message || '');
+}
+
+function missingPreviewFunction(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return error.code === 'PGRST202'
+    || /could not find the function|function .* does not exist/i.test(error.message || '');
+}
 
 export async function fetchLiveConnections() {
   const supabase = getSupabaseBrowserClient();
@@ -72,6 +123,7 @@ export async function fetchLiveConnections() {
   let requests: LiveConnectionRequest[] = [];
   let profiles: LiveConnectionProfile[] = [];
   let locations: ConnectionLocationShare[] = [];
+  let scheduleProposals: ConnectionScheduleProposal[] = [];
 
   if (requestIds.length) {
     const { data } = await supabase
@@ -90,15 +142,25 @@ export async function fetchLiveConnections() {
   }
 
   if (connectionIds.length) {
-    const { data } = await supabase
-      .from('connection_live_locations')
-      .select('connection_id,user_id,latitude,longitude,accuracy_meters,expires_at,updated_at')
-      .in('connection_id', connectionIds)
-      .gt('expires_at', new Date().toISOString());
-    locations = (data ?? []) as ConnectionLocationShare[];
+    const [{ data: locationRows }, { data: proposalRows, error: proposalError }] = await Promise.all([
+      supabase
+        .from('connection_live_locations')
+        .select('connection_id,user_id,latitude,longitude,accuracy_meters,expires_at,updated_at')
+        .in('connection_id', connectionIds)
+        .gt('expires_at', new Date().toISOString()),
+      supabase
+        .from('connection_schedule_proposals')
+        .select('id,connection_id,proposed_by,start_at,end_at,timezone,meeting_label,status,responded_by,responded_at,created_at,updated_at')
+        .in('connection_id', connectionIds)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+    ]);
+    locations = (locationRows ?? []) as ConnectionLocationShare[];
+    if (proposalError && !missingPreviewRelation(proposalError)) throw proposalError;
+    if (!proposalError) scheduleProposals = (proposalRows ?? []) as ConnectionScheduleProposal[];
   }
 
-  return { userId: authData.user.id, connections, requests, profiles, locations };
+  return { userId: authData.user.id, connections, requests, profiles, locations, scheduleProposals };
 }
 
 export async function fetchConnectionEvents(connectionId: string) {
@@ -145,6 +207,38 @@ export async function setConnectionSchedule(
   if (error) throw error;
 }
 
+export async function proposeConnectionSchedule(
+  connectionId: string,
+  startAt: string,
+  timezone: string,
+  meetingLabel?: string,
+  endAt?: string
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('propose_connection_schedule', {
+    p_connection_id: connectionId,
+    p_start_at: startAt,
+    p_timezone: timezone,
+    p_meeting_label: meetingLabel?.trim() || null,
+    p_end_at: endAt || null
+  });
+  if (error) {
+    if (missingPreviewFunction(error)) throw new Error('Mutual time proposals are not enabled in this preview database yet.');
+    throw error;
+  }
+  return String(data || '');
+}
+
+export async function respondConnectionSchedule(proposalId: string, accept: boolean) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('respond_connection_schedule', {
+    p_proposal_id: proposalId,
+    p_accept: accept
+  });
+  if (error) throw error;
+  return String(data || '');
+}
+
 export async function setConnectionCoordinationStatus(
   connectionId: string,
   status: 'on_the_way' | 'arrived' | 'in_progress'
@@ -155,6 +249,37 @@ export async function setConnectionCoordinationStatus(
     p_status: status
   });
   if (error) throw error;
+}
+
+export async function recordConnectionAttendanceUpdate(
+  connectionId: string,
+  update: 'running_late' | 'cannot_make_it'
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.rpc('record_connection_attendance_update', {
+    p_connection_id: connectionId,
+    p_update: update
+  });
+  if (error) {
+    if (missingPreviewFunction(error)) throw new Error('Attendance updates are not enabled in this preview database yet.');
+    throw error;
+  }
+}
+
+export async function cancelConnectionWithProtection(connectionId: string, note?: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('cancel_connection_with_protection', {
+    p_connection_id: connectionId,
+    p_note: note?.trim() || null
+  });
+  if (error) {
+    const text = `${error.message || ''} ${error.details || ''}`;
+    if (missingPreviewFunction(error)) throw new Error('Participant cancellation is not enabled in this preview database yet.');
+    if (/PAYMENT_STILL_PROCESSING/i.test(text)) throw new Error('This payment is still processing. Wait for Stripe to finish before cancelling so Aspire does not create a conflicting money state.');
+    if (/PAYMENT_NEEDS_RESOLUTION_CENTER/i.test(text)) throw new Error('This payment is already released or disputed. Use Get help / Resolution Center instead of cancelling the connection directly.');
+    throw error;
+  }
+  return (data || { status: 'cancelled', resolution_case_id: null, review_required: false, payment_status: null }) as ConnectionCancellationResult;
 }
 
 export async function shareConnectionLocation(

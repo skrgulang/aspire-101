@@ -81,6 +81,24 @@ export async function POST(request: Request) {
     }
     if (payment.status !== 'secured') throw new Error('PAYMENT_NOT_SECURED');
 
+    // A participant-created Resolution Center case freezes payout release before any
+    // Stripe transfer is attempted. During rollout the table may not exist in older
+    // preview databases; only a missing-table error is ignored.
+    const { data: openResolution, error: resolutionError } = await supabase
+      .from('connection_resolution_cases')
+      .select('id,status')
+      .eq('connection_id', connectionId)
+      .in('status', ['submitted', 'under_review'])
+      .limit(1)
+      .maybeSingle();
+    if (resolutionError && resolutionError.code !== '42P01') throw resolutionError;
+    if (openResolution) {
+      return NextResponse.json({
+        error: 'Payout is paused while this connection is being reviewed in the Aspire Resolution Center.',
+        code: 'RESOLUTION_CASE_OPEN'
+      }, { status: 409 });
+    }
+
     if (marketOrder) {
       if (user.id !== marketOrder.buyer_id && user.id !== marketOrder.seller_id) {
         return NextResponse.json({ error: 'You are not part of this marketplace order.' }, { status: 403 });

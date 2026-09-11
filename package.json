@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run test:resolution && next build",
     "start": "next start",
-    "test:brain": "node scripts/aspire-brain-regression.mjs"
+    "test:brain": "node scripts/aspire-brain-regression.mjs",
+    "test:resolution": "node scripts/resolution-center-regression.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
