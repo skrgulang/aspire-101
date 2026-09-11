@@ -55,6 +55,13 @@ export type ConnectionScheduleProposal = {
   updated_at: string;
 };
 
+export type ConnectionCancellationResult = {
+  status: 'cancelled';
+  resolution_case_id: string | null;
+  review_required: boolean;
+  payment_status: string | null;
+};
+
 export type ConnectionEvent = {
   id: number;
   connection_id: string;
@@ -71,6 +78,7 @@ export type ConnectionEvent = {
     | 'reminder'
     | 'running_late'
     | 'cannot_make_it'
+    | 'connection_cancelled'
     | 'issue_opened'
     | 'issue_reviewing'
     | 'issue_response'
@@ -256,6 +264,22 @@ export async function recordConnectionAttendanceUpdate(
     if (missingPreviewFunction(error)) throw new Error('Attendance updates are not enabled in this preview database yet.');
     throw error;
   }
+}
+
+export async function cancelConnectionWithProtection(connectionId: string, note?: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('cancel_connection_with_protection', {
+    p_connection_id: connectionId,
+    p_note: note?.trim() || null
+  });
+  if (error) {
+    const text = `${error.message || ''} ${error.details || ''}`;
+    if (missingPreviewFunction(error)) throw new Error('Participant cancellation is not enabled in this preview database yet.');
+    if (/PAYMENT_STILL_PROCESSING/i.test(text)) throw new Error('This payment is still processing. Wait for Stripe to finish before cancelling so Aspire does not create a conflicting money state.');
+    if (/PAYMENT_NEEDS_RESOLUTION_CENTER/i.test(text)) throw new Error('This payment is already released or disputed. Use Get help / Resolution Center instead of cancelling the connection directly.');
+    throw error;
+  }
+  return (data || { status: 'cancelled', resolution_case_id: null, review_required: false, payment_status: null }) as ConnectionCancellationResult;
 }
 
 export async function shareConnectionLocation(
