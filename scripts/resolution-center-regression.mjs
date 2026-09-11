@@ -49,7 +49,7 @@ const checks = [
   [cancellationSql, "'connection_cancelled'", 'participant cancellation must create a shared timeline event'],
   [cancellationQueries, ".eq('event_type', 'connection_cancelled')", 'participant cancellation receipts must be loaded from the shared cancellation event'],
   [cancellationHistory, 'CANCELLATION RECEIPT', 'cancelled connections must retain a user-facing cancellation receipt'],
-  [cancellationHistory, 'Cancellation by itself does not establish fault', 'cancellation history must not imply automatic fault or financial outcome'],
+  [cancellationHistory, 'Cancellation records the event; it does not automatically assign fault', 'cancellation history must not imply automatic fault or financial outcome'],
   [cancellationHistory, 'Under Aspire review · provider payout paused', 'cancellation history must surface protected payment holds'],
   [resolutionPage, '<CancellationHistory />', 'cancelled connection history must remain reachable from Resolution Center']
 ];
