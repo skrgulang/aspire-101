@@ -47,6 +47,12 @@ function profileName(profile?: PublicProfile) {
   return profile?.display_name || profile?.full_name || profile?.name || 'Aspire student';
 }
 
+function profileAvatar(profile?: PublicProfile) {
+  return profile?.avatar_url
+    ? <img src={profile.avatar_url} alt="" />
+    : profileName(profile).slice(0, 1).toUpperCase();
+}
+
 function money(request?: AspireRequest) {
   if (!request) return '';
   if (request.kind === 'community') return 'Community help';
@@ -371,9 +377,11 @@ export default function ConnectionsHub() {
                     const profile = inboxProfiles.get(response.responder_id);
                     return (
                       <div className="responseRow" key={response.id}>
-                        <div className="responseAvatar">{profileName(profile).slice(0, 1).toUpperCase()}</div>
+                        <a className="responseAvatar profileAvatarLink" href={`/people/${response.responder_id}`} aria-label={`View ${profileName(profile)} profile`}>
+                          {profileAvatar(profile)}
+                        </a>
                         <div className="responseCopy">
-                          <strong>{profileName(profile)}</strong>
+                          <strong><a className="profileNameLink" href={`/people/${response.responder_id}`}>{profileName(profile)}</a></strong>
                           <span>{profile?.school || 'Student'} · {response.status}</span>
                           <p>{response.message || 'I can help with this.'}</p>
                         </div>
@@ -419,8 +427,8 @@ export default function ConnectionsHub() {
                 </div>
                 <h2>{request?.title || 'Aspire connection'}</h2>
                 <div className="connectionPerson">
-                  <i>{profileName(other).slice(0, 1).toUpperCase()}</i>
-                  <div><strong>{profileName(other)}</strong><span>{other?.school || request?.campus || 'Campus'}</span></div>
+                  <a className="connectionPersonAvatar" href={`/people/${otherId}`} aria-label={`View ${profileName(other)} profile`}><i>{profileAvatar(other)}</i></a>
+                  <div><strong><a className="profileNameLink" href={`/people/${otherId}`}>{profileName(other)}</a></strong><span>{other?.school || request?.campus || 'Campus'}</span></div>
                 </div>
                 <div className="connectionChecks">
                   <span className={connection.requester_confirmed ? 'done' : ''}>Requester chose ✓</span>
@@ -508,10 +516,10 @@ export default function ConnectionsHub() {
             const unreadCount = unread[entry.connection_id] || 0;
             return (
               <article className="circleCard" key={entry.connection_id}>
-                <div className="circleAvatar">{profileName(other).slice(0, 1).toUpperCase()}</div>
+                <a className="circleAvatar profileAvatarLink" href={`/people/${entry.other_user_id}`} aria-label={`View ${profileName(other)} profile`}>{profileAvatar(other)}</a>
                 <div className="circleCopy">
                   <span>MY CIRCLE · {other?.school || request?.campus || 'Campus'}</span>
-                  <h2>{profileName(other)}</h2>
+                  <h2><a href={`/people/${entry.other_user_id}`}>{profileName(other)}</a></h2>
                   <p>Connected through “{request?.title || 'an Aspire request'}”. You both chose to keep in touch.</p>
                 </div>
                 <div className="circleActions">
@@ -536,7 +544,7 @@ export default function ConnectionsHub() {
               <header>
                 <div>
                   <span>{fromCircle ? 'MY CIRCLE · REAL-TIME CHAT' : 'PRIVATE CONNECTION · LIVE'}</span>
-                  <strong>{profileName(other)} · {request?.title || 'Aspire chat'}</strong>
+                  <strong><a className="chatProfileName" href={`/people/${otherId}`}>{profileName(other)}</a> · {request?.title || 'Aspire chat'}</strong>
                   <small className={`chatPresence ${otherOnline ? 'online' : ''}`}><i />{otherOnline ? 'Online now' : 'Offline'}</small>
                 </div>
                 <button type="button" onClick={closeChat} aria-label="Close chat">×</button>

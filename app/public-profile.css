@@ -1,0 +1,182 @@
+/* Privacy-aware student profile shared from connections and chat. */
+body:has(.publicProfilePage) { background: #f7f7f5; }
+.publicProfilePage {
+  min-height: 100vh;
+  padding: 34px 30px 100px 266px;
+  background: #f7f7f5;
+  color: #171717;
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+.publicProfileShell { width: min(1040px, 100%); margin: 0 auto; }
+.publicProfileTop { min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.publicProfileTop > button {
+  min-height: 38px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e2e2dd;
+  border-radius: 10px;
+  background: #fff;
+  color: #4b4b46;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.publicProfileTop > button svg { width: 14px; height: 14px; transform: rotate(180deg); }
+.publicProfileTop > span { color: #9a7400; font-size: 9px; font-weight: 850; letter-spacing: .11em; }
+
+.publicProfileHero {
+  margin-top: 18px;
+  padding: 28px;
+  display: grid;
+  grid-template-columns: 112px minmax(0,1fr) minmax(180px,220px);
+  gap: 26px;
+  align-items: start;
+  border: 1px solid #e7e7e3;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(17,17,17,.035);
+}
+.publicProfileAvatar {
+  width: 112px;
+  height: 112px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ead99d;
+  border-radius: 30px;
+  background: #fff3c5;
+  color: #7d5e00;
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+.publicProfileAvatar img { width: 100%; height: 100%; object-fit: cover; }
+.publicProfileEyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.publicProfileEyebrow > span { color: #9a7400; font-size: 9px; font-weight: 850; letter-spacing: .11em; }
+.publicProfileEyebrow > b {
+  padding: 5px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #e1d18f;
+  border-radius: 999px;
+  background: #fff7dc;
+  color: #745700;
+  font-size: 8px;
+}
+.publicProfileEyebrow > b svg { width: 11px; height: 11px; }
+.publicProfileIdentity h1 { margin: 8px 0 5px; font-size: clamp(34px,4.5vw,54px); line-height: .98; letter-spacing: -.05em; }
+.publicProfileCampus { display: flex; align-items: center; gap: 6px; color: #777772; font-size: 12px; }
+.publicProfileCampus svg { width: 15px; height: 15px; color: #a27b00; }
+.publicProfileAcademic { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
+.publicProfileAcademic > span { min-width: 150px; padding: 10px 12px; display: grid; gap: 3px; border: 1px solid #ecece7; border-radius: 12px; background: #fafaf8; }
+.publicProfileAcademic small { color: #9a7400; font-size: 8px; font-weight: 850; letter-spacing: .1em; }
+.publicProfileAcademic strong { color: #292926; font-size: 10px; }
+.publicProfileBio { max-width: 650px; margin: 16px 0 0; color: #555550; font-size: 12px; line-height: 1.6; }
+.publicProfileInterests { margin-top: 13px; display: flex; flex-wrap: wrap; gap: 6px; }
+.publicProfileInterests span { padding: 7px 9px; border: 1px solid #e6e6e1; border-radius: 999px; background: #fafaf8; color: #5c5c57; font-size: 9px; font-weight: 750; }
+.publicProfileActions { margin-top: 17px; display: flex; flex-wrap: wrap; gap: 8px; }
+.publicProfileActions a { min-height: 39px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #e1e1dc; border-radius: 11px; background: #fff; color: #3a3a36; font-size: 9px; font-weight: 800; }
+.publicProfileActions a.primary { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+.publicProfileActions svg { width: 15px; height: 15px; }
+.publicProfileStats { display: grid; gap: 9px; }
+.publicProfileStats > div { min-height: 96px; padding: 15px; display: grid; align-content: center; border: 1px solid #eee4c0; border-radius: 16px; background: linear-gradient(145deg,#fffaf0,#fff5d6); }
+.publicProfileStats span { color: #8a6800; font-size: 8px; font-weight: 850; letter-spacing: .11em; }
+.publicProfileStats strong { margin-top: 4px; color: #1f1b12; font-size: 25px; line-height: 1; letter-spacing: -.04em; }
+.publicProfileStats small { margin-top: 4px; color: #8b826c; font-size: 8px; }
+
+.publicProfileTrustCard {
+  margin-top: 14px;
+  padding: 15px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid #e8e8e3;
+  border-radius: 16px;
+  background: #fff;
+}
+.publicProfileTrustCard > div { display: grid; grid-template-columns: 36px minmax(0,1fr); gap: 10px; align-items: center; }
+.publicProfileTrustCard > div > i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; background: #fff3c5; color: #795b00; }
+.publicProfileTrustCard > div > i svg { width: 17px; height: 17px; }
+.publicProfileTrustCard > div > span { display: grid; gap: 2px; }
+.publicProfileTrustCard strong { color: #31312d; font-size: 9px; }
+.publicProfileTrustCard small { color: #888882; font-size: 8px; line-height: 1.4; }
+.publicProfileTrustCard > a { display: inline-flex; align-items: center; gap: 5px; color: #6b6043; font-size: 8px; font-weight: 800; white-space: nowrap; }
+.publicProfileTrustCard > a svg { width: 13px; height: 13px; }
+
+.publicProfileStateCard {
+  width: min(620px,100%);
+  margin: 80px auto 0;
+  padding: 38px;
+  text-align: center;
+  border: 1px solid #e7e7e3;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(17,17,17,.035);
+}
+.publicProfileStateCard > i { width: 58px; height: 58px; margin: 0 auto 16px; display: grid; place-items: center; border-radius: 18px; background: #fff3c5; color: #795b00; }
+.publicProfileStateCard > i svg { width: 25px; height: 25px; }
+.publicProfileStateCard > span { color: #9a7400; font-size: 9px; font-weight: 850; letter-spacing: .11em; }
+.publicProfileStateCard h1 { margin: 8px 0 9px; font-size: 30px; line-height: 1.05; letter-spacing: -.04em; }
+.publicProfileStateCard > p { max-width: 440px; margin: 0 auto; color: #777772; font-size: 11px; line-height: 1.55; }
+.publicProfileStateCard > button,
+.publicProfileStateCard > a { min-height: 40px; margin-top: 18px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #ffc72c; border-radius: 11px; background: #ffc72c; color: #18130a; font: inherit; font-size: 9px; font-weight: 850; cursor: pointer; }
+.publicProfileLockNotes { margin: 18px auto 0; padding: 12px; max-width: 470px; display: grid; gap: 4px; border-radius: 12px; background: #fafaf8; color: #8a8a84; }
+.publicProfileLockNotes small { font-size: 8px; line-height: 1.45; }
+
+/* People in Inbox and Chat now behave like real profile entry points. */
+.connectionsPage .profileAvatarLink,
+.connectionsPage .profileNameLink { color: inherit; text-decoration: none; }
+.connectionsPage .profileAvatarLink { display: grid; place-items: center; overflow: hidden; }
+.connectionsPage .profileAvatarLink img,
+.connectionsPage .connectionPersonAvatar img { width: 100%; height: 100%; object-fit: cover; }
+.connectionsPage .profileNameLink:hover { text-decoration: underline; text-underline-offset: 2px; }
+.connectionsPage .connectionPersonAvatar { width: 36px; height: 36px; display: block; border-radius: 50%; overflow: hidden; text-decoration: none; }
+.connectionsPage .connectionPersonAvatar i { display: grid; place-items: center; }
+.connectionsPage .circleCopy h2 a { color: inherit; text-decoration: none; }
+.connectionsPage .circleCopy h2 a:hover { text-decoration: underline; text-underline-offset: 2px; }
+.connectionsPage .connectionChat header .chatProfileName { color: inherit; text-decoration: none; }
+.connectionsPage .connectionChat header .chatProfileName:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+html[data-aspire-theme='dark'] body:has(.publicProfilePage) { background: #0b0b0a; }
+html[data-aspire-theme='dark'] .publicProfilePage { background: #0b0b0a; color: #f4f1e8; }
+html[data-aspire-theme='dark'] .publicProfileHero,
+html[data-aspire-theme='dark'] .publicProfileTrustCard,
+html[data-aspire-theme='dark'] .publicProfileStateCard,
+html[data-aspire-theme='dark'] .publicProfileTop > button,
+html[data-aspire-theme='dark'] .publicProfileActions a,
+html[data-aspire-theme='dark'] .publicProfileAcademic > span { border-color: #2d2d29; background: #151513; color: #f4f1e8; }
+html[data-aspire-theme='dark'] .publicProfileIdentity h1,
+html[data-aspire-theme='dark'] .publicProfileAcademic strong,
+html[data-aspire-theme='dark'] .publicProfileTrustCard strong,
+html[data-aspire-theme='dark'] .publicProfileStateCard h1 { color: #f5f1e7; }
+html[data-aspire-theme='dark'] .publicProfileCampus,
+html[data-aspire-theme='dark'] .publicProfileBio,
+html[data-aspire-theme='dark'] .publicProfileTrustCard small,
+html[data-aspire-theme='dark'] .publicProfileStateCard > p { color: #a8a398; }
+html[data-aspire-theme='dark'] .publicProfileInterests span,
+html[data-aspire-theme='dark'] .publicProfileLockNotes { border-color: #2d2d29; background: #1a1a17; color: #aaa59a; }
+html[data-aspire-theme='dark'] .publicProfileStats > div { border-color: #4c3d14; background: linear-gradient(145deg,#1f1a0f,#17140c); }
+html[data-aspire-theme='dark'] .publicProfileStats strong { color: #f7efd5; }
+
+@media (max-width: 1120px) {
+  .publicProfileHero { grid-template-columns: 112px minmax(0,1fr); }
+  .publicProfileStats { grid-column: 1 / -1; grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 900px) {
+  .publicProfilePage { padding: 20px 15px 110px; }
+}
+@media (max-width: 680px) {
+  .publicProfileHero { padding: 20px; grid-template-columns: 1fr; gap: 18px; }
+  .publicProfileAvatar { width: 88px; height: 88px; border-radius: 24px; }
+  .publicProfileAcademic { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .publicProfileAcademic > span { min-width: 0; }
+  .publicProfileStats { grid-column: auto; }
+  .publicProfileTrustCard { align-items: stretch; flex-direction: column; }
+  .publicProfileTrustCard > a { justify-content: space-between; }
+  .publicProfileStateCard { margin-top: 38px; padding: 28px 20px; }
+}

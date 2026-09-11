@@ -41,6 +41,7 @@ import './app-loader.css';
 import './trust-moderation.css';
 import './profile-polish.css';
 import './profile-settings.css';
+import './public-profile.css';
 import './moderator-polish.css';
 import './discover-v2.css';
 import './payments-connect.css';
