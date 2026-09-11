@@ -39,14 +39,6 @@ export type ConnectionUnread = {
   last_message_at: string | null;
 };
 
-export type CircleChoice = {
-  connection_id: string;
-  user_id: string;
-  keep_in_circle: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
 export type CircleEntry = {
   connection_id: string;
   other_user_id: string;
@@ -256,17 +248,6 @@ export async function fetchConnectionLifecycleStates() {
     mutual_circle: Boolean(row.mutual_circle),
     blocked_between: Boolean(row.blocked_between)
   })) as ConnectionLifecycleState[];
-}
-
-export async function fetchCircleChoices(connectionIds: string[]) {
-  if (!connectionIds.length) return [] as CircleChoice[];
-  const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('connection_circle_choices')
-    .select('connection_id,user_id,keep_in_circle,created_at,updated_at')
-    .in('connection_id', connectionIds);
-  if (error) throw error;
-  return (data ?? []) as CircleChoice[];
 }
 
 export async function setCircleChoice(connectionId: string, keep: boolean) {
