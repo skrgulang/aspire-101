@@ -34,6 +34,7 @@ import './cookie-banner.css';
 import './safety-ui.css';
 import './connections.css';
 import './connections-refresh.css';
+import './connection-lifecycle.css';
 import './connection-social.css';
 import './realtime-notifications.css';
 import './app-shell.css';

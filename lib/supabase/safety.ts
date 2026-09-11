@@ -46,11 +46,11 @@ export async function blockUser(blockedId: string) {
   if (error) throw error;
   if (!data.user) throw new Error('You must be signed in to block someone.');
 
-  const { error: insertError } = await supabase.from('user_blocks').upsert({
+  const { error: insertError } = await supabase.from('user_blocks').insert({
     blocker_id: data.user.id,
     blocked_id: blockedId
   });
-  if (insertError) throw insertError;
+  if (insertError && insertError.code !== '23505') throw insertError;
 }
 
 export async function fetchBlockedUserIds() {

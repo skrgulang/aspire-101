@@ -1,0 +1,297 @@
+/* Connection lifecycle: Connected → Complete → Review / Circle → Archive */
+.connectionsPage .connectionCard.isBlocked {
+  border-color: rgba(189, 73, 61, .34);
+}
+
+.connectionsPage .connectionCompletionPending {
+  margin-top: 14px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid rgba(255,199,44,.28);
+  border-radius: 14px;
+  background: rgba(255,199,44,.075);
+}
+.connectionsPage .connectionCompletionPending > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.connectionsPage .connectionCompletionPending span,
+.connectionsPage .lifecycleCompleteSummary > span {
+  color: #9a7400;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+.connectionsPage .connectionCompletionPending strong,
+.connectionsPage .lifecycleCompleteSummary > strong {
+  color: var(--inbox-text);
+  font-size: 11px;
+}
+.connectionsPage .connectionCompletionPending p,
+.connectionsPage .lifecycleCompleteSummary > p {
+  margin: 0;
+  color: var(--inbox-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.connectionsPage .connectionCompletionPending > b {
+  flex: 0 0 auto;
+  color: var(--inbox-muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.connectionsPage .connectionCompletionPending > button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--inbox-gold);
+  border-radius: 10px;
+  background: var(--inbox-gold);
+  color: #18130a;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.connectionsPage .lifecycleAftercare {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--inbox-border);
+  border-radius: 15px;
+  background: var(--inbox-surface-2);
+}
+.connectionsPage .lifecycleCompleteSummary {
+  padding: 2px 2px 13px;
+  display: grid;
+  gap: 4px;
+  border-bottom: 1px solid var(--inbox-border);
+}
+.connectionsPage .circleChoiceRow,
+.connectionsPage .reviewRow {
+  border-color: var(--inbox-border) !important;
+}
+.connectionsPage .aftercareSafetyActions {
+  padding-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.connectionsPage .aftercareSafetyActions button,
+.connectionsPage .connectionDanger,
+.connectionsPage .connectionHistoryButton {
+  min-height: 36px;
+  padding: 0 11px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.connectionsPage .aftercareSafetyActions button,
+.connectionsPage .connectionDanger {
+  border: 1px solid rgba(184,76,61,.34);
+  background: rgba(184,76,61,.07);
+  color: #a64d40;
+}
+.connectionsPage .aftercareSafetyActions a {
+  color: var(--inbox-muted);
+  font-size: 9px;
+  font-weight: 750;
+}
+.connectionsPage .connectionHistoryButton {
+  border: 1px solid var(--inbox-border);
+  background: transparent;
+  color: var(--inbox-text);
+}
+.connectionsPage .waitingCompletionAction {
+  min-height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--inbox-muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+.connectionsPage .completionActionButton {
+  min-height: 38px;
+}
+.connectionsPage .connectionChecks .blockedCheck {
+  border-color: rgba(184,76,61,.28);
+  background: rgba(184,76,61,.08);
+  color: #ae5547;
+}
+
+/* Chat lifecycle footer */
+.connectionsPage .archivedChat .chatMessages {
+  opacity: .92;
+}
+.connectionsPage .archivedPresence {
+  color: var(--inbox-muted) !important;
+}
+.connectionsPage .archivedPresence i {
+  background: #87877f !important;
+  box-shadow: none !important;
+}
+.connectionsPage .chatLifecycleBar {
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--inbox-border);
+  background: rgba(255,199,44,.055);
+}
+.connectionsPage .chatLifecycleBar.needsAction {
+  background: rgba(255,199,44,.10);
+}
+.connectionsPage .chatLifecycleBar > div {
+  display: grid;
+  gap: 2px;
+}
+.connectionsPage .chatLifecycleBar span {
+  color: var(--inbox-text);
+  font-size: 9px;
+  font-weight: 850;
+}
+.connectionsPage .chatLifecycleBar small {
+  color: var(--inbox-muted);
+  font-size: 8px;
+}
+.connectionsPage .chatLifecycleBar > button {
+  min-height: 36px;
+  padding: 0 11px;
+  border: 1px solid var(--inbox-gold);
+  border-radius: 10px;
+  background: var(--inbox-gold);
+  color: #18130a;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.connectionsPage .chatArchivePanel,
+.connectionsPage .chatClosedPanel {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--inbox-border);
+  background: var(--inbox-surface-2);
+}
+.connectionsPage .chatArchivePanel > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+.connectionsPage .chatArchivePanel > div:first-child > span {
+  color: #9a7400;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+.connectionsPage .chatArchivePanel strong,
+.connectionsPage .chatClosedPanel strong {
+  color: var(--inbox-text);
+  font-size: 11px;
+}
+.connectionsPage .chatArchivePanel p,
+.connectionsPage .chatClosedPanel p {
+  margin: 3px 0 0;
+  color: var(--inbox-muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.connectionsPage .chatArchiveActions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.connectionsPage .chatArchiveActions button {
+  min-height: 37px;
+  padding: 0 11px;
+  border: 1px solid var(--inbox-border);
+  border-radius: 10px;
+  background: var(--inbox-surface);
+  color: var(--inbox-text);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 820;
+  cursor: pointer;
+}
+.connectionsPage .chatArchiveActions button.primary {
+  border-color: var(--inbox-gold);
+  background: var(--inbox-gold);
+  color: #18130a;
+}
+.connectionsPage .chatArchiveActions button.selected {
+  box-shadow: inset 0 0 0 2px rgba(255,199,44,.35);
+}
+.connectionsPage .chatArchiveActions button.danger {
+  border-color: rgba(184,76,61,.34);
+  background: rgba(184,76,61,.07);
+  color: #a64d40;
+}
+.connectionsPage .chatClosedPanel {
+  display: grid;
+  gap: 4px;
+}
+.connectionsPage .chatClosedPanel a {
+  width: fit-content;
+  margin-top: 6px;
+  color: #987300;
+  font-size: 9px;
+  font-weight: 800;
+}
+.connectionsPage .blockedPanel {
+  background: rgba(184,76,61,.055);
+}
+
+html[data-aspire-theme='dark'] .connectionsPage .connectionCompletionPending,
+html[data-aspire-theme='dark'] .connectionsPage .chatLifecycleBar {
+  border-color: rgba(255,199,44,.2);
+  background: rgba(255,199,44,.055);
+}
+html[data-aspire-theme='dark'] .connectionsPage .connectionCompletionPending span,
+html[data-aspire-theme='dark'] .connectionsPage .lifecycleCompleteSummary > span,
+html[data-aspire-theme='dark'] .connectionsPage .chatArchivePanel > div:first-child > span,
+html[data-aspire-theme='dark'] .connectionsPage .chatClosedPanel a {
+  color: var(--inbox-gold);
+}
+html[data-aspire-theme='dark'] .connectionsPage .aftercareSafetyActions button,
+html[data-aspire-theme='dark'] .connectionsPage .connectionDanger,
+html[data-aspire-theme='dark'] .connectionsPage .chatArchiveActions button.danger {
+  color: #ef8d7f;
+  border-color: rgba(239,141,127,.28);
+  background: rgba(239,141,127,.07);
+}
+
+@media (max-width: 720px) {
+  .connectionsPage .connectionCompletionPending {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .connectionsPage .connectionCompletionPending > button {
+    width: 100%;
+  }
+  .connectionsPage .aftercareSafetyActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .connectionsPage .chatLifecycleBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .connectionsPage .chatLifecycleBar > button {
+    width: 100%;
+  }
+  .connectionsPage .chatArchiveActions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .connectionsPage .chatArchiveActions button {
+    width: 100%;
+  }
+}

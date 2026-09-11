@@ -65,6 +65,16 @@ export type ConnectionReview = {
   updated_at: string;
 };
 
+export type ConnectionLifecycleState = {
+  connection_id: string;
+  viewer_completed: boolean;
+  other_completed: boolean;
+  completion_count: number;
+  viewer_circle_choice: boolean | null;
+  mutual_circle: boolean;
+  blocked_between: boolean;
+};
+
 export type PublicProfile = {
   id: string;
   display_name: string | null;
@@ -231,6 +241,21 @@ export async function fetchConnectionUnreadCounts() {
     unread_count: Number(row.unread_count || 0),
     last_message_at: row.last_message_at ? String(row.last_message_at) : null
   })) as ConnectionUnread[];
+}
+
+export async function fetchConnectionLifecycleStates() {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('get_connection_lifecycle_states');
+  if (error) throw error;
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    connection_id: String(row.connection_id),
+    viewer_completed: Boolean(row.viewer_completed),
+    other_completed: Boolean(row.other_completed),
+    completion_count: Number(row.completion_count || 0),
+    viewer_circle_choice: row.viewer_circle_choice == null ? null : Boolean(row.viewer_circle_choice),
+    mutual_circle: Boolean(row.mutual_circle),
+    blocked_between: Boolean(row.blocked_between)
+  })) as ConnectionLifecycleState[];
 }
 
 export async function fetchCircleChoices(connectionIds: string[]) {
