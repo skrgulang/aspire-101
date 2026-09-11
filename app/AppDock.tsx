@@ -7,7 +7,7 @@ import { aspireLogo } from './logo';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { fetchConnectionUnreadCounts } from '../lib/supabase/connections';
 
-type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'profile';
+type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'resolution' | 'profile';
 type Theme = 'light' | 'dark';
 type DockItem = { key: AppDockTab; label: string; href: string; icon: UiIconName; mobile?: boolean };
 
@@ -21,7 +21,8 @@ const personalItems: DockItem[] = [
   { key: 'connections', label: 'Inbox', href: '/connections', icon: 'message', mobile: true },
   { key: 'activity', label: 'My Activity', href: '/activity', icon: 'activity' },
   { key: 'saved', label: 'Saved', href: '/saved', icon: 'bookmark' },
-  { key: 'transactions', label: 'Transactions', href: '/transactions', icon: 'wallet' }
+  { key: 'transactions', label: 'Transactions', href: '/transactions', icon: 'wallet' },
+  { key: 'resolution', label: 'Resolution', href: '/resolution', icon: 'shield' }
 ];
 
 const accountItems: DockItem[] = [
@@ -62,17 +63,14 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
     }
 
     void refreshUnread();
-
     const channel = supabase
       .channel(`dock-inbox-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'connection_messages' }, () => {
         window.setTimeout(() => { void refreshUnread(); }, 120);
       })
       .subscribe();
-
     const onFocus = () => { void refreshUnread(); };
     window.addEventListener('focus', onFocus);
-
     return () => {
       alive = false;
       window.removeEventListener('focus', onFocus);
@@ -90,7 +88,6 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
   function renderItem(item: DockItem) {
     const showUnread = item.key === 'connections' && inboxUnread > 0;
     const badgeLabel = inboxUnread > 99 ? '99+' : String(inboxUnread);
-
     return (
       <a
         key={item.key}
@@ -116,18 +113,13 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
         <img src={aspireLogo} alt="" />
         <span>Aspire 101</span>
       </a>
-
       <div className={styles.groupLabel}>Discover</div>
       {discoverItems.map(renderItem)}
-
       <div className={styles.groupLabel}>Your stuff</div>
       {personalItems.map(renderItem)}
-
       <div className={styles.groupLabel}>Account</div>
       {accountItems.map(renderItem)}
-
       <span className={styles.spacer} aria-hidden="true" />
-
       <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/safety'} title="Safety & Help" onClick={preview ? (event) => event.preventDefault() : undefined}>
         <UiIcon name="shield" />
         <span>Safety & Help</span>
