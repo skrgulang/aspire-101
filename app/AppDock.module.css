@@ -81,6 +81,7 @@
 
 .navItem,
 .utilityLink {
+  position: relative;
   min-height: 44px;
   padding: 0 17px;
   display: flex;
@@ -94,7 +95,20 @@
 }
 .navItem svg,
 .utilityLink svg { width: 20px; height: 20px; flex: 0 0 auto; }
-.navItem span,
+.iconWrap {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  overflow: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+  max-width: none !important;
+}
+.iconWrap svg { width: 20px; height: 20px; }
+.navItem > span:not(.iconWrap),
 .utilityLink span {
   max-width: 0;
   overflow: hidden;
@@ -106,8 +120,8 @@
   line-height: 1;
   transition: max-width .22s ease, opacity .16s ease, transform .22s ease;
 }
-.dock:hover .navItem span,
-.dock:focus-within .navItem span,
+.dock:hover .navItem > span:not(.iconWrap),
+.dock:focus-within .navItem > span:not(.iconWrap),
 .dock:hover .utilityLink span,
 .dock:focus-within .utilityLink span {
   max-width: 160px;
@@ -120,6 +134,41 @@
 .post { background: transparent; color: #4f4f4b; }
 .post:hover { background: #f5f5f2; color: #111; }
 .post.active { background: #fff4cf; color: #111; }
+
+.unreadBadge,
+.unreadBadgeExpanded {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #ffc72c;
+  color: #171109;
+  font: 900 10px/1 var(--font-inter), system-ui, sans-serif;
+  letter-spacing: -.03em;
+  box-shadow: 0 2px 8px rgba(127, 92, 0, .26);
+}
+.unreadBadge {
+  position: absolute;
+  top: -10px;
+  right: -12px;
+  z-index: 3;
+}
+.unreadBadgeExpanded {
+  position: absolute;
+  right: 13px;
+  opacity: 0;
+  transform: scale(.88);
+  pointer-events: none;
+  transition: opacity .15s ease, transform .18s ease;
+}
+.dock:hover .unreadBadge,
+.dock:focus-within .unreadBadge { opacity: 0; transform: scale(.82); }
+.dock:hover .unreadBadgeExpanded,
+.dock:focus-within .unreadBadgeExpanded { opacity: 1; transform: scale(1); }
 
 .spacer { flex: 1; min-height: 4px; }
 .utilityLink {
@@ -182,6 +231,8 @@
 :global(html[data-aspire-theme='dark']) .post:hover,
 :global(html[data-aspire-theme='dark']) .post.active { background: rgba(255,199,44,.10); color: #f5d56f; }
 :global(html[data-aspire-theme='dark']) .themeButton { border-color: rgba(255,255,255,.10); background: #171716; color: #d8d3ca; }
+:global(html[data-aspire-theme='dark']) .unreadBadge,
+:global(html[data-aspire-theme='dark']) .unreadBadgeExpanded { border-color: #0f0f0e; background: #ffc72c; color: #171109; }
 
 @media (max-height: 720px) and (min-width: 901px) {
   .dock { gap: 2px; padding-block: 8px; }
@@ -215,15 +266,24 @@
   .brand, .spacer, .themeButton, .desktopExtra, .groupLabel { display: none; }
   .navItem { min-height: 54px; padding: 5px 2px; flex-direction: column; justify-content: center; gap: 3px; border-radius: 17px; }
   .navItem svg { width: 19px; height: 19px; }
-  .navItem span,
-  .dock:hover .navItem span,
-  .dock:focus-within .navItem span {
+  .iconWrap { width: 19px; height: 19px; }
+  .iconWrap svg { width: 19px; height: 19px; }
+  .navItem > span:not(.iconWrap),
+  .dock:hover .navItem > span:not(.iconWrap),
+  .dock:focus-within .navItem > span:not(.iconWrap) {
     max-width: none;
     overflow: visible;
     opacity: 1;
     transform: none;
     font-size: 9px;
   }
+  .unreadBadge {
+    top: -9px;
+    right: -13px;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .unreadBadgeExpanded { display: none; }
   .post { background: #ffc72c; color: #18130a; }
   .post:hover, .post.active { background: #ffc72c; color: #18130a; }
 }
@@ -231,8 +291,10 @@
 @media (prefers-reduced-motion: reduce) {
   .dock,
   .brand span,
-  .navItem span,
+  .navItem > span:not(.iconWrap),
   .utilityLink span,
   .groupLabel,
-  .themeButton::after { transition: none; }
+  .themeButton::after,
+  .unreadBadge,
+  .unreadBadgeExpanded { transition: none; }
 }
