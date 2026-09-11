@@ -30,6 +30,15 @@ export type ConnectionResolutionCase = {
   updated_at: string;
 };
 
+export type ConnectionResolutionResponse = {
+  id: string;
+  case_id: string;
+  connection_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+};
+
 export async function fetchResolutionCases(connectionIds: string[]) {
   if (!connectionIds.length) return [] as ConnectionResolutionCase[];
   const supabase = getSupabaseBrowserClient();
@@ -43,6 +52,21 @@ export async function fetchResolutionCases(connectionIds: string[]) {
     throw error;
   }
   return (data ?? []) as ConnectionResolutionCase[];
+}
+
+export async function fetchResolutionCaseResponses(caseIds: string[]) {
+  if (!caseIds.length) return [] as ConnectionResolutionResponse[];
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from('connection_resolution_responses')
+    .select('id,case_id,connection_id,author_id,body,created_at')
+    .in('case_id', caseIds)
+    .order('created_at', { ascending: true });
+  if (error) {
+    if (error.code === '42P01') return [] as ConnectionResolutionResponse[];
+    throw error;
+  }
+  return (data ?? []) as ConnectionResolutionResponse[];
 }
 
 export async function fetchResolutionCasesForModeration(limit = 100) {
@@ -79,6 +103,18 @@ export async function openResolutionCase(input: {
     if (/NO_SHOW_GRACE_PERIOD/i.test(text)) throw new Error('No-show reports unlock 10 minutes after the agreed start time. Use chat or “Running late” before then.');
     throw error;
   }
+  return String(data || '');
+}
+
+export async function addResolutionCaseResponse(caseId: string, body: string) {
+  const clean = body.trim();
+  if (!clean) throw new Error('Write a short update first.');
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('add_connection_resolution_response', {
+    p_case_id: caseId,
+    p_body: clean
+  });
+  if (error) throw error;
   return String(data || '');
 }
 
