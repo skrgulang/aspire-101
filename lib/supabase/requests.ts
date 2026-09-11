@@ -67,6 +67,10 @@ export type AspireRequest = {
   city: string | null;
   latitude: number | null;
   longitude: number | null;
+  scheduled_start_at?: string | null;
+  scheduled_end_at?: string | null;
+  timezone?: string | null;
+  meeting_label?: string | null;
   amount_cents: number | null;
   currency: string;
   payment_method: 'aspire' | 'in_person' | 'none';
@@ -104,6 +108,10 @@ export type AspireRequest = {
 export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'title'> & {
   details?: string;
   campusId: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  timezone?: string;
+  meeting_label?: string;
   amount_cents?: number;
   currency?: string;
   payment_method?: AspireRequest['payment_method'];
@@ -198,6 +206,7 @@ export async function createRequest(input: CreateRequestInput) {
   }
 
   const isMarket = input.kind === 'buy_sell';
+  const scheduled = Boolean(input.scheduled_start_at);
   const { data, error } = await supabase
     .from('requests')
     .insert({
@@ -209,6 +218,10 @@ export async function createRequest(input: CreateRequestInput) {
       campus_id: input.campusId,
       latitude: null,
       longitude: null,
+      scheduled_start_at: scheduled ? input.scheduled_start_at : null,
+      scheduled_end_at: scheduled ? input.scheduled_end_at || null : null,
+      timezone: scheduled ? input.timezone?.trim().slice(0, 100) || 'UTC' : null,
+      meeting_label: input.meeting_label?.trim().slice(0, 240) || null,
       amount_cents: input.amount_cents ?? null,
       currency: input.currency || 'USD',
       payment_method: input.payment_method || 'none',
