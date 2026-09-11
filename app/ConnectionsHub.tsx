@@ -31,6 +31,7 @@ import { confirmConnectionCompletion } from '../lib/supabase/payments';
 import type { AspireRequest } from '../lib/supabase/requests';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import NotificationCenter from './NotificationCenter';
+import ConnectionEventTimeline from './ConnectionEventTimeline';
 
 type Tab = 'requests' | 'connections' | 'circle';
 type ReviewDraft = { choice: boolean | null; tags: string[] };
@@ -545,6 +546,9 @@ export default function ConnectionsHub() {
                 {fromCircle ? 'You both chose to keep in touch after completing a connection.' : 'Both sides confirmed.'} Keep timing, location, scope, and money clear. <a href="/safety">Safety center ↗</a>
               </div>
               <div className="chatMessages" ref={chatMessagesRef}>
+                {connection && (
+                  <ConnectionEventTimeline connectionId={connection.id} userId={connectionData.userId} otherName={profileName(other)} />
+                )}
                 {!messages.length && (
                   <div className="chatEmpty"><strong>You&apos;re connected.</strong><p>Start with the details that matter: where, when, what, and how much if money is involved.</p></div>
                 )}
