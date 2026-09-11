@@ -1,0 +1,236 @@
+/* Profile identity + standalone settings. Loaded after profile-polish.css. */
+
+.profileIdentityHero {
+  grid-template-columns: auto minmax(0, 1fr) minmax(185px, 230px);
+  align-items: start;
+}
+
+.profileIdentityCopy { padding-top: 3px; }
+.profileCampusLine { margin-top: 7px; display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: #73736e; font-size: 12px; }
+.profileCampusLine > svg { width: 15px; height: 15px; color: #a37b00; }
+.profileCampusLine b { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border: 1px solid #e5d395; border-radius: 999px; background: #fff7dc; color: #755800; font-size: 8px; letter-spacing: .03em; }
+.profileCampusLine b svg { width: 11px; height: 11px; }
+
+.profileIdentityFacts { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 9px; }
+.profileIdentityFacts > span { min-width: 150px; padding: 10px 12px; border: 1px solid #ecece8; border-radius: 12px; background: #fafaf8; display: grid; gap: 3px; }
+.profileIdentityFacts small { color: #a37b00; font-size: 8px; font-weight: 850; letter-spacing: .1em; }
+.profileIdentityFacts strong { color: #292926; font-size: 11px; }
+
+.profileBio { max-width: 670px; margin: 15px 0 0 !important; color: #555550 !important; font-size: 12px !important; line-height: 1.55; }
+.profileBio.empty { color: #989892 !important; }
+.profileInterests { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.profileInterests span,
+.profileInterests button { min-height: 29px; padding: 0 9px; border: 1px solid #e6e6e1; border-radius: 999px; background: #fff; color: #5a5a55; font: inherit; font-size: 9px; font-weight: 750; }
+.profileInterests button { cursor: pointer; border-style: dashed; }
+.profileIdentityActions button,
+.profileIdentityActions a { min-height: 39px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #e3e3de; border-radius: 11px; background: #fff; color: #343431; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
+.profileIdentityActions button { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+.profileIdentityActions a:first-of-type { border-color: #e3e3de; background: #fff; color: #343431; }
+.profileIdentityActions button svg,
+.profileIdentityActions a svg { width: 15px; height: 15px; }
+
+.profileIdentityStats { display: grid; gap: 9px; }
+.profileIdentityStats > div { min-height: 96px; padding: 15px; border: 1px solid #eee4c0; border-radius: 16px; background: linear-gradient(145deg, #fffaf0, #fff5d6); display: grid; align-content: center; }
+.profileIdentityStats span { color: #8a6800; font-size: 8px; font-weight: 850; letter-spacing: .11em; }
+.profileIdentityStats strong { margin-top: 4px; color: #1d1a13; font-size: 26px; line-height: 1; letter-spacing: -.045em; }
+.profileIdentityStats small { margin-top: 4px; color: #8b826c; font-size: 8px; }
+
+.profileEditPanel { margin-top: 18px; padding: 22px; border: 1px solid #e4e4df; border-radius: 22px; background: #fff; box-shadow: 0 8px 28px rgba(17,17,17,.03); }
+.profileEditClose { min-height: 36px; padding: 0 11px; border: 1px solid #e1e1dc; border-radius: 10px; background: #fafaf8; color: #555550; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
+.profileEditGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.profileEditGrid label { display: grid; gap: 6px; }
+.profileEditGrid label.wide { grid-column: 1 / -1; }
+.profileEditGrid label > span { color: #6f6f69; font-size: 9px; font-weight: 800; }
+.profileEditGrid input,
+.profileEditGrid textarea { width: 100%; min-height: 43px; padding: 0 12px; border: 1px solid #deded9; border-radius: 11px; background: #fff; color: #232320; outline: none; font: inherit; font-size: 11px; }
+.profileEditGrid textarea { min-height: 104px; padding-top: 11px; resize: vertical; }
+.profileEditGrid input:focus,
+.profileEditGrid textarea:focus { border-color: #d1b74f; box-shadow: 0 0 0 3px rgba(255,199,44,.12); }
+.profileEditGrid input:disabled { background: #f4f4f1; color: #8a8a84; }
+.profileEditGrid small { color: #999993; font-size: 8px; line-height: 1.4; }
+.profileEditActions { margin-top: 15px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.profileEditActions p { margin: 0; color: #777772; font-size: 9px; }
+.profileEditActions button { min-height: 40px; padding: 0 15px; border: 1px solid #ffc72c; border-radius: 11px; background: #ffc72c; color: #171109; font: inherit; font-size: 10px; font-weight: 850; cursor: pointer; }
+.profileEditActions button:disabled { opacity: .55; cursor: wait; }
+.profileInlineMessage { margin: 10px 4px 0; color: #657060; font-size: 9px; }
+
+.profileIdentityOverview { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr); gap: 18px; align-items: start; }
+.profileIdentityCard { padding: 20px; border: 1px solid #e7e7e3; border-radius: 22px; background: #fff; box-shadow: 0 8px 28px rgba(17,17,17,.03); }
+.profileVisibilityRows { display: grid; gap: 8px; }
+.profileVisibilityRows > div,
+.profileQuickActions > a { min-height: 60px; padding: 10px 11px; border: 1px solid #ecece8; border-radius: 13px; background: #fafaf8; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 10px; align-items: center; }
+.profileVisibilityRows i,
+.profileQuickActions > a > i { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: #fff3c5; color: #7b5d00; }
+.profileVisibilityRows i svg,
+.profileQuickActions > a > i svg { width: 16px; height: 16px; }
+.profileVisibilityRows span,
+.profileQuickActions > a > span { min-width: 0; display: grid; gap: 2px; }
+.profileVisibilityRows strong,
+.profileQuickActions strong { color: #2c2c28; font-size: 10px; }
+.profileVisibilityRows small,
+.profileQuickActions small { color: #898983; font-size: 8px; line-height: 1.35; }
+.profilePrivacyLink { margin-top: 12px; min-height: 38px; padding: 0 11px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #e4e4df; border-radius: 11px; color: #4a4a45; font-size: 9px; font-weight: 800; }
+.profilePrivacyLink svg { width: 14px; height: 14px; }
+.profileQuickActions { display: grid; gap: 8px; }
+.profileQuickActions .profileSectionHeading { margin-bottom: 3px; }
+.profileQuickActions > a { grid-template-columns: 34px minmax(0,1fr) 16px; color: inherit; }
+.profileQuickActions > a > b { color: #aaa9a3; }
+.profileQuickActions > a > b svg { width: 14px; height: 14px; }
+.profileEmailSummary { margin-top: 3px; padding: 12px; border-top: 1px solid #ecece7; display: grid; gap: 2px; }
+.profileEmailSummary > span { color: #9a7400; font-size: 8px; font-weight: 850; letter-spacing: .1em; }
+.profileEmailSummary strong { overflow-wrap: anywhere; color: #41413d; font-size: 9px; }
+.profileEmailSummary small { color: #8d8d87; font-size: 8px; }
+
+/* Standalone settings */
+body:has(.settingsPage) { background: #f7f7f5; }
+.settingsPage { min-height: 100vh; padding: 34px 30px 100px 266px; background: #f7f7f5; color: #171717; font-family: var(--font-inter), system-ui, sans-serif; }
+.settingsShell { width: min(1180px, 100%); margin: 0 auto; }
+.settingsTop { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.settingsTop > div > span,
+.settingsSectionHeading > div > span,
+.settingsAccountFoot > div > span { color: #9a7400; font-size: 10px; font-weight: 850; letter-spacing: .11em; }
+.settingsTop h1 { margin: 5px 0 6px; font-size: clamp(32px, 3vw, 42px); line-height: 1; letter-spacing: -.045em; }
+.settingsTop p { max-width: 680px; margin: 0; color: #777772; font-size: 12px; line-height: 1.5; }
+.settingsTop > a { min-height: 42px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e5e5e1; border-radius: 12px; background: #fff; color: #3e3e3a; font-size: 10px; font-weight: 800; }
+.settingsTop > a svg { width: 16px; height: 16px; }
+.settingsJump { position: sticky; top: 0; z-index: 5; margin: 20px 0 14px; padding: 7px; display: flex; flex-wrap: wrap; gap: 5px; border: 1px solid #e8e8e3; border-radius: 14px; background: rgba(247,247,245,.92); backdrop-filter: blur(14px); }
+.settingsJump a { min-height: 32px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 9px; color: #686863; font-size: 9px; font-weight: 780; }
+.settingsJump a:hover { background: #fff; color: #22221f; }
+
+.settingsSection { margin-top: 14px; padding: 22px; scroll-margin-top: 72px; border: 1px solid #e7e7e3; border-radius: 22px; background: #fff; box-shadow: 0 8px 28px rgba(17,17,17,.025); }
+.settingsSectionHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 16px; }
+.settingsSectionHeading h2 { margin: 5px 0 0; font-size: 24px; line-height: 1.05; letter-spacing: -.035em; }
+.settingsSectionHeading > p { max-width: 420px; margin: 0; color: #85857f; font-size: 9px; line-height: 1.55; }
+.settingsGrid { display: grid; gap: 10px; }
+.settingsGrid.two { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.settingsCard { min-width: 0; padding: 16px; border: 1px solid #e9e9e5; border-radius: 17px; background: #fafaf8; }
+.settingsCardTitle { display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 10px; align-items: center; }
+.settingsCardTitle > i { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #ead99d; border-radius: 12px; background: #fff5cf; color: #7c5e00; }
+.settingsCardTitle > i svg { width: 17px; height: 17px; }
+.settingsCardTitle > div { min-width: 0; display: grid; gap: 2px; }
+.settingsCardTitle strong { color: #282825; font-size: 11px; }
+.settingsCardTitle span { color: #8a8a84; font-size: 8px; }
+.settingsField { margin-top: 14px; display: grid; gap: 6px; }
+.settingsField > span { color: #6f6f69; font-size: 8px; font-weight: 800; }
+.settingsField input,
+.settingsField select { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid #deded9; border-radius: 10px; background: #fff; color: #252522; outline: none; font: inherit; font-size: 10px; }
+.settingsField input:focus,
+.settingsField select:focus { border-color: #d1b74f; box-shadow: 0 0 0 3px rgba(255,199,44,.12); }
+.settingsMessage { min-height: 13px; margin: 8px 0 0; color: #766b47; font-size: 8px; line-height: 1.4; }
+.settingsButton { min-height: 38px; margin-top: 10px; padding: 0 12px; border-radius: 10px; font: inherit; font-size: 9px; font-weight: 850; cursor: pointer; }
+.settingsButton.secondary { border: 1px solid #dcdcd6; background: #fff; color: #383834; }
+.settingsButton:disabled { opacity: .55; cursor: wait; }
+.settingsTrustGrid > .profileCard,
+.settingsTrustGrid > .trustPassportCard { background: #fafaf8; }
+
+.settingsChoiceGroup { margin-top: 14px; display: grid; gap: 7px; }
+.settingsChoiceGroup button { width: 100%; min-height: 58px; padding: 10px; display: grid; grid-template-columns: minmax(0,1fr) 22px; gap: 8px; align-items: center; border: 1px solid #e3e3df; border-radius: 12px; background: #fff; color: #33332f; text-align: left; font: inherit; cursor: pointer; }
+.settingsChoiceGroup button span { display: grid; gap: 3px; }
+.settingsChoiceGroup button strong { font-size: 9px; }
+.settingsChoiceGroup button small { color: #898983; font-size: 8px; line-height: 1.35; }
+.settingsChoiceGroup button b { width: 21px; height: 21px; display: grid; place-items: center; border: 1px solid #deded9; border-radius: 50%; color: #171109; font-size: 9px; }
+.settingsChoiceGroup button.selected { border-color: #d8b83e; background: #fff9e8; }
+.settingsChoiceGroup button.selected b { border-color: #ffc72c; background: #ffc72c; }
+
+.settingsToggleList { margin-top: 12px; display: grid; gap: 5px; }
+.settingsToggleList.split { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+.settingsToggleList label { position: relative; min-height: 58px; padding: 9px 52px 9px 10px; display: flex; align-items: center; border: 1px solid #e8e8e4; border-radius: 12px; background: #fff; cursor: pointer; }
+.settingsToggleList label > span { display: grid; gap: 3px; }
+.settingsToggleList strong { color: #33332f; font-size: 9px; }
+.settingsToggleList small { color: #8a8a84; font-size: 8px; line-height: 1.35; }
+.settingsToggleList input { position: absolute; opacity: 0; pointer-events: none; }
+.settingsToggleList label > i { position: absolute; right: 11px; width: 31px; height: 18px; border-radius: 999px; background: #d8d8d2; transition: .2s ease; }
+.settingsToggleList label > i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.18); transition: .2s ease; }
+.settingsToggleList input:checked + i { background: #ffc72c; }
+.settingsToggleList input:checked + i::after { transform: translateX(13px); }
+.settingsWideCard { padding: 12px; }
+
+.settingsSaveBar { position: sticky; bottom: 14px; z-index: 6; margin-top: 14px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid #e0d18d; border-radius: 15px; background: rgba(255,249,228,.94); box-shadow: 0 10px 32px rgba(30,25,8,.09); backdrop-filter: blur(14px); }
+.settingsSaveBar > div { display: grid; gap: 2px; }
+.settingsSaveBar strong { color: #49412a; font-size: 9px; }
+.settingsSaveBar span { color: #8a8168; font-size: 8px; }
+.settingsSaveBar button { min-height: 40px; padding: 0 15px; border: 1px solid #171717; border-radius: 11px; background: #171717; color: #ffc72c; font: inherit; font-size: 9px; font-weight: 850; cursor: pointer; }
+.settingsSaveBar button:disabled { opacity: .55; cursor: wait; }
+.settingsAccountFoot { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.settingsAccountFoot > div { display: grid; gap: 2px; }
+.settingsAccountFoot strong { overflow-wrap: anywhere; color: #343431; font-size: 10px; }
+.settingsAccountFoot small { color: #8c8c86; font-size: 8px; }
+.settingsAccountFoot > button { min-height: 38px; padding: 0 12px; border: 1px solid #e0bdb7; border-radius: 10px; background: #fff5f3; color: #9a4438; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
+
+html[data-aspire-theme='dark'] body:has(.profileIdentityPage),
+html[data-aspire-theme='dark'] body:has(.settingsPage) { background: #0b0b0a; }
+html[data-aspire-theme='dark'] .profileIdentityFacts > span,
+html[data-aspire-theme='dark'] .profileInterests span,
+html[data-aspire-theme='dark'] .profileInterests button,
+html[data-aspire-theme='dark'] .profileEditPanel,
+html[data-aspire-theme='dark'] .profileIdentityCard,
+html[data-aspire-theme='dark'] .profileIdentityActions a,
+html[data-aspire-theme='dark'] .settingsTop > a,
+html[data-aspire-theme='dark'] .settingsSection,
+html[data-aspire-theme='dark'] .settingsCard,
+html[data-aspire-theme='dark'] .settingsChoiceGroup button,
+html[data-aspire-theme='dark'] .settingsToggleList label,
+html[data-aspire-theme='dark'] .settingsField input,
+html[data-aspire-theme='dark'] .settingsField select { background: #151513; border-color: #2c2c28; color: #f5f1e6; }
+html[data-aspire-theme='dark'] .settingsPage { background: #0b0b0a; color: #f6f2e8; }
+html[data-aspire-theme='dark'] .settingsJump { border-color: #2c2c28; background: rgba(11,11,10,.9); }
+html[data-aspire-theme='dark'] .settingsJump a { color: #b5b0a3; }
+html[data-aspire-theme='dark'] .settingsJump a:hover { background: #1b1b18; color: #fff; }
+html[data-aspire-theme='dark'] .settingsTop p,
+html[data-aspire-theme='dark'] .settingsSectionHeading > p,
+html[data-aspire-theme='dark'] .settingsCardTitle span,
+html[data-aspire-theme='dark'] .settingsToggleList small,
+html[data-aspire-theme='dark'] .settingsChoiceGroup button small,
+html[data-aspire-theme='dark'] .profileVisibilityRows small,
+html[data-aspire-theme='dark'] .profileQuickActions small,
+html[data-aspire-theme='dark'] .profileBio { color: #aba79b !important; }
+html[data-aspire-theme='dark'] .settingsCardTitle strong,
+html[data-aspire-theme='dark'] .settingsToggleList strong,
+html[data-aspire-theme='dark'] .settingsChoiceGroup button strong,
+html[data-aspire-theme='dark'] .profileVisibilityRows strong,
+html[data-aspire-theme='dark'] .profileQuickActions strong,
+html[data-aspire-theme='dark'] .profileIdentityFacts strong { color: #f1ede3; }
+html[data-aspire-theme='dark'] .profileVisibilityRows > div,
+html[data-aspire-theme='dark'] .profileQuickActions > a { border-color: #2d2d29; background: #181816; }
+html[data-aspire-theme='dark'] .profileIdentityStats > div { border-color: #4c3d14; background: linear-gradient(145deg,#1e1a0f,#17140d); }
+html[data-aspire-theme='dark'] .profileIdentityStats strong { color: #f9f1d6; }
+html[data-aspire-theme='dark'] .settingsSaveBar { border-color: #4f421d; background: rgba(31,27,15,.94); }
+html[data-aspire-theme='dark'] .settingsSaveBar strong { color: #e9dfbd; }
+html[data-aspire-theme='dark'] .settingsSaveBar span { color: #aaa080; }
+html[data-aspire-theme='dark'] .settingsSaveBar button { border-color: #ffc72c; background: #ffc72c; color: #171109; }
+
+@media (max-width: 1120px) {
+  .profileIdentityHero { grid-template-columns: auto minmax(0,1fr); }
+  .profileIdentityStats { grid-column: 1 / -1; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .profileIdentityOverview { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  .settingsPage { padding: 18px 14px 106px; }
+  .settingsTop { align-items: flex-start; }
+  .settingsJump { top: 8px; overflow-x: auto; flex-wrap: nowrap; }
+  .settingsJump a { white-space: nowrap; }
+  .settingsSectionHeading { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .settingsGrid.two,
+  .settingsToggleList.split { grid-template-columns: 1fr; }
+  .settingsSaveBar { bottom: 88px; }
+}
+
+@media (max-width: 660px) {
+  .profileIdentityHero { grid-template-columns: 1fr; }
+  .profileIdentityHero .profileAvatarWrap { justify-items: start; }
+  .profileIdentityStats { grid-column: auto; }
+  .profileIdentityFacts { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .profileIdentityFacts > span { min-width: 0; }
+  .profileEditGrid { grid-template-columns: 1fr; }
+  .profileEditGrid label.wide { grid-column: auto; }
+  .profileEditActions,
+  .settingsSaveBar,
+  .settingsAccountFoot { align-items: stretch; flex-direction: column; }
+  .profileEditActions button,
+  .settingsSaveBar button,
+  .settingsAccountFoot > button { width: 100%; }
+  .settingsTop { flex-direction: column; }
+  .settingsTop > a { width: 100%; justify-content: center; }
+  .settingsSection { padding: 16px; border-radius: 18px; }
+}
