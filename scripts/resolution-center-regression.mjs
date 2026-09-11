@@ -28,7 +28,7 @@ const checks = [
   [resolutionRoute, 'resolutionCase.opened_by !== payment.payer_id', 'automatic customer refunds must come from payer-owned cases'],
   [resolutionRoute, 'aspire_resolution_refund_', 'refunds must stay idempotent'],
   [scheduleSql, 'The other participant must respond to this proposal', 'a proposer must not accept their own schedule change'],
-  [scheduleSql, "status='accepted'", 'schedule proposals must have an accepted state'],
+  [scheduleSql, "status text not null default 'pending' check (status in ('pending','accepted','declined','superseded'))", 'schedule proposals must retain accepted/declined lifecycle states'],
   [lockdownSql, 'revoke execute on function public.set_connection_schedule', 'legacy direct schedule mutation must stay revoked'],
   [followupSql, "'connection_coordination'", 'coordination notifications must remain supported'],
   [followupSql, "'resolution_case'", 'Resolution Center notifications must remain supported'],
