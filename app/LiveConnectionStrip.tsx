@@ -7,6 +7,7 @@ import {
   LiveConnectionProfile,
   LiveConnectionRequest,
   ConnectionLocationShare,
+  recordConnectionAttendanceUpdate,
   setConnectionCoordinationStatus,
   setConnectionSchedule,
   shareConnectionLocation,
@@ -14,6 +15,7 @@ import {
 } from '../lib/supabase/liveConnections';
 import { ConnectionResolutionCase, fetchResolutionCases } from '../lib/supabase/resolution';
 import ConnectionEventTimeline from './ConnectionEventTimeline';
+import ResolutionCaseStatus from './ResolutionCaseStatus';
 import ResolutionCenterModal from './ResolutionCenterModal';
 import styles from './LiveConnectionStrip.module.css';
 
@@ -138,6 +140,22 @@ export default function LiveConnectionStrip() {
     }
   }
 
+  async function attendanceUpdate(connectionId: string, update: 'running_late' | 'cannot_make_it') {
+    if (update === 'cannot_make_it' && !window.confirm('Tell the other person you can’t make the agreed time? This creates a timestamped Aspire activity record but does not automatically cancel or move any money.')) return;
+    setBusy(`${update}-${connectionId}`);
+    try {
+      await recordConnectionAttendanceUpdate(connectionId, update);
+      await reload(true);
+      setNotice(update === 'running_late'
+        ? 'Running late was added to the shared connection timeline. Message the other person with your ETA.'
+        : 'Can’t make it was added to the shared timeline. Use chat to reschedule, or Get help if payment/refund review is needed.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update the connection.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function shareLocation(connectionId: string) {
     if (!navigator.geolocation) return setNotice('Location sharing is not supported in this browser.');
     setBusy(`location-${connectionId}`);
@@ -225,12 +243,7 @@ export default function LiveConnectionStrip() {
                 <small>{connection.meeting_label ? `${timer.detail} · ${connection.meeting_label}` : timer.detail}</small>
               </div>
 
-              {openCase && (
-                <div className={styles.resolutionHold}>
-                  <div><span>PAYMENT ON HOLD</span><strong>{openCase.status === 'under_review' ? 'Aspire is reviewing this issue.' : 'Resolution Center case opened.'}</strong></div>
-                  <p>Provider payout cannot be released while this case is open. Keep coordination and evidence inside Aspire.</p>
-                </div>
-              )}
+              {openCase && <ResolutionCaseStatus item={openCase} currentUserId={data.userId} otherName={otherName} />}
 
               {editingId === connection.id && (
                 <div className={styles.editor}>
@@ -259,6 +272,7 @@ export default function LiveConnectionStrip() {
                 <a className={styles.primary} href="#my-activity">Message</a>
                 <button type="button" onClick={() => beginSchedule(connection)}>Set time</button>
                 <button type="button" disabled={busy === `on_the_way-${connection.id}`} onClick={() => void updateStatus(connection.id, 'on_the_way')}>On my way</button>
+                <button type="button" disabled={busy === `running_late-${connection.id}`} onClick={() => void attendanceUpdate(connection.id, 'running_late')}>Running late</button>
                 <button type="button" disabled={busy === `arrived-${connection.id}`} onClick={() => void updateStatus(connection.id, 'arrived')}>I&apos;ve arrived</button>
                 <button type="button" disabled={busy === `in_progress-${connection.id}`} onClick={() => void updateStatus(connection.id, 'in_progress')}>Start task</button>
                 {!myShare ? (
@@ -266,6 +280,7 @@ export default function LiveConnectionStrip() {
                 ) : (
                   <button className={styles.danger} type="button" disabled={busy === `stop-location-${connection.id}`} onClick={() => void stopLocation(connection.id)}>Stop sharing</button>
                 )}
+                <button className={styles.danger} type="button" disabled={busy === `cannot_make_it-${connection.id}`} onClick={() => void attendanceUpdate(connection.id, 'cannot_make_it')}>Can&apos;t make it</button>
                 <button className={styles.help} type="button" disabled={Boolean(openCase)} onClick={() => setHelpConnectionId(connection.id)}>{openCase ? 'Issue open' : 'Get help'}</button>
               </div>
 
