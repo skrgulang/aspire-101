@@ -43,6 +43,9 @@
 .paymentFeeBreakdown > div.total { margin-top: 5px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.07); color: #e9dfcc; font-weight: 800; }
 .paymentFeeBreakdown > div.total strong { color: var(--gold); font-size: 15px; letter-spacing: -.02em; }
 .paymentFeeBreakdown > small { display: block; margin-top: 8px; color: #625d55; font-size: 7px; line-height: 1.45; }
+.connectionPaymentResolutionHold { margin-top:14px; padding:12px 13px; display:grid; gap:4px; border:1px solid rgba(255,130,90,.18); border-radius:15px; background:linear-gradient(135deg,rgba(255,124,82,.075),rgba(255,199,44,.028)); }
+.connectionPaymentResolutionHold strong { color:#e2aa8b; font-size:10px; }
+.connectionPaymentResolutionHold span { color:#907f74; font-size:9px; line-height:1.5; }
 .connectionPaymentState { margin-top: 14px; padding: 13px 14px; border: 1px solid rgba(255,255,255,.07); border-radius: 15px; background: rgba(255,255,255,.018); }
 .connectionPaymentState b { display: block; color: #e7dfd2; font-size: 11px; }
 .connectionPaymentState p { margin: 4px 0 0; color: #797268; font-size: 9px; line-height: 1.5; }
