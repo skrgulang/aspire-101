@@ -3,7 +3,17 @@ import { getSupabaseBrowserClient } from './client';
 export type AspireNotification = {
   id: number;
   user_id: string;
-  kind: 'request_response' | 'connection_chosen' | 'connection_confirmed' | 'connection_completed' | 'connection_cancelled' | 'message' | 'circle_mutual' | 'connection_reminder';
+  kind:
+    | 'request_response'
+    | 'connection_chosen'
+    | 'connection_confirmed'
+    | 'connection_completed'
+    | 'connection_cancelled'
+    | 'message'
+    | 'circle_mutual'
+    | 'connection_reminder'
+    | 'connection_coordination'
+    | 'resolution_case';
   actor_id: string | null;
   request_id: string | null;
   response_id: string | null;
