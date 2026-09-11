@@ -49,6 +49,13 @@ export type ConnectionNoShowIncident = {
   created_at: string;
 };
 
+function missingPreviewRelation(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return error.code === '42P01'
+    || error.code === 'PGRST205'
+    || /could not find the table|relation .* does not exist/i.test(error.message || '');
+}
+
 export async function fetchResolutionCases(connectionIds: string[]) {
   if (!connectionIds.length) return [] as ConnectionResolutionCase[];
   const supabase = getSupabaseBrowserClient();
@@ -58,7 +65,7 @@ export async function fetchResolutionCases(connectionIds: string[]) {
     .in('connection_id', connectionIds)
     .order('created_at', { ascending: false });
   if (error) {
-    if (error.code === '42P01') return [] as ConnectionResolutionCase[];
+    if (missingPreviewRelation(error)) return [] as ConnectionResolutionCase[];
     throw error;
   }
   return (data ?? []) as ConnectionResolutionCase[];
@@ -73,7 +80,7 @@ export async function fetchResolutionCaseResponses(caseIds: string[]) {
     .in('case_id', caseIds)
     .order('created_at', { ascending: true });
   if (error) {
-    if (error.code === '42P01') return [] as ConnectionResolutionResponse[];
+    if (missingPreviewRelation(error)) return [] as ConnectionResolutionResponse[];
     throw error;
   }
   return (data ?? []) as ConnectionResolutionResponse[];
@@ -89,7 +96,7 @@ export async function fetchNoShowIncidents(userIds: string[]) {
     .in('user_id', ids)
     .order('created_at', { ascending: false });
   if (error) {
-    if (error.code === '42P01') return [] as ConnectionNoShowIncident[];
+    if (missingPreviewRelation(error)) return [] as ConnectionNoShowIncident[];
     throw error;
   }
   return (data ?? []) as ConnectionNoShowIncident[];
@@ -103,7 +110,7 @@ export async function fetchResolutionCasesForModeration(limit = 100) {
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) {
-    if (error.code === '42P01') return [] as ConnectionResolutionCase[];
+    if (missingPreviewRelation(error)) return [] as ConnectionResolutionCase[];
     throw error;
   }
   return (data ?? []) as ConnectionResolutionCase[];
@@ -127,6 +134,7 @@ export async function openResolutionCase(input: {
   if (error) {
     const text = `${error.message || ''} ${error.details || ''}`;
     if (/NO_SHOW_GRACE_PERIOD/i.test(text)) throw new Error('No-show reports unlock 10 minutes after the agreed start time. Use chat or “Running late” before then.');
+    if (/function .*open_connection_resolution_case.*does not exist|could not find the function/i.test(text)) throw new Error('Resolution Center is not enabled in this preview database yet.');
     throw error;
   }
   return String(data || '');
