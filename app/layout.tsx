@@ -41,6 +41,7 @@ import './app-loader.css';
 import './trust-moderation.css';
 import './profile-polish.css';
 import './student-profile-settings.css';
+import './student-profile-controls.css';
 import './moderator-polish.css';
 import './discover-v2.css';
 import './payments-connect.css';
