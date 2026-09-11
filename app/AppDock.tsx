@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
 
-type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'profile';
-type Theme = 'light' | 'dark';
+type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'profile' | 'settings';
 type DockItem = { key: AppDockTab; label: string; href: string; icon: UiIconName; mobile?: boolean };
 
 const discoverItems: DockItem[] = [
@@ -27,23 +26,13 @@ const accountItems: DockItem[] = [
 ];
 
 export default function AppDock({ active, preview = false }: { active: AppDockTab; preview?: boolean }) {
-  const [theme, setTheme] = useState<Theme>('light');
-
   useEffect(() => {
     const stored = window.localStorage.getItem('aspire-theme');
-    const next: Theme = stored === 'dark' || stored === 'light'
+    const next = stored === 'dark' || stored === 'light'
       ? stored
       : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    setTheme(next);
     document.documentElement.dataset.aspireTheme = next;
   }, []);
-
-  function toggleTheme() {
-    const next: Theme = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    window.localStorage.setItem('aspire-theme', next);
-    document.documentElement.dataset.aspireTheme = next;
-  }
 
   function renderItem(item: DockItem) {
     return (
@@ -83,13 +72,10 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
         <UiIcon name="shield" />
         <span>Safety & Help</span>
       </a>
-      <a className={`${styles.utilityLink} ${styles.desktopExtra}`} href={preview ? '/ui-preview' : '/profile#account-settings'} title="Settings" onClick={preview ? (event) => event.preventDefault() : undefined}>
+      <a className={`${styles.utilityLink} ${styles.desktopExtra} ${active === 'settings' ? styles.active : ''}`} href={preview ? '/ui-preview' : '/settings'} title="Settings" aria-current={active === 'settings' ? 'page' : undefined} onClick={preview ? (event) => event.preventDefault() : undefined}>
         <UiIcon name="settings" />
         <span>Settings</span>
       </a>
-      <button className={styles.themeButton} type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} title={`Switch to ${theme === 'light' ? 'Black & Gold' : 'Light'} mode`}>
-        <UiIcon name={theme === 'light' ? 'moon' : 'sun'} />
-      </button>
     </nav>
   );
 }
