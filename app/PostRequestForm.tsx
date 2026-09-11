@@ -19,6 +19,7 @@ import { fetchActiveUniversities, University } from '../lib/supabase/universitie
 import { clearAspireAgentDraft, markAspireAgentOutcome, readAspireAgentDraft } from '../lib/supabase/aspireAi';
 import CampusPicker from './CampusPicker';
 import PaymentFeePreview from './PaymentFeePreview';
+import RequestScheduleFields, { type RequestScheduleMode } from './RequestScheduleFields';
 
 type CategoryOption = { label: string; value: string; icon: string; prompt: string; examples: string[]; defaultKind: RequestKind };
 
@@ -74,6 +75,10 @@ export default function PostRequestForm() {
   const [marketIntent, setMarketIntent] = useState<MarketIntent>('sell');
   const [itemCondition, setItemCondition] = useState<ItemCondition>('good');
   const [priceNegotiable, setPriceNegotiable] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState<RequestScheduleMode>('flexible');
+  const [startLocal, setStartLocal] = useState('');
+  const [endLocal, setEndLocal] = useState('');
+  const [meetingLabel, setMeetingLabel] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
@@ -89,6 +94,12 @@ export default function PostRequestForm() {
   const homeCampus = useMemo(() => universities.find((item) => item.id === homeCampusId) ?? null, [universities, homeCampusId]);
   const visiting = Boolean(selectedCampus && homeCampus && selectedCampus.id !== homeCampus.id);
   const photoPreviews = useMemo(() => photos.map((file) => ({ file, url: URL.createObjectURL(file) })), [photos]);
+  const schedulePreview = useMemo(() => {
+    if (scheduleMode !== 'scheduled' || !startLocal) return 'Flexible timing';
+    const value = new Date(startLocal);
+    if (Number.isNaN(value.getTime())) return 'Time to be confirmed';
+    return value.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }, [scheduleMode, startLocal]);
 
   useEffect(() => () => photoPreviews.forEach((item) => URL.revokeObjectURL(item.url)), [photoPreviews]);
 
@@ -187,11 +198,33 @@ export default function PostRequestForm() {
     setPhotos((current) => current.filter((_, itemIndex) => itemIndex !== index));
   }
 
+  function resetPost() {
+    setPosted(null);
+    setTitle('');
+    setDetails('');
+    setAmount('');
+    setPhotos([]);
+    setScheduleMode('flexible');
+    setStartLocal('');
+    setEndLocal('');
+    setMeetingLabel('');
+  }
+
   function openConfirmation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
     if (!title.trim()) return setError('Tell campus what you need first.');
     if (!selectedCampus) return setError('Choose a supported campus for this request.');
+    if (scheduleMode === 'scheduled') {
+      if (!startLocal) return setError('Choose the date and start time, or switch timing to Flexible.');
+      const start = new Date(startLocal).getTime();
+      if (!Number.isFinite(start)) return setError('Choose a valid start time.');
+      if (start <= Date.now()) return setError('Choose a start time in the future.');
+      if (endLocal) {
+        const end = new Date(endLocal).getTime();
+        if (!Number.isFinite(end) || end <= start) return setError('End time must be after the start time.');
+      }
+    }
     if (kind === 'paid_help' && (!amount || Number(amount) <= 0)) return setError('Add the amount you are offering for paid help.');
     if (isMarket && (!amount || Number(amount) <= 0)) return setError(marketIntent === 'sell' ? 'Add the item price.' : 'Add your budget.');
     if (isMarket && marketIntent === 'sell' && photos.length < 1) return setError('Add at least one real photo of the item you are selling.');
@@ -210,12 +243,19 @@ export default function PostRequestForm() {
     setError('');
     try {
       const amountCents = amount ? Math.round(Number(amount) * 100) : undefined;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const scheduledStartAt = scheduleMode === 'scheduled' && startLocal ? new Date(startLocal).toISOString() : undefined;
+      const scheduledEndAt = scheduleMode === 'scheduled' && endLocal ? new Date(endLocal).toISOString() : undefined;
       const request = await createRequest({
         kind,
         category,
         title,
         details,
         campusId: selectedCampus.id,
+        scheduled_start_at: scheduledStartAt,
+        scheduled_end_at: scheduledEndAt,
+        timezone: scheduledStartAt ? timezone : undefined,
+        meeting_label: meetingLabel,
         amount_cents: amountCents,
         payment_method: moneyInvolved ? paymentMethod : 'none',
         market_intent: isMarket ? marketIntent : undefined,
@@ -259,10 +299,10 @@ export default function PostRequestForm() {
     <section className="postSuccess">
       <p className="eyebrow">SUBMITTED FOR REVIEW</p>
       <h1>Almost there.</h1>
-      <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · {requestLanguageLabel(language)} · #{posted.id.slice(0, 8)} · pending review</small></article>
+      <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · {schedulePreview} · {requestLanguageLabel(language)} · #{posted.id.slice(0, 8)} · pending review</small></article>
       {posted.warning && <p className="postError">{posted.warning}</p>}
       <p className="postSuccessNote">{isMarket ? 'Your marketplace listing is saved but is not public yet. Aspire reviews new listings before they appear in Discover.' : 'Your request is saved but is not public yet. Aspire reviews new posts before they appear in the campus feed.'}</p>
-      <div className="postSuccessActions"><a className="button buttonGold" href="/connections">View my activity <span>↗</span></a><button className="quietPostButton" type="button" onClick={() => { setPosted(null); setTitle(''); setDetails(''); setAmount(''); setPhotos([]); }}>Submit another</button></div>
+      <div className="postSuccessActions"><a className="button buttonGold" href="/connections">View my activity <span>↗</span></a><button className="quietPostButton" type="button" onClick={resetPost}>Submit another</button></div>
     </section>
   );
 
@@ -273,6 +313,23 @@ export default function PostRequestForm() {
       <div className="postCategoryPicker" aria-label="Choose a request category">{categories.map((item) => <button key={item.value} type="button" className={category === item.value ? 'active' : ''} onClick={() => chooseCategory(item)}><i>{item.icon}</i><strong>{item.label}</strong><span>{item.prompt}</span></button>)}</div>
       <div className="postQuickStarts"><span>TRY ONE</span>{selectedCategory.examples.map((example) => <button type="button" key={example} onClick={() => setTitle(example)}>{example} ↗</button>)}</div>
       <label className="postField postFieldLarge postComposerField"><span>{isMarket ? 'Listing title · required' : selectedCategory.prompt}</span><textarea value={title} onChange={(e) => setTitle(e.target.value)} maxLength={180} rows={3} placeholder={selectedCategory.examples[0]} /><small>{title.length}/180</small></label>
+
+      <RequestScheduleFields
+        mode={scheduleMode}
+        startLocal={startLocal}
+        endLocal={endLocal}
+        meetingLabel={meetingLabel}
+        onModeChange={(next) => {
+          setScheduleMode(next);
+          if (next === 'flexible') {
+            setStartLocal('');
+            setEndLocal('');
+          }
+        }}
+        onStartChange={setStartLocal}
+        onEndChange={setEndLocal}
+        onMeetingLabelChange={setMeetingLabel}
+      />
 
       {isMarket && (
         <section className="marketComposer" aria-label="Campus marketplace listing details">
@@ -302,11 +359,11 @@ export default function PostRequestForm() {
 
       {isMarket && <section className="marketPaymentChoice"><div><span>PAYMENT</span><strong>Choose how the order is protected.</strong></div><label className={paymentMethod === 'aspire' ? 'active' : ''}><input type="radio" name="market-payment" checked={paymentMethod === 'aspire'} onChange={() => setPaymentMethod('aspire')} /><span><b>Aspire Protected</b><small>Buyer pays through Stripe. Seller transfer waits for receipt confirmation.</small></span></label><label className={paymentMethod === 'in_person' ? 'active offPlatform' : 'offPlatform'}><input type="radio" name="market-payment" checked={paymentMethod === 'in_person'} onChange={() => setPaymentMethod('in_person')} /><span><b>Pay in person</b><small>Not processed or protected by Aspire.</small></span></label>{paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}</section>}
 
-      <label className="postField postDetailsField"><span>{isMarket ? 'Description' : 'Anything else?'} <em>optional</em></span><textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} placeholder={isMarket ? 'Model, size, included accessories, defects, approximate pickup area, or anything a buyer should know.' : 'Timing, approximate area, what to bring, or anything that helps someone decide. Share exact addresses only after connecting.'} /></label>
+      <label className="postField postDetailsField"><span>{isMarket ? 'Description' : 'Anything else?'} <em>optional</em></span><textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} placeholder={isMarket ? 'Model, size, included accessories, defects, approximate pickup area, or anything a buyer should know.' : 'What to bring, access notes, or anything that helps someone decide. Keep exact private addresses for the connection chat.'} /></label>
       <div className="postContextCard"><div><span>SAFETY FOR THIS REQUEST</span><strong>{context.title}</strong></div><p>{context.note}</p><a href="/safety">Safety center ↗</a></div>{error && <p className="postError" role="alert">{error}</p>}
       <div className="postSubmitRow"><p>Submitting sends this to Aspire&apos;s review gate. It will not appear publicly in Discover until it is approved. Automated policy checks may block clearly prohibited language before submission.</p><button className="button buttonGold" type="submit">Review + submit <span>→</span></button></div>
     </form>
 
-    {confirming && selectedCampus && <div className="publishOverlay" role="dialog" aria-modal="true" aria-labelledby="publish-title"><div className="publishModal publishModalContext"><span className="publishKicker">BEFORE YOU SUBMIT · {isMarket ? 'ASPIRE MARKET' : selectedCategory.label.toUpperCase()}</span><h2 id="publish-title">{context.title}</h2><p>{context.note}</p><div className="publishPreviewMeta"><span>{selectedCampus.short_name}</span><span>{requestLanguageLabel(language)}</span>{isMarket && <span>{marketIntent === 'sell' ? 'SELLING' : 'WANTED'} · ${Number(amount).toFixed(2)}</span>}{isMarket && priceNegotiable && <span>NEGOTIABLE</span>}{visiting && <span>Visiting from {homeCampus?.short_name} ✓</span>}{photos.length > 0 && <span>{photos.length} photo{photos.length === 1 ? '' : 's'}</span>}</div><div className="publishRules"><span><b>01</b> Submitted to {selectedCampus.short_name} for review. {visiting ? `Your identity remains ${homeCampus?.short_name}.` : 'This is your home campus.'}</span><span><b>02</b> The post stays out of Discover until Aspire approves it.</span><span><b>03</b> {isMarket && paymentMethod === 'aspire' ? 'Aspire Protected records payment, handoff, buyer receipt, and dispute state before seller payout.' : paymentMethod === 'aspire' ? 'Pay with Aspire starts only after mutual confirmation; Stripe confirms payment status.' : 'Confirm timing, location, scope, and money before anything starts.'}</span></div><p className="publishFinePrint">Aspire uses automated checks and human review to reduce abusive, prohibited, or unsafe content. Follow the <a href="/guidelines" target="_blank">Community Guidelines ↗</a> and <a href="/safety" target="_blank">Safety Center ↗</a>.</p><div className="publishActions"><button className="quietPostButton" type="button" onClick={() => setConfirming(false)} disabled={publishing}>Go back</button><button className="button buttonGold" type="button" onClick={publish} disabled={publishing}>{publishing ? (photos.length ? 'Submitting + uploading…' : 'Submitting…') : 'Submit for review'}</button></div></div></div>}
+    {confirming && selectedCampus && <div className="publishOverlay" role="dialog" aria-modal="true" aria-labelledby="publish-title"><div className="publishModal publishModalContext"><span className="publishKicker">BEFORE YOU SUBMIT · {isMarket ? 'ASPIRE MARKET' : selectedCategory.label.toUpperCase()}</span><h2 id="publish-title">{context.title}</h2><p>{context.note}</p><div className="publishPreviewMeta"><span>{selectedCampus.short_name}</span><span>{schedulePreview}</span>{meetingLabel.trim() && <span>{meetingLabel.trim()}</span>}<span>{requestLanguageLabel(language)}</span>{isMarket && <span>{marketIntent === 'sell' ? 'SELLING' : 'WANTED'} · ${Number(amount).toFixed(2)}</span>}{isMarket && priceNegotiable && <span>NEGOTIABLE</span>}{visiting && <span>Visiting from {homeCampus?.short_name} ✓</span>}{photos.length > 0 && <span>{photos.length} photo{photos.length === 1 ? '' : 's'}</span>}</div><div className="publishRules"><span><b>01</b> Submitted to {selectedCampus.short_name} for review. {visiting ? `Your identity remains ${homeCampus?.short_name}.` : 'This is your home campus.'}</span><span><b>02</b> {scheduleMode === 'scheduled' ? 'Your selected time will carry into the connection and power the countdown. Either person can update it later.' : 'Timing stays flexible until you and the other person agree in the private connection.'}</span><span><b>03</b> {isMarket && paymentMethod === 'aspire' ? 'Aspire Protected records payment, handoff, buyer receipt, and dispute state before seller payout.' : paymentMethod === 'aspire' ? 'Pay with Aspire starts only after mutual confirmation; Stripe confirms payment status.' : 'Confirm timing, location, scope, and money before anything starts.'}</span></div><p className="publishFinePrint">Aspire uses automated checks and human review to reduce abusive, prohibited, or unsafe content. Follow the <a href="/guidelines" target="_blank">Community Guidelines ↗</a> and <a href="/safety" target="_blank">Safety Center ↗</a>.</p><div className="publishActions"><button className="quietPostButton" type="button" onClick={() => setConfirming(false)} disabled={publishing}>Go back</button><button className="button buttonGold" type="button" onClick={publish} disabled={publishing}>{publishing ? (photos.length ? 'Submitting + uploading…' : 'Submitting…') : 'Submit for review'}</button></div></div></div>}
   </>;
 }
