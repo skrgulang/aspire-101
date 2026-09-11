@@ -12,7 +12,9 @@ import {
   shareConnectionLocation,
   stopConnectionLocationShare
 } from '../lib/supabase/liveConnections';
+import { ConnectionResolutionCase, fetchResolutionCases } from '../lib/supabase/resolution';
 import ConnectionEventTimeline from './ConnectionEventTimeline';
+import ResolutionCenterModal from './ResolutionCenterModal';
 import styles from './LiveConnectionStrip.module.css';
 
 type Data = {
@@ -55,10 +57,12 @@ function statusLabel(status: LiveConnection['coordination_status']) {
 
 export default function LiveConnectionStrip() {
   const [data, setData] = useState<Data>(emptyData);
+  const [resolutionCases, setResolutionCases] = useState<ConnectionResolutionCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState('');
   const [editingId, setEditingId] = useState('');
+  const [helpConnectionId, setHelpConnectionId] = useState('');
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
   const [meetingLabel, setMeetingLabel] = useState('');
@@ -68,7 +72,9 @@ export default function LiveConnectionStrip() {
     if (!quiet) setLoading(true);
     try {
       const next = await fetchLiveConnections();
+      const cases = await fetchResolutionCases(next.connections.map((connection) => connection.id)).catch(() => [] as ConnectionResolutionCase[]);
       setData(next);
+      setResolutionCases(cases);
       setNotice('');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load active connections.');
@@ -86,6 +92,7 @@ export default function LiveConnectionStrip() {
 
   const requestMap = useMemo(() => new Map(data.requests.map((request) => [request.id, request])), [data.requests]);
   const profileMap = useMemo(() => new Map(data.profiles.map((profile) => [profile.id, profile])), [data.profiles]);
+  const helpConnection = data.connections.find((connection) => connection.id === helpConnectionId) ?? null;
 
   function beginSchedule(connection: LiveConnection) {
     setEditingId(connection.id);
@@ -194,6 +201,7 @@ export default function LiveConnectionStrip() {
           const timer = timerCopy(connection.scheduled_start_at, now);
           const myShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === data.userId);
           const otherShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === otherId);
+          const openCase = resolutionCases.find((item) => item.connection_id === connection.id && ['submitted', 'under_review'].includes(item.status));
           const mapHref = otherShare ? `https://www.google.com/maps?q=${encodeURIComponent(`${otherShare.latitude},${otherShare.longitude}`)}` : '';
 
           return (
@@ -216,6 +224,13 @@ export default function LiveConnectionStrip() {
                 <strong>{timer.value}</strong>
                 <small>{connection.meeting_label ? `${timer.detail} · ${connection.meeting_label}` : timer.detail}</small>
               </div>
+
+              {openCase && (
+                <div className={styles.resolutionHold}>
+                  <div><span>PAYMENT ON HOLD</span><strong>{openCase.status === 'under_review' ? 'Aspire is reviewing this issue.' : 'Resolution Center case opened.'}</strong></div>
+                  <p>Provider payout cannot be released while this case is open. Keep coordination and evidence inside Aspire.</p>
+                </div>
+              )}
 
               {editingId === connection.id && (
                 <div className={styles.editor}>
@@ -251,6 +266,7 @@ export default function LiveConnectionStrip() {
                 ) : (
                   <button className={styles.danger} type="button" disabled={busy === `stop-location-${connection.id}`} onClick={() => void stopLocation(connection.id)}>Stop sharing</button>
                 )}
+                <button className={styles.help} type="button" disabled={Boolean(openCase)} onClick={() => setHelpConnectionId(connection.id)}>{openCase ? 'Issue open' : 'Get help'}</button>
               </div>
 
               <div className={styles.privacy}><strong>Location is always optional.</strong> It is shared only after browser permission, only with the other person in this connection, and expires automatically.</div>
@@ -258,6 +274,21 @@ export default function LiveConnectionStrip() {
           );
         })}
       </div>
+
+      {helpConnection && (() => {
+        const otherId = data.userId === helpConnection.requester_id ? helpConnection.responder_id : helpConnection.requester_id;
+        return <ResolutionCenterModal
+          connection={helpConnection}
+          currentUserId={data.userId}
+          otherUserId={otherId}
+          otherName={personName(profileMap.get(otherId))}
+          onClose={() => setHelpConnectionId('')}
+          onOpened={async () => {
+            await reload(true);
+            setNotice('Issue opened. If this connection uses Pay with Aspire, payout release is now paused while Aspire reviews the case.');
+          }}
+        />;
+      })()}
     </section>
   );
 }
