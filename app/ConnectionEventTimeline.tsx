@@ -15,17 +15,22 @@ type Props = {
 };
 
 function eventIcon(type: ConnectionEvent['event_type']) {
-  if (type === 'schedule_set') return '◷';
+  if (type === 'schedule_set') return '✓';
+  if (type === 'schedule_proposed') return '◷';
+  if (type === 'schedule_declined') return '↶';
+  if (type === 'reminder') return '⏱';
   if (type === 'on_the_way') return '↗';
+  if (type === 'running_late') return '…';
+  if (type === 'cannot_make_it' || type === 'connection_cancelled') return '×';
   if (type === 'arrived') return '●';
   if (type === 'in_progress') return '▶';
   if (type === 'location_shared') return '⌖';
   if (type === 'location_stopped') return '×';
+  if (type === 'issue_opened' || type === 'issue_reviewing' || type === 'issue_response' || type === 'issue_resolved') return '◇';
   return '◉';
 }
 
-function eventCopy(event: ConnectionEvent) {
-  if (event.event_type !== 'schedule_set') return event.body;
+function scheduleCopy(event: ConnectionEvent, prefix: string) {
   const start = typeof event.metadata?.scheduled_start_at === 'string' ? event.metadata.scheduled_start_at : '';
   const meeting = typeof event.metadata?.meeting_label === 'string' ? event.metadata.meeting_label : '';
   if (!start) return event.body;
@@ -33,7 +38,13 @@ function eventCopy(event: ConnectionEvent) {
   const when = Number.isNaN(date.getTime())
     ? ''
     : date.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  return [when ? `Time set for ${when}.` : event.body, meeting ? `Meet at ${meeting}.` : ''].filter(Boolean).join(' ');
+  return [when ? `${prefix} ${when}.` : event.body, meeting ? `Meet at ${meeting}.` : ''].filter(Boolean).join(' ');
+}
+
+function eventCopy(event: ConnectionEvent) {
+  if (event.event_type === 'schedule_set') return scheduleCopy(event, 'Agreed time set for');
+  if (event.event_type === 'schedule_proposed') return scheduleCopy(event, 'Proposed time:');
+  return event.body;
 }
 
 export default function ConnectionEventTimeline({ connectionId, userId, otherName }: Props) {
