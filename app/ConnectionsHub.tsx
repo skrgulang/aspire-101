@@ -6,12 +6,12 @@ import {
   acceptRequestResponse,
   AspireConnection,
   cancelConnection,
+  CircleChoice,
   CircleEntry,
   confirmConnection,
-  ConnectionLifecycleState,
   ConnectionMessage,
   ConnectionReview,
-  fetchConnectionLifecycleStates,
+  fetchCircleChoices,
   fetchConnectionMessages,
   fetchConnectionReviews,
   fetchConnectionUnreadCounts,
@@ -28,10 +28,10 @@ import {
 } from '../lib/supabase/connections';
 import { useConnectionRealtimeRoom } from '../lib/supabase/connection-realtime';
 import { confirmConnectionCompletion } from '../lib/supabase/payments';
-import { blockUser } from '../lib/supabase/safety';
 import type { AspireRequest } from '../lib/supabase/requests';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import NotificationCenter from './NotificationCenter';
+import ConnectionEventTimeline from './ConnectionEventTimeline';
 
 type Tab = 'requests' | 'connections' | 'circle';
 type ReviewDraft = { choice: boolean | null; tags: string[] };
@@ -48,12 +48,6 @@ function profileName(profile?: PublicProfile) {
   return profile?.display_name || profile?.full_name || profile?.name || 'Aspire student';
 }
 
-function profileAvatar(profile?: PublicProfile) {
-  return profile?.avatar_url
-    ? <img src={profile.avatar_url} alt="" />
-    : profileName(profile).slice(0, 1).toUpperCase();
-}
-
 function money(request?: AspireRequest) {
   if (!request) return '';
   if (request.kind === 'community') return 'Community help';
@@ -67,29 +61,6 @@ function addMessage(current: ConnectionMessage[], next: ConnectionMessage) {
   return [...current, next].sort((a, b) => a.id - b.id);
 }
 
-function emptyLifecycle(connectionId: string): ConnectionLifecycleState {
-  return {
-    connection_id: connectionId,
-    viewer_completed: false,
-    other_completed: false,
-    completion_count: 0,
-    viewer_circle_choice: null,
-    mutual_circle: false,
-    blocked_between: false
-  };
-}
-
-function connectionStageLabel(connection: AspireConnection, lifecycle: ConnectionLifecycleState) {
-  if (lifecycle.blocked_between) return 'BLOCKED · CHAT CLOSED';
-  if (connection.status === 'cancelled') return 'CANCELLED · ARCHIVED';
-  if (connection.status === 'completed' && lifecycle.mutual_circle) return 'COMPLETED · MY CIRCLE';
-  if (connection.status === 'completed') return 'COMPLETED · ARCHIVED';
-  if (lifecycle.viewer_completed && !lifecycle.other_completed) return 'WAITING FOR COMPLETION';
-  if (lifecycle.other_completed && !lifecycle.viewer_completed) return 'READY TO COMPLETE';
-  if (connection.status === 'pending') return 'WAITING FOR MUTUAL CONFIRMATION';
-  return 'CONNECTED';
-}
-
 export default function ConnectionsHub() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('requests');
@@ -100,7 +71,7 @@ export default function ConnectionsHub() {
   const [connectionData, setConnectionData] = useState<{ userId: string; connections: AspireConnection[]; requests: AspireRequest[]; profiles: PublicProfile[] }>({ userId: '', connections: [], requests: [], profiles: [] });
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [circle, setCircle] = useState<CircleEntry[]>([]);
-  const [lifecycleStates, setLifecycleStates] = useState<ConnectionLifecycleState[]>([]);
+  const [circleChoices, setCircleChoices] = useState<CircleChoice[]>([]);
   const [reviews, setReviews] = useState<ConnectionReview[]>([]);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
   const [chatId, setChatId] = useState<string | null>(null);
@@ -121,18 +92,18 @@ export default function ConnectionsHub() {
 
       const [nextInbox, nextConnections] = await Promise.all([fetchMyRequestInbox(), fetchMyConnections()]);
       const connectionIds = nextConnections.connections.map((connection) => connection.id);
-      const [unreadRows, nextCircle, nextReviews, nextLifecycle] = await Promise.all([
+      const [unreadRows, nextCircle, nextChoices, nextReviews] = await Promise.all([
         fetchConnectionUnreadCounts(),
         fetchMyCircle(),
-        fetchConnectionReviews(connectionIds),
-        fetchConnectionLifecycleStates()
+        fetchCircleChoices(connectionIds),
+        fetchConnectionReviews(connectionIds)
       ]);
 
       setInbox(nextInbox);
       setConnectionData(nextConnections);
       setCircle(nextCircle);
+      setCircleChoices(nextChoices);
       setReviews(nextReviews);
-      setLifecycleStates(nextLifecycle);
       setUnread(Object.fromEntries(unreadRows.map((row) => [row.connection_id, row.unread_count])));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load your Aspire activity.');
@@ -171,7 +142,6 @@ export default function ConnectionsHub() {
   const connectionProfiles = useMemo(() => new Map(connectionData.profiles.map((profile) => [profile.id, profile])), [connectionData.profiles]);
   const requestMap = useMemo(() => new Map(connectionData.requests.map((request) => [request.id, request])), [connectionData.requests]);
   const circleMap = useMemo(() => new Map(circle.map((entry) => [entry.connection_id, entry])), [circle]);
-  const lifecycleMap = useMemo(() => new Map(lifecycleStates.map((state) => [state.connection_id, state])), [lifecycleStates]);
   const unreadTotal = useMemo(() => Object.values(unread).reduce((sum, count) => sum + count, 0), [unread]);
   const activeChatConnection = useMemo(
     () => connectionData.connections.find((connection) => connection.id === chatId),
@@ -220,7 +190,8 @@ export default function ConnectionsHub() {
     setNotice('');
     try {
       await cancelConnection(connectionId);
-      setNotice('Connection cancelled. The old conversation stays available as read-only history.');
+      setNotice('Connection cancelled.');
+      if (chatId === connectionId) closeChat();
       await reload(true);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not cancel this connection.');
@@ -241,7 +212,7 @@ export default function ConnectionsHub() {
       await markConnectionRead(connectionId, last?.id);
       setUnread((current) => ({ ...current, [connectionId]: 0 }));
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not open chat history.');
+      setNotice(error instanceof Error ? error.message : 'Could not open chat.');
     }
   }
 
@@ -279,8 +250,8 @@ export default function ConnectionsHub() {
     try {
       const count = await confirmConnectionCompletion(connectionId);
       setNotice(count >= 2
-        ? 'Both people confirmed this activity is complete. The request chat is now archived unless you both keep in touch.'
-        : 'You marked this activity complete. Chat stays open while you wait for the other person to confirm.');
+        ? 'Both people marked this complete. You can now review the connection and choose whether to keep in touch.'
+        : 'Marked complete. Waiting for the other person.');
       await reload(true);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not mark this connection complete.');
@@ -295,36 +266,11 @@ export default function ConnectionsHub() {
     try {
       await setCircleChoice(connectionId, keep);
       setNotice(keep
-        ? 'Your keep-in-touch choice is saved. My Circle opens only if both people choose it.'
-        : 'Archived. You can still view the old request chat, but new messages stay closed.');
+        ? 'Saved. My Circle opens only when both people choose to keep in touch.'
+        : 'Circle choice updated.');
       await reload(true);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not update your keep-in-touch choice.');
-    } finally {
-      setBusyId('');
-    }
-  }
-
-  async function blockConnectionUser(connection: AspireConnection, otherId: string, otherName: string) {
-    const confirmed = window.confirm(`Block ${otherName}? They will no longer be able to message you, and this connection will be closed for future contact.`);
-    if (!confirmed) return;
-
-    setBusyId(`block-${connection.id}`);
-    setNotice('');
-    try {
-      await blockUser(otherId);
-      if (['pending', 'confirmed', 'active'].includes(connection.status)) {
-        try {
-          await cancelConnection(connection.id);
-        } catch {
-          // Blocking still closes messaging even when a payment state prevents cancellation.
-        }
-      }
-      if (chatId === connection.id) closeChat();
-      setNotice(`${otherName} is blocked. They cannot message you or use this connection to contact you.`);
-      await reload(true);
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not block this user.');
+      setNotice(error instanceof Error ? error.message : 'Could not update your Circle choice.');
     } finally {
       setBusyId('');
     }
@@ -373,7 +319,7 @@ export default function ConnectionsHub() {
         <div>
           <p className="eyebrow">YOUR ASPIRE</p>
           <h1>Requests.<br /><span>Connections.</span></h1>
-          <p>Connect for a reason. Complete it together. Then choose whether the relationship continues.</p>
+          <p>Interest first. Mutual choice second. Real-time private chat only after both sides say yes.</p>
         </div>
         <div className="connectionsStats">
           <article><strong>{inbox.requests.length}</strong><span>your requests</span></article>
@@ -426,11 +372,9 @@ export default function ConnectionsHub() {
                     const profile = inboxProfiles.get(response.responder_id);
                     return (
                       <div className="responseRow" key={response.id}>
-                        <a className="responseAvatar profileAvatarLink" href={`/people/${response.responder_id}`} aria-label={`View ${profileName(profile)} profile`}>
-                          {profileAvatar(profile)}
-                        </a>
+                        <div className="responseAvatar">{profileName(profile).slice(0, 1).toUpperCase()}</div>
                         <div className="responseCopy">
-                          <strong><a className="profileNameLink" href={`/people/${response.responder_id}`}>{profileName(profile)}</a></strong>
+                          <strong>{profileName(profile)}</strong>
                           <span>{profile?.school || 'Student'} · {response.status}</span>
                           <p>{response.message || 'I can help with this.'}</p>
                         </div>
@@ -460,82 +404,43 @@ export default function ConnectionsHub() {
             const request = requestMap.get(connection.request_id);
             const otherId = connectionData.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
             const other = connectionProfiles.get(otherId);
-            const otherName = profileName(other);
             const isResponder = connectionData.userId === connection.responder_id;
-            const lifecycle = lifecycleMap.get(connection.id) || emptyLifecycle(connection.id);
-            const isCircleConnection = lifecycle.mutual_circle || circleMap.has(connection.id);
-            const blocked = lifecycle.blocked_between;
-            const isActiveConnection = ['confirmed', 'active'].includes(connection.status);
-            const canLiveChat = !blocked && (isActiveConnection || (connection.status === 'completed' && isCircleConnection));
-            const canViewHistory = ['confirmed', 'active', 'completed', 'cancelled'].includes(connection.status);
+            const isCircleConnection = circleMap.has(connection.id);
+            const canChat = ['confirmed', 'active'].includes(connection.status) || (connection.status === 'completed' && isCircleConnection);
+            const ownCircleChoice = circleChoices.find((choice) => choice.connection_id === connection.id && choice.user_id === connectionData.userId);
             const ownReview = reviews.find((review) => review.connection_id === connection.id && review.reviewer_id === connectionData.userId);
             const draft = reviewDrafts[connection.id] || { choice: null, tags: [] };
             const unreadCount = unread[connection.id] || 0;
 
             return (
-              <article className={`connectionCard ${unreadCount ? 'hasUnread' : ''} ${blocked ? 'isBlocked' : ''}`} key={connection.id}>
+              <article className={`connectionCard ${unreadCount ? 'hasUnread' : ''}`} key={connection.id}>
                 <div className="connectionCardTop">
-                  <span>{connectionStageLabel(connection, lifecycle)}</span>
+                  <span>{connection.status === 'pending' ? 'WAITING FOR MUTUAL CONFIRMATION' : connection.status === 'completed' ? 'COMPLETED CONNECTION' : 'CONNECTED'}</span>
                   <small>{request?.category || 'Request'}</small>
                 </div>
                 <h2>{request?.title || 'Aspire connection'}</h2>
                 <div className="connectionPerson">
-                  <a className="connectionPersonAvatar" href={`/people/${otherId}`} aria-label={`View ${otherName} profile`}><i>{profileAvatar(other)}</i></a>
-                  <div><strong><a className="profileNameLink" href={`/people/${otherId}`}>{otherName}</a></strong><span>{other?.school || request?.campus || 'Campus'}</span></div>
+                  <i>{profileName(other).slice(0, 1).toUpperCase()}</i>
+                  <div><strong>{profileName(other)}</strong><span>{other?.school || request?.campus || 'Campus'}</span></div>
                 </div>
                 <div className="connectionChecks">
                   <span className={connection.requester_confirmed ? 'done' : ''}>Requester chose ✓</span>
                   <span className={connection.responder_confirmed ? 'done' : ''}>Responder confirmed {connection.responder_confirmed ? '✓' : '…'}</span>
-                  {lifecycle.viewer_completed && <span className="done">You marked complete ✓</span>}
-                  {lifecycle.other_completed && <span className="done">{otherName} marked complete ✓</span>}
-                  {isCircleConnection && !blocked && <span className="done">In My Circle ✓</span>}
-                  {blocked && <span className="blockedCheck">Blocked</span>}
+                  {isCircleConnection && <span className="done">In My Circle ✓</span>}
                 </div>
 
-                {isActiveConnection && connection.payment_method !== 'aspire' && (lifecycle.viewer_completed || lifecycle.other_completed) && (
-                  <div className="connectionCompletionPending">
-                    {lifecycle.viewer_completed && !lifecycle.other_completed ? (
-                      <>
-                        <div><span>1 OF 2 COMPLETE</span><strong>You marked this activity complete.</strong><p>Chat stays open while you wait for {otherName} to confirm.</p></div>
-                        <b>Waiting for {otherName}</b>
-                      </>
-                    ) : (
-                      <>
-                        <div><span>THEY FINISHED</span><strong>{otherName} marked this activity complete.</strong><p>Confirm only when the activity is actually finished for you too.</p></div>
-                        <button type="button" onClick={() => markNonAspireComplete(connection.id)} disabled={busyId === `complete-${connection.id}`}>{busyId === `complete-${connection.id}` ? 'Saving…' : 'Confirm complete ✓'}</button>
-                      </>
-                    )}
-                  </div>
-                )}
-
                 {connection.status === 'completed' && (
-                  <div className="connectionAftercare lifecycleAftercare">
-                    <div className="lifecycleCompleteSummary">
-                      <span>✓ ACTIVITY COMPLETE</span>
-                      <strong>{blocked ? 'This connection is blocked.' : isCircleConnection ? 'You both chose to keep in touch.' : lifecycle.viewer_circle_choice === false ? 'This request chat is archived.' : 'The request chat is now read-only.'}</strong>
-                      <p>{blocked
-                        ? 'Old messages remain available for your records, but future contact is closed.'
-                        : isCircleConnection
-                          ? 'The original request is finished. Your conversation can continue through My Circle.'
-                          : lifecycle.viewer_circle_choice === true
-                            ? 'Your keep-in-touch choice is saved. My Circle opens only if both people choose it.'
-                            : lifecycle.viewer_circle_choice === false
-                              ? 'You can still view the old conversation, but no new request messages can be sent.'
-                              : 'Choose whether you want to keep in touch, archive the connection, or block this person.'}</p>
+                  <div className="connectionAftercare">
+                    <div className="circleChoiceRow">
+                      <div><strong>Keep in touch?</strong><p>My Circle opens only if both of you choose it. No traditional friend requests.</p></div>
+                      <div className="circleChoiceActions">
+                        <button type="button" className={ownCircleChoice?.keep_in_circle ? 'selected' : ''} onClick={() => chooseCircle(connection.id, true)} disabled={busyId === `circle-${connection.id}`}>Keep in my Circle</button>
+                        <button type="button" className={ownCircleChoice?.keep_in_circle === false ? 'selected muted' : 'muted'} onClick={() => chooseCircle(connection.id, false)} disabled={busyId === `circle-${connection.id}`}>Not now</button>
+                      </div>
                     </div>
 
-                    {!blocked && (
-                      <div className="circleChoiceRow">
-                        <div><strong>Keep in touch?</strong><p>This is private. My Circle opens only when both people independently choose to continue.</p></div>
-                        <div className="circleChoiceActions">
-                          <button type="button" className={lifecycle.viewer_circle_choice === true ? 'selected' : ''} onClick={() => chooseCircle(connection.id, true)} disabled={busyId === `circle-${connection.id}`}>Keep in my Circle</button>
-                          <button type="button" className={lifecycle.viewer_circle_choice === false ? 'selected muted' : 'muted'} onClick={() => chooseCircle(connection.id, false)} disabled={busyId === `circle-${connection.id}`}>Archive chat</button>
-                        </div>
-                      </div>
-                    )}
-
                     <div className="reviewRow">
-                      <div><strong>Would you connect again?</strong><p>This helps Aspire build trust without turning people into a public star score.</p></div>
+                      <div><strong>Would you connect again?</strong><p>This helps Aspire build trust without turning people into a 5-star score.</p></div>
                       {ownReview ? (
                         <div className="savedReview">
                           <b>{ownReview.would_connect_again ? 'Yes ✓' : 'No'}</b>
@@ -560,39 +465,25 @@ export default function ConnectionsHub() {
                         </div>
                       )}
                     </div>
-
-                    <div className="aftercareSafetyActions">
-                      {!blocked && <button type="button" onClick={() => blockConnectionUser(connection, otherId, otherName)} disabled={busyId === `block-${connection.id}`}>Block {otherName.split(' ')[0]}</button>}
-                      <a href="/safety">Report or get safety help ↗</a>
-                    </div>
                   </div>
                 )}
 
                 <div className="connectionActions">
-                  {isResponder && connection.status === 'pending' && !blocked && (
+                  {isResponder && connection.status === 'pending' && (
                     <button type="button" className="button buttonGold" onClick={() => confirm(connection.id)} disabled={busyId === connection.id}>Confirm connection</button>
                   )}
-                  {canLiveChat && (
+                  {canChat && (
                     <button type="button" className="button buttonGold chatButton" onClick={() => openChat(connection.id)}>
-                      {connection.status === 'completed' ? 'Message in My Circle' : 'Open chat'} {unreadCount > 0 && <b>{unreadCount}</b>}
+                      Open chat {unreadCount > 0 && <b>{unreadCount}</b>}
                     </button>
                   )}
-                  {!canLiveChat && canViewHistory && (
-                    <button type="button" className="connectionHistoryButton" onClick={() => openChat(connection.id)}>View chat history</button>
-                  )}
-                  {isActiveConnection && connection.payment_method !== 'aspire' && !lifecycle.viewer_completed && (
-                    <button type="button" className={lifecycle.other_completed ? 'button buttonGold completionActionButton' : 'connectionCancel'} onClick={() => markNonAspireComplete(connection.id)} disabled={busyId === `complete-${connection.id}`}>
-                      {busyId === `complete-${connection.id}` ? 'Saving…' : lifecycle.other_completed ? 'Confirm complete ✓' : 'Mark complete ✓'}
+                  {['confirmed', 'active'].includes(connection.status) && connection.payment_method !== 'aspire' && (
+                    <button type="button" className="connectionCancel" onClick={() => markNonAspireComplete(connection.id)} disabled={busyId === `complete-${connection.id}`}>
+                      {busyId === `complete-${connection.id}` ? 'Saving…' : 'Mark complete ✓'}
                     </button>
                   )}
-                  {isActiveConnection && connection.payment_method !== 'aspire' && lifecycle.viewer_completed && !lifecycle.other_completed && (
-                    <span className="waitingCompletionAction">Waiting for {otherName.split(' ')[0]}…</span>
-                  )}
-                  {!['completed', 'cancelled'].includes(connection.status) && !lifecycle.viewer_completed && !lifecycle.other_completed && !blocked && (
+                  {!['completed', 'cancelled'].includes(connection.status) && (
                     <button type="button" className="connectionCancel" onClick={() => cancel(connection.id)} disabled={busyId === connection.id}>Cancel</button>
-                  )}
-                  {!blocked && !['cancelled'].includes(connection.status) && (
-                    <button type="button" className="connectionDanger" onClick={() => blockConnectionUser(connection, otherId, otherName)} disabled={busyId === `block-${connection.id}`}>Block</button>
                   )}
                   <a href="/safety">Safety ↗</a>
                 </div>
@@ -607,7 +498,7 @@ export default function ConnectionsHub() {
           {!circle.length && (
             <div className="connectionsEmpty">
               <strong>Your Circle starts after a real connection.</strong>
-              <p>Complete something together, then both independently choose “Keep in my Circle.”</p>
+              <p>Complete a request together, then both choose “Keep in my Circle.” That keeps random DMs out.</p>
               <button type="button" className="button buttonGold" onClick={() => setTab('connections')}>View connections</button>
             </div>
           )}
@@ -618,15 +509,15 @@ export default function ConnectionsHub() {
             const unreadCount = unread[entry.connection_id] || 0;
             return (
               <article className="circleCard" key={entry.connection_id}>
-                <a className="circleAvatar profileAvatarLink" href={`/people/${entry.other_user_id}`} aria-label={`View ${profileName(other)} profile`}>{profileAvatar(other)}</a>
+                <div className="circleAvatar">{profileName(other).slice(0, 1).toUpperCase()}</div>
                 <div className="circleCopy">
                   <span>MY CIRCLE · {other?.school || request?.campus || 'Campus'}</span>
-                  <h2><a href={`/people/${entry.other_user_id}`}>{profileName(other)}</a></h2>
-                  <p>You met through “{request?.title || 'an Aspire request'}”. That activity is complete, and you both chose to keep in touch.</p>
+                  <h2>{profileName(other)}</h2>
+                  <p>Connected through “{request?.title || 'an Aspire request'}”. You both chose to keep in touch.</p>
                 </div>
                 <div className="circleActions">
                   <button type="button" className="button buttonGold" onClick={() => openChat(entry.connection_id)}>Message {unreadCount > 0 && <b>{unreadCount}</b>}</button>
-                  <a href={`/people/${entry.other_user_id}`}>View profile →</a>
+                  <a href="/post">Post another request →</a>
                 </div>
               </article>
             );
@@ -636,46 +527,30 @@ export default function ConnectionsHub() {
 
       {chatId && (() => {
         const connection = connectionData.connections.find((item) => item.id === chatId);
-        if (!connection) return null;
-        const request = requestMap.get(connection.request_id);
-        const otherId = connectionData.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
+        const request = connection ? requestMap.get(connection.request_id) : undefined;
+        const otherId = connection ? (connectionData.userId === connection.requester_id ? connection.responder_id : connection.requester_id) : '';
         const other = connectionProfiles.get(otherId);
-        const otherName = profileName(other);
-        const lifecycle = lifecycleMap.get(connection.id) || emptyLifecycle(connection.id);
-        const fromCircle = connection.status === 'completed' && (lifecycle.mutual_circle || circleMap.has(connection.id));
-        const activeConnection = ['confirmed', 'active'].includes(connection.status);
-        const blocked = lifecycle.blocked_between;
-        const chatWritable = !blocked && (activeConnection || fromCircle);
-        const completionEligible = activeConnection && connection.payment_method !== 'aspire';
-        const archived = !chatWritable;
-
+        const fromCircle = Boolean(connection && connection.status === 'completed' && circleMap.has(connection.id));
         return (
           <div className="connectionChatOverlay" role="dialog" aria-modal="true" aria-label="Private connection chat">
-            <section className={`connectionChat ${archived ? 'archivedChat' : ''}`}>
+            <section className="connectionChat">
               <header>
                 <div>
-                  <span>{blocked ? 'BLOCKED · CHAT CLOSED' : fromCircle ? 'MY CIRCLE · REAL-TIME CHAT' : connection.status === 'completed' ? 'ACTIVITY COMPLETE · ARCHIVED' : connection.status === 'cancelled' ? 'CONNECTION CANCELLED · ARCHIVED' : 'PRIVATE CONNECTION · LIVE'}</span>
-                  <strong><a className="chatProfileName" href={`/people/${otherId}`}>{otherName}</a> · {request?.title || 'Aspire chat'}</strong>
-                  {chatWritable
-                    ? <small className={`chatPresence ${otherOnline ? 'online' : ''}`}><i />{otherOnline ? 'Online now' : 'Offline'}</small>
-                    : <small className="chatPresence archivedPresence"><i />Read-only history</small>}
+                  <span>{fromCircle ? 'MY CIRCLE · REAL-TIME CHAT' : 'PRIVATE CONNECTION · LIVE'}</span>
+                  <strong>{profileName(other)} · {request?.title || 'Aspire chat'}</strong>
+                  <small className={`chatPresence ${otherOnline ? 'online' : ''}`}><i />{otherOnline ? 'Online now' : 'Offline'}</small>
                 </div>
                 <button type="button" onClick={closeChat} aria-label="Close chat">×</button>
               </header>
               <div className="chatSafetyBar">
-                {blocked
-                  ? 'This person is blocked. Old messages remain available for your records.'
-                  : fromCircle
-                    ? 'The original activity is complete. You both chose to keep in touch through My Circle.'
-                    : connection.status === 'completed'
-                      ? 'This request is complete. The old request chat is read-only unless you both choose My Circle.'
-                      : connection.status === 'cancelled'
-                        ? 'This connection was cancelled. The conversation is kept as read-only history.'
-                        : 'Both sides confirmed. Keep timing, location, scope, and money clear.'} <a href="/safety">Safety center ↗</a>
+                {fromCircle ? 'You both chose to keep in touch after completing a connection.' : 'Both sides confirmed.'} Keep timing, location, scope, and money clear. <a href="/safety">Safety center ↗</a>
               </div>
               <div className="chatMessages" ref={chatMessagesRef}>
+                {connection && (
+                  <ConnectionEventTimeline connectionId={connection.id} userId={connectionData.userId} otherName={profileName(other)} />
+                )}
                 {!messages.length && (
-                  <div className="chatEmpty"><strong>{archived ? 'No messages in this connection.' : 'You’re connected.'}</strong><p>{archived ? 'This conversation is stored as read-only history.' : 'Start with the details that matter: where, when, what, and how much if money is involved.'}</p></div>
+                  <div className="chatEmpty"><strong>You&apos;re connected.</strong><p>Start with the details that matter: where, when, what, and how much if money is involved.</p></div>
                 )}
                 {messages.map((message) => (
                   <div key={message.id} className={message.sender_id === connectionData.userId ? 'chatBubble mine' : 'chatBubble'}>
@@ -683,68 +558,19 @@ export default function ConnectionsHub() {
                     <small>{new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</small>
                   </div>
                 ))}
-                {chatWritable && otherTyping && (
-                  <div className="typingIndicator" aria-live="polite"><i /><i /><i /><span>{otherName} is typing</span></div>
+                {otherTyping && (
+                  <div className="typingIndicator" aria-live="polite"><i /><i /><i /><span>{profileName(other)} is typing</span></div>
                 )}
               </div>
-
-              {completionEligible && (
-                <div className={`chatLifecycleBar ${lifecycle.other_completed && !lifecycle.viewer_completed ? 'needsAction' : ''}`}>
-                  {lifecycle.viewer_completed && !lifecycle.other_completed ? (
-                    <div><span>✓ You marked this complete</span><small>Chat stays open while you wait for {otherName}.</small></div>
-                  ) : lifecycle.other_completed && !lifecycle.viewer_completed ? (
-                    <>
-                      <div><span>{otherName} marked the activity complete.</span><small>Confirm when it is finished for you too.</small></div>
-                      <button type="button" onClick={() => markNonAspireComplete(connection.id)} disabled={busyId === `complete-${connection.id}`}>{busyId === `complete-${connection.id}` ? 'Saving…' : 'Confirm complete ✓'}</button>
-                    </>
-                  ) : (
-                    <>
-                      <div><span>Finished the activity?</span><small>Both people must confirm before this request chat closes.</small></div>
-                      <button type="button" onClick={() => markNonAspireComplete(connection.id)} disabled={busyId === `complete-${connection.id}`}>{busyId === `complete-${connection.id}` ? 'Saving…' : 'Mark complete'}</button>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {chatWritable && (
-                <form className="chatComposer" onSubmit={send}>
-                  <input
-                    value={chatText}
-                    onChange={(event) => changeChatText(event.target.value)}
-                    maxLength={2000}
-                    placeholder={fromCircle ? `Message ${otherName}…` : 'Message about the request…'}
-                  />
-                  <button type="submit" disabled={busyId === `chat-${chatId}` || !chatText.trim()}>Send ↑</button>
-                </form>
-              )}
-
-              {connection.status === 'completed' && !fromCircle && !blocked && (
-                <div className="chatArchivePanel">
-                  <div><span>✓ Activity complete</span><strong>This request chat is archived.</strong><p>Keep the history, then choose whether this person should become a lasting connection.</p></div>
-                  <div className="chatArchiveActions">
-                    <button type="button" className={lifecycle.viewer_circle_choice === true ? 'selected primary' : 'primary'} onClick={() => chooseCircle(connection.id, true)} disabled={busyId === `circle-${connection.id}`}>Keep in my Circle</button>
-                    <button type="button" className={lifecycle.viewer_circle_choice === false ? 'selected' : ''} onClick={() => chooseCircle(connection.id, false)} disabled={busyId === `circle-${connection.id}`}>Archive</button>
-                    <button type="button" className="danger" onClick={() => blockConnectionUser(connection, otherId, otherName)} disabled={busyId === `block-${connection.id}`}>Block</button>
-                    <button type="button" onClick={closeChat}>Close & review</button>
-                  </div>
-                </div>
-              )}
-
-              {blocked && (
-                <div className="chatClosedPanel blockedPanel">
-                  <strong>Contact closed</strong>
-                  <p>You blocked {otherName}. This history remains available, but neither side can continue this chat.</p>
-                  <a href="/safety">Safety & reporting ↗</a>
-                </div>
-              )}
-
-              {connection.status === 'cancelled' && !blocked && (
-                <div className="chatClosedPanel">
-                  <strong>Connection cancelled</strong>
-                  <p>This conversation is read-only. You can keep it for reference or return to Discover.</p>
-                  <a href="/discover">Find another request →</a>
-                </div>
-              )}
+              <form className="chatComposer" onSubmit={send}>
+                <input
+                  value={chatText}
+                  onChange={(event) => changeChatText(event.target.value)}
+                  maxLength={2000}
+                  placeholder={fromCircle ? `Message ${profileName(other)}…` : 'Message about the request…'}
+                />
+                <button type="submit" disabled={busyId === `chat-${chatId}` || !chatText.trim()}>Send ↑</button>
+              </form>
             </section>
           </div>
         );
