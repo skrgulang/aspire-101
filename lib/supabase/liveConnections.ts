@@ -52,8 +52,11 @@ export type ConnectionEvent = {
     | 'location_shared'
     | 'location_stopped'
     | 'reminder'
+    | 'running_late'
+    | 'cannot_make_it'
     | 'issue_opened'
     | 'issue_reviewing'
+    | 'issue_response'
     | 'issue_resolved';
   body: string;
   metadata: Record<string, unknown>;
@@ -163,6 +166,18 @@ export async function setConnectionCoordinationStatus(
   const { error } = await supabase.rpc('set_connection_coordination_status', {
     p_connection_id: connectionId,
     p_status: status
+  });
+  if (error) throw error;
+}
+
+export async function recordConnectionAttendanceUpdate(
+  connectionId: string,
+  update: 'running_late' | 'cannot_make_it'
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { error } = await supabase.rpc('record_connection_attendance_update', {
+    p_connection_id: connectionId,
+    p_update: update
   });
   if (error) throw error;
 }
