@@ -14,6 +14,8 @@ import { CAMPUS_FEED_REFRESH_EVENT, CAMPUS_FEED_REFRESH_STORAGE_KEY } from './ca
 
 const categories: DiscoverCategory[] = ['Anything','Get me there','Pick this up','Give me a hand','Study / class','Gaming / duos','Build something','People / community','Buy & sell'];
 const suggestions = ['Math 55','IND rides','Moving help','Valorant','Study group','Photographer'];
+const searchHistoryKey = 'aspire:discover-search-history';
+const savedPostsKey = 'aspire-saved-posts';
 const reportReasons: { value: SafetyReason; label: string }[] = [
   { value: 'spam', label: 'Spam / fake request' },
   { value: 'scam', label: 'Scam or payment issue' },
@@ -24,6 +26,16 @@ const reportReasons: { value: SafetyReason; label: string }[] = [
   { value: 'sexual', label: 'Sexual misconduct' },
   { value: 'other', label: 'Something else' }
 ];
+
+type SavedPost = {
+  id: string;
+  title: string;
+  category?: string;
+  campus?: string;
+  meta?: string;
+  image?: string;
+  href?: string;
+};
 
 function marketActionLabel(item: DiscoverRequest) {
   if (item.kind !== 'buy_sell') return item.kind === 'community' ? 'I’m interested →' : 'I can help →';
@@ -44,6 +56,37 @@ function mergeRequests(primary: DiscoverRequest[], extra: DiscoverRequest[]) {
   return Array.from(merged.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
+function readStringList(key: string, limit: number) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [] as string[];
+    return parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).slice(0, limit);
+  } catch {
+    return [] as string[];
+  }
+}
+
+function readSavedPosts() {
+  try {
+    const raw = window.localStorage.getItem(savedPostsKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((item): item is SavedPost => Boolean(item && typeof item.id === 'string' && typeof item.title === 'string')) : [];
+  } catch {
+    return [] as SavedPost[];
+  }
+}
+
+function relatedSearches(query: string) {
+  const value = query.toLowerCase();
+  if (/ride|airport|\bind\b|carpool|chicago|indy/.test(value)) return ['IND rides', 'Airport carpool', 'Chicago ride'];
+  if (/math|study|class|tutor|homework|exam|quiz/.test(value)) return ['Study group', 'Math 55', 'Tutor'];
+  if (/game|gaming|valorant|fortnite|duo|league/.test(value)) return ['Valorant', 'Gaming duos', 'League'];
+  if (/move|moving|furniture|carry/.test(value)) return ['Moving help', 'Furniture help', 'Pickup help'];
+  if (/photo|photographer|camera/.test(value)) return ['Photographer', 'Graduation photos', 'Event photos'];
+  return suggestions.filter((item) => !value.includes(item.toLowerCase())).slice(0, 3);
+}
+
 export default function DiscoverRequestsV2() {
   const router = useRouter();
   const [bootLoading,setBootLoading] = useState(true);
@@ -54,6 +97,8 @@ export default function DiscoverRequestsV2() {
   const [universities,setUniversities] = useState<University[]>([]);
   const [query,setQuery] = useState('');
   const [debouncedQuery,setDebouncedQuery] = useState('');
+  const [searchHistory,setSearchHistory] = useState<string[]>([]);
+  const [savedIds,setSavedIds] = useState<Set<string>>(new Set());
   const [category,setCategory] = useState<DiscoverCategory>('Anything');
   const [items,setItems] = useState<DiscoverRequest[]>([]);
   const [dataLoading,setDataLoading] = useState(false);
@@ -67,9 +112,24 @@ export default function DiscoverRequestsV2() {
   const [reportDetails,setReportDetails] = useState('');
 
   useEffect(() => {
+    setSearchHistory(readStringList(searchHistoryKey, 5));
+    setSavedIds(new Set(readSavedPosts().map((item) => item.id)));
+  }, []);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 280);
     return () => window.clearTimeout(timer);
   }, [query]);
+
+  useEffect(() => {
+    const nextQuery = debouncedQuery.trim();
+    if (nextQuery.length < 2) return;
+    setSearchHistory((current) => {
+      const next = [nextQuery, ...current.filter((item) => item.toLowerCase() !== nextQuery.toLowerCase())].slice(0, 5);
+      try { window.localStorage.setItem(searchHistoryKey, JSON.stringify(next)); } catch { /* ignore storage errors */ }
+      return next;
+    });
+  }, [debouncedQuery]);
 
   useEffect(() => {
     let alive = true;
@@ -90,6 +150,7 @@ export default function DiscoverRequestsV2() {
       const params = new URLSearchParams(window.location.search);
       const requestedCategory = params.get('category');
       const requestedCampus = params.get('campus');
+      const requestedQuery = params.get('q') || params.get('query');
       const storedCampus = window.sessionStorage.getItem('aspire-active-campus-id');
       const validIds = new Set(campusList.map((campus) => campus.id));
       const nextActive = requestedCampus && validIds.has(requestedCampus)
@@ -100,6 +161,7 @@ export default function DiscoverRequestsV2() {
             ? currentId
             : homeId;
       if (requestedCategory && categories.includes(requestedCategory as DiscoverCategory)) setCategory(requestedCategory as DiscoverCategory);
+      if (requestedQuery) setQuery(requestedQuery.slice(0, 120));
       setCurrentUserId(data.user.id);
       setUniversities(campusList);
       setHomeCampusId(homeId);
@@ -119,8 +181,12 @@ export default function DiscoverRequestsV2() {
     const refresh = () => setRetryKey((value) => value + 1);
     const onStorage = (event: StorageEvent) => {
       if (event.key === CAMPUS_FEED_REFRESH_STORAGE_KEY) refresh();
+      if (event.key === savedPostsKey) setSavedIds(new Set(readSavedPosts().map((item) => item.id)));
     };
-    const onFocus = () => refresh();
+    const onFocus = () => {
+      refresh();
+      setSavedIds(new Set(readSavedPosts().map((item) => item.id)));
+    };
     window.addEventListener(CAMPUS_FEED_REFRESH_EVENT, refresh);
     window.addEventListener('storage', onStorage);
     window.addEventListener('focus', onFocus);
@@ -173,6 +239,7 @@ export default function DiscoverRequestsV2() {
   const activeCampus = useMemo(() => universities.find((c) => c.id === activeCampusId) ?? null, [universities, activeCampusId]);
   const pendingCampus = useMemo(() => universities.find((c) => c.id === pendingCampusId) ?? null, [universities, pendingCampusId]);
   const visiting = Boolean(homeCampus && activeCampus && homeCampus.id !== activeCampus.id);
+  const related = useMemo(() => relatedSearches(debouncedQuery), [debouncedQuery]);
 
   function chooseCampus(nextId: string) {
     if (nextId === activeCampusId) return;
@@ -201,6 +268,37 @@ export default function DiscoverRequestsV2() {
     setActiveCampusId(pendingCampusId);
     void persistCurrentCampus(pendingCampusId === homeCampusId ? null : pendingCampusId);
     setPendingCampusId(null);
+  }
+
+  function clearHistory() {
+    setSearchHistory([]);
+    try { window.localStorage.removeItem(searchHistoryKey); } catch { /* ignore storage errors */ }
+  }
+
+  function toggleSaved(item: DiscoverRequest) {
+    if (!activeCampus) return;
+    try {
+      const current = readSavedPosts();
+      const exists = current.some((saved) => saved.id === item.id);
+      const next = exists
+        ? current.filter((saved) => saved.id !== item.id)
+        : [{
+            id: item.id,
+            title: item.title,
+            category: item.category || item.kind,
+            campus: activeCampus.short_name,
+            meta: item.scheduled_start_at
+              ? new Date(item.scheduled_start_at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+              : undefined,
+            image: item.media?.[0]?.public_url || activeCampus.cover_image || undefined,
+            href: `/discover?q=${encodeURIComponent(item.title)}`
+          }, ...current.filter((saved) => saved.id !== item.id)].slice(0, 100);
+      window.localStorage.setItem(savedPostsKey, JSON.stringify(next));
+      setSavedIds(new Set(next.map((saved) => saved.id)));
+      setMessage(exists ? 'Removed from Saved.' : 'Saved. You can find it anytime under Your Stuff → Saved.');
+    } catch {
+      setMessage('Could not update Saved on this device.');
+    }
   }
 
   async function respond(item: DiscoverRequest) {
@@ -261,18 +359,23 @@ export default function DiscoverRequestsV2() {
       <div className="discoverV2CampusControl discoverCampusPickerControl"><span>ACTIVE CAMPUS</span><CampusPicker universities={universities} value={activeCampusId || ''} onChange={chooseCampus} homeCampusId={homeCampusId || ''} maxNearbyMiles={300} /><b className={visiting ? 'visiting' : ''}>{visiting ? `VISITING FROM ${homeCampus.short_name.toUpperCase()}` : 'HOME CAMPUS ✓'}</b>{visiting && <button type="button" onClick={() => { setActiveCampusId(homeCampus.id); window.sessionStorage.setItem('aspire-active-campus-id', homeCampus.id); void persistCurrentCampus(null); }}>Return to {homeCampus.short_name}</button>}</div>
     </header>
 
-    <div className="discoverV2SearchWrap"><div className="discoverV2SearchBox"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${activeCampus.short_name} — Math 55, ride to IND, Valorant...`} aria-label={`Search ${activeCampus.short_name} requests`} />{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}</div>{!query && <div className="discoverV2Suggestions" aria-label="Suggested searches"><span>TRY</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setQuery(suggestion)}>{suggestion}</button>)}</div>}</div>
+    <div className="discoverV2SearchWrap">
+      <div className="discoverV2SearchBox"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${activeCampus.short_name} — Math 55, ride to IND, Valorant...`} aria-label={`Search ${activeCampus.short_name} requests`} />{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}</div>
+      {!query && searchHistory.length > 0 && <div className="discoverV2Suggestions discoverV2Recent" aria-label="Recent searches"><span>RECENT</span>{searchHistory.map((item) => <button key={item} type="button" onClick={() => setQuery(item)}>{item}</button>)}<button className="discoverV2ClearHistory" type="button" onClick={clearHistory}>Clear</button></div>}
+      {!query && <div className="discoverV2Suggestions" aria-label="Suggested searches"><span>TRY</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setQuery(suggestion)}>{suggestion}</button>)}</div>}
+    </div>
     <div className="discoverV2Categories" aria-label="Request categories">{categories.map((item) => <button key={item} className={category === item ? 'active' : ''} type="button" onClick={() => setCategory(item)}>{item}</button>)}</div>
     <div className="discoverV2ResultMeta"><div><strong>{dataLoading && !items.length ? 'Searching campus…' : `${items.length} open ${items.length === 1 ? 'request' : 'requests'}`}</strong><span>{debouncedQuery ? `for “${debouncedQuery}” · ` : ''}{activeCampus.name}</span></div><span>Newest first</span></div>
     {message && <div className="discoverV2Notice" role="status">{message}</div>}
 
     {error ? <div className="discoverV2State error" role="alert"><span>DISCOVER UNAVAILABLE</span><h2>We couldn’t load nearby campus requests.</h2><p>{error}</p><button className="button buttonGold" type="button" onClick={() => setRetryKey((value) => value + 1)}>Try again</button></div>
       : showSkeleton ? <div className="discoverV2SkeletonList" aria-label="Loading requests">{[0,1,2].map((item) => <div className="discoverV2Skeleton" key={item}><i /><div><span /><span /><span /></div></div>)}</div>
-      : !dataLoading && !items.length ? <div className="discoverV2State empty"><span>NOTHING MATCHED</span><h2>{debouncedQuery ? `No results for “${debouncedQuery}” at ${activeCampus.short_name}.` : `Your ${category === 'Anything' ? 'campus feed' : category} is quiet right now.`}</h2><p>Try another keyword, clear your filters, or start the request yourself.</p><div className="discoverV2EmptyActions">{(query || category !== 'Anything') && <button type="button" onClick={() => { setQuery(''); setCategory('Anything'); }}>Clear filters</button>}<a className="button buttonGold" href="/post">Post what you need →</a></div></div>
+      : !dataLoading && !items.length ? <div className="discoverV2State empty"><span>NOTHING MATCHED</span><h2>{debouncedQuery ? `No results for “${debouncedQuery}” at ${activeCampus.short_name}.` : `Your ${category === 'Anything' ? 'campus feed' : category} is quiet right now.`}</h2><p>Try a related search, clear your filters, or start the request yourself.</p>{debouncedQuery && <div className="discoverV2EmptySuggestions"><span>TRY INSTEAD</span>{related.map((item) => <button key={item} type="button" onClick={() => setQuery(item)}>{item}</button>)}</div>}<div className="discoverV2EmptyActions">{(query || category !== 'Anything') && <button type="button" onClick={() => { setQuery(''); setCategory('Anything'); }}>Clear filters</button>}<a className="button buttonGold" href="/post">Post what you need →</a></div></div>
       : <div className={`discoverV2List campusUnifiedFeed ${dataLoading ? 'isRefreshing' : ''}`}>{items.map((item) => {
           const mine = Boolean(currentUserId && item.poster_id === currentUserId);
           const demo = item.id.startsWith('demo-preview-');
           const pending = mine && item.moderation_status && item.moderation_status !== 'approved';
+          const saved = savedIds.has(item.id);
           return <CampusFeedCard
             key={item.id}
             item={item}
@@ -282,7 +385,7 @@ export default function DiscoverRequestsV2() {
             fallbackImage={activeCampus.cover_image || undefined}
             footerLeft={mine
               ? <span className={campusFeedCardStyles.secondaryAction}>{pending ? 'Pending review' : 'Your post'}</span>
-              : <button className={campusFeedCardStyles.secondaryAction} type="button" onClick={() => setSafetyItem(item)}>Safety</button>}
+              : <><button className={campusFeedCardStyles.secondaryAction} type="button" aria-pressed={saved} onClick={() => toggleSaved(item)}>{saved ? 'Saved ✓' : 'Save'}</button><button className={campusFeedCardStyles.secondaryAction} type="button" onClick={() => setSafetyItem(item)}>Safety</button></>}
             footerRight={mine
               ? <a className={campusFeedCardStyles.primaryAction} href="/activity">{demo ? 'Manage preview →' : 'Manage post →'}</a>
               : <button className={campusFeedCardStyles.primaryAction} type="button" onClick={() => respond(item)} disabled={busyId === item.id}>{busyId === item.id ? 'Sending…' : marketActionLabel(item)}</button>}
