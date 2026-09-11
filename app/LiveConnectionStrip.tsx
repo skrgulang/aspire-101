@@ -1,0 +1,369 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  fetchLiveConnections,
+  LiveConnection,
+  LiveConnectionProfile,
+  LiveConnectionRequest,
+  ConnectionLocationShare,
+  ConnectionScheduleProposal,
+  proposeConnectionSchedule,
+  recordConnectionAttendanceUpdate,
+  respondConnectionSchedule,
+  setConnectionCoordinationStatus,
+  shareConnectionLocation,
+  stopConnectionLocationShare
+} from '../lib/supabase/liveConnections';
+import { ConnectionResolutionCase, fetchResolutionCases } from '../lib/supabase/resolution';
+import CancelConnectionModal from './CancelConnectionModal';
+import ConnectionEventTimeline from './ConnectionEventTimeline';
+import ResolutionCaseStatus from './ResolutionCaseStatus';
+import ResolutionCenterModal from './ResolutionCenterModal';
+import styles from './LiveConnectionStrip.module.css';
+
+type Data = {
+  userId: string;
+  connections: LiveConnection[];
+  requests: LiveConnectionRequest[];
+  profiles: LiveConnectionProfile[];
+  locations: ConnectionLocationShare[];
+  scheduleProposals: ConnectionScheduleProposal[];
+};
+
+const emptyData: Data = { userId: '', connections: [], requests: [], profiles: [], locations: [], scheduleProposals: [] };
+
+function personName(profile?: LiveConnectionProfile) {
+  return profile?.display_name || profile?.full_name || profile?.name || 'Aspire student';
+}
+
+function timerCopy(startAt: string | null, now: number) {
+  if (!startAt) return { label: 'TIME NOT SET', value: 'Coordinate a time', detail: 'Propose a time and have the other person accept it.' };
+  const start = new Date(startAt).getTime();
+  const diff = start - now;
+  const abs = Math.abs(diff);
+  const hours = Math.floor(abs / 3_600_000);
+  const minutes = Math.floor((abs % 3_600_000) / 60_000);
+  const days = Math.floor(hours / 24);
+  if (diff > 0) {
+    const value = days > 0 ? `Starts in ${days}d ${hours % 24}h` : hours > 0 ? `Starts in ${hours}h ${minutes}m` : `Starts in ${Math.max(1, minutes)}m`;
+    return { label: 'AGREED TIME', value, detail: new Date(startAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) };
+  }
+  if (abs < 3_600_000) return { label: 'AGREED START TIME', value: 'Starting now', detail: new Date(startAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+  return { label: 'AGREED TIME PASSED', value: `${hours}h ${minutes}m ago`, detail: 'Use the status buttons to keep the other person updated.' };
+}
+
+function proposalCopy(proposal: ConnectionScheduleProposal) {
+  const start = new Date(proposal.start_at);
+  const when = start.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return proposal.meeting_label ? `${when} · ${proposal.meeting_label}` : when;
+}
+
+function statusLabel(status: LiveConnection['coordination_status']) {
+  if (status === 'on_the_way') return 'On the way';
+  if (status === 'arrived') return 'Arrived';
+  if (status === 'in_progress') return 'In progress';
+  if (status === 'scheduled') return 'Scheduled';
+  return 'Planning';
+}
+
+export default function LiveConnectionStrip() {
+  const [data, setData] = useState<Data>(emptyData);
+  const [resolutionCases, setResolutionCases] = useState<ConnectionResolutionCase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState('');
+  const [editingId, setEditingId] = useState('');
+  const [helpConnectionId, setHelpConnectionId] = useState('');
+  const [cancelConnectionId, setCancelConnectionId] = useState('');
+  const [startLocal, setStartLocal] = useState('');
+  const [endLocal, setEndLocal] = useState('');
+  const [meetingLabel, setMeetingLabel] = useState('');
+  const [now, setNow] = useState(Date.now());
+
+  const reload = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    try {
+      const next = await fetchLiveConnections();
+      const cases = await fetchResolutionCases(next.connections.map((connection) => connection.id)).catch(() => [] as ConnectionResolutionCase[]);
+      setData(next);
+      setResolutionCases(cases);
+      setNotice('');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not load active connections.');
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    const refresh = window.setInterval(() => void reload(true), 45_000);
+    return () => { window.clearInterval(timer); window.clearInterval(refresh); };
+  }, [reload]);
+
+  const requestMap = useMemo(() => new Map(data.requests.map((request) => [request.id, request])), [data.requests]);
+  const profileMap = useMemo(() => new Map(data.profiles.map((profile) => [profile.id, profile])), [data.profiles]);
+  const helpConnection = data.connections.find((connection) => connection.id === helpConnectionId) ?? null;
+  const cancelConnection = data.connections.find((connection) => connection.id === cancelConnectionId) ?? null;
+
+  function beginSchedule(connection: LiveConnection) {
+    setEditingId(connection.id);
+    setMeetingLabel(connection.meeting_label || '');
+    const localValue = connection.scheduled_start_at
+      ? new Date(new Date(connection.scheduled_start_at).getTime() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+      : '';
+    const localEnd = connection.scheduled_end_at
+      ? new Date(new Date(connection.scheduled_end_at).getTime() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+      : '';
+    setStartLocal(localValue);
+    setEndLocal(localEnd);
+  }
+
+  async function proposeSchedule(connectionId: string) {
+    if (!startLocal) return setNotice('Choose a start time first.');
+    setBusy(`schedule-${connectionId}`);
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      const startAt = new Date(startLocal).toISOString();
+      const endAt = endLocal ? new Date(endLocal).toISOString() : undefined;
+      await proposeConnectionSchedule(connectionId, startAt, timezone, meetingLabel, endAt);
+      setEditingId('');
+      await reload(true);
+      setNotice('Time change proposed. The current agreed time stays in place until the other person accepts.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not propose the time.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function respondSchedule(proposalId: string, accept: boolean) {
+    setBusy(`proposal-${proposalId}`);
+    try {
+      await respondConnectionSchedule(proposalId, accept);
+      await reload(true);
+      setNotice(accept ? 'Accepted. The proposed time is now the agreed Aspire schedule.' : 'Declined. The current agreed time did not change.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not respond to the time proposal.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function updateStatus(connectionId: string, status: 'on_the_way' | 'arrived' | 'in_progress') {
+    setBusy(`${status}-${connectionId}`);
+    try {
+      await setConnectionCoordinationStatus(connectionId, status);
+      await reload(true);
+      setNotice(status === 'on_the_way' ? 'The other person can now see that you are on the way.' : status === 'arrived' ? 'Marked arrived.' : 'Marked in progress.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update your status.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function attendanceUpdate(connectionId: string, update: 'running_late' | 'cannot_make_it') {
+    if (update === 'cannot_make_it' && !window.confirm('Tell the other person you can’t make the agreed time? This creates a timestamped Aspire activity record but does not cancel the connection or move any money. You can still reschedule afterward.')) return;
+    setBusy(`${update}-${connectionId}`);
+    try {
+      await recordConnectionAttendanceUpdate(connectionId, update);
+      await reload(true);
+      setNotice(update === 'running_late'
+        ? 'Running late was added to the shared connection timeline. Message the other person with your ETA.'
+        : 'Can’t make it was added to the shared timeline. The connection is still active so you can reschedule, cancel explicitly, or Get help.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update the connection.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function shareLocation(connectionId: string) {
+    if (!navigator.geolocation) return setNotice('Location sharing is not supported in this browser.');
+    setBusy(`location-${connectionId}`);
+    setNotice('Your browser will ask for location permission. Aspire only shares it after you approve.');
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        await shareConnectionLocation(
+          connectionId,
+          position.coords.latitude,
+          position.coords.longitude,
+          Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+          30
+        );
+        await reload(true);
+        setNotice('Live location shared for 30 minutes. You can stop sharing at any time.');
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Could not share your location.');
+      } finally {
+        setBusy('');
+      }
+    }, (error) => {
+      setBusy('');
+      setNotice(error.code === error.PERMISSION_DENIED ? 'Location was not shared because permission was not granted.' : 'Could not get your current location.');
+    }, { enableHighAccuracy: true, timeout: 12_000, maximumAge: 15_000 });
+  }
+
+  async function stopLocation(connectionId: string) {
+    setBusy(`stop-location-${connectionId}`);
+    try {
+      await stopConnectionLocationShare(connectionId);
+      await reload(true);
+      setNotice('Live location sharing stopped.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not stop location sharing.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  if (loading) return null;
+  if (!data.connections.length && !notice) return null;
+
+  return (
+    <section className={styles.section} aria-label="Active Aspire connections">
+      <div className={styles.heading}>
+        <div>
+          <p className={styles.eyebrow}>ASPIRE LIVE</p>
+          <h2>Active connections</h2>
+        </div>
+        <p>Coordinate time, arrival and optional location without leaving Aspire.</p>
+      </div>
+
+      {notice && <div className={styles.notice} role="status">{notice}</div>}
+
+      <div className={styles.grid}>
+        {data.connections.map((connection) => {
+          const request = requestMap.get(connection.request_id);
+          const otherId = data.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
+          const other = profileMap.get(otherId);
+          const otherName = personName(other);
+          const timer = timerCopy(connection.scheduled_start_at, now);
+          const myShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === data.userId);
+          const otherShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === otherId);
+          const pendingProposal = data.scheduleProposals.find((proposal) => proposal.connection_id === connection.id);
+          const openCase = resolutionCases.find((item) => item.connection_id === connection.id && ['submitted', 'under_review'].includes(item.status));
+          const mapHref = otherShare ? `https://www.google.com/maps?q=${encodeURIComponent(`${otherShare.latitude},${otherShare.longitude}`)}` : '';
+
+          return (
+            <article key={connection.id} className={styles.card}>
+              <div className={styles.top}>
+                <div className={styles.identity}>
+                  <div className={styles.avatar}>{otherName.slice(0, 1).toUpperCase()}</div>
+                  <div><span>WITH</span><strong>{otherName}</strong></div>
+                </div>
+                <span className={styles.badge}>{statusLabel(connection.coordination_status)}</span>
+              </div>
+
+              <div className={styles.request}>
+                <h3>{request?.title || 'Active Aspire connection'}</h3>
+                <p>{[request?.category, request?.campus].filter(Boolean).join(' · ') || 'Campus connection'}</p>
+              </div>
+
+              <div className={styles.timer}>
+                <span>{timer.label}</span>
+                <strong>{timer.value}</strong>
+                <small>{connection.meeting_label ? `${timer.detail} · ${connection.meeting_label}` : timer.detail}</small>
+              </div>
+
+              {pendingProposal && (
+                <div className={styles.scheduleProposal}>
+                  <div>
+                    <span>TIME CHANGE PROPOSED</span>
+                    <strong>{proposalCopy(pendingProposal)}</strong>
+                    <small>{pendingProposal.proposed_by === data.userId ? `Waiting for ${otherName} to accept.` : `${otherName} proposed this change. Your current agreed time stays active until you accept.`}</small>
+                  </div>
+                  {pendingProposal.proposed_by !== data.userId && (
+                    <div className={styles.proposalActions}>
+                      <button type="button" disabled={busy === `proposal-${pendingProposal.id}`} onClick={() => void respondSchedule(pendingProposal.id, false)}>Keep current time</button>
+                      <button className={styles.primary} type="button" disabled={busy === `proposal-${pendingProposal.id}`} onClick={() => void respondSchedule(pendingProposal.id, true)}>Accept new time</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {openCase && <ResolutionCaseStatus item={openCase} currentUserId={data.userId} otherName={otherName} />}
+
+              {editingId === connection.id && (
+                <div className={styles.editor}>
+                  <div className={styles.editorRow}>
+                    <label>Proposed start time<input type="datetime-local" value={startLocal} onChange={(event) => setStartLocal(event.target.value)} /></label>
+                    <label>Optional end time<input type="datetime-local" value={endLocal} onChange={(event) => setEndLocal(event.target.value)} /></label>
+                  </div>
+                  <label>Meeting point or place<input value={meetingLabel} maxLength={240} placeholder="e.g. PMU main entrance" onChange={(event) => setMeetingLabel(event.target.value)} /></label>
+                  <small className={styles.agreementNote}>The existing agreed time does not change until the other person accepts your proposal.</small>
+                  <div className={styles.actions}>
+                    <button className={styles.primary} type="button" disabled={busy === `schedule-${connection.id}`} onClick={() => void proposeSchedule(connection.id)}>Propose time</button>
+                    <button type="button" onClick={() => setEditingId('')}>Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {otherShare && (
+                <div className={styles.locationNotice}>
+                  <span>{otherName} shared location temporarily.</span>
+                  <a href={mapHref} target="_blank" rel="noreferrer">Open map ↗</a>
+                </div>
+              )}
+
+              <ConnectionEventTimeline connectionId={connection.id} userId={data.userId} otherName={otherName} />
+
+              <div className={styles.actions}>
+                <a className={styles.primary} href="#my-activity">Message</a>
+                <button type="button" onClick={() => beginSchedule(connection)}>Propose time</button>
+                <button type="button" disabled={busy === `on_the_way-${connection.id}`} onClick={() => void updateStatus(connection.id, 'on_the_way')}>On my way</button>
+                <button type="button" disabled={busy === `running_late-${connection.id}`} onClick={() => void attendanceUpdate(connection.id, 'running_late')}>Running late</button>
+                <button type="button" disabled={busy === `arrived-${connection.id}`} onClick={() => void updateStatus(connection.id, 'arrived')}>I&apos;ve arrived</button>
+                <button type="button" disabled={busy === `in_progress-${connection.id}`} onClick={() => void updateStatus(connection.id, 'in_progress')}>Start task</button>
+                {!myShare ? (
+                  <button type="button" disabled={busy === `location-${connection.id}`} onClick={() => void shareLocation(connection.id)}>Share location · 30m</button>
+                ) : (
+                  <button className={styles.danger} type="button" disabled={busy === `stop-location-${connection.id}`} onClick={() => void stopLocation(connection.id)}>Stop sharing</button>
+                )}
+                <button className={styles.danger} type="button" disabled={busy === `cannot_make_it-${connection.id}`} onClick={() => void attendanceUpdate(connection.id, 'cannot_make_it')}>Can&apos;t make it</button>
+                <button className={styles.danger} type="button" onClick={() => setCancelConnectionId(connection.id)}>Cancel connection</button>
+                <button className={styles.help} type="button" disabled={Boolean(openCase)} onClick={() => setHelpConnectionId(connection.id)}>{openCase ? 'Issue open' : 'Get help'}</button>
+              </div>
+
+              <div className={styles.privacy}><strong>Location is always optional.</strong> It is shared only after browser permission, only with the other person in this connection, and expires automatically.</div>
+            </article>
+          );
+        })}
+      </div>
+
+      {helpConnection && (() => {
+        const otherId = data.userId === helpConnection.requester_id ? helpConnection.responder_id : helpConnection.requester_id;
+        return <ResolutionCenterModal
+          connection={helpConnection}
+          currentUserId={data.userId}
+          otherUserId={otherId}
+          otherName={personName(profileMap.get(otherId))}
+          onClose={() => setHelpConnectionId('')}
+          onOpened={async () => {
+            await reload(true);
+            setNotice('Issue opened. If this connection uses Pay with Aspire, payout release is now paused while Aspire reviews the case.');
+          }}
+        />;
+      })()}
+
+      {cancelConnection && (() => {
+        const otherId = data.userId === cancelConnection.requester_id ? cancelConnection.responder_id : cancelConnection.requester_id;
+        return <CancelConnectionModal
+          connection={cancelConnection}
+          otherName={personName(profileMap.get(otherId))}
+          onClose={() => setCancelConnectionId('')}
+          onCancelled={async (result) => {
+            await reload(true);
+            setCancelConnectionId('');
+            setNotice(result.review_required
+              ? 'Connection cancelled. A protected payment review is open, so payout remains paused until Aspire resolves the case.'
+              : 'Connection cancelled. The other participant was notified and the cancellation was timestamped.');
+          }}
+        />;
+      })()}
+    </section>
+  );
+}

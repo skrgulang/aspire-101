@@ -13,7 +13,7 @@ export default function SafetyPage() {
     <main className="safetyPage">
       <header className="safetyNav shell">
         <a className="brand" href="/" aria-label="Aspire 101 home"><img src={aspireLogo} alt="" style={logoStyle} /><span>Aspire 101</span></a>
-        <nav className="safetyNavLinks"><a href="/discover">Discover</a><a href="/guidelines">Guidelines</a><a href="/terms">Terms</a><a className="button buttonGold" href="/post">Ask campus</a></nav>
+        <nav className="safetyNavLinks"><a href="/discover">Discover</a><a href="/resolution">Resolution Center</a><a href="/guidelines">Guidelines</a><a href="/terms">Terms</a><a className="button buttonGold" href="/post">Ask campus</a></nav>
       </header>
 
       <section className="safetyHero shell">
@@ -60,6 +60,7 @@ export default function SafetyPage() {
       <section className="safetySection shell">
         <div className="safetySectionHead"><h2>Your controls.</h2><p>Safety tools should be easy to reach from requests, profiles, connections, and private chat — not hidden in legal pages.</p></div>
         <div className="safetyControlGrid">
+          <article className="safetyControlCard"><span>RESOLUTION</span><h3>Track problems and protected refunds.</h3><p>No-shows, cancellations, incomplete work, payment concerns, and other connection issues can be tracked in one place. Open eligible cases pause provider payout while Aspire reviews the record.</p><a href="/resolution">Open Resolution Center ↗</a></article>
           <article className="safetyControlCard"><span>REPORT</span><h3>Tell Aspire what happened.</h3><p>Reports can include scams, harassment, unsafe conduct, illegal activity, hate, sexual misconduct, or other misuse. Serious reports belong in the safety system, not public ratings.</p><a href="/guidelines">See what is not allowed ↗</a></article>
           <article className="safetyControlCard"><span>BLOCK</span><h3>Stop seeing an account.</h3><p>Blocking removes that account from your discovery experience and should prevent unwanted future contact through Aspire where technically supported.</p><a href="/discover">Try request discovery ↗</a></article>
           <article className="safetyControlCard"><span>VERIFICATION</span><h3>A signal, not a guarantee.</h3><p>Email, school, or future identity verification can add context. Verification does not mean Aspire guarantees a person is safe, qualified, licensed, or trustworthy.</p></article>
@@ -69,7 +70,7 @@ export default function SafetyPage() {
 
       <section className="safetyLegalStrip shell">
         <div><h3>Safety works with rules, not instead of them.</h3><p>Our product controls work alongside Aspire’s Community Guidelines, Terms, and Privacy Policy. Final production legal language should be reviewed by qualified counsel before broad launch or regulated payment/transport expansion.</p></div>
-        <nav><a href="/guidelines">Guidelines</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
+        <nav><a href="/resolution-policy">Resolution policy</a><a href="/guidelines">Guidelines</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a></nav>
       </section>
     </main>
   );

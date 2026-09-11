@@ -27,7 +27,9 @@
 .connectionPaymentCard { padding: 18px; border: 1px solid rgba(255,255,255,.075); border-radius: 22px; background: rgba(7,7,6,.58); }
 .connectionPaymentCard.state-secured { border-color: rgba(255,194,28,.22); background: rgba(255,194,28,.026); }
 .connectionPaymentCard.state-released { border-color: rgba(104,211,150,.22); }
+.connectionPaymentCard.state-refunded { border-color: rgba(104,211,150,.18); background: rgba(104,211,150,.018); }
 .connectionPaymentCard.state-disputed { border-color: rgba(255,105,105,.22); }
+.connectionPaymentCard.state-cancelled { border-color: rgba(255,255,255,.07); opacity: .94; }
 .connectionPaymentTop { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 18px; align-items: start; }
 .connectionPaymentTop span { color: #7e776d; font-size: 8px; font-weight: 900; letter-spacing: .12em; }
 .connectionPaymentTop h3 { margin: 6px 0 0; max-width: 720px; font-size: 21px; line-height: 1.16; letter-spacing: -.025em; }
@@ -43,14 +45,27 @@
 .paymentFeeBreakdown > div.total { margin-top: 5px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.07); color: #e9dfcc; font-weight: 800; }
 .paymentFeeBreakdown > div.total strong { color: var(--gold); font-size: 15px; letter-spacing: -.02em; }
 .paymentFeeBreakdown > small { display: block; margin-top: 8px; color: #625d55; font-size: 7px; line-height: 1.45; }
+.paymentProtectionNote { margin-top:14px; padding:12px 13px; display:grid; gap:5px; border:1px solid rgba(255,194,28,.13); border-radius:15px; background:rgba(255,194,28,.025); }
+.paymentProtectionNote strong { color:#d9bd72; font-size:9px; }
+.paymentProtectionNote span { color:#82796c; font-size:8px; line-height:1.5; }
+.paymentProtectionNote a { width:max-content; max-width:100%; color:#c9a84d; font-size:8px; font-weight:850; text-decoration:none; }
+.paymentProtectionNote a:hover { color:#efd47d; }
+.connectionPaymentResolutionHold { margin-top:14px; padding:12px 13px; display:grid; gap:4px; border:1px solid rgba(255,130,90,.18); border-radius:15px; background:linear-gradient(135deg,rgba(255,124,82,.075),rgba(255,199,44,.028)); }
+.connectionPaymentResolutionHold strong { color:#e2aa8b; font-size:10px; }
+.connectionPaymentResolutionHold span { color:#907f74; font-size:9px; line-height:1.5; }
 .connectionPaymentState { margin-top: 14px; padding: 13px 14px; border: 1px solid rgba(255,255,255,.07); border-radius: 15px; background: rgba(255,255,255,.018); }
 .connectionPaymentState b { display: block; color: #e7dfd2; font-size: 11px; }
 .connectionPaymentState p { margin: 4px 0 0; color: #797268; font-size: 9px; line-height: 1.5; }
+.connectionPaymentState a { display:inline-block; margin-top:7px; color:#c9a84d; font-size:8px; font-weight:850; text-decoration:none; }
+.connectionPaymentState a:hover { color:#efd47d; }
 .connectionPaymentState.secured { border-color: rgba(255,194,28,.16); }
 .connectionPaymentState.secured b { color: var(--gold); }
-.connectionPaymentState.released b { color: #9ad6b2; }
+.connectionPaymentState.released,.connectionPaymentState.refunded { border-color: rgba(104,211,150,.16); background: rgba(104,211,150,.025); }
+.connectionPaymentState.released b,.connectionPaymentState.refunded b { color: #9ad6b2; }
+.connectionPaymentState.disputed,.connectionPaymentState.failed { border-color:rgba(255,105,105,.15); background:rgba(255,105,105,.025); }
 .connectionPaymentState.disputed b,.connectionPaymentState.failed b { color: #d69b9b; }
-.connectionPaymentState.offPlatform b { color: #aaa295; }
+.connectionPaymentState.cancelled { border-color:rgba(255,255,255,.065); background:rgba(255,255,255,.012); }
+.connectionPaymentState.cancelled b,.connectionPaymentState.offPlatform b { color: #aaa295; }
 .paymentProgress { margin-top: 14px; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
 .paymentProgress span { min-height: 52px; padding: 9px; display: grid; grid-template-columns: 18px 1fr; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.065); border-radius: 13px; color: #555047; font-size: 8px; }
 .paymentProgress span b { color: #70695f; font-size: 8px; }
@@ -60,9 +75,15 @@
 .connectionPaymentActions { margin-top: 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .connectionPaymentActions > a { color: var(--gold); font-size: 10px; font-weight: 800; }
 .paymentWaiting { color: #918a7f; font-size: 9px; }
-.paymentReleased { color: #9ad6b2; font-size: 10px; font-weight: 800; }
-.paymentReleased a { color:#bfe7cf; text-decoration:none; }
-.paymentReleased a:hover { color:#e4f8eb; }
+.paymentWaiting a { color:#c9a84d; text-decoration:none; font-weight:850; }
+.paymentWaiting a:hover { color:#efd47d; }
+.paymentReleased,.paymentRefunded { color: #9ad6b2; font-size: 10px; font-weight: 800; }
+.paymentReleased a,.paymentRefunded a { color:#bfe7cf; text-decoration:none; }
+.paymentReleased a:hover,.paymentRefunded a:hover { color:#e4f8eb; }
+.paymentDisputed { color:#d69b9b; font-size:10px; font-weight:800; }
+.paymentDisputed a { color:#e4b1b1; text-decoration:none; }
+.paymentDisputed a:hover { color:#f4d0d0; }
+.paymentCancelled { color:#999187; font-size:10px; font-weight:800; }
 .paymentSkeleton { min-height: 130px; display: grid; grid-template-columns: 1.3fr 1fr .8fr; gap: 10px; }
 .paymentSkeleton span { border-radius: 18px; background: linear-gradient(90deg,rgba(255,255,255,.02),rgba(255,255,255,.055),rgba(255,255,255,.02)); background-size: 200% 100%; animation: paymentSkeleton 1.5s ease infinite; }
 @keyframes paymentSkeleton { to { background-position: -200% 0; } }

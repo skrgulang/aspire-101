@@ -26,6 +26,9 @@ function iconFor(kind: AspireNotification['kind']) {
   if (kind === 'request_response') return '◌';
   if (kind === 'circle_mutual') return '♧';
   if (kind === 'connection_cancelled') return '×';
+  if (kind === 'connection_reminder') return '◷';
+  if (kind === 'connection_coordination') return '⏱';
+  if (kind === 'resolution_case') return '!';
   return '✓';
 }
 
@@ -76,8 +79,12 @@ export default function NotificationCenter({
       onShowRequests();
       return;
     }
-    if (item.kind === 'message' && item.connection_id) {
+    if ((item.kind === 'message' || item.kind === 'connection_reminder') && item.connection_id) {
       onOpenChat(item.connection_id);
+      return;
+    }
+    if ((item.kind === 'connection_coordination' || item.kind === 'resolution_case') && item.connection_id) {
+      onShowConnections();
       return;
     }
     onShowConnections();
@@ -103,7 +110,7 @@ export default function NotificationCenter({
 
             <div className="notificationList">
               {loading && !items.length && <p className="notificationEmpty">Loading activity…</p>}
-              {!loading && !items.length && <div className="notificationEmpty"><strong>All quiet for now.</strong><p>Responses, connection updates, messages, and Circle activity will appear here.</p></div>}
+              {!loading && !items.length && <div className="notificationEmpty"><strong>All quiet for now.</strong><p>Responses, connection updates, messages, reminders, Resolution Center activity, and Circle updates will appear here.</p></div>}
               {items.map((item) => (
                 <button type="button" className={`notificationItem ${item.read_at ? '' : 'unread'}`} key={item.id} onClick={() => read(item)}>
                   <i>{iconFor(item.kind)}</i>
