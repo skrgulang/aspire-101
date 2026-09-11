@@ -96,7 +96,7 @@ export default function ResolutionHistory() {
             const isOpen = ['submitted', 'under_review'].includes(item.status);
             const openedByMe = item.opened_by === data?.userId;
             return (
-              <article className={`${styles.card} ${isOpen ? styles.open : ''}`} key={item.id}>
+              <article id={`case-${item.id}`} className={`${styles.card} ${isOpen ? styles.open : ''}`} key={item.id}>
                 <div className={styles.top}>
                   <div><span>{reasonLabel(item.reason).toUpperCase()}</span><h3>{request?.title || 'Aspire connection issue'}</h3><small>{request ? [request.category, request.campus].filter(Boolean).join(' · ') : 'Connection case'}</small></div>
                   {amount && <strong>{amount}</strong>}
