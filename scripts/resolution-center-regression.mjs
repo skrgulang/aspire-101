@@ -12,6 +12,7 @@ const centerSql = read('supabase/migrations/20260911012000_resolution_center.sql
 const followupSql = read('supabase/migrations/20260911014000_resolution_followup.sql');
 const scheduleSql = read('supabase/migrations/20260911015000_schedule_agreement.sql');
 const lockdownSql = read('supabase/migrations/20260911015100_schedule_agreement_lockdown.sql');
+const cancellationSql = read('supabase/migrations/20260911016000_connection_cancellation.sql');
 const releaseRoute = read('app/api/stripe/payment/release/route.ts');
 const resolutionRoute = read('app/api/resolution/resolve/route.ts');
 
@@ -25,14 +26,24 @@ const checks = [
   [resolutionRoute, "payment.status !== 'secured'", 'automatic refund must require a secured payment'],
   [resolutionRoute, 'payment.stripe_transfer_id', 'automatic refund must refuse already-transferred provider funds'],
   [resolutionRoute, "role !== 'admin'", 'financial refunds must stay admin-only'],
-  [resolutionRoute, 'resolutionCase.opened_by !== payment.payer_id', 'automatic customer refunds must come from payer-owned cases'],
+  [resolutionRoute, 'resolutionCase.opened_by !== payment.payer_id && !providerSelfCancelled', 'automatic refunds must remain payer-owned except verified provider self-cancellation'],
+  [resolutionRoute, 'cancellationActorId === payment.payee_id', 'provider self-cancellation refund exception must require captured provider identity'],
+  [resolutionRoute, 'evidence.voluntary_cancellation === true', 'provider self-cancellation refund exception must require explicit voluntary cancellation evidence'],
   [resolutionRoute, 'aspire_resolution_refund_', 'refunds must stay idempotent'],
   [scheduleSql, 'The other participant must respond to this proposal', 'a proposer must not accept their own schedule change'],
   [scheduleSql, "status text not null default 'pending' check (status in ('pending','accepted','declined','superseded'))", 'schedule proposals must retain accepted/declined lifecycle states'],
   [lockdownSql, 'revoke execute on function public.set_connection_schedule', 'legacy direct schedule mutation must stay revoked'],
   [followupSql, "'connection_coordination'", 'coordination notifications must remain supported'],
   [followupSql, "'resolution_case'", 'Resolution Center notifications must remain supported'],
-  [followupSql, 'connection_resolution_responses', 'both sides must retain a case-statement channel']
+  [followupSql, 'connection_resolution_responses', 'both sides must retain a case-statement channel'],
+  [cancellationSql, 'cancel_connection_with_protection', 'participant cancellation must stay server-controlled'],
+  [cancellationSql, "v_payment.status in ('processing','checkout_created')", 'cancellation must not race an unsettled checkout'],
+  [cancellationSql, "v_payment.status in ('released','disputed')", 'post-release or disputed payments must route through Resolution Center'],
+  [cancellationSql, "v_payment.status = 'secured'", 'secured payment cancellation must enter protected review'],
+  [cancellationSql, "'cancellation_actor_id'", 'cancellation evidence must capture the actor'],
+  [cancellationSql, "'voluntary_cancellation', true", 'explicit cancellation evidence must remain distinct from no-show'],
+  [cancellationSql, "set status='cancelled'", 'participant cancellation must end the active connection'],
+  [cancellationSql, "'connection_cancelled'", 'participant cancellation must create a shared timeline event']
 ];
 
 for (const [source, needle, label] of checks) requireText(source, needle, label);
