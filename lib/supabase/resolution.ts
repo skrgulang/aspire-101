@@ -39,6 +39,16 @@ export type ConnectionResolutionResponse = {
   created_at: string;
 };
 
+export type ConnectionNoShowIncident = {
+  id: string;
+  case_id: string;
+  connection_id: string;
+  user_id: string;
+  confirmed_by: string;
+  note: string | null;
+  created_at: string;
+};
+
 export async function fetchResolutionCases(connectionIds: string[]) {
   if (!connectionIds.length) return [] as ConnectionResolutionCase[];
   const supabase = getSupabaseBrowserClient();
@@ -67,6 +77,22 @@ export async function fetchResolutionCaseResponses(caseIds: string[]) {
     throw error;
   }
   return (data ?? []) as ConnectionResolutionResponse[];
+}
+
+export async function fetchNoShowIncidents(userIds: string[]) {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (!ids.length) return [] as ConnectionNoShowIncident[];
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from('connection_no_show_incidents')
+    .select('id,case_id,connection_id,user_id,confirmed_by,note,created_at')
+    .in('user_id', ids)
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (error.code === '42P01') return [] as ConnectionNoShowIncident[];
+    throw error;
+  }
+  return (data ?? []) as ConnectionNoShowIncident[];
 }
 
 export async function fetchResolutionCasesForModeration(limit = 100) {
