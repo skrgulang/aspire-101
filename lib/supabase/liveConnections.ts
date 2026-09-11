@@ -6,6 +6,7 @@ export type LiveConnection = {
   requester_id: string;
   responder_id: string;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
+  payment_method: 'none' | 'in_person' | 'aspire';
   scheduled_start_at: string | null;
   scheduled_end_at: string | null;
   timezone: string | null;
@@ -62,7 +63,7 @@ export async function fetchLiveConnections() {
 
   const { data: connectionRows, error: connectionError } = await supabase
     .from('connections')
-    .select('id,request_id,requester_id,responder_id,status,scheduled_start_at,scheduled_end_at,timezone,meeting_label,coordination_status,last_coordination_actor_id,last_coordination_at')
+    .select('id,request_id,requester_id,responder_id,status,payment_method,scheduled_start_at,scheduled_end_at,timezone,meeting_label,coordination_status,last_coordination_actor_id,last_coordination_at')
     .or(`requester_id.eq.${authData.user.id},responder_id.eq.${authData.user.id}`)
     .in('status', ['confirmed', 'active'])
     .order('updated_at', { ascending: false });
