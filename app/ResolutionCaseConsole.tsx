@@ -14,6 +14,13 @@ import {
 } from '../lib/supabase/resolution';
 import styles from './ResolutionCaseConsole.module.css';
 
+type EvidenceEvent = {
+  event_type?: string;
+  actor_id?: string | null;
+  body?: string;
+  created_at?: string;
+};
+
 function money(cents: number | null, currency: string | null) {
   if (cents == null) return 'No Aspire payment snapshot';
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD' }).format(cents / 100);
@@ -31,6 +38,27 @@ function titleForReason(reason: ConnectionResolutionCase['reason']) {
 
 function when(value: string) {
   return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function evidenceEvents(item: ConnectionResolutionCase) {
+  const raw = item.evidence_snapshot?.events;
+  if (!Array.isArray(raw)) return [] as EvidenceEvent[];
+  return raw.filter((entry): entry is EvidenceEvent => Boolean(entry && typeof entry === 'object')).slice(-8).reverse();
+}
+
+function eventLabel(type?: string) {
+  if (!type) return 'Activity';
+  if (type === 'schedule_set') return 'Agreed time';
+  if (type === 'schedule_proposed') return 'Time proposed';
+  if (type === 'schedule_declined') return 'Time declined';
+  if (type === 'on_the_way') return 'On the way';
+  if (type === 'running_late') return 'Running late';
+  if (type === 'cannot_make_it') return 'Can’t make it';
+  if (type === 'arrived') return 'Arrived';
+  if (type === 'in_progress') return 'Task started';
+  if (type === 'location_shared') return 'Location shared';
+  if (type === 'location_stopped') return 'Location stopped';
+  return type.replaceAll('_', ' ');
 }
 
 export default function ResolutionCaseConsole() {
@@ -140,6 +168,7 @@ export default function ResolutionCaseConsole() {
         <div className={styles.list}>
           {openCases.map((item) => {
             const caseResponses = responseMap.get(item.id) ?? [];
+            const capturedEvents = evidenceEvents(item);
             const priorIncidents = item.against_user_id ? (incidentMap.get(item.against_user_id) ?? []) : [];
             const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
             const recentIncidents = priorIncidents.filter((incident) => new Date(incident.created_at).getTime() >= cutoff);
@@ -159,6 +188,17 @@ export default function ResolutionCaseConsole() {
                 </div>
                 {recentIncidents.length >= 2 && <div className={styles.pattern}><strong>Repeat no-show pattern</strong><span>Human account review recommended. This signal does not automatically suspend the user.</span></div>}
                 <p className={styles.details}>{item.details || 'No additional participant note.'}</p>
+                {capturedEvents.length > 0 && (
+                  <div className={styles.evidence}>
+                    <b>CAPTURED CONNECTION EVIDENCE</b>
+                    <div>
+                      {capturedEvents.map((event, index) => {
+                        const actor = !event.actor_id ? 'Aspire' : event.actor_id === item.opened_by ? 'Reporter' : event.actor_id === item.against_user_id ? 'Other participant' : 'Participant';
+                        return <span key={`${event.created_at || 'event'}-${index}`}><strong>{eventLabel(event.event_type)}</strong><small>{actor}{event.created_at ? ` · ${when(event.created_at)}` : ''}</small></span>;
+                      })}
+                    </div>
+                  </div>
+                )}
                 {caseResponses.length > 0 && (
                   <div className={styles.responses}>
                     <b>PARTICIPANT STATEMENTS</b>
