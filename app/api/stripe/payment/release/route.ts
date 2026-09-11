@@ -59,6 +59,12 @@ export async function POST(request: Request) {
     if (user.id !== connection.requester_id && user.id !== connection.responder_id) {
       return NextResponse.json({ error: 'You are not part of this connection.' }, { status: 403 });
     }
+    if (connection.status === 'cancelled') {
+      return NextResponse.json({
+        error: 'This connection was cancelled. Provider payout is paused until any secured payment is reviewed.',
+        code: 'CONNECTION_CANCELLED'
+      }, { status: 409 });
+    }
 
     const [{ data: payment }, { data: completions }, { data: marketOrder }] = await Promise.all([
       supabase.from('connection_payments').select('*').eq('connection_id', connectionId).maybeSingle(),
@@ -112,9 +118,6 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
 
-    // Re-check the connected account with Stripe's stable v1 Account endpoint
-    // immediately before a transfer so a stale Aspire status cannot block or
-    // incorrectly allow release.
     const stripeAccount = await stripeGet<StripeConnectAccount>(
       `/v1/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}`
     );
