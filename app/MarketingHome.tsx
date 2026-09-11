@@ -7,7 +7,6 @@ import { fetchActiveUniversities, University } from '../lib/supabase/universitie
 import { aspireLogo } from './logo';
 import CampusPicker from './CampusPicker';
 import MarketingExtras from './MarketingExtras';
-import MarketingProductLife from './MarketingProductLife';
 
 const imageFallback = 'https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
@@ -36,46 +35,11 @@ const recent = [
   { label: 'New to campus — meet people?', meta: '2 hours ago', icon: '+' }
 ];
 
-const featureStories = [
-  {
-    step: '01',
-    title: 'Ask campus.',
-    line: 'Post what you need.',
-    image: 'https://images.pexels.com/photos/7973095/pexels-photo-7973095.jpeg?auto=compress&cs=tinysrgb&w=1400',
-    chips: ['Ride to IND?', 'Move a desk?', 'Study tonight?'],
-    className: 'storyAsk'
-  },
-  {
-    step: '02',
-    title: 'Find your people.',
-    line: 'Browse the campus around you.',
-    image: 'https://images.pexels.com/photos/7972533/pexels-photo-7972533.jpeg?auto=compress&cs=tinysrgb&w=1400',
-    chips: ['Same class', 'Same game', 'Same vibe'],
-    className: 'storyDiscover'
-  },
-  {
-    step: '03',
-    title: 'Connect when it fits.',
-    line: 'Both sides choose. Then chat opens.',
-    image: 'https://images.pexels.com/photos/5965683/pexels-photo-5965683.jpeg?auto=compress&cs=tinysrgb&w=1400',
-    chips: ['Interested', 'Mutual connect', 'Chat'],
-    className: 'storyConnect'
-  }
-];
-
 const howItWorks = [
-  { step: '01', title: 'Post it', text: 'Say what you need.', visual: 'Need a ride to IND Friday?' },
-  { step: '02', title: 'Campus sees it', text: 'Nearby students respond.', visual: 'I can help after class.' },
-  { step: '03', title: 'Pick who fits', text: 'You choose. They confirm.', visual: 'Mutual connect ✓' },
-  { step: '04', title: 'Make it happen', text: 'Chat, meet, get it done.', visual: 'See you there 👋' }
-];
-
-const productPages = [
-  { label: 'Post a Request', note: 'Ask campus.', icon: '+', href: '/post', className: 'productPost' },
-  { label: 'Discover', note: 'See what’s happening.', icon: '⌕', href: '/discover', className: 'productDiscover' },
-  { label: 'Connections', note: 'Chat. Plan. Do more.', icon: '◌', href: '/connections', className: 'productConnections' },
-  { label: 'Safety Center', note: 'Tools when you need them.', icon: '◇', href: '/safety', className: 'productSafety' },
-  { label: 'Campus Circle', note: 'Your campus in one place.', icon: '◎', href: '/campus', className: 'productCircle' }
+  { step: '01', title: 'Ask campus', text: 'Post what you need in a few words.', visual: 'Need a ride to IND Friday?' },
+  { step: '02', title: 'See who fits', text: 'Nearby students can respond or discover your request.', visual: 'I can help after class.' },
+  { step: '03', title: 'Choose each other', text: 'A connection opens only after both sides agree.', visual: 'Mutual connect ✓' },
+  { step: '04', title: 'Make it happen', text: 'Chat, coordinate, meet, and get it done.', visual: 'See you there 👋' }
 ];
 
 function signupHref(campusSchool: string) {
@@ -85,10 +49,6 @@ function signupHref(campusSchool: string) {
 function featureHref(featureKey: string, user: User | null, campusSchool: string) {
   const next = `/campus?deck=${encodeURIComponent(featureKey)}`;
   return user ? next : signupHref(campusSchool);
-}
-
-function gatedHref(href: string, user: User | null, campusSchool: string) {
-  return user ? href : signupHref(campusSchool);
 }
 
 function campusImage(campus: University | null) {
@@ -192,7 +152,7 @@ export default function MarketingHome() {
           />
 
           <nav className="marketingNavRight" aria-label="Main navigation">
-            <a href="#features">What is Aspire?</a>
+            <a href="#features">How it works</a>
             <a href="#why-aspire">Why Aspire?</a>
             <a href="#campuses">For campuses</a>
             {authReady && user ? (
@@ -247,36 +207,11 @@ export default function MarketingHome() {
         </section>
       </section>
 
-      <section id="features" className="marketingStorySection">
-        <div className="marketingStoryHead" data-reveal="left">
-          <p>WHAT ASPIRE DOES</p>
-          <h2>One campus.<br /><em>A lot going on.</em></h2>
-          <span>Ask. Discover. Connect.</span>
-        </div>
-
-        <div className="marketingStoryGrid marketingStoryCollage">
-          {featureStories.map((story, index) => (
-            <article className={`marketingStoryCard ${story.className} revealDelay${index + 1}`} data-reveal={index === 0 ? 'left' : 'right'} key={story.step}>
-              <img src={story.image} alt="College students using Aspire together" onError={handleImageError} />
-              <span className="marketingStoryShade" />
-              <div className="marketingStoryStep">{story.step}</div>
-              <div className="marketingStoryCopy">
-                <h3>{story.title}</h3>
-                <p>{story.line}</p>
-              </div>
-              <div className="marketingStoryChips" aria-hidden="true">
-                {story.chips.map((chip) => <span key={chip}>{chip}</span>)}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="marketingHow">
+      <section id="features" className="marketingHow">
         <div className="marketingExpandHead" data-reveal="left">
-          <p>HOW IT WORKS</p>
-          <h2>From request to <em>real life.</em></h2>
-          <span>Simple. Fast. Human.</span>
+          <p>HOW ASPIRE WORKS</p>
+          <h2>Ask. Choose. Connect.<br /><em>Get it done.</em></h2>
+          <span>One clear flow from campus request to real life.</span>
         </div>
         <div className="marketingHowGrid marketingHowFlow">
           {howItWorks.map((item, index) => (
@@ -286,23 +221,6 @@ export default function MarketingHome() {
               <p>{item.text}</p>
               <div className="marketingHowVisual">{item.visual}</div>
             </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="marketingProducts">
-        <MarketingProductLife />
-        <div className="marketingExpandHead" data-reveal="up">
-          <p>EXPLORE MORE ON ASPIRE</p>
-          <h2>Everything you need.<br /><em>One campus network.</em></h2>
-        </div>
-        <div className="marketingProductGrid">
-          {productPages.map((item, index) => (
-            <a key={item.label} data-reveal="pop" className={`marketingProductCard ${item.className} revealDelay${index}`} href={gatedHref(item.href, user, campusName)}>
-              <i>{item.icon}</i>
-              <div><strong>{item.label}</strong><span>{item.note}</span></div>
-              <b>→</b>
-            </a>
           ))}
         </div>
       </section>
