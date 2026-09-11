@@ -85,11 +85,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Seller/provider funds were already transferred. This case needs manual reconciliation instead of an automatic refund.' }, { status: 409 });
     }
 
-    // Automatic refunds always return money to Stripe's original payer. Require the
-    // case itself to have been opened by that payer so a provider-side compensation
-    // claim cannot accidentally trigger a customer refund from the admin console.
-    if (resolutionCase.opened_by !== payment.payer_id) {
-      return NextResponse.json({ error: 'This case was not opened by the payer, so it is not eligible for an automatic customer refund. Review compensation manually.' }, { status: 409 });
+    const evidence = resolutionCase.evidence_snapshot && typeof resolutionCase.evidence_snapshot === 'object'
+      ? resolutionCase.evidence_snapshot as Record<string, unknown>
+      : {};
+    const cancellationActorId = typeof evidence.cancellation_actor_id === 'string' ? evidence.cancellation_actor_id : '';
+    const providerSelfCancelled = resolutionCase.reason === 'cancellation'
+      && resolutionCase.opened_by === payment.payee_id
+      && cancellationActorId === payment.payee_id
+      && evidence.voluntary_cancellation === true;
+
+    // Automatic refunds return money only to Stripe's original payer. Normally the
+    // case must have been opened by that payer. The narrow exception is a provider
+    // explicitly self-cancelling through Aspire's cancellation RPC: that action is
+    // captured as first-party evidence and may support an admin-reviewed refund to
+    // the original payer. It never grants money to the provider automatically.
+    if (resolutionCase.opened_by !== payment.payer_id && !providerSelfCancelled) {
+      return NextResponse.json({ error: 'This case is not eligible for an automatic customer refund. Review compensation manually.' }, { status: 409 });
     }
 
     // A payer asking for a full no-show refund must also have reported the actual payee.
