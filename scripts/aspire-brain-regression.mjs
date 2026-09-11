@@ -5,7 +5,9 @@ const classificationCases = [
   ['selling my used monitor for $80', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 8000 }],
   ['looking for a math study group', { category: 'Study', kind: 'community' }],
   ['Need help moving a desk tomorrow', { category: 'Moving / help', kind: 'paid_help' }],
-  ['Looking for a teammate for a hackathon project', { category: 'Project / collab', kind: 'collaboration' }]
+  ['Looking for a teammate for a hackathon project', { category: 'Project / collab', kind: 'collaboration' }],
+  ['WTB bike near campus', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted' }],
+  ['WTS textbook for $25', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 2500 }]
 ];
 
 for (const [input, expected] of classificationCases) {
@@ -23,6 +25,17 @@ const candidates = [
 
 const ranked = rankCandidatesForIntent('ride to airport Friday', candidates, 2);
 if (ranked[0]?.id !== 'ride') throw new Error(`ranking failed: ${ranked.map((item) => item.id).join(',')}`);
+
+const marketplaceCandidates = [
+  { id: 'seller', title: 'Bike for sale', details: 'campus commuter bike', category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell' },
+  { id: 'buyer', title: 'Wanted bike', details: 'looking for a campus bike', category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted' }
+];
+
+const buyRanked = rankCandidatesForIntent('WTB bike', marketplaceCandidates, 2);
+if (buyRanked[0]?.id !== 'seller') throw new Error(`buyer reciprocal ranking failed: ${buyRanked.map((item) => item.id).join(',')}`);
+
+const sellRanked = rankCandidatesForIntent('WTS bike', marketplaceCandidates, 2);
+if (sellRanked[0]?.id !== 'buyer') throw new Error(`seller reciprocal ranking failed: ${sellRanked.map((item) => item.id).join(',')}`);
 
 const navigationCases = [
   ['open connections', '/connections'],
@@ -51,4 +64,4 @@ for (const input of negativeNavigationCases) {
   if (inferNavigationIntent(input)) throw new Error(`${input}: should not be treated as direct navigation`);
 }
 
-console.log('Aspire Brain regression: 18/18 passed');
+console.log('Aspire Brain regression: 22/22 passed');
