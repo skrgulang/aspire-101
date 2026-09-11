@@ -49,6 +49,12 @@ export type ConnectionNoShowIncident = {
   created_at: string;
 };
 
+export type ParticipantResolutionHistory = {
+  userId: string;
+  cases: ConnectionResolutionCase[];
+  requests: { id: string; title: string; category: string; campus: string | null }[];
+};
+
 function missingPreviewRelation(error: { code?: string; message?: string } | null) {
   if (!error) return false;
   return error.code === '42P01'
@@ -69,6 +75,39 @@ export async function fetchResolutionCases(connectionIds: string[]) {
     throw error;
   }
   return (data ?? []) as ConnectionResolutionCase[];
+}
+
+export async function fetchMyResolutionHistory(): Promise<ParticipantResolutionHistory> {
+  const supabase = getSupabaseBrowserClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error('AUTH_REQUIRED');
+
+  const { data, error } = await supabase
+    .from('connection_resolution_cases')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) {
+    if (missingPreviewRelation(error)) return { userId: authData.user.id, cases: [], requests: [] };
+    throw error;
+  }
+
+  const cases = (data ?? []) as ConnectionResolutionCase[];
+  const requestIds = [...new Set(cases.map((item) => item.request_id))];
+  if (!requestIds.length) return { userId: authData.user.id, cases, requests: [] };
+
+  const { data: requestRows, error: requestError } = await supabase
+    .from('requests')
+    .select('id,title,category,campus')
+    .in('id', requestIds);
+  if (requestError) throw requestError;
+
+  return {
+    userId: authData.user.id,
+    cases,
+    requests: (requestRows ?? []) as ParticipantResolutionHistory['requests']
+  };
 }
 
 export async function fetchResolutionCaseResponses(caseIds: string[]) {
