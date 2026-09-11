@@ -7,9 +7,11 @@ import {
   LiveConnectionProfile,
   LiveConnectionRequest,
   ConnectionLocationShare,
+  ConnectionScheduleProposal,
+  proposeConnectionSchedule,
   recordConnectionAttendanceUpdate,
+  respondConnectionSchedule,
   setConnectionCoordinationStatus,
-  setConnectionSchedule,
   shareConnectionLocation,
   stopConnectionLocationShare
 } from '../lib/supabase/liveConnections';
@@ -25,16 +27,17 @@ type Data = {
   requests: LiveConnectionRequest[];
   profiles: LiveConnectionProfile[];
   locations: ConnectionLocationShare[];
+  scheduleProposals: ConnectionScheduleProposal[];
 };
 
-const emptyData: Data = { userId: '', connections: [], requests: [], profiles: [], locations: [] };
+const emptyData: Data = { userId: '', connections: [], requests: [], profiles: [], locations: [], scheduleProposals: [] };
 
 function personName(profile?: LiveConnectionProfile) {
   return profile?.display_name || profile?.full_name || profile?.name || 'Aspire student';
 }
 
 function timerCopy(startAt: string | null, now: number) {
-  if (!startAt) return { label: 'TIME NOT SET', value: 'Coordinate a time', detail: 'Set it together before meeting.' };
+  if (!startAt) return { label: 'TIME NOT SET', value: 'Coordinate a time', detail: 'Propose a time and have the other person accept it.' };
   const start = new Date(startAt).getTime();
   const diff = start - now;
   const abs = Math.abs(diff);
@@ -43,10 +46,16 @@ function timerCopy(startAt: string | null, now: number) {
   const days = Math.floor(hours / 24);
   if (diff > 0) {
     const value = days > 0 ? `Starts in ${days}d ${hours % 24}h` : hours > 0 ? `Starts in ${hours}h ${minutes}m` : `Starts in ${Math.max(1, minutes)}m`;
-    return { label: 'UP NEXT', value, detail: new Date(startAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) };
+    return { label: 'AGREED TIME', value, detail: new Date(startAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) };
   }
-  if (abs < 3_600_000) return { label: 'START TIME', value: 'Starting now', detail: new Date(startAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
-  return { label: 'START TIME PASSED', value: `${hours}h ${minutes}m ago`, detail: 'Use the status buttons to keep the other person updated.' };
+  if (abs < 3_600_000) return { label: 'AGREED START TIME', value: 'Starting now', detail: new Date(startAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+  return { label: 'AGREED TIME PASSED', value: `${hours}h ${minutes}m ago`, detail: 'Use the status buttons to keep the other person updated.' };
+}
+
+function proposalCopy(proposal: ConnectionScheduleProposal) {
+  const start = new Date(proposal.start_at);
+  const when = start.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return proposal.meeting_label ? `${when} · ${proposal.meeting_label}` : when;
 }
 
 function statusLabel(status: LiveConnection['coordination_status']) {
@@ -109,19 +118,32 @@ export default function LiveConnectionStrip() {
     setEndLocal(localEnd);
   }
 
-  async function saveSchedule(connectionId: string) {
+  async function proposeSchedule(connectionId: string) {
     if (!startLocal) return setNotice('Choose a start time first.');
     setBusy(`schedule-${connectionId}`);
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       const startAt = new Date(startLocal).toISOString();
       const endAt = endLocal ? new Date(endLocal).toISOString() : undefined;
-      await setConnectionSchedule(connectionId, startAt, timezone, meetingLabel, endAt);
+      await proposeConnectionSchedule(connectionId, startAt, timezone, meetingLabel, endAt);
       setEditingId('');
       await reload(true);
-      setNotice('Time updated. Both people can see it on the active connection.');
+      setNotice('Time change proposed. The current agreed time stays in place until the other person accepts.');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not update the time.');
+      setNotice(error instanceof Error ? error.message : 'Could not propose the time.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function respondSchedule(proposalId: string, accept: boolean) {
+    setBusy(`proposal-${proposalId}`);
+    try {
+      await respondConnectionSchedule(proposalId, accept);
+      await reload(true);
+      setNotice(accept ? 'Accepted. The proposed time is now the agreed Aspire schedule.' : 'Declined. The current agreed time did not change.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not respond to the time proposal.');
     } finally {
       setBusy('');
     }
@@ -219,6 +241,7 @@ export default function LiveConnectionStrip() {
           const timer = timerCopy(connection.scheduled_start_at, now);
           const myShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === data.userId);
           const otherShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === otherId);
+          const pendingProposal = data.scheduleProposals.find((proposal) => proposal.connection_id === connection.id);
           const openCase = resolutionCases.find((item) => item.connection_id === connection.id && ['submitted', 'under_review'].includes(item.status));
           const mapHref = otherShare ? `https://www.google.com/maps?q=${encodeURIComponent(`${otherShare.latitude},${otherShare.longitude}`)}` : '';
 
@@ -243,17 +266,34 @@ export default function LiveConnectionStrip() {
                 <small>{connection.meeting_label ? `${timer.detail} · ${connection.meeting_label}` : timer.detail}</small>
               </div>
 
+              {pendingProposal && (
+                <div className={styles.scheduleProposal}>
+                  <div>
+                    <span>TIME CHANGE PROPOSED</span>
+                    <strong>{proposalCopy(pendingProposal)}</strong>
+                    <small>{pendingProposal.proposed_by === data.userId ? `Waiting for ${otherName} to accept.` : `${otherName} proposed this change. Your current agreed time stays active until you accept.`}</small>
+                  </div>
+                  {pendingProposal.proposed_by !== data.userId && (
+                    <div className={styles.proposalActions}>
+                      <button type="button" disabled={busy === `proposal-${pendingProposal.id}`} onClick={() => void respondSchedule(pendingProposal.id, false)}>Keep current time</button>
+                      <button className={styles.primary} type="button" disabled={busy === `proposal-${pendingProposal.id}`} onClick={() => void respondSchedule(pendingProposal.id, true)}>Accept new time</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {openCase && <ResolutionCaseStatus item={openCase} currentUserId={data.userId} otherName={otherName} />}
 
               {editingId === connection.id && (
                 <div className={styles.editor}>
                   <div className={styles.editorRow}>
-                    <label>Start time<input type="datetime-local" value={startLocal} onChange={(event) => setStartLocal(event.target.value)} /></label>
+                    <label>Proposed start time<input type="datetime-local" value={startLocal} onChange={(event) => setStartLocal(event.target.value)} /></label>
                     <label>Optional end time<input type="datetime-local" value={endLocal} onChange={(event) => setEndLocal(event.target.value)} /></label>
                   </div>
                   <label>Meeting point or place<input value={meetingLabel} maxLength={240} placeholder="e.g. PMU main entrance" onChange={(event) => setMeetingLabel(event.target.value)} /></label>
+                  <small className={styles.agreementNote}>The existing agreed time does not change until the other person accepts your proposal.</small>
                   <div className={styles.actions}>
-                    <button className={styles.primary} type="button" disabled={busy === `schedule-${connection.id}`} onClick={() => void saveSchedule(connection.id)}>Save time</button>
+                    <button className={styles.primary} type="button" disabled={busy === `schedule-${connection.id}`} onClick={() => void proposeSchedule(connection.id)}>Propose time</button>
                     <button type="button" onClick={() => setEditingId('')}>Cancel</button>
                   </div>
                 </div>
@@ -270,7 +310,7 @@ export default function LiveConnectionStrip() {
 
               <div className={styles.actions}>
                 <a className={styles.primary} href="#my-activity">Message</a>
-                <button type="button" onClick={() => beginSchedule(connection)}>Set time</button>
+                <button type="button" onClick={() => beginSchedule(connection)}>Propose time</button>
                 <button type="button" disabled={busy === `on_the_way-${connection.id}`} onClick={() => void updateStatus(connection.id, 'on_the_way')}>On my way</button>
                 <button type="button" disabled={busy === `running_late-${connection.id}`} onClick={() => void attendanceUpdate(connection.id, 'running_late')}>Running late</button>
                 <button type="button" disabled={busy === `arrived-${connection.id}`} onClick={() => void updateStatus(connection.id, 'arrived')}>I&apos;ve arrived</button>
