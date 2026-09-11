@@ -21,6 +21,9 @@ function eventIcon(type: ConnectionEvent['event_type']) {
   if (type === 'in_progress') return '▶';
   if (type === 'location_shared') return '⌖';
   if (type === 'location_stopped') return '×';
+  if (type === 'issue_opened') return '!';
+  if (type === 'issue_reviewing') return '…';
+  if (type === 'issue_resolved') return '✓';
   return '◉';
 }
 
