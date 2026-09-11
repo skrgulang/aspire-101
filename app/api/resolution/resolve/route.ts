@@ -85,13 +85,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Seller/provider funds were already transferred. This case needs manual reconciliation instead of an automatic refund.' }, { status: 409 });
     }
 
-    // A participant asking for a full no-show refund must be the payer and the reported
-    // account must be the payee. Other case shapes stay review-only so Aspire never sends
-    // money based on the wrong side of a no-show claim.
-    if (resolutionCase.reason === 'no_show') {
-      if (resolutionCase.opened_by !== payment.payer_id || resolutionCase.against_user_id !== payment.payee_id) {
-        return NextResponse.json({ error: 'This no-show case is not eligible for an automatic full refund. Review compensation manually.' }, { status: 409 });
-      }
+    // Automatic refunds always return money to Stripe's original payer. Require the
+    // case itself to have been opened by that payer so a provider-side compensation
+    // claim cannot accidentally trigger a customer refund from the admin console.
+    if (resolutionCase.opened_by !== payment.payer_id) {
+      return NextResponse.json({ error: 'This case was not opened by the payer, so it is not eligible for an automatic customer refund. Review compensation manually.' }, { status: 409 });
+    }
+
+    // A payer asking for a full no-show refund must also have reported the actual payee.
+    // Other no-show shapes stay review-only so Aspire never returns money based on the
+    // wrong side of a no-show claim.
+    if (resolutionCase.reason === 'no_show' && resolutionCase.against_user_id !== payment.payee_id) {
+      return NextResponse.json({ error: 'This no-show case is not eligible for an automatic full refund. Review compensation manually.' }, { status: 409 });
     }
 
     const refundParams: Record<string, string> = {
