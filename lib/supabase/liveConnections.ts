@@ -44,7 +44,17 @@ export type ConnectionEvent = {
   id: number;
   connection_id: string;
   actor_id: string | null;
-  event_type: 'schedule_set' | 'on_the_way' | 'arrived' | 'in_progress' | 'location_shared' | 'location_stopped' | 'reminder';
+  event_type:
+    | 'schedule_set'
+    | 'on_the_way'
+    | 'arrived'
+    | 'in_progress'
+    | 'location_shared'
+    | 'location_stopped'
+    | 'reminder'
+    | 'issue_opened'
+    | 'issue_reviewing'
+    | 'issue_resolved';
   body: string;
   metadata: Record<string, unknown>;
   created_at: string;
