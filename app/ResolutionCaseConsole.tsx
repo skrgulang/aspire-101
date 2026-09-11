@@ -36,6 +36,15 @@ function titleForReason(reason: ConnectionResolutionCase['reason']) {
   return 'Other issue';
 }
 
+function outcomeLabel(status: ConnectionResolutionCase['status']) {
+  if (status === 'resolved_refund') return 'Refunded';
+  if (status === 'resolved_release') return 'Released';
+  if (status === 'resolved_partial') return 'Partial';
+  if (status === 'dismissed') return 'Dismissed';
+  if (status === 'under_review') return 'Under review';
+  return 'Submitted';
+}
+
 function when(value: string) {
   return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
@@ -94,6 +103,7 @@ export default function ResolutionCaseConsole() {
   useEffect(() => { void reload(); }, [reload]);
 
   const openCases = useMemo(() => cases.filter((item) => ['submitted', 'under_review'].includes(item.status)), [cases]);
+  const closedCases = useMemo(() => cases.filter((item) => !['submitted', 'under_review'].includes(item.status)).slice(0, 12), [cases]);
   const responseMap = useMemo(() => {
     const map = new Map<string, ConnectionResolutionResponse[]>();
     responses.forEach((response) => {
@@ -222,6 +232,34 @@ export default function ResolutionCaseConsole() {
           })}
         </div>
       )}
+
+      <div className={styles.audit}>
+        <div className={styles.auditHead}>
+          <div><span>ADMIN AUDIT TRAIL</span><strong>Recent case outcomes</strong></div>
+          <small>{closedCases.length ? `Showing ${closedCases.length} recent closed cases` : 'No closed cases yet'}</small>
+        </div>
+        {!closedCases.length ? (
+          <div className={styles.auditEmpty}>Resolved refunds, dismissals and releases will stay visible here for operational review.</div>
+        ) : (
+          <div className={styles.auditList}>
+            {closedCases.map((item) => (
+              <article className={styles.auditRow} key={`audit-${item.id}`}>
+                <div>
+                  <span>#{item.id.slice(0, 8).toUpperCase()} · {titleForReason(item.reason).toUpperCase()}</span>
+                  <strong>{outcomeLabel(item.status)}</strong>
+                  <small>{item.resolution_note || 'No resolution note recorded.'}</small>
+                </div>
+                <div className={styles.auditFacts}>
+                  {item.refund_cents != null && <span><b>Refund</b>{money(item.refund_cents, item.currency_snapshot)}</span>}
+                  {item.provider_release_cents != null && <span><b>Release</b>{money(item.provider_release_cents, item.currency_snapshot)}</span>}
+                  <span><b>Reviewed</b>{item.reviewed_at ? when(item.reviewed_at) : 'Not recorded'}</span>
+                  <span><b>Reviewer</b>{item.reviewed_by ? item.reviewed_by.slice(0, 8) : 'System / legacy'}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
