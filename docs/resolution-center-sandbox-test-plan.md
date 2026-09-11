@@ -140,13 +140,26 @@ Use a fresh paid-help connection for each destructive payment scenario so one ca
 - Trust & Safety can review agreed schedule, coordination events, participant statements, payment state, cancellation actor, and other platform records without treating location as mandatory evidence.
 - Raw report count alone does not automatically suspend an account.
 
+## K. Cancellation receipt + permanent history
+
+1. Complete scenario D or E so the connection disappears from the active Aspire Live list.
+2. Open `/resolution` as both participants.
+3. Confirm the cancelled connection remains visible under **Cancellation history** even when there is no Resolution Center money case.
+4. Confirm the receipt shows the connection reference, who cancelled, cancellation time, optional cancellation note, and the current payment state.
+5. If a protected payment review exists, confirm the receipt shows **Under Aspire review · provider payout paused** and links to the exact Resolution Center case.
+6. Resolve the case with a refund or dismissal and reload `/resolution`.
+7. Confirm the cancellation receipt remains visible and the payment/case outcome updates without rewriting who cancelled or when the cancellation happened.
+8. Open a legacy/system-cancelled connection with no `connection_cancelled` event and confirm the UI labels the missing actor record instead of inventing one.
+
+**Pass condition:** cancellation history survives after the active connection disappears, keeps the original actor/time immutable, and does not misrepresent fault or money outcomes.
+
 ## Release gate
 
 Do not merge the Resolution Center into a production release until:
 
 - the regression script passes;
 - Vercel preview build passes;
-- scenarios A–J pass in an isolated Supabase branch + Stripe test mode;
-- payout release, cancellation guards, and refund idempotency are verified;
+- scenarios A–K pass in an isolated Supabase branch + Stripe test mode;
+- payout release, cancellation guards, cancellation-history integrity, and refund idempotency are verified;
 - payment-production hardening changes are reconciled;
 - production migrations are reviewed separately before application.
