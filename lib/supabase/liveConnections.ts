@@ -56,6 +56,10 @@ export async function fetchLiveConnections() {
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in.');
 
+  // Location is intentionally temporary. The database also hides expired rows with RLS,
+  // but this keeps old coordinates from lingering when a user returns to Aspire Live.
+  await supabase.rpc('cleanup_expired_connection_locations');
+
   const { data: connectionRows, error: connectionError } = await supabase
     .from('connections')
     .select('id,request_id,requester_id,responder_id,status,scheduled_start_at,scheduled_end_at,timezone,meeting_label,coordination_status,last_coordination_actor_id,last_coordination_at')
