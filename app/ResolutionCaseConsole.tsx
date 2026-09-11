@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchMyRole, AppRole } from '../lib/supabase/trust';
 import {
   ConnectionResolutionCase,
+  ConnectionResolutionResponse,
+  fetchResolutionCaseResponses,
   fetchResolutionCasesForModeration,
   resolveResolutionCase,
   reviewResolutionCase
@@ -32,6 +34,7 @@ function when(value: string) {
 export default function ResolutionCaseConsole() {
   const [role, setRole] = useState<AppRole>('member');
   const [cases, setCases] = useState<ConnectionResolutionCase[]>([]);
+  const [responses, setResponses] = useState<ConnectionResolutionResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState('');
@@ -42,7 +45,10 @@ export default function ResolutionCaseConsole() {
       const nextRole = await fetchMyRole();
       setRole(nextRole);
       if (!['moderator', 'admin'].includes(nextRole)) return;
-      setCases(await fetchResolutionCasesForModeration());
+      const nextCases = await fetchResolutionCasesForModeration();
+      const nextResponses = await fetchResolutionCaseResponses(nextCases.map((item) => item.id)).catch(() => [] as ConnectionResolutionResponse[]);
+      setCases(nextCases);
+      setResponses(nextResponses);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load Resolution Center cases.');
     } finally {
@@ -53,6 +59,15 @@ export default function ResolutionCaseConsole() {
   useEffect(() => { void reload(); }, [reload]);
 
   const openCases = useMemo(() => cases.filter((item) => ['submitted', 'under_review'].includes(item.status)), [cases]);
+  const responseMap = useMemo(() => {
+    const map = new Map<string, ConnectionResolutionResponse[]>();
+    responses.forEach((response) => {
+      const current = map.get(response.case_id) ?? [];
+      current.push(response);
+      map.set(response.case_id, current);
+    });
+    return map;
+  }, [responses]);
 
   async function markReviewing(item: ConnectionResolutionCase) {
     setBusy(`review-${item.id}`);
@@ -107,27 +122,43 @@ export default function ResolutionCaseConsole() {
       {notice && <div className={styles.notice} role="status">{notice}</div>}
       {!openCases.length ? <div className={styles.empty}><strong>✓ No open resolution cases</strong><span>New participant claims will appear here.</span></div> : (
         <div className={styles.list}>
-          {openCases.map((item) => (
-            <article className={styles.card} key={item.id}>
-              <div className={styles.top}>
-                <div><span>{titleForReason(item.reason).toUpperCase()} · {item.status.replace('_', ' ').toUpperCase()}</span><h3>{item.requested_resolution.replace('_', ' ')}</h3></div>
-                <strong>{money(item.payment_total_cents_snapshot, item.currency_snapshot)}</strong>
-              </div>
-              <div className={styles.meta}>
-                <span>Opened {when(item.created_at)}</span>
-                <span>Payment: {item.payment_status_snapshot || 'none'}</span>
-                {item.scheduled_start_snapshot && <span>Agreed time: {when(item.scheduled_start_snapshot)}</span>}
-                {item.meeting_label_snapshot && <span>Place: {item.meeting_label_snapshot}</span>}
-              </div>
-              <p className={styles.details}>{item.details || 'No additional participant note.'}</p>
-              <div className={styles.actions}>
-                {item.status === 'submitted' && <button type="button" onClick={() => void markReviewing(item)} disabled={busy === `review-${item.id}`}>Start review</button>}
-                <button type="button" onClick={() => void dismiss(item)} disabled={busy === `dismiss-${item.id}`}>Dismiss</button>
-                {role === 'admin' && <button className={styles.refund} type="button" onClick={() => void fullRefund(item)} disabled={busy === `refund-${item.id}`}>Full refund</button>}
-              </div>
-              {role !== 'admin' && <small className={styles.adminNote}>Moderators can investigate and dismiss; only an admin can issue a Stripe refund.</small>}
-            </article>
-          ))}
+          {openCases.map((item) => {
+            const caseResponses = responseMap.get(item.id) ?? [];
+            return (
+              <article className={styles.card} key={item.id}>
+                <div className={styles.top}>
+                  <div><span>{titleForReason(item.reason).toUpperCase()} · {item.status.replace('_', ' ').toUpperCase()}</span><h3>{item.requested_resolution.replace('_', ' ')}</h3></div>
+                  <strong>{money(item.payment_total_cents_snapshot, item.currency_snapshot)}</strong>
+                </div>
+                <div className={styles.meta}>
+                  <span>Opened {when(item.created_at)}</span>
+                  <span>Payment: {item.payment_status_snapshot || 'none'}</span>
+                  {item.scheduled_start_snapshot && <span>Agreed time: {when(item.scheduled_start_snapshot)}</span>}
+                  {item.meeting_label_snapshot && <span>Place: {item.meeting_label_snapshot}</span>}
+                  <span>Participant updates: {caseResponses.length}</span>
+                </div>
+                <p className={styles.details}>{item.details || 'No additional participant note.'}</p>
+                {caseResponses.length > 0 && (
+                  <div className={styles.responses}>
+                    <b>PARTICIPANT STATEMENTS</b>
+                    {caseResponses.slice(-5).map((response) => (
+                      <article key={response.id}>
+                        <strong>{response.author_id === item.opened_by ? 'Reporter' : 'Other participant'}</strong>
+                        <p>{response.body}</p>
+                        <time>{when(response.created_at)}</time>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.actions}>
+                  {item.status === 'submitted' && <button type="button" onClick={() => void markReviewing(item)} disabled={busy === `review-${item.id}`}>Start review</button>}
+                  <button type="button" onClick={() => void dismiss(item)} disabled={busy === `dismiss-${item.id}`}>Dismiss</button>
+                  {role === 'admin' && <button className={styles.refund} type="button" onClick={() => void fullRefund(item)} disabled={busy === `refund-${item.id}`}>Full refund</button>}
+                </div>
+                {role !== 'admin' && <small className={styles.adminNote}>Moderators can investigate and dismiss; only an admin can issue a Stripe refund.</small>}
+              </article>
+            );
+          })}
         </div>
       )}
     </section>
