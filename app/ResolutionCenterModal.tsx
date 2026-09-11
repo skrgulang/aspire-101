@@ -29,10 +29,9 @@ const reasons: { value: ResolutionReason; label: string; detail: string }[] = [
 ];
 
 export default function ResolutionCenterModal({ connection, currentUserId, otherUserId, otherName, onClose, onOpened }: Props) {
-  const isRequester = currentUserId === connection.requester_id;
-  const defaultResolution: RequestedResolution = isRequester ? 'refund' : 'provider_compensation';
+  void currentUserId;
   const [reason, setReason] = useState<ResolutionReason>('cancellation');
-  const [requestedResolution, setRequestedResolution] = useState<RequestedResolution>(defaultResolution);
+  const [requestedResolution, setRequestedResolution] = useState<RequestedResolution>('review');
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -101,11 +100,12 @@ export default function ResolutionCenterModal({ connection, currentUserId, other
           <label className={styles.field}>
             <span>What outcome are you asking for?</span>
             <select value={requestedResolution} onChange={(event) => setRequestedResolution(event.target.value as RequestedResolution)}>
-              {isRequester && <option value="refund">Refund my Aspire payment</option>}
-              {!isRequester && <option value="provider_compensation">Provider cancellation / no-show compensation</option>}
-              <option value="partial">Partial refund / partial payment</option>
               <option value="review">Let Aspire decide after review</option>
+              <option value="refund">Refund my Aspire payment — if I was the payer</option>
+              <option value="provider_compensation">Provider cancellation / no-show compensation — if applicable</option>
+              <option value="partial">Partial refund / partial payment</option>
             </select>
+            <small>Aspire verifies the actual payer/payee roles from the transaction record. A request here does not move money automatically.</small>
           </label>
         )}
 
