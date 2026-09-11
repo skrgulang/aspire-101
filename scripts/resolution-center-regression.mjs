@@ -13,6 +13,9 @@ const followupSql = read('supabase/migrations/20260911014000_resolution_followup
 const scheduleSql = read('supabase/migrations/20260911015000_schedule_agreement.sql');
 const lockdownSql = read('supabase/migrations/20260911015100_schedule_agreement_lockdown.sql');
 const cancellationSql = read('supabase/migrations/20260911016000_connection_cancellation.sql');
+const cancellationHistory = read('app/CancellationHistory.tsx');
+const cancellationQueries = read('lib/supabase/cancellations.ts');
+const resolutionPage = read('app/resolution/page.tsx');
 const releaseRoute = read('app/api/stripe/payment/release/route.ts');
 const resolutionRoute = read('app/api/resolution/resolve/route.ts');
 
@@ -43,7 +46,12 @@ const checks = [
   [cancellationSql, "'cancellation_actor_id'", 'cancellation evidence must capture the actor'],
   [cancellationSql, "'voluntary_cancellation', true", 'explicit cancellation evidence must remain distinct from no-show'],
   [cancellationSql, "set status='cancelled'", 'participant cancellation must end the active connection'],
-  [cancellationSql, "'connection_cancelled'", 'participant cancellation must create a shared timeline event']
+  [cancellationSql, "'connection_cancelled'", 'participant cancellation must create a shared timeline event'],
+  [cancellationQueries, ".eq('event_type', 'connection_cancelled')", 'participant cancellation receipts must be loaded from the shared cancellation event'],
+  [cancellationHistory, 'CANCELLATION RECEIPT', 'cancelled connections must retain a user-facing cancellation receipt'],
+  [cancellationHistory, 'Cancellation by itself does not establish fault', 'cancellation history must not imply automatic fault or financial outcome'],
+  [cancellationHistory, 'Under Aspire review · provider payout paused', 'cancellation history must surface protected payment holds'],
+  [resolutionPage, '<CancellationHistory />', 'cancelled connection history must remain reachable from Resolution Center']
 ];
 
 for (const [source, needle, label] of checks) requireText(source, needle, label);
