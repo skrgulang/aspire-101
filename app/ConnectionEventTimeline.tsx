@@ -17,12 +17,15 @@ type Props = {
 function eventIcon(type: ConnectionEvent['event_type']) {
   if (type === 'schedule_set') return '◷';
   if (type === 'on_the_way') return '↗';
+  if (type === 'running_late') return '⏱';
+  if (type === 'cannot_make_it') return '×';
   if (type === 'arrived') return '●';
   if (type === 'in_progress') return '▶';
   if (type === 'location_shared') return '⌖';
   if (type === 'location_stopped') return '×';
   if (type === 'issue_opened') return '!';
   if (type === 'issue_reviewing') return '…';
+  if (type === 'issue_response') return '↳';
   if (type === 'issue_resolved') return '✓';
   return '◉';
 }
