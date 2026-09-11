@@ -36,6 +36,11 @@ export default function ConnectionsPage() {
               <div><strong>View activity</strong><span>Your requests and connections</span></div>
               <UiIcon name="chevron" />
             </a>
+            <a href="/resolution" className={styles.quickAction}>
+              <i><UiIcon name="shield" /></i>
+              <div><strong>Resolution Center</strong><span>No-show, cancellation, payment or safety help</span></div>
+              <UiIcon name="chevron" />
+            </a>
           </section>
 
           <section className={styles.railCard}>
