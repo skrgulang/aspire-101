@@ -80,6 +80,19 @@ export type ConnectionEvent = {
   created_at: string;
 };
 
+function missingPreviewRelation(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return error.code === '42P01'
+    || error.code === 'PGRST205'
+    || /could not find the table|relation .* does not exist/i.test(error.message || '');
+}
+
+function missingPreviewFunction(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return error.code === 'PGRST202'
+    || /could not find the function|function .* does not exist/i.test(error.message || '');
+}
+
 export async function fetchLiveConnections() {
   const supabase = getSupabaseBrowserClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -135,10 +148,8 @@ export async function fetchLiveConnections() {
         .order('created_at', { ascending: false })
     ]);
     locations = (locationRows ?? []) as ConnectionLocationShare[];
-    if (!proposalError || proposalError.code !== '42P01') {
-      if (proposalError) throw proposalError;
-      scheduleProposals = (proposalRows ?? []) as ConnectionScheduleProposal[];
-    }
+    if (proposalError && !missingPreviewRelation(proposalError)) throw proposalError;
+    if (!proposalError) scheduleProposals = (proposalRows ?? []) as ConnectionScheduleProposal[];
   }
 
   return { userId: authData.user.id, connections, requests, profiles, locations, scheduleProposals };
@@ -203,7 +214,10 @@ export async function proposeConnectionSchedule(
     p_meeting_label: meetingLabel?.trim() || null,
     p_end_at: endAt || null
   });
-  if (error) throw error;
+  if (error) {
+    if (missingPreviewFunction(error)) throw new Error('Mutual time proposals are not enabled in this preview database yet.');
+    throw error;
+  }
   return String(data || '');
 }
 
@@ -238,7 +252,10 @@ export async function recordConnectionAttendanceUpdate(
     p_connection_id: connectionId,
     p_update: update
   });
-  if (error) throw error;
+  if (error) {
+    if (missingPreviewFunction(error)) throw new Error('Attendance updates are not enabled in this preview database yet.');
+    throw error;
+  }
 }
 
 export async function shareConnectionLocation(
