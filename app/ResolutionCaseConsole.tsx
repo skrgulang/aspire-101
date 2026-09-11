@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchMyRole, AppRole } from '../lib/supabase/trust';
 import {
+  ConnectionNoShowIncident,
   ConnectionResolutionCase,
   ConnectionResolutionResponse,
+  fetchNoShowIncidents,
   fetchResolutionCaseResponses,
   fetchResolutionCasesForModeration,
   resolveResolutionCase,
@@ -35,6 +37,7 @@ export default function ResolutionCaseConsole() {
   const [role, setRole] = useState<AppRole>('member');
   const [cases, setCases] = useState<ConnectionResolutionCase[]>([]);
   const [responses, setResponses] = useState<ConnectionResolutionResponse[]>([]);
+  const [incidents, setIncidents] = useState<ConnectionNoShowIncident[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState('');
@@ -46,9 +49,13 @@ export default function ResolutionCaseConsole() {
       setRole(nextRole);
       if (!['moderator', 'admin'].includes(nextRole)) return;
       const nextCases = await fetchResolutionCasesForModeration();
-      const nextResponses = await fetchResolutionCaseResponses(nextCases.map((item) => item.id)).catch(() => [] as ConnectionResolutionResponse[]);
+      const [nextResponses, nextIncidents] = await Promise.all([
+        fetchResolutionCaseResponses(nextCases.map((item) => item.id)).catch(() => [] as ConnectionResolutionResponse[]),
+        fetchNoShowIncidents(nextCases.map((item) => item.against_user_id || '')).catch(() => [] as ConnectionNoShowIncident[])
+      ]);
       setCases(nextCases);
       setResponses(nextResponses);
+      setIncidents(nextIncidents);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load Resolution Center cases.');
     } finally {
@@ -68,6 +75,15 @@ export default function ResolutionCaseConsole() {
     });
     return map;
   }, [responses]);
+  const incidentMap = useMemo(() => {
+    const map = new Map<string, ConnectionNoShowIncident[]>();
+    incidents.forEach((incident) => {
+      const current = map.get(incident.user_id) ?? [];
+      current.push(incident);
+      map.set(incident.user_id, current);
+    });
+    return map;
+  }, [incidents]);
 
   async function markReviewing(item: ConnectionResolutionCase) {
     setBusy(`review-${item.id}`);
@@ -124,6 +140,9 @@ export default function ResolutionCaseConsole() {
         <div className={styles.list}>
           {openCases.map((item) => {
             const caseResponses = responseMap.get(item.id) ?? [];
+            const priorIncidents = item.against_user_id ? (incidentMap.get(item.against_user_id) ?? []) : [];
+            const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+            const recentIncidents = priorIncidents.filter((incident) => new Date(incident.created_at).getTime() >= cutoff);
             return (
               <article className={styles.card} key={item.id}>
                 <div className={styles.top}>
@@ -136,7 +155,9 @@ export default function ResolutionCaseConsole() {
                   {item.scheduled_start_snapshot && <span>Agreed time: {when(item.scheduled_start_snapshot)}</span>}
                   {item.meeting_label_snapshot && <span>Place: {item.meeting_label_snapshot}</span>}
                   <span>Participant updates: {caseResponses.length}</span>
+                  {item.against_user_id && <span>Confirmed no-shows: {priorIncidents.length} total · {recentIncidents.length} in 90d</span>}
                 </div>
+                {recentIncidents.length >= 2 && <div className={styles.pattern}><strong>Repeat no-show pattern</strong><span>Human account review recommended. This signal does not automatically suspend the user.</span></div>}
                 <p className={styles.details}>{item.details || 'No additional participant note.'}</p>
                 {caseResponses.length > 0 && (
                   <div className={styles.responses}>
