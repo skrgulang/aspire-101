@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
+import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { fetchConnectionUnreadCounts } from '../lib/supabase/connections';
 
 type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'profile';
 type Theme = 'light' | 'dark';
@@ -28,6 +30,7 @@ const accountItems: DockItem[] = [
 
 export default function AppDock({ active, preview = false }: { active: AppDockTab; preview?: boolean }) {
   const [theme, setTheme] = useState<Theme>('light');
+  const [inboxUnread, setInboxUnread] = useState(0);
 
   useEffect(() => {
     const stored = window.localStorage.getItem('aspire-theme');
@@ -38,6 +41,45 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
     document.documentElement.dataset.aspireTheme = next;
   }, []);
 
+  useEffect(() => {
+    if (preview) return;
+    const supabase = getSupabaseBrowserClient();
+    let alive = true;
+
+    async function refreshUnread() {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (!data.user || !alive) {
+          if (alive) setInboxUnread(0);
+          return;
+        }
+        const rows = await fetchConnectionUnreadCounts();
+        if (!alive) return;
+        setInboxUnread(rows.reduce((sum, row) => sum + Number(row.unread_count || 0), 0));
+      } catch {
+        if (alive) setInboxUnread(0);
+      }
+    }
+
+    void refreshUnread();
+
+    const channel = supabase
+      .channel(`dock-inbox-${Math.random().toString(36).slice(2)}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'connection_messages' }, () => {
+        window.setTimeout(() => { void refreshUnread(); }, 120);
+      })
+      .subscribe();
+
+    const onFocus = () => { void refreshUnread(); };
+    window.addEventListener('focus', onFocus);
+
+    return () => {
+      alive = false;
+      window.removeEventListener('focus', onFocus);
+      void supabase.removeChannel(channel);
+    };
+  }, [preview, active]);
+
   function toggleTheme() {
     const next: Theme = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
@@ -46,17 +88,24 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
   }
 
   function renderItem(item: DockItem) {
+    const showUnread = item.key === 'connections' && inboxUnread > 0;
+    const badgeLabel = inboxUnread > 99 ? '99+' : String(inboxUnread);
+
     return (
       <a
         key={item.key}
         href={preview ? '/ui-preview' : item.href}
         className={`${styles.navItem} ${!item.mobile ? styles.desktopExtra : ''} ${item.key === active ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
         aria-current={item.key === active ? 'page' : undefined}
-        title={item.label}
+        title={showUnread ? `${item.label} · ${inboxUnread} unread` : item.label}
         onClick={preview ? (event) => event.preventDefault() : undefined}
       >
-        <UiIcon name={item.icon} />
+        <span className={styles.iconWrap}>
+          <UiIcon name={item.icon} />
+          {showUnread && <b className={styles.unreadBadge} aria-label={`${inboxUnread} unread messages`}>{badgeLabel}</b>}
+        </span>
         <span>{item.label}</span>
+        {showUnread && <b className={styles.unreadBadgeExpanded} aria-hidden="true">{badgeLabel}</b>}
       </a>
     );
   }
