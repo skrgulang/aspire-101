@@ -25,6 +25,7 @@ const checks = [
   [resolutionRoute, "payment.status !== 'secured'", 'automatic refund must require a secured payment'],
   [resolutionRoute, 'payment.stripe_transfer_id', 'automatic refund must refuse already-transferred provider funds'],
   [resolutionRoute, "role !== 'admin'", 'financial refunds must stay admin-only'],
+  [resolutionRoute, 'resolutionCase.opened_by !== payment.payer_id', 'automatic customer refunds must come from payer-owned cases'],
   [resolutionRoute, 'aspire_resolution_refund_', 'refunds must stay idempotent'],
   [scheduleSql, 'The other participant must respond to this proposal', 'a proposer must not accept their own schedule change'],
   [scheduleSql, "status='accepted'", 'schedule proposals must have an accepted state'],
