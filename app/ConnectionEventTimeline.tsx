@@ -21,6 +21,7 @@ function eventIcon(type: ConnectionEvent['event_type']) {
   if (type === 'on_the_way') return '↗';
   if (type === 'running_late') return '⏱';
   if (type === 'cannot_make_it') return '×';
+  if (type === 'connection_cancelled') return '⊘';
   if (type === 'arrived') return '●';
   if (type === 'in_progress') return '▶';
   if (type === 'location_shared') return '⌖';
@@ -48,6 +49,10 @@ function scheduleCopy(event: ConnectionEvent) {
 
 function eventCopy(event: ConnectionEvent) {
   if (event.event_type === 'schedule_set' || event.event_type === 'schedule_proposed') return scheduleCopy(event);
+  if (event.event_type === 'connection_cancelled') {
+    const note = typeof event.metadata?.note === 'string' ? event.metadata.note.trim() : '';
+    return note ? `${event.body} Note: ${note}` : event.body;
+  }
   return event.body;
 }
 
