@@ -40,12 +40,29 @@ export type ConnectionLocationShare = {
   updated_at: string;
 };
 
+export type ConnectionScheduleProposal = {
+  id: string;
+  connection_id: string;
+  proposed_by: string;
+  start_at: string;
+  end_at: string | null;
+  timezone: string | null;
+  meeting_label: string | null;
+  status: 'pending' | 'accepted' | 'declined' | 'superseded';
+  responded_by: string | null;
+  responded_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ConnectionEvent = {
   id: number;
   connection_id: string;
   actor_id: string | null;
   event_type:
     | 'schedule_set'
+    | 'schedule_proposed'
+    | 'schedule_declined'
     | 'on_the_way'
     | 'arrived'
     | 'in_progress'
@@ -85,6 +102,7 @@ export async function fetchLiveConnections() {
   let requests: LiveConnectionRequest[] = [];
   let profiles: LiveConnectionProfile[] = [];
   let locations: ConnectionLocationShare[] = [];
+  let scheduleProposals: ConnectionScheduleProposal[] = [];
 
   if (requestIds.length) {
     const { data } = await supabase
@@ -103,15 +121,27 @@ export async function fetchLiveConnections() {
   }
 
   if (connectionIds.length) {
-    const { data } = await supabase
-      .from('connection_live_locations')
-      .select('connection_id,user_id,latitude,longitude,accuracy_meters,expires_at,updated_at')
-      .in('connection_id', connectionIds)
-      .gt('expires_at', new Date().toISOString());
-    locations = (data ?? []) as ConnectionLocationShare[];
+    const [{ data: locationRows }, { data: proposalRows, error: proposalError }] = await Promise.all([
+      supabase
+        .from('connection_live_locations')
+        .select('connection_id,user_id,latitude,longitude,accuracy_meters,expires_at,updated_at')
+        .in('connection_id', connectionIds)
+        .gt('expires_at', new Date().toISOString()),
+      supabase
+        .from('connection_schedule_proposals')
+        .select('id,connection_id,proposed_by,start_at,end_at,timezone,meeting_label,status,responded_by,responded_at,created_at,updated_at')
+        .in('connection_id', connectionIds)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+    ]);
+    locations = (locationRows ?? []) as ConnectionLocationShare[];
+    if (!proposalError || proposalError.code !== '42P01') {
+      if (proposalError) throw proposalError;
+      scheduleProposals = (proposalRows ?? []) as ConnectionScheduleProposal[];
+    }
   }
 
-  return { userId: authData.user.id, connections, requests, profiles, locations };
+  return { userId: authData.user.id, connections, requests, profiles, locations, scheduleProposals };
 }
 
 export async function fetchConnectionEvents(connectionId: string) {
@@ -156,6 +186,35 @@ export async function setConnectionSchedule(
     p_end_at: endAt || null
   });
   if (error) throw error;
+}
+
+export async function proposeConnectionSchedule(
+  connectionId: string,
+  startAt: string,
+  timezone: string,
+  meetingLabel?: string,
+  endAt?: string
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('propose_connection_schedule', {
+    p_connection_id: connectionId,
+    p_start_at: startAt,
+    p_timezone: timezone,
+    p_meeting_label: meetingLabel?.trim() || null,
+    p_end_at: endAt || null
+  });
+  if (error) throw error;
+  return String(data || '');
+}
+
+export async function respondConnectionSchedule(proposalId: string, accept: boolean) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('respond_connection_schedule', {
+    p_proposal_id: proposalId,
+    p_accept: accept
+  });
+  if (error) throw error;
+  return String(data || '');
 }
 
 export async function setConnectionCoordinationStatus(
