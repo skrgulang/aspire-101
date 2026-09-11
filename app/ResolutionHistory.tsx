@@ -28,6 +28,11 @@ function money(cents: number | null, currency: string | null) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD' }).format(cents / 100);
 }
 
+function reviewedWhen(value: string | null) {
+  if (!value) return 'Completed by Aspire review';
+  return new Date(value).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 export default function ResolutionHistory() {
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchMyResolutionHistory>> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +92,7 @@ export default function ResolutionHistory() {
             const request = requestMap.get(item.request_id);
             const status = statusCopy(item);
             const amount = money(item.payment_total_cents_snapshot, item.currency_snapshot);
+            const refundAmount = money(item.refund_cents ?? item.payment_total_cents_snapshot, item.currency_snapshot);
             const isOpen = ['submitted', 'under_review'].includes(item.status);
             const openedByMe = item.opened_by === data?.userId;
             return (
@@ -102,6 +108,17 @@ export default function ResolutionHistory() {
                   {item.scheduled_start_snapshot && <span>Agreed time {new Date(item.scheduled_start_snapshot).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>}
                 </div>
                 {item.resolution_note && <div className={styles.note}><b>Aspire resolution</b><p>{item.resolution_note}</p></div>}
+                {item.status === 'resolved_refund' && (
+                  <div className={styles.receipt} aria-label="Refund receipt">
+                    <div className={styles.receiptTop}><span>REFUND RECEIPT</span><strong>{refundAmount || 'Refund approved'}</strong></div>
+                    <div className={styles.receiptGrid}>
+                      <span><b>Aspire case</b><small>#{item.id.slice(0, 8).toUpperCase()}</small></span>
+                      <span><b>Decision</b><small>{reviewedWhen(item.reviewed_at)}</small></span>
+                      <span><b>Payment state</b><small>Refund issued · provider payout stopped</small></span>
+                    </div>
+                    <p>This is your Aspire resolution record. Your card or bank can take additional time to post the refund after Stripe accepts it.</p>
+                  </div>
+                )}
                 <div className={styles.actions}>
                   {isOpen ? <a href="/connections">Open active connection →</a> : <a href="/transactions">View transactions →</a>}
                   <a className={styles.policy} href="/resolution-policy">Policy</a>
