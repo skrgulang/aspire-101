@@ -1,11 +1,4 @@
 import { getSupabaseBrowserClient } from './client';
-import {
-  clearPostCoverPreference,
-  coverSourceForAsset,
-  fetchRecommendedCover,
-  readPostCoverPreference,
-  type RequestCoverSource
-} from './coverImages';
 import { runRequestAiSafety } from './trust';
 
 export type RequestKind =
@@ -48,13 +41,6 @@ export function detectRequestLanguage(locale?: string | null): RequestLanguageCo
   return 'en';
 }
 
-function readPreferredPostLanguage(): RequestLanguageCode {
-  if (typeof window === 'undefined') return 'en';
-  const stored = window.localStorage.getItem('aspire:post-language');
-  if (stored && requestLanguages.some((item) => item.value === stored)) return stored as RequestLanguageCode;
-  return detectRequestLanguage(window.navigator.language);
-}
-
 export type AspireRequest = {
   id: string;
   poster_id: string;
@@ -80,9 +66,6 @@ export type AspireRequest = {
   fulfillment_method?: FulfillmentMethod | null;
   quantity?: number;
   language_code?: RequestLanguageCode;
-  cover_image_url?: string | null;
-  cover_image_source?: RequestCoverSource;
-  cover_image_asset_id?: string | null;
   moderation_status?: RequestModerationStatus;
   moderation_flags?: string[];
   moderation_version?: string;
@@ -121,9 +104,6 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
   fulfillment_method?: FulfillmentMethod;
   quantity?: number;
   language_code?: RequestLanguageCode;
-  cover_image_url?: string | null;
-  cover_image_source?: RequestCoverSource;
-  cover_image_asset_id?: string | null;
 };
 
 function friendlyPolicyError(error: { message?: string; details?: string; hint?: string }, fallback: string) {
@@ -177,34 +157,6 @@ export async function createRequest(input: CreateRequestInput) {
     throw new Error('Verify your school identity in Profile before posting.');
   }
 
-  let coverImageUrl = input.cover_image_url ?? null;
-  let coverImageAssetId = input.cover_image_asset_id ?? null;
-  let coverImageSource: RequestCoverSource = input.cover_image_source ?? 'none';
-
-  if (input.cover_image_source === undefined) {
-    const preference = readPostCoverPreference(input.campusId);
-    if (preference?.mode === 'none') {
-      coverImageUrl = null;
-      coverImageAssetId = null;
-      coverImageSource = 'none';
-    } else if (preference?.mode === 'asset') {
-      coverImageUrl = preference.image_url;
-      coverImageAssetId = preference.asset_id;
-      coverImageSource = preference.source;
-    } else {
-      try {
-        const recommended = await fetchRecommendedCover(input.campusId, input.category);
-        if (recommended) {
-          coverImageUrl = recommended.image_url;
-          coverImageAssetId = recommended.id;
-          coverImageSource = coverSourceForAsset(recommended);
-        }
-      } catch {
-        // Recommended artwork is presentation-only and must never block posting.
-      }
-    }
-  }
-
   const isMarket = input.kind === 'buy_sell';
   const scheduled = Boolean(input.scheduled_start_at);
   const { data, error } = await supabase
@@ -230,16 +182,12 @@ export async function createRequest(input: CreateRequestInput) {
       price_negotiable: isMarket ? Boolean(input.price_negotiable) : false,
       fulfillment_method: isMarket ? input.fulfillment_method || 'campus_pickup' : null,
       quantity: isMarket ? Math.max(1, Math.min(99, input.quantity || 1)) : 1,
-      language_code: input.language_code || readPreferredPostLanguage(),
-      cover_image_url: coverImageUrl,
-      cover_image_source: coverImageSource,
-      cover_image_asset_id: coverImageAssetId
+      language_code: input.language_code || 'en'
     })
     .select('*')
     .single();
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
-  clearPostCoverPreference();
   notifyCampusFeedChanged();
   await runRequestAiSafety(data.id).catch(() => undefined);
   return data as AspireRequest;
