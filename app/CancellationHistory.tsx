@@ -25,11 +25,7 @@ function money(cents: number | null | undefined, currency = 'USD') {
 function when(value: string | null | undefined) {
   if (!value) return 'Time not recorded';
   return new Date(value).toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
+    month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
   });
 }
 
@@ -48,12 +44,8 @@ function paymentSummary(
   resolutionCase: ConnectionResolutionCase | undefined,
   paymentMethod: 'none' | 'in_person' | 'aspire'
 ) {
-  if (resolutionCase && ['submitted', 'under_review'].includes(resolutionCase.status)) {
-    return 'Under Aspire review · provider payout paused';
-  }
-  if (!payment) {
-    return paymentMethod === 'aspire' ? 'No secured Aspire payment' : 'No Pay with Aspire transaction';
-  }
+  if (resolutionCase && ['submitted', 'under_review'].includes(resolutionCase.status)) return 'Under Aspire review · provider payout paused';
+  if (!payment) return paymentMethod === 'aspire' ? 'No secured Aspire payment' : 'No Pay with Aspire transaction';
   if (payment.status === 'refunded') return 'Refund issued';
   if (payment.status === 'released') return 'Provider payout released';
   if (payment.status === 'disputed') return 'Card dispute open';
@@ -102,22 +94,18 @@ export default function CancellationHistory() {
   const paymentMap = useMemo(() => new Map((data?.payments ?? []).map((item) => [item.connection_id, item])), [data]);
   const caseMap = useMemo(() => {
     const map = new Map<string, ConnectionResolutionCase>();
-    (data?.cases ?? []).forEach((item) => {
-      if (!map.has(item.connection_id)) map.set(item.connection_id, item);
-    });
+    (data?.cases ?? []).forEach((item) => { if (!map.has(item.connection_id)) map.set(item.connection_id, item); });
     return map;
   }, [data]);
   const eventMap = useMemo(() => {
     const map = new Map<string, CancellationData['events'][number]>();
-    (data?.events ?? []).forEach((item) => {
-      if (!map.has(item.connection_id)) map.set(item.connection_id, item);
-    });
+    (data?.events ?? []).forEach((item) => { if (!map.has(item.connection_id)) map.set(item.connection_id, item); });
     return map;
   }, [data]);
 
   const reviewCount = useMemo(() => (data?.cases ?? []).filter((item) => ['submitted', 'under_review'].includes(item.status)).length, [data]);
 
-  if (loading) return <div className={styles.loading}><span /><strong>Loading cancellation history…</strong></div>;
+  if (loading) return <div className={styles.loading}><span /><strong>Loading past activity…</strong></div>;
   if (error) return <div className={styles.error}><strong>Couldn’t load cancellation history.</strong><p>{error}</p></div>;
   if (!data?.connections.length) return null;
 
@@ -125,14 +113,14 @@ export default function CancellationHistory() {
     <section className={styles.section} aria-label="Cancelled Aspire connections">
       <header className={styles.head}>
         <div>
-          <span>CANCELLED CONNECTIONS</span>
-          <h2>Cancellation history</h2>
-          <p>Cancelled connections stay visible here so both participants can see who cancelled, when it happened, and what happened to any protected payment.</p>
+          <span>PAST ACTIVITY</span>
+          <h2>Cancelled connections</h2>
+          <p>A clean record of what happened, who cancelled, and what Aspire did with any protected payment.</p>
         </div>
         <div className={styles.summary}>
           <strong>{data.connections.length}</strong>
-          <span>saved receipts</span>
-          {reviewCount > 0 && <small>{reviewCount} under review</small>}
+          <span>saved</span>
+          {reviewCount > 0 && <small>{reviewCount} in review</small>}
         </div>
       </header>
 
@@ -145,50 +133,64 @@ export default function CancellationHistory() {
           const otherId = data.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
           const otherName = personName(profileMap.get(otherId));
           const actorCopy = !event?.actor_id
-            ? 'Cancellation actor not recorded · legacy or Aspire-closed record'
+            ? 'Cancellation actor not recorded'
             : event.actor_id === data.userId
               ? 'Cancelled by you'
               : event.actor_id === otherId
                 ? `Cancelled by ${otherName}`
-                : 'Cancelled through an Aspire record';
+                : 'Cancelled through Aspire';
           const note = typeof event?.metadata?.note === 'string' ? event.metadata.note.trim() : '';
           const amount = money(payment?.customer_total_cents ?? payment?.gross_amount_cents, payment?.currency || 'USD');
           const paymentCopy = paymentSummary(payment, resolutionCase, connection.payment_method);
           const resolutionCopy = caseStatus(resolutionCase);
           const protectedReview = Boolean(resolutionCase && ['submitted', 'under_review'].includes(resolutionCase.status));
+          const outcome = protectedReview ? 'Aspire review' : payment?.status === 'refunded' ? 'Refunded' : resolutionCase ? resolutionCopy || 'Case closed' : 'Closed';
 
           return (
             <article className={styles.card} key={connection.id}>
-              <div className={styles.top}>
-                <div>
+              <div className={styles.cardHero}>
+                <div className={styles.icon} aria-hidden="true">×</div>
+                <div className={styles.identity}>
                   <span>{request?.category?.toUpperCase() || 'ASPIRE CONNECTION'}</span>
                   <h3>{request?.title || 'Cancelled Aspire connection'}</h3>
-                  <small>With {otherName}</small>
+                  <small>With {otherName} · {when(event?.created_at || connection.updated_at)}</small>
                 </div>
-                <div className={styles.cancelledBadge}>CANCELLED</div>
+                <div className={styles.heroRight}>
+                  {amount && <strong>{amount}</strong>}
+                  <div className={styles.cancelledBadge}>Cancelled</div>
+                </div>
+              </div>
+
+              <div className={styles.activityLine}>
+                <span><i className={styles.doneDot} />Connected</span>
+                <b />
+                <span><i className={styles.cancelDot} />Cancelled</span>
+                <b />
+                <span><i className={protectedReview ? styles.reviewDot : styles.doneDot} />{outcome}</span>
               </div>
 
               <div className={styles.receipt} aria-label="Cancellation receipt">
                 <div className={styles.receiptHead}>
                   <div><span>CANCELLATION RECEIPT</span><strong>{actorCopy}</strong></div>
-                  {amount && <b>{amount}</b>}
+                  <small>#{connection.id.slice(0, 8).toUpperCase()}</small>
                 </div>
+
                 <div className={styles.facts}>
-                  <span><b>Connection</b><small>#{connection.id.slice(0, 8).toUpperCase()}</small></span>
-                  <span><b>Cancelled</b><small>{when(event?.created_at || connection.updated_at)}</small></span>
-                  <span><b>Payment</b><small>{paymentCopy}</small></span>
-                  <span><b>Resolution</b><small>{resolutionCase ? `#${resolutionCase.id.slice(0, 8).toUpperCase()} · ${resolutionCopy}` : 'No Resolution Center case required'}</small></span>
+                  <div><b>Payment</b><p>{paymentCopy}</p></div>
+                  <div><b>Resolution</b><p>{resolutionCase ? `#${resolutionCase.id.slice(0, 8).toUpperCase()} · ${resolutionCopy}` : 'No case required'}</p></div>
                 </div>
-                {note && <div className={styles.note}><b>Cancellation note</b><p>{note}</p></div>}
-                {protectedReview && <div className={styles.hold}><strong>Payment protected · payout paused</strong><span>Aspire review must close before any eligible provider payout or refund decision.</span></div>}
-                {!event && <div className={styles.legacy}><strong>Legacy / system closure</strong><span>This connection is cancelled, but it does not contain the newer participant cancellation receipt event.</span></div>}
-                <p className={styles.disclaimer}>This receipt records what happened in Aspire. Cancellation by itself does not establish fault or automatically decide a refund, compensation, or account penalty.</p>
+
+                {protectedReview && <div className={styles.hold}><i>✓</i><div><strong>Payment protected</strong><span>Provider payout stays paused until Aspire review closes.</span></div></div>}
+                {note && <div className={styles.note}><b>Note from cancellation</b><p>“{note}”</p></div>}
+                {!event && <div className={styles.legacy}><strong>Legacy / system closure</strong><span>This older record does not contain the newer participant cancellation event, so Aspire does not guess who cancelled it.</span></div>}
+
+                <p className={styles.disclaimer}>Cancellation records the event; it does not automatically assign fault, a refund, compensation, or an account penalty.</p>
               </div>
 
               <div className={styles.actions}>
-                {resolutionCase && <a href={`/resolution#case-${resolutionCase.id}`}>View Resolution Center case →</a>}
-                <a className={styles.secondary} href="/transactions">View transactions</a>
-                <a className={styles.secondary} href="/resolution-policy">Cancellation policy</a>
+                {resolutionCase && <a href={`/resolution#case-${resolutionCase.id}`}>View case <span>→</span></a>}
+                <a className={styles.secondary} href="/transactions">Transaction</a>
+                <a className={styles.ghost} href="/resolution-policy">Policy</a>
               </div>
             </article>
           );
