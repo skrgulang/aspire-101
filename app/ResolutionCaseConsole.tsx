@@ -63,6 +63,7 @@ function eventLabel(type?: string) {
   if (type === 'on_the_way') return 'On the way';
   if (type === 'running_late') return 'Running late';
   if (type === 'cannot_make_it') return 'Can’t make it';
+  if (type === 'connection_cancelled') return 'Connection cancelled';
   if (type === 'arrived') return 'Arrived';
   if (type === 'in_progress') return 'Task started';
   if (type === 'location_shared') return 'Location shared';
