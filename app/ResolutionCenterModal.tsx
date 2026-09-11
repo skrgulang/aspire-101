@@ -31,7 +31,7 @@ const reasons: { value: ResolutionReason; label: string; detail: string }[] = [
 export default function ResolutionCenterModal({ connection, currentUserId, otherUserId, otherName, onClose, onOpened }: Props) {
   const isRequester = currentUserId === connection.requester_id;
   const defaultResolution: RequestedResolution = isRequester ? 'refund' : 'provider_compensation';
-  const [reason, setReason] = useState<ResolutionReason>('no_show');
+  const [reason, setReason] = useState<ResolutionReason>('cancellation');
   const [requestedResolution, setRequestedResolution] = useState<RequestedResolution>(defaultResolution);
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
