@@ -23,6 +23,7 @@ as $$
 declare
   v_connection public.connections;
   v_payment public.connection_payments;
+  v_has_payment boolean := false;
   v_other uuid;
   v_case_id uuid;
   v_existing_case_id uuid;
@@ -56,12 +57,13 @@ begin
   from public.connection_payments
   where connection_id = p_connection_id
   limit 1;
+  v_has_payment := found;
 
   -- Do not let a cancellation race an unsettled checkout or hide a post-release money issue.
-  if found and v_payment.status in ('processing','checkout_created') then
+  if v_has_payment and v_payment.status in ('processing','checkout_created') then
     raise exception 'PAYMENT_STILL_PROCESSING';
   end if;
-  if found and v_payment.status in ('released','disputed') then
+  if v_has_payment and v_payment.status in ('released','disputed') then
     raise exception 'PAYMENT_NEEDS_RESOLUTION_CENTER';
   end if;
 
@@ -72,7 +74,7 @@ begin
   order by created_at desc
   limit 1;
 
-  if found and v_payment.status = 'secured' then
+  if v_has_payment and v_payment.status = 'secured' then
     v_review_required := true;
 
     if v_existing_case_id is not null then
@@ -185,7 +187,7 @@ begin
     'status','cancelled',
     'resolution_case_id',v_case_id,
     'review_required',v_review_required,
-    'payment_status',case when v_payment.id is null then null else v_payment.status end
+    'payment_status',case when v_has_payment then v_payment.status else null end
   );
 end;
 $$;
