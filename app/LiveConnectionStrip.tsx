@@ -12,6 +12,13 @@ import {
   shareConnectionLocation,
   stopConnectionLocationShare
 } from '../lib/supabase/liveConnections';
+import { cancelConnection } from '../lib/supabase/connections';
+import {
+  confirmConnectionCompletion,
+  fetchCompletionConfirmations,
+  releaseAspirePayment,
+  type CompletionConfirmation
+} from '../lib/supabase/payments';
 import ConnectionEventTimeline from './ConnectionEventTimeline';
 import styles from './LiveConnectionStrip.module.css';
 
@@ -21,9 +28,10 @@ type Data = {
   requests: LiveConnectionRequest[];
   profiles: LiveConnectionProfile[];
   locations: ConnectionLocationShare[];
+  completions: CompletionConfirmation[];
 };
 
-const emptyData: Data = { userId: '', connections: [], requests: [], profiles: [], locations: [] };
+const emptyData: Data = { userId: '', connections: [], requests: [], profiles: [], locations: [], completions: [] };
 
 function personName(profile?: LiveConnectionProfile) {
   return profile?.display_name || profile?.full_name || profile?.name || 'Aspire student';
@@ -53,6 +61,14 @@ function statusLabel(status: LiveConnection['coordination_status']) {
   return 'Planning';
 }
 
+function stageIndex(status: LiveConnection['coordination_status'], selfComplete: boolean) {
+  if (selfComplete) return 4;
+  if (status === 'in_progress') return 3;
+  if (status === 'arrived') return 2;
+  if (status === 'on_the_way') return 1;
+  return 0;
+}
+
 export default function LiveConnectionStrip() {
   const [data, setData] = useState<Data>(emptyData);
   const [loading, setLoading] = useState(true);
@@ -68,7 +84,10 @@ export default function LiveConnectionStrip() {
     if (!quiet) setLoading(true);
     try {
       const next = await fetchLiveConnections();
-      setData(next);
+      const completions = next.connections.length
+        ? await fetchCompletionConfirmations(next.connections.map((connection) => connection.id)).catch(() => [] as CompletionConfirmation[])
+        : [];
+      setData({ ...next, completions });
       setNotice('');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load active connections.');
@@ -87,7 +106,7 @@ export default function LiveConnectionStrip() {
   const requestMap = useMemo(() => new Map(data.requests.map((request) => [request.id, request])), [data.requests]);
   const profileMap = useMemo(() => new Map(data.profiles.map((profile) => [profile.id, profile])), [data.profiles]);
 
-  function beginSchedule(connection: LiveConnection) {
+  function beginSchedule(connection: LiveConnection, reschedule = false) {
     setEditingId(connection.id);
     setMeetingLabel(connection.meeting_label || '');
     const localValue = connection.scheduled_start_at
@@ -98,6 +117,7 @@ export default function LiveConnectionStrip() {
       : '';
     setStartLocal(localValue);
     setEndLocal(localEnd);
+    if (reschedule) setNotice('Need a different time? Update the plan here, then message the other person so the change is clear.');
   }
 
   async function saveSchedule(connectionId: string) {
@@ -123,9 +143,54 @@ export default function LiveConnectionStrip() {
     try {
       await setConnectionCoordinationStatus(connectionId, status);
       await reload(true);
-      setNotice(status === 'on_the_way' ? 'The other person can now see that you are on the way.' : status === 'arrived' ? 'Marked arrived.' : 'Marked in progress.');
+      setNotice(status === 'on_the_way' ? 'The other person can now see that you are on the way.' : status === 'arrived' ? 'Marked arrived.' : 'Task started. When it is finished, mark the connection complete.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not update your status.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function completeConnection(connection: LiveConnection) {
+    setBusy(`complete-${connection.id}`);
+    try {
+      const count = await confirmConnectionCompletion(connection.id);
+      if (count >= 2 && connection.payment_method === 'aspire') {
+        try {
+          await releaseAspirePayment(connection.id);
+          setNotice('Both people marked complete. Aspire payment release was started and this connection is moving to history.');
+        } catch (releaseError) {
+          setNotice(releaseError instanceof Error
+            ? `Both people marked complete. ${releaseError.message}`
+            : 'Both people marked complete. Payment release is still being finalized.');
+        }
+      } else if (count >= 2) {
+        setNotice('Both people marked complete. This connection is moving to history.');
+      } else {
+        setNotice('You marked this complete. Waiting for the other person before Aspire closes it.');
+      }
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not mark this connection complete.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function cancelActiveConnection(connection: LiveConnection) {
+    const protectedCopy = connection.payment_method === 'aspire'
+      ? ' If an Aspire payment is secured, it will stay protected and will not be paid out automatically.'
+      : '';
+    if (!window.confirm(`Cancel this connection? This closes the active plan.${protectedCopy}`)) return;
+    setBusy(`cancel-${connection.id}`);
+    try {
+      await cancelConnection(connection.id);
+      setNotice(connection.payment_method === 'aspire'
+        ? 'Connection cancelled. Any secured Aspire payment stays protected; cancellation does not automatically release money.'
+        : 'Connection cancelled. It is no longer active.');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not cancel this connection.');
     } finally {
       setBusy('');
     }
@@ -180,7 +245,7 @@ export default function LiveConnectionStrip() {
           <p className={styles.eyebrow}>ASPIRE LIVE</p>
           <h2>Active connections</h2>
         </div>
-        <p>Coordinate time, arrival and optional location without leaving Aspire.</p>
+        <p>Plan it, meet, finish, and close the loop without leaving Aspire.</p>
       </div>
 
       {notice && <div className={styles.notice} role="status">{notice}</div>}
@@ -194,7 +259,11 @@ export default function LiveConnectionStrip() {
           const timer = timerCopy(connection.scheduled_start_at, now);
           const myShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === data.userId);
           const otherShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === otherId);
+          const myCompletion = data.completions.some((item) => item.connection_id === connection.id && item.user_id === data.userId);
+          const otherCompletion = data.completions.some((item) => item.connection_id === connection.id && item.user_id === otherId);
+          const currentStage = stageIndex(connection.coordination_status, myCompletion);
           const mapHref = otherShare ? `https://www.google.com/maps?q=${encodeURIComponent(`${otherShare.latitude},${otherShare.longitude}`)}` : '';
+          const stages = ['Plan', 'On the way', 'Arrived', 'In progress', 'Complete'];
 
           return (
             <article key={connection.id} className={styles.card}>
@@ -211,6 +280,15 @@ export default function LiveConnectionStrip() {
                 <p>{[request?.category, request?.campus].filter(Boolean).join(' · ') || 'Campus connection'}</p>
               </div>
 
+              <div className={styles.journey} aria-label="Connection progress">
+                {stages.map((stage, index) => (
+                  <div className={index < currentStage ? styles.stageDone : index === currentStage ? styles.stageCurrent : ''} key={stage}>
+                    <i>{index < currentStage ? '✓' : index + 1}</i>
+                    <span>{stage}</span>
+                  </div>
+                ))}
+              </div>
+
               <div className={styles.timer}>
                 <span>{timer.label}</span>
                 <strong>{timer.value}</strong>
@@ -225,8 +303,8 @@ export default function LiveConnectionStrip() {
                   </div>
                   <label>Meeting point or place<input value={meetingLabel} maxLength={240} placeholder="e.g. PMU main entrance" onChange={(event) => setMeetingLabel(event.target.value)} /></label>
                   <div className={styles.actions}>
-                    <button className={styles.primary} type="button" disabled={busy === `schedule-${connection.id}`} onClick={() => void saveSchedule(connection.id)}>Save time</button>
-                    <button type="button" onClick={() => setEditingId('')}>Cancel</button>
+                    <button className={styles.primary} type="button" disabled={busy === `schedule-${connection.id}`} onClick={() => void saveSchedule(connection.id)}>Save plan</button>
+                    <button type="button" onClick={() => setEditingId('')}>Close</button>
                   </div>
                 </div>
               )}
@@ -241,16 +319,34 @@ export default function LiveConnectionStrip() {
               <ConnectionEventTimeline connectionId={connection.id} userId={data.userId} otherName={otherName} />
 
               <div className={styles.actions}>
-                <a className={styles.primary} href="#my-activity">Message</a>
+                <a className={styles.primary} href="#my-activity">Open chat ↓</a>
                 <button type="button" onClick={() => beginSchedule(connection)}>Set time</button>
+                <button type="button" onClick={() => beginSchedule(connection, true)}>Reschedule</button>
                 <button type="button" disabled={busy === `on_the_way-${connection.id}`} onClick={() => void updateStatus(connection.id, 'on_the_way')}>On my way</button>
                 <button type="button" disabled={busy === `arrived-${connection.id}`} onClick={() => void updateStatus(connection.id, 'arrived')}>I&apos;ve arrived</button>
                 <button type="button" disabled={busy === `in_progress-${connection.id}`} onClick={() => void updateStatus(connection.id, 'in_progress')}>Start task</button>
+                {!myCompletion ? (
+                  <button className={styles.complete} type="button" disabled={busy === `complete-${connection.id}`} onClick={() => void completeConnection(connection)}>
+                    {busy === `complete-${connection.id}` ? 'Saving…' : 'Complete ✓'}
+                  </button>
+                ) : (
+                  <span className={styles.waiting}>{otherCompletion ? 'Both marked complete' : 'You completed · waiting on them'}</span>
+                )}
                 {!myShare ? (
                   <button type="button" disabled={busy === `location-${connection.id}`} onClick={() => void shareLocation(connection.id)}>Share location · 30m</button>
                 ) : (
                   <button className={styles.danger} type="button" disabled={busy === `stop-location-${connection.id}`} onClick={() => void stopLocation(connection.id)}>Stop sharing</button>
                 )}
+              </div>
+
+              <div className={styles.closeout}>
+                <div><strong>Plans changed?</strong><span>Reschedule if you still intend to meet. Cancel only when this connection is actually ending.</span></div>
+                <div className={styles.closeoutActions}>
+                  <a href="/safety">Get help</a>
+                  <button type="button" disabled={busy === `cancel-${connection.id}`} onClick={() => void cancelActiveConnection(connection)}>
+                    {busy === `cancel-${connection.id}` ? 'Cancelling…' : 'Cancel connection'}
+                  </button>
+                </div>
               </div>
 
               <div className={styles.privacy}><strong>Location is always optional.</strong> It is shared only after browser permission, only with the other person in this connection, and expires automatically.</div>
