@@ -16,6 +16,7 @@ import {
   stopConnectionLocationShare
 } from '../lib/supabase/liveConnections';
 import { ConnectionResolutionCase, fetchResolutionCases } from '../lib/supabase/resolution';
+import CancelConnectionModal from './CancelConnectionModal';
 import ConnectionEventTimeline from './ConnectionEventTimeline';
 import ResolutionCaseStatus from './ResolutionCaseStatus';
 import ResolutionCenterModal from './ResolutionCenterModal';
@@ -74,6 +75,7 @@ export default function LiveConnectionStrip() {
   const [busy, setBusy] = useState('');
   const [editingId, setEditingId] = useState('');
   const [helpConnectionId, setHelpConnectionId] = useState('');
+  const [cancelConnectionId, setCancelConnectionId] = useState('');
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
   const [meetingLabel, setMeetingLabel] = useState('');
@@ -104,6 +106,7 @@ export default function LiveConnectionStrip() {
   const requestMap = useMemo(() => new Map(data.requests.map((request) => [request.id, request])), [data.requests]);
   const profileMap = useMemo(() => new Map(data.profiles.map((profile) => [profile.id, profile])), [data.profiles]);
   const helpConnection = data.connections.find((connection) => connection.id === helpConnectionId) ?? null;
+  const cancelConnection = data.connections.find((connection) => connection.id === cancelConnectionId) ?? null;
 
   function beginSchedule(connection: LiveConnection) {
     setEditingId(connection.id);
@@ -163,14 +166,14 @@ export default function LiveConnectionStrip() {
   }
 
   async function attendanceUpdate(connectionId: string, update: 'running_late' | 'cannot_make_it') {
-    if (update === 'cannot_make_it' && !window.confirm('Tell the other person you can’t make the agreed time? This creates a timestamped Aspire activity record but does not automatically cancel or move any money.')) return;
+    if (update === 'cannot_make_it' && !window.confirm('Tell the other person you can’t make the agreed time? This creates a timestamped Aspire activity record but does not cancel the connection or move any money. You can still reschedule afterward.')) return;
     setBusy(`${update}-${connectionId}`);
     try {
       await recordConnectionAttendanceUpdate(connectionId, update);
       await reload(true);
       setNotice(update === 'running_late'
         ? 'Running late was added to the shared connection timeline. Message the other person with your ETA.'
-        : 'Can’t make it was added to the shared timeline. Use chat to reschedule, or Get help if payment/refund review is needed.');
+        : 'Can’t make it was added to the shared timeline. The connection is still active so you can reschedule, cancel explicitly, or Get help.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not update the connection.');
     } finally {
@@ -321,6 +324,7 @@ export default function LiveConnectionStrip() {
                   <button className={styles.danger} type="button" disabled={busy === `stop-location-${connection.id}`} onClick={() => void stopLocation(connection.id)}>Stop sharing</button>
                 )}
                 <button className={styles.danger} type="button" disabled={busy === `cannot_make_it-${connection.id}`} onClick={() => void attendanceUpdate(connection.id, 'cannot_make_it')}>Can&apos;t make it</button>
+                <button className={styles.danger} type="button" onClick={() => setCancelConnectionId(connection.id)}>Cancel connection</button>
                 <button className={styles.help} type="button" disabled={Boolean(openCase)} onClick={() => setHelpConnectionId(connection.id)}>{openCase ? 'Issue open' : 'Get help'}</button>
               </div>
 
@@ -341,6 +345,22 @@ export default function LiveConnectionStrip() {
           onOpened={async () => {
             await reload(true);
             setNotice('Issue opened. If this connection uses Pay with Aspire, payout release is now paused while Aspire reviews the case.');
+          }}
+        />;
+      })()}
+
+      {cancelConnection && (() => {
+        const otherId = data.userId === cancelConnection.requester_id ? cancelConnection.responder_id : cancelConnection.requester_id;
+        return <CancelConnectionModal
+          connection={cancelConnection}
+          otherName={personName(profileMap.get(otherId))}
+          onClose={() => setCancelConnectionId('')}
+          onCancelled={async (result) => {
+            await reload(true);
+            setCancelConnectionId('');
+            setNotice(result.review_required
+              ? 'Connection cancelled. A protected payment review is open, so payout remains paused until Aspire resolves the case.'
+              : 'Connection cancelled. The other participant was notified and the cancellation was timestamped.');
           }}
         />;
       })()}
