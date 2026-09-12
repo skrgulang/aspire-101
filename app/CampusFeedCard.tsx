@@ -27,7 +27,6 @@ type SavedPost = {
   href?: string;
 };
 
-const LEGACY_SAVED_KEY = 'aspire-saved-posts';
 const savedKey = (userId: string) => `aspire-saved-posts:${userId}`;
 
 function initialFor(name: string) {
@@ -90,9 +89,6 @@ export default function CampusFeedCard({
           href: campusFeedHref(item)
         }, ...current];
     window.localStorage.setItem(key, JSON.stringify(next));
-    if (!window.localStorage.getItem(LEGACY_SAVED_KEY)) {
-      window.localStorage.removeItem(LEGACY_SAVED_KEY);
-    }
     setSaved(!exists);
   }
 
