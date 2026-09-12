@@ -66,6 +66,7 @@ import './discover-reference.css';
 import './discover-unified-feed.css';
 import './campus-demo-feed.css';
 import './campus-demo-feed-fix.css';
+import './legal.css';
 import './production-typography.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
