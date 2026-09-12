@@ -1,4 +1,5 @@
 import ConnectionsHub from '../ConnectionsHub';
+import ConnectionCloseoutPanel from '../ConnectionCloseoutPanel';
 import ConnectionCopilotPanel from '../ConnectionCopilotPanel';
 import LiveConnectionStrip from '../LiveConnectionStrip';
 import AppDock from '../AppDock';
@@ -13,6 +14,7 @@ export default function ConnectionsPage() {
       <div className={styles.workspace}>
         <section className={styles.primary} id="my-activity">
           <LiveConnectionStrip />
+          <ConnectionCloseoutPanel />
           <ConnectionsHub />
         </section>
 
