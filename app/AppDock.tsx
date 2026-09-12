@@ -5,7 +5,7 @@ import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
 
-type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'profile' | 'settings';
+type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'resolution' | 'profile' | 'settings';
 type DockItem = { key: AppDockTab; label: string; href: string; icon: UiIconName; mobile?: boolean };
 
 const discoverItems: DockItem[] = [
@@ -18,7 +18,8 @@ const personalItems: DockItem[] = [
   { key: 'connections', label: 'Inbox', href: '/connections', icon: 'message', mobile: true },
   { key: 'activity', label: 'My Activity', href: '/activity', icon: 'activity' },
   { key: 'saved', label: 'Saved', href: '/saved', icon: 'bookmark' },
-  { key: 'transactions', label: 'Transactions', href: '/transactions', icon: 'wallet' }
+  { key: 'transactions', label: 'Transactions', href: '/transactions', icon: 'wallet' },
+  { key: 'resolution', label: 'Resolution', href: '/resolution', icon: 'shield' }
 ];
 
 const accountItems: DockItem[] = [
