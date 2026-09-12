@@ -7,11 +7,20 @@ import {
   LiveConnectionProfile,
   LiveConnectionRequest,
   ConnectionLocationShare,
+  ConnectionScheduleProposal,
+  proposeConnectionSchedule,
+  respondConnectionSchedule,
   setConnectionCoordinationStatus,
-  setConnectionSchedule,
   shareConnectionLocation,
   stopConnectionLocationShare
 } from '../lib/supabase/liveConnections';
+import { cancelConnection } from '../lib/supabase/connections';
+import {
+  confirmConnectionCompletion,
+  fetchCompletionConfirmations,
+  releaseAspirePayment,
+  type CompletionConfirmation
+} from '../lib/supabase/payments';
 import ConnectionEventTimeline from './ConnectionEventTimeline';
 import styles from './LiveConnectionStrip.module.css';
 
@@ -21,16 +30,26 @@ type Data = {
   requests: LiveConnectionRequest[];
   profiles: LiveConnectionProfile[];
   locations: ConnectionLocationShare[];
+  scheduleProposals: ConnectionScheduleProposal[];
+  completions: CompletionConfirmation[];
 };
 
-const emptyData: Data = { userId: '', connections: [], requests: [], profiles: [], locations: [] };
+const emptyData: Data = {
+  userId: '',
+  connections: [],
+  requests: [],
+  profiles: [],
+  locations: [],
+  scheduleProposals: [],
+  completions: []
+};
 
 function personName(profile?: LiveConnectionProfile) {
   return profile?.display_name || profile?.full_name || profile?.name || 'Aspire student';
 }
 
 function timerCopy(startAt: string | null, now: number) {
-  if (!startAt) return { label: 'TIME NOT SET', value: 'Coordinate a time', detail: 'Set it together before meeting.' };
+  if (!startAt) return { label: 'TIME NOT AGREED', value: 'Coordinate a time', detail: 'Propose a time and have the other person accept it.' };
   const start = new Date(startAt).getTime();
   const diff = start - now;
   const abs = Math.abs(diff);
@@ -39,10 +58,16 @@ function timerCopy(startAt: string | null, now: number) {
   const days = Math.floor(hours / 24);
   if (diff > 0) {
     const value = days > 0 ? `Starts in ${days}d ${hours % 24}h` : hours > 0 ? `Starts in ${hours}h ${minutes}m` : `Starts in ${Math.max(1, minutes)}m`;
-    return { label: 'UP NEXT', value, detail: new Date(startAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) };
+    return { label: 'AGREED TIME', value, detail: new Date(startAt).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) };
   }
-  if (abs < 3_600_000) return { label: 'START TIME', value: 'Starting now', detail: new Date(startAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
-  return { label: 'START TIME PASSED', value: `${hours}h ${minutes}m ago`, detail: 'Use the status buttons to keep the other person updated.' };
+  if (abs < 3_600_000) return { label: 'AGREED START TIME', value: 'Starting now', detail: new Date(startAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) };
+  return { label: 'AGREED TIME PASSED', value: `${hours}h ${minutes}m ago`, detail: 'Use the status buttons to keep the other person updated.' };
+}
+
+function proposalCopy(proposal: ConnectionScheduleProposal) {
+  const start = new Date(proposal.start_at);
+  const when = start.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return proposal.meeting_label ? `${when} · ${proposal.meeting_label}` : when;
 }
 
 function statusLabel(status: LiveConnection['coordination_status']) {
@@ -51,6 +76,14 @@ function statusLabel(status: LiveConnection['coordination_status']) {
   if (status === 'in_progress') return 'In progress';
   if (status === 'scheduled') return 'Scheduled';
   return 'Planning';
+}
+
+function stageIndex(status: LiveConnection['coordination_status'], selfComplete: boolean) {
+  if (selfComplete) return 4;
+  if (status === 'in_progress') return 3;
+  if (status === 'arrived') return 2;
+  if (status === 'on_the_way') return 1;
+  return 0;
 }
 
 export default function LiveConnectionStrip() {
@@ -68,7 +101,10 @@ export default function LiveConnectionStrip() {
     if (!quiet) setLoading(true);
     try {
       const next = await fetchLiveConnections();
-      setData(next);
+      const completions = next.connections.length
+        ? await fetchCompletionConfirmations(next.connections.map((connection) => connection.id)).catch(() => [] as CompletionConfirmation[])
+        : [];
+      setData({ ...next, completions });
       setNotice('');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load active connections.');
@@ -100,19 +136,34 @@ export default function LiveConnectionStrip() {
     setEndLocal(localEnd);
   }
 
-  async function saveSchedule(connectionId: string) {
+  async function proposeSchedule(connectionId: string) {
     if (!startLocal) return setNotice('Choose a start time first.');
     setBusy(`schedule-${connectionId}`);
     try {
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       const startAt = new Date(startLocal).toISOString();
       const endAt = endLocal ? new Date(endLocal).toISOString() : undefined;
-      await setConnectionSchedule(connectionId, startAt, timezone, meetingLabel, endAt);
+      await proposeConnectionSchedule(connectionId, startAt, timezone, meetingLabel, endAt);
       setEditingId('');
       await reload(true);
-      setNotice('Time updated. Both people can see it on the active connection.');
+      setNotice('Time proposed. The current agreed time stays in place until the other person accepts.');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not update the time.');
+      setNotice(error instanceof Error ? error.message : 'Could not propose the time.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function respondSchedule(proposalId: string, accept: boolean) {
+    setBusy(`proposal-${proposalId}`);
+    try {
+      await respondConnectionSchedule(proposalId, accept);
+      await reload(true);
+      setNotice(accept
+        ? 'Accepted. This is now the agreed Aspire time and reminder schedule.'
+        : 'Declined. The current agreed time did not change.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not respond to the time proposal.');
     } finally {
       setBusy('');
     }
@@ -123,9 +174,54 @@ export default function LiveConnectionStrip() {
     try {
       await setConnectionCoordinationStatus(connectionId, status);
       await reload(true);
-      setNotice(status === 'on_the_way' ? 'The other person can now see that you are on the way.' : status === 'arrived' ? 'Marked arrived.' : 'Marked in progress.');
+      setNotice(status === 'on_the_way' ? 'The other person can now see that you are on the way.' : status === 'arrived' ? 'Marked arrived.' : 'Task started. When it is finished, mark the connection complete.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not update your status.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function completeConnection(connection: LiveConnection) {
+    setBusy(`complete-${connection.id}`);
+    try {
+      const count = await confirmConnectionCompletion(connection.id);
+      if (count >= 2 && connection.payment_method === 'aspire') {
+        try {
+          await releaseAspirePayment(connection.id);
+          setNotice('Both people marked complete. Aspire payment release was started and this connection is moving to history.');
+        } catch (releaseError) {
+          setNotice(releaseError instanceof Error
+            ? `Both people marked complete. ${releaseError.message}`
+            : 'Both people marked complete. Payment release is still being finalized.');
+        }
+      } else if (count >= 2) {
+        setNotice('Both people marked complete. This connection is moving to history.');
+      } else {
+        setNotice('You marked this complete. Waiting for the other person before Aspire closes it.');
+      }
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not mark this connection complete.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function cancelActiveConnection(connection: LiveConnection) {
+    const protectedCopy = connection.payment_method === 'aspire'
+      ? ' If an Aspire payment is secured, it will stay protected and will not be paid out automatically.'
+      : '';
+    if (!window.confirm(`Cancel this connection? This closes the active plan.${protectedCopy}`)) return;
+    setBusy(`cancel-${connection.id}`);
+    try {
+      await cancelConnection(connection.id);
+      setNotice(connection.payment_method === 'aspire'
+        ? 'Connection cancelled. Any secured Aspire payment stays protected; cancellation does not automatically release money.'
+        : 'Connection cancelled. It is no longer active.');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not cancel this connection.');
     } finally {
       setBusy('');
     }
@@ -180,7 +276,7 @@ export default function LiveConnectionStrip() {
           <p className={styles.eyebrow}>ASPIRE LIVE</p>
           <h2>Active connections</h2>
         </div>
-        <p>Coordinate time, arrival and optional location without leaving Aspire.</p>
+        <p>Agree on the plan together, meet, finish, and close the loop without leaving Aspire.</p>
       </div>
 
       {notice && <div className={styles.notice} role="status">{notice}</div>}
@@ -194,7 +290,12 @@ export default function LiveConnectionStrip() {
           const timer = timerCopy(connection.scheduled_start_at, now);
           const myShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === data.userId);
           const otherShare = data.locations.find((location) => location.connection_id === connection.id && location.user_id === otherId);
+          const pendingProposal = data.scheduleProposals.find((proposal) => proposal.connection_id === connection.id);
+          const myCompletion = data.completions.some((item) => item.connection_id === connection.id && item.user_id === data.userId);
+          const otherCompletion = data.completions.some((item) => item.connection_id === connection.id && item.user_id === otherId);
+          const currentStage = stageIndex(connection.coordination_status, myCompletion);
           const mapHref = otherShare ? `https://www.google.com/maps?q=${encodeURIComponent(`${otherShare.latitude},${otherShare.longitude}`)}` : '';
+          const stages = ['Plan', 'On the way', 'Arrived', 'In progress', 'Complete'];
 
           return (
             <article key={connection.id} className={styles.card}>
@@ -211,22 +312,50 @@ export default function LiveConnectionStrip() {
                 <p>{[request?.category, request?.campus].filter(Boolean).join(' · ') || 'Campus connection'}</p>
               </div>
 
+              <div className={styles.journey} aria-label="Connection progress">
+                {stages.map((stage, index) => (
+                  <div className={index < currentStage ? styles.stageDone : index === currentStage ? styles.stageCurrent : ''} key={stage}>
+                    <i>{index < currentStage ? '✓' : index + 1}</i>
+                    <span>{stage}</span>
+                  </div>
+                ))}
+              </div>
+
               <div className={styles.timer}>
                 <span>{timer.label}</span>
                 <strong>{timer.value}</strong>
                 <small>{connection.meeting_label ? `${timer.detail} · ${connection.meeting_label}` : timer.detail}</small>
               </div>
 
+              {pendingProposal && (
+                <div className={styles.scheduleProposal}>
+                  <div>
+                    <span>TIME CHANGE PROPOSED</span>
+                    <strong>{proposalCopy(pendingProposal)}</strong>
+                    <small>{pendingProposal.proposed_by === data.userId
+                      ? `Waiting for ${otherName} to accept. The current agreed plan stays active until then.`
+                      : `${otherName} proposed this plan. Your current agreed plan stays active unless you accept.`}</small>
+                  </div>
+                  {pendingProposal.proposed_by !== data.userId && (
+                    <div className={styles.proposalActions}>
+                      <button type="button" disabled={busy === `proposal-${pendingProposal.id}`} onClick={() => void respondSchedule(pendingProposal.id, false)}>Keep current time</button>
+                      <button className={styles.primary} type="button" disabled={busy === `proposal-${pendingProposal.id}`} onClick={() => void respondSchedule(pendingProposal.id, true)}>Accept new time</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {editingId === connection.id && (
                 <div className={styles.editor}>
                   <div className={styles.editorRow}>
-                    <label>Start time<input type="datetime-local" value={startLocal} onChange={(event) => setStartLocal(event.target.value)} /></label>
+                    <label>Proposed start time<input type="datetime-local" value={startLocal} onChange={(event) => setStartLocal(event.target.value)} /></label>
                     <label>Optional end time<input type="datetime-local" value={endLocal} onChange={(event) => setEndLocal(event.target.value)} /></label>
                   </div>
                   <label>Meeting point or place<input value={meetingLabel} maxLength={240} placeholder="e.g. PMU main entrance" onChange={(event) => setMeetingLabel(event.target.value)} /></label>
+                  <small className={styles.agreementNote}>The existing agreed plan does not change until the other person accepts your proposal.</small>
                   <div className={styles.actions}>
-                    <button className={styles.primary} type="button" disabled={busy === `schedule-${connection.id}`} onClick={() => void saveSchedule(connection.id)}>Save time</button>
-                    <button type="button" onClick={() => setEditingId('')}>Cancel</button>
+                    <button className={styles.primary} type="button" disabled={busy === `schedule-${connection.id}`} onClick={() => void proposeSchedule(connection.id)}>Propose time</button>
+                    <button type="button" onClick={() => setEditingId('')}>Close</button>
                   </div>
                 </div>
               )}
@@ -241,16 +370,33 @@ export default function LiveConnectionStrip() {
               <ConnectionEventTimeline connectionId={connection.id} userId={data.userId} otherName={otherName} />
 
               <div className={styles.actions}>
-                <a className={styles.primary} href="#my-activity">Message</a>
-                <button type="button" onClick={() => beginSchedule(connection)}>Set time</button>
+                <a className={styles.primary} href="#my-activity">Open chat ↓</a>
+                <button type="button" onClick={() => beginSchedule(connection)}>{connection.scheduled_start_at ? 'Propose new time' : 'Propose time'}</button>
                 <button type="button" disabled={busy === `on_the_way-${connection.id}`} onClick={() => void updateStatus(connection.id, 'on_the_way')}>On my way</button>
                 <button type="button" disabled={busy === `arrived-${connection.id}`} onClick={() => void updateStatus(connection.id, 'arrived')}>I&apos;ve arrived</button>
                 <button type="button" disabled={busy === `in_progress-${connection.id}`} onClick={() => void updateStatus(connection.id, 'in_progress')}>Start task</button>
+                {!myCompletion ? (
+                  <button className={styles.complete} type="button" disabled={busy === `complete-${connection.id}`} onClick={() => void completeConnection(connection)}>
+                    {busy === `complete-${connection.id}` ? 'Saving…' : 'Complete ✓'}
+                  </button>
+                ) : (
+                  <span className={styles.waiting}>{otherCompletion ? 'Both marked complete' : 'You completed · waiting on them'}</span>
+                )}
                 {!myShare ? (
                   <button type="button" disabled={busy === `location-${connection.id}`} onClick={() => void shareLocation(connection.id)}>Share location · 30m</button>
                 ) : (
                   <button className={styles.danger} type="button" disabled={busy === `stop-location-${connection.id}`} onClick={() => void stopLocation(connection.id)}>Stop sharing</button>
                 )}
+              </div>
+
+              <div className={styles.closeout}>
+                <div><strong>Plans changed?</strong><span>Propose a new plan if you still intend to meet. Cancel only when this connection is actually ending.</span></div>
+                <div className={styles.closeoutActions}>
+                  <a href="/resolution">Get help</a>
+                  <button type="button" disabled={busy === `cancel-${connection.id}`} onClick={() => void cancelActiveConnection(connection)}>
+                    {busy === `cancel-${connection.id}` ? 'Cancelling…' : 'Cancel connection'}
+                  </button>
+                </div>
               </div>
 
               <div className={styles.privacy}><strong>Location is always optional.</strong> It is shared only after browser permission, only with the other person in this connection, and expires automatically.</div>
