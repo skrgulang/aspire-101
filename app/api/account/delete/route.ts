@@ -6,7 +6,7 @@ const RECENT_SIGN_IN_MS = 30 * 60 * 1000;
 
 export async function DELETE(request: Request) {
   try {
-    const { user } = await getAuthenticatedUser(request);
+    const { user, accessToken } = await getAuthenticatedUser(request);
     const body = await request.json().catch(() => ({}));
     const confirmation = typeof body?.confirmation === 'string' ? body.confirmation.trim() : '';
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -38,6 +38,11 @@ export async function DELETE(request: Request) {
 
     await eraseDirectAccountData(supabase, user.id);
 
+    // Revoke refresh tokens on every device. Existing stateless access tokens can live
+    // until their normal expiry, so the public profile/data cleanup above happens first.
+    const { error: signOutError } = await supabase.auth.admin.signOut(accessToken, 'global');
+    if (signOutError) console.warn('Account deletion session revocation warning:', signOutError.message);
+
     // Soft-delete the Auth user so the opaque user id can remain attached to retained
     // accounting/safety history without keeping a usable login identity.
     const { error: authError } = await supabase.auth.admin.deleteUser(user.id, true);
@@ -48,7 +53,7 @@ export async function DELETE(request: Request) {
     const raw = error instanceof Error ? error.message : 'UNKNOWN';
     if (raw.startsWith('ACCOUNT_DELETE:') || raw.startsWith('ACCOUNT_DATA:')) {
       return NextResponse.json({
-        error: 'Account deletion could not finish. Your login was not intentionally removed unless every cleanup step completed. Please retry or contact Aspire support.',
+        error: 'Account deletion could not finish. Please retry or contact Aspire support if the problem continues.',
         code: 'ACCOUNT_DELETE_FAILED'
       }, { status: 500 });
     }
