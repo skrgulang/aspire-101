@@ -5,17 +5,22 @@ import LiveConnectionStrip from '../LiveConnectionStrip';
 import AppDock from '../AppDock';
 import UiIcon from '../UiIcon';
 import styles from './ConnectionsRefresh.module.css';
+import cleanup from './ConnectionLifecycleCleanup.module.css';
 
 export default function ConnectionsPage() {
   return (
-    <main className={`${styles.page} connectionsPage`}>
+    <main className={`${styles.page} ${cleanup.scope} connectionsPage`}>
       <AppDock active="connections" />
 
       <div className={styles.workspace}>
-        <section className={styles.primary} id="my-activity">
+        <section className={styles.primary}>
           <LiveConnectionStrip />
-          <ConnectionCloseoutPanel />
-          <ConnectionsHub />
+          <div id="connection-closeout" className={cleanup.closeoutAnchor}>
+            <ConnectionCloseoutPanel />
+          </div>
+          <div id="my-activity" className={cleanup.inboxAnchor}>
+            <ConnectionsHub />
+          </div>
         </section>
 
         <aside className={styles.rail} aria-label="Inbox shortcuts">
@@ -36,6 +41,11 @@ export default function ConnectionsPage() {
             <a href="/activity" className={styles.quickAction}>
               <i><UiIcon name="users" /></i>
               <div><strong>View activity</strong><span>Your requests and connections</span></div>
+              <UiIcon name="chevron" />
+            </a>
+            <a href="/resolution" className={styles.quickAction}>
+              <i><UiIcon name="shield" /></i>
+              <div><strong>Resolution Center</strong><span>No-show, cancellation, payment or safety help</span></div>
               <UiIcon name="chevron" />
             </a>
           </section>
