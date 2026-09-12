@@ -1,0 +1,16 @@
+.scope :global(section[aria-label='Active Aspire connections']) button[class*='complete'] {
+  display: none !important;
+}
+
+.scope :global(section[aria-label='Active Aspire connections']) div[class*='closeout'] {
+  display: none !important;
+}
+
+.scope :global(.connectionActions > .connectionCancel:has(+ .connectionCancel)) {
+  display: none !important;
+}
+
+.inboxAnchor,
+.closeoutAnchor {
+  scroll-margin-top: 20px;
+}
