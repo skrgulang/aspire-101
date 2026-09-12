@@ -13,11 +13,17 @@ import {
   releaseAspirePayment,
   type CompletionConfirmation
 } from '../lib/supabase/payments';
+import {
+  fetchResolutionCases,
+  type ConnectionResolutionCase,
+  type ResolutionReason
+} from '../lib/supabase/resolution';
 import ResolutionCenterModal from './ResolutionCenterModal';
 import styles from './ConnectionCloseoutPanel.module.css';
 
 type CloseoutData = Awaited<ReturnType<typeof fetchLiveConnections>> & {
   completions: CompletionConfirmation[];
+  cases: ConnectionResolutionCase[];
 };
 
 function personName(profile?: LiveConnectionProfile) {
@@ -43,8 +49,19 @@ function scheduleCopy(connection: LiveConnection) {
 
 function shouldOfferCloseout(connection: LiveConnection, now: number) {
   if (connection.coordination_status === 'in_progress') return true;
+  const end = connection.scheduled_end_at ? new Date(connection.scheduled_end_at).getTime() : null;
+  if (end) return end <= now;
+  const start = connection.scheduled_start_at ? new Date(connection.scheduled_start_at).getTime() : null;
+  return Boolean(start && start <= now);
+}
+
+function noShowUnlocked(connection: LiveConnection, now: number) {
   if (!connection.scheduled_start_at) return false;
-  return new Date(connection.scheduled_start_at).getTime() <= now;
+  return new Date(connection.scheduled_start_at).getTime() + 10 * 60_000 <= now;
+}
+
+function isOpenCase(item: ConnectionResolutionCase) {
+  return item.status === 'submitted' || item.status === 'under_review';
 }
 
 export default function ConnectionCloseoutPanel() {
@@ -53,16 +70,23 @@ export default function ConnectionCloseoutPanel() {
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
   const [helpConnectionId, setHelpConnectionId] = useState('');
+  const [helpReason, setHelpReason] = useState<ResolutionReason>('other');
   const [now, setNow] = useState(Date.now());
 
   const reload = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
     try {
       const next = await fetchLiveConnections();
-      const completions = next.connections.length
-        ? await fetchCompletionConfirmations(next.connections.map((item) => item.id)).catch(() => [] as CompletionConfirmation[])
-        : [];
-      setData({ ...next, completions });
+      const connectionIds = next.connections.map((item) => item.id);
+      const [completions, cases] = await Promise.all([
+        connectionIds.length
+          ? fetchCompletionConfirmations(connectionIds).catch(() => [] as CompletionConfirmation[])
+          : Promise.resolve([] as CompletionConfirmation[]),
+        connectionIds.length
+          ? fetchResolutionCases(connectionIds).catch(() => [] as ConnectionResolutionCase[])
+          : Promise.resolve([] as ConnectionResolutionCase[])
+      ]);
+      setData({ ...next, completions, cases });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load connection closeout.');
     } finally {
@@ -73,8 +97,12 @@ export default function ConnectionCloseoutPanel() {
   useEffect(() => { void reload(); }, [reload]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
+    const refresh = window.setInterval(() => void reload(true), 60_000);
+    return () => {
+      window.clearInterval(timer);
+      window.clearInterval(refresh);
+    };
+  }, [reload]);
 
   const requestMap = useMemo(() => new Map((data?.requests ?? []).map((request) => [request.id, request])), [data]);
   const profileMap = useMemo(() => new Map((data?.profiles ?? []).map((profile) => [profile.id, profile])), [data]);
@@ -84,6 +112,11 @@ export default function ConnectionCloseoutPanel() {
   );
   const helpConnection = closeoutConnections.find((connection) => connection.id === helpConnectionId) ?? null;
 
+  function openHelp(connection: LiveConnection) {
+    setHelpReason(noShowUnlocked(connection, now) ? 'no_show' : 'other');
+    setHelpConnectionId(connection.id);
+  }
+
   async function markComplete(connection: LiveConnection) {
     setBusy(`complete-${connection.id}`);
     setNotice('');
@@ -92,14 +125,14 @@ export default function ConnectionCloseoutPanel() {
       if (count >= 2 && connection.payment_method === 'aspire') {
         try {
           await releaseAspirePayment(connection.id);
-          setNotice('Both people marked this complete. Aspire started the protected payment release and moved the connection toward History.');
+          setNotice('Both people confirmed completion. Aspire started the protected payment release and the connection is moving to History.');
         } catch (releaseError) {
           setNotice(releaseError instanceof Error
-            ? `Both people marked this complete. ${releaseError.message}`
-            : 'Both people marked this complete. Payment release is still being finalized.');
+            ? `Both people confirmed completion. ${releaseError.message}`
+            : 'Both people confirmed completion. Payment release is still being finalized.');
         }
       } else if (count >= 2) {
-        setNotice('Both people marked this complete. The connection is moving to History, where you can review it and choose My Circle.');
+        setNotice('Both people confirmed completion. The connection is moving to History, where you can review it and choose My Circle.');
       } else {
         setNotice('You marked this complete. Aspire will close it after the other person confirms too.');
       }
@@ -140,7 +173,7 @@ export default function ConnectionCloseoutPanel() {
           <span className={styles.eyebrow}>CLOSE THE LOOP</span>
           <h2>Did this activity happen?</h2>
         </div>
-        <p>Finish cleanly, report a problem, or cancel. Completed connections move to History instead of staying active forever.</p>
+        <p>Finish cleanly, report a problem, or cancel. Your chat is archived with the connection instead of staying active forever.</p>
       </header>
 
       {notice && <div className={styles.notice} role="status">{notice}</div>}
@@ -152,6 +185,8 @@ export default function ConnectionCloseoutPanel() {
           const otherName = personName(profileMap.get(otherId));
           const myCompletion = data.completions.some((item) => item.connection_id === connection.id && item.user_id === data.userId);
           const otherCompletion = data.completions.some((item) => item.connection_id === connection.id && item.user_id === otherId);
+          const openCase = data.cases.find((item) => item.connection_id === connection.id && isOpenCase(item));
+          const canReportNoShow = noShowUnlocked(connection, now);
 
           return (
             <article className={styles.card} key={connection.id}>
@@ -180,10 +215,19 @@ export default function ConnectionCloseoutPanel() {
                     {busy === `complete-${connection.id}` ? 'Saving…' : '✓ Completed'}
                     <small>The activity happened and is finished</small>
                   </button>
-                  <button type="button" onClick={() => setHelpConnectionId(connection.id)}>
-                    ! No-show / Get help
-                    <small>Report no-show, incomplete work, payment, or safety</small>
-                  </button>
+
+                  {openCase ? (
+                    <a href="/resolution">
+                      ! View open case
+                      <small>A Resolution Center case is already active</small>
+                    </a>
+                  ) : (
+                    <button type="button" onClick={() => openHelp(connection)}>
+                      {canReportNoShow ? '! No-show / Get help' : '! Get help'}
+                      <small>{canReportNoShow ? 'No-show is available now, or report another issue' : 'Report incomplete work, payment, safety, or another issue'}</small>
+                    </button>
+                  )}
+
                   <button
                     className={styles.cancel}
                     type="button"
@@ -191,12 +235,12 @@ export default function ConnectionCloseoutPanel() {
                     onClick={() => void cancel(connection)}
                   >
                     {busy === `cancel-${connection.id}` ? 'Cancelling…' : '× Cancelled'}
-                    <small>The plan ended and no further activity will happen</small>
+                    <small>The activity was called off and should close</small>
                   </button>
                 </div>
               )}
 
-              <p className={styles.archiveNote}>Chats are never deleted by closeout. Completed or cancelled connections remain available in History; completed chats become read-only unless both people choose My Circle.</p>
+              <p className={styles.archiveNote}>Closing a connection never deletes the conversation. Completed and cancelled connections stay in History; completed connections can be reviewed and added to My Circle.</p>
             </article>
           );
         })}
@@ -210,11 +254,12 @@ export default function ConnectionCloseoutPanel() {
             currentUserId={data.userId}
             otherUserId={otherId}
             otherName={personName(profileMap.get(otherId))}
+            initialReason={helpReason}
             onClose={() => setHelpConnectionId('')}
             onOpened={async () => {
               setHelpConnectionId('');
               await reload(true);
-              setNotice('Case opened. If an Aspire payment is secured, provider payout stays paused while the case is reviewed.');
+              setNotice('Case opened. If an Aspire payment is secured, provider payout is paused while the case is reviewed.');
             }}
           />
         );
