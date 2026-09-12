@@ -44,15 +44,21 @@ export default function MyActivityManager() {
         return;
       }
 
-      const { data: rows, error } = await supabase
-        .from('requests')
-        .select('*')
-        .eq('poster_id', auth.user.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
+      const [requestResult, profileResult] = await Promise.all([
+        supabase
+          .from('requests')
+          .select('*')
+          .eq('poster_id', auth.user.id)
+          .order('created_at', { ascending: false }),
+        supabase.from('profiles').select('school').eq('id', auth.user.id).maybeSingle()
+      ]);
+      if (requestResult.error) throw requestResult.error;
 
-      const realRequests = (rows ?? []) as AspireRequest[];
-      const previewRequests = isPreviewDemoEnabled() ? buildDemoAspireRequests(auth.user.id, 'Purdue University') : [];
+      const realRequests = (requestResult.data ?? []) as AspireRequest[];
+      const previewCampus = typeof profileResult.data?.school === 'string' && profileResult.data.school.trim()
+        ? profileResult.data.school.trim()
+        : 'Campus';
+      const previewRequests = isPreviewDemoEnabled() ? buildDemoAspireRequests(auth.user.id, previewCampus) : [];
       setRequests([...previewRequests, ...realRequests].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
 
       if (!realRequests.length) {
