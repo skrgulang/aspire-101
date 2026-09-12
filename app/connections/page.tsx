@@ -5,17 +5,22 @@ import LiveConnectionStrip from '../LiveConnectionStrip';
 import AppDock from '../AppDock';
 import UiIcon from '../UiIcon';
 import styles from './ConnectionsRefresh.module.css';
+import cleanup from './ConnectionLifecycleCleanup.module.css';
 
 export default function ConnectionsPage() {
   return (
-    <main className={`${styles.page} connectionsPage`}>
+    <main className={`${styles.page} ${cleanup.scope} connectionsPage`}>
       <AppDock active="connections" />
 
       <div className={styles.workspace}>
-        <section className={styles.primary} id="my-activity">
+        <section className={styles.primary}>
           <LiveConnectionStrip />
-          <ConnectionCloseoutPanel />
-          <ConnectionsHub />
+          <div id="connection-closeout" className={cleanup.closeoutAnchor}>
+            <ConnectionCloseoutPanel />
+          </div>
+          <div id="my-activity" className={cleanup.inboxAnchor}>
+            <ConnectionsHub />
+          </div>
         </section>
 
         <aside className={styles.rail} aria-label="Inbox shortcuts">
