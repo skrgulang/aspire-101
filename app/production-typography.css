@@ -1,0 +1,37 @@
+/* Production signed-in typography alignment.
+   Keep marketing display type intact; use the product UI family inside Profile and Settings. */
+.settingsPage,
+.profilePagePolished {
+  font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.settingsPage h1,
+.settingsPage h2,
+.settingsPage h3,
+.profilePagePolished h1,
+.profilePagePolished h2,
+.profilePagePolished h3 {
+  font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-style: normal;
+}
+
+/* Match the Settings page title to the Profile page title instead of using display serif. */
+.settingsHero h1 {
+  margin: 5px 0 5px;
+  font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: clamp(30px, 3vw, 40px);
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.settingsPage button,
+.settingsPage input,
+.settingsPage textarea,
+.settingsPage select,
+.profilePagePolished button,
+.profilePagePolished input,
+.profilePagePolished textarea,
+.profilePagePolished select {
+  font-family: inherit;
+}
