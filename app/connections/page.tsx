@@ -4,6 +4,7 @@ import ConnectionCopilotPanel from '../ConnectionCopilotPanel';
 import LiveConnectionStrip from '../LiveConnectionStrip';
 import AppDock from '../AppDock';
 import UiIcon from '../UiIcon';
+import PendingChoiceFlash from './PendingChoiceFlash';
 import styles from './ConnectionsRefresh.module.css';
 import cleanup from './ConnectionLifecycleCleanup.module.css';
 
@@ -14,6 +15,7 @@ export default function ConnectionsPage() {
 
       <div className={styles.workspace}>
         <section className={styles.primary}>
+          <PendingChoiceFlash />
           <LiveConnectionStrip />
           <div id="connection-closeout" className={cleanup.closeoutAnchor}>
             <ConnectionCloseoutPanel />
