@@ -1,6 +1,6 @@
 .shell {
-  width: min(1180px, calc(100vw - 124px));
-  margin: 0 auto;
+  width: min(1180px, calc(100vw - 138px));
+  margin: 0 30px 0 max(108px, calc((100vw - 1180px) / 2));
   padding: 42px 0 92px;
 }
 
@@ -99,6 +99,7 @@
 @media (max-width: 900px) {
   .shell {
     width: min(100% - 28px, 720px);
+    margin: 0 auto;
     padding: 28px 0 108px;
   }
 
