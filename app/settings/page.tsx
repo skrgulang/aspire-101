@@ -68,6 +68,7 @@ export default function SettingsPage() {
   const [theme, setTheme] = useState<ThemePreference>('system');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [status, setStatus] = useState('');
 
   useEffect(() => {
@@ -134,6 +135,37 @@ export default function SettingsPage() {
     }
   }
 
+  async function downloadData() {
+    setExporting(true);
+    setStatus('');
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session?.access_token) throw new Error('Your session expired. Sign in again and retry.');
+      const response = await fetch('/api/account/export', { headers: { Authorization: `Bearer ${data.session.access_token}` } });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || 'Could not prepare your data export.');
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition') || '';
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] || 'aspire-101-data.json';
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setStatus('Your Aspire data export is ready.');
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Could not prepare your data export.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
@@ -165,6 +197,7 @@ export default function SettingsPage() {
             <a href="#personalization"><UiIcon name="compass" />Aspire personalization</a>
             <a href="#payments"><UiIcon name="wallet" />Payments & payouts</a>
             <a href="#appearance"><UiIcon name="moon" />Appearance</a>
+            <a href="#data"><UiIcon name="shield" />Data & account</a>
           </nav>
 
           <div className="settingsContent">
@@ -247,6 +280,13 @@ export default function SettingsPage() {
                 <button type="button" className={theme === 'light' ? 'active' : ''} onClick={() => applyTheme('light')}><UiIcon name="sun" /><span>Light</span></button>
                 <button type="button" className={theme === 'dark' ? 'active' : ''} onClick={() => applyTheme('dark')}><UiIcon name="moon" /><span>Black & Gold</span></button>
               </div>
+            </section>
+
+            <section className="settingsCard" id="data">
+              <div className="settingsCardHead"><i><UiIcon name="shield" /></i><div><span>DATA & ACCOUNT</span><h2>Your data stays under your control.</h2><p>Download a copy of your Aspire data or permanently close your account.</p></div></div>
+              <div className="settingsInfoRow"><div><strong>Download my data</strong><span>Exports your profile, settings, requests, connections, messages, reviews, payments, and Resolution Center history as JSON.</span></div><b>JSON</b></div>
+              <div className="settingsInlineLinks"><button type="button" onClick={downloadData} disabled={exporting}>{exporting ? 'Preparing…' : 'Download my data'}</button><a href="/account/delete">Delete account</a></div>
+              <div className="settingsAiNote"><UiIcon name="shield" /><span><strong>Deletion keeps only limited records when necessary.</strong> Financial, dispute, moderation, fraud-prevention, or safety records may be retained for accounting, refunds, legal duties, or platform integrity, while your login and direct profile data are removed or anonymized.</span></div>
             </section>
 
             <section className="settingsCard settingsHelpCard">
