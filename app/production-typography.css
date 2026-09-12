@@ -1,7 +1,14 @@
-/* Production signed-in typography alignment.
-   Keep marketing display type intact; use the product UI family inside Profile and Settings. */
+/* Production typography alignment.
+   Marketing homepage display type remains intentional; product and utility pages use one UI family. */
 .settingsPage,
-.profilePagePolished {
+.profilePagePolished,
+.postPage,
+.discoverPage,
+.connectionsPage,
+.aspireMoneyPage,
+.safetyPage,
+.updatesPage,
+.legalPage {
   font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -10,12 +17,30 @@
 .settingsPage h3,
 .profilePagePolished h1,
 .profilePagePolished h2,
-.profilePagePolished h3 {
+.profilePagePolished h3,
+.postPage h1,
+.postPage h2,
+.postPage h3,
+.connectionsPage h1,
+.connectionsPage h2,
+.connectionsPage h3,
+.aspireMoneyPage h1,
+.aspireMoneyPage h2,
+.aspireMoneyPage h3,
+.safetyPage h1,
+.safetyPage h2,
+.safetyPage h3,
+.updatesPage h1,
+.updatesPage h2,
+.updatesPage h3,
+.legalPage h1,
+.legalPage h2,
+.legalPage h3 {
   font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-style: normal;
 }
 
-/* Match the Settings page title to the Profile page title instead of using display serif. */
+/* Settings and Profile should read as parts of the same product. */
 .settingsHero h1 {
   margin: 5px 0 5px;
   font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
@@ -25,6 +50,55 @@
   letter-spacing: -.045em;
 }
 
+/* Transactions and Resolution used oversized inline headings. Bring them back to app scale. */
+.connectionsPage .connectionsShell > header h1 {
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+  font-size: clamp(30px, 3.6vw, 44px) !important;
+  font-style: normal !important;
+  font-weight: 820;
+  line-height: 1 !important;
+  letter-spacing: -.045em !important;
+}
+
+.connectionsPage .connectionsShell > header > p:last-child {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* Safety is an important utility page, not a second marketing homepage. */
+.safetyHero h1 {
+  font-size: clamp(46px, 6vw, 72px) !important;
+  line-height: .95 !important;
+  letter-spacing: -.055em !important;
+}
+
+.safetyHero h1 span {
+  color: var(--gold);
+  font-family: inherit !important;
+  font-style: normal !important;
+  font-weight: inherit !important;
+  letter-spacing: inherit !important;
+}
+
+.safetySectionHead h2 {
+  font-size: clamp(34px, 4vw, 50px) !important;
+  line-height: 1 !important;
+  letter-spacing: -.045em !important;
+}
+
+.safetyScenario h3,
+.safetyControlCard h3,
+.safetyLegalStrip h3 {
+  letter-spacing: -.025em;
+}
+
+/* Product updates should stay expressive without dwarfing the rest of the site. */
+.updatesIntro h1 {
+  font-size: clamp(42px, 5vw, 64px) !important;
+  line-height: .98 !important;
+  letter-spacing: -.05em !important;
+}
+
 .settingsPage button,
 .settingsPage input,
 .settingsPage textarea,
@@ -32,6 +106,37 @@
 .profilePagePolished button,
 .profilePagePolished input,
 .profilePagePolished textarea,
-.profilePagePolished select {
+.profilePagePolished select,
+.postPage button,
+.postPage input,
+.postPage textarea,
+.postPage select,
+.connectionsPage button,
+.connectionsPage input,
+.connectionsPage textarea,
+.connectionsPage select,
+.aspireMoneyPage button,
+.aspireMoneyPage input,
+.aspireMoneyPage textarea,
+.aspireMoneyPage select,
+.safetyPage button,
+.safetyPage input,
+.safetyPage textarea,
+.safetyPage select,
+.updatesPage button,
+.updatesPage input,
+.updatesPage textarea,
+.updatesPage select,
+.legalPage button,
+.legalPage input,
+.legalPage textarea,
+.legalPage select {
   font-family: inherit;
+}
+
+@media (max-width: 620px) {
+  .safetyHero h1 { font-size: clamp(42px, 14vw, 58px) !important; }
+  .safetySectionHead h2 { font-size: clamp(30px, 10vw, 40px) !important; }
+  .updatesIntro h1 { font-size: clamp(38px, 12vw, 52px) !important; }
+  .connectionsPage .connectionsShell > header h1 { font-size: 34px !important; }
 }
