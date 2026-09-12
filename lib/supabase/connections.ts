@@ -160,6 +160,33 @@ export async function confirmConnection(connectionId: string) {
 
 export async function cancelConnection(connectionId: string) {
   const supabase = getSupabaseBrowserClient();
+
+  // Pending means the requester chose someone but the responder has not confirmed.
+  // Reopen the original request instead of killing it and forcing the requester to repost.
+  const { data: resetResult, error: resetError } = await supabase.rpc('reset_pending_connection', {
+    p_connection_id: connectionId
+  });
+
+  if (!resetError) {
+    if (typeof window !== 'undefined') {
+      const outcome = String(resetResult || 'reopened');
+      window.sessionStorage.setItem('aspire-pending-choice-outcome', outcome);
+      window.location.assign('/connections#my-activity');
+    }
+    return;
+  }
+
+  const resetDetail = `${resetError.message || ''} ${resetError.details || ''} ${resetError.hint || ''}`;
+  if (/PAYMENT_ACTIVITY_EXISTS/i.test(resetDetail)) {
+    throw new Error('This connection already has payment activity. Use the normal cancellation or Resolution Center flow instead.');
+  }
+
+  // Confirmed/active connections are not eligible for pending reset; use the regular
+  // protected cancellation path for those lifecycle states.
+  if (!/Only an unconfirmed connection choice can be reopened|Request is not awaiting responder confirmation/i.test(resetDetail)) {
+    throw resetError;
+  }
+
   const { error } = await supabase.rpc('cancel_connection', { p_connection_id: connectionId });
   if (error) throw error;
 }
