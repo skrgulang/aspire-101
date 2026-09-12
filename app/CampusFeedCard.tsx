@@ -52,8 +52,7 @@ export default function CampusFeedCard({
   footerLeft,
   footerRight
 }: Props) {
-  if (item.id.startsWith('demo-preview-') && !/\bpurdue\b/i.test(campusLabel)) return null;
-
+  const previewHidden = item.id.startsWith('demo-preview-') && !/\bpurdue\b/i.test(campusLabel);
   const category = campusFeedCategory(item);
   const image = item.media?.[0]?.public_url || item.cover_image_url || fallbackImage || '';
   const mine = Boolean(currentUserId && item.poster_id === currentUserId);
@@ -65,15 +64,15 @@ export default function CampusFeedCard({
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (!currentUserId || mine) {
+    if (!currentUserId || mine || previewHidden) {
       setSaved(false);
       return;
     }
     setSaved(readSaved(savedKey(currentUserId)).some((entry) => entry.id === item.id));
-  }, [currentUserId, item.id, mine]);
+  }, [currentUserId, item.id, mine, previewHidden]);
 
   function toggleSaved() {
-    if (!currentUserId || mine) return;
+    if (!currentUserId || mine || previewHidden) return;
     const key = savedKey(currentUserId);
     const current = readSaved(key);
     const exists = current.some((entry) => entry.id === item.id);
@@ -91,6 +90,8 @@ export default function CampusFeedCard({
     window.localStorage.setItem(key, JSON.stringify(next));
     setSaved(!exists);
   }
+
+  if (previewHidden) return null;
 
   return (
     <article className={styles.card} data-request-id={item.id}>
