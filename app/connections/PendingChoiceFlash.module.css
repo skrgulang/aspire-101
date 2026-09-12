@@ -1,0 +1,45 @@
+.flash {
+  position: relative;
+  margin: 0 0 14px;
+  padding: 13px 44px 13px 15px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(255,199,44,.28);
+  border-radius: 14px;
+  background: rgba(255,199,44,.08);
+  color: #f7f4ed;
+}
+
+.flash strong {
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.flash span {
+  color: #aaa59b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.flash button {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #b8b3a8;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.flash button:hover {
+  background: rgba(255,255,255,.06);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .flash { margin-bottom: 10px; }
+}
