@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { aspireLogo } from '../logo';
+import AmbassadorApplicationForm from './AmbassadorApplicationForm';
 import styles from './ambassadors.module.css';
 
 export const metadata: Metadata = {
@@ -7,7 +8,9 @@ export const metadata: Metadata = {
   description: 'Help grow Aspire 101 on your campus and shape the student community from the beginning.'
 };
 
-const applicationUrl = process.env.NEXT_PUBLIC_AMBASSADOR_FORM_URL || 'mailto:team@aspires101.com?subject=Aspire%20101%20Campus%20Ambassador%20Application';
+const externalApplicationUrl = process.env.NEXT_PUBLIC_AMBASSADOR_FORM_URL?.trim() || '';
+const applicationHref = externalApplicationUrl || '#apply';
+const applicationTarget = externalApplicationUrl ? '_blank' : undefined;
 
 const benefits = [
   ['Leadership experience', 'Own real campus growth projects and build experience you can talk about.'],
@@ -44,7 +47,7 @@ export default function AmbassadorsPage() {
           <a href="#process">How it works</a>
           <a href="#faq">FAQ</a>
         </nav>
-        <a className={styles.navCta} href={applicationUrl} target={applicationUrl.startsWith('http') ? '_blank' : undefined} rel="noreferrer">Apply now</a>
+        <a className={styles.navCta} href={applicationHref} target={applicationTarget} rel={applicationTarget ? 'noreferrer' : undefined}>Apply now</a>
       </header>
 
       <section className={styles.hero}>
@@ -54,7 +57,7 @@ export default function AmbassadorsPage() {
           <h1>Build Aspire 101<br /><span>at your campus.</span></h1>
           <p className={styles.heroLead}>Be one of the students who helps Aspire 101 become useful locally. Build community, create opportunities, and help shape the product from the beginning.</p>
           <div className={styles.heroActions}>
-            <a className={styles.primaryCta} href={applicationUrl} target={applicationUrl.startsWith('http') ? '_blank' : undefined} rel="noreferrer">Apply to your campus <span>→</span></a>
+            <a className={styles.primaryCta} href={applicationHref} target={applicationTarget} rel={applicationTarget ? 'noreferrer' : undefined}>Apply to your campus <span>→</span></a>
             <a className={styles.secondaryCta} href="#role">See what you’ll do</a>
           </div>
           <div className={styles.heroMeta}>
@@ -64,19 +67,21 @@ export default function AmbassadorsPage() {
           </div>
         </div>
 
-        <aside className={styles.applyCard} aria-label="Campus ambassador application">
-          <div className={styles.cardIcon}>↗</div>
-          <p className={styles.cardEyebrow}>APPLICATIONS OPEN</p>
-          <h2>Represent Aspire 101 on your campus.</h2>
-          <p>Tell us who you are, what campus you’re part of, and why you want to help build the community.</p>
-          <dl>
-            <div><dt>Time</dt><dd>Flexible, campus-based</dd></div>
-            <div><dt>Focus</dt><dd>Growth · Events · Community · Feedback</dd></div>
-            <div><dt>Who</dt><dd>Current college students</dd></div>
-          </dl>
-          <a href={applicationUrl} target={applicationUrl.startsWith('http') ? '_blank' : undefined} rel="noreferrer">Open application form <span>→</span></a>
-          <small>Applications are reviewed on a rolling basis.</small>
-        </aside>
+        {externalApplicationUrl ? (
+          <aside className={styles.applyCard} aria-label="Campus ambassador application">
+            <div className={styles.cardIcon}>↗</div>
+            <p className={styles.cardEyebrow}>APPLICATIONS OPEN</p>
+            <h2>Represent Aspire 101 on your campus.</h2>
+            <p>Tell us who you are, what campus you’re part of, and why you want to help build the community.</p>
+            <dl>
+              <div><dt>Time</dt><dd>Flexible, campus-based</dd></div>
+              <div><dt>Focus</dt><dd>Growth · Events · Community · Feedback</dd></div>
+              <div><dt>Who</dt><dd>Current college students</dd></div>
+            </dl>
+            <a href={externalApplicationUrl} target="_blank" rel="noreferrer">Open application form <span>→</span></a>
+            <small>Applications are reviewed on a rolling basis.</small>
+          </aside>
+        ) : <AmbassadorApplicationForm />}
       </section>
 
       <section className={styles.section} id="role">
@@ -140,7 +145,7 @@ export default function AmbassadorsPage() {
 
       <section className={styles.finalCta}>
         <div><p className={styles.eyebrow}>READY?</p><h2>Build something students at your campus will actually use.</h2></div>
-        <a href={applicationUrl} target={applicationUrl.startsWith('http') ? '_blank' : undefined} rel="noreferrer">Apply for Campus Ambassador <span>→</span></a>
+        <a href={applicationHref} target={applicationTarget} rel={applicationTarget ? 'noreferrer' : undefined}>Apply for Campus Ambassador <span>→</span></a>
       </section>
 
       <footer className={styles.footer}>
