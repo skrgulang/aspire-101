@@ -48,7 +48,7 @@ export default function ConnectionsPage() {
               <i><UiIcon name="shield" /></i>
               <div><strong>Verified campus community</strong><span>Chat and transact only after both sides agree.</span></div>
             </div>
-            <div className={styles.trustRow}><UiIcon name="check" /><span>Purdue email verification</span></div>
+            <div className={styles.trustRow}><UiIcon name="check" /><span>University email verification</span></div>
             <div className={styles.trustRow}><UiIcon name="users" /><span>Mutual choice before private chat</span></div>
             <div className={styles.trustRow}><UiIcon name="shield" /><span>Report, block, and safety support</span></div>
             <a className={styles.learnLink} href="/safety">Safety center →</a>
