@@ -29,9 +29,9 @@ const accountItems: DockItem[] = [
   { key: 'profile', label: 'Profile', href: '/profile', icon: 'user', mobile: true }
 ];
 
-export default function AppDock({ active, preview = false }: { active: AppDockTab; preview?: boolean }) {
+export default function AppDock({ active, preview = false, previewUnread = 0 }: { active: AppDockTab; preview?: boolean; previewUnread?: number }) {
   const [theme, setTheme] = useState<Theme>('light');
-  const [inboxUnread, setInboxUnread] = useState(0);
+  const [inboxUnread, setInboxUnread] = useState(preview ? previewUnread : 0);
 
   useEffect(() => {
     const stored = window.localStorage.getItem('aspire-theme');
@@ -43,7 +43,10 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
   }, []);
 
   useEffect(() => {
-    if (preview) return;
+    if (preview) {
+      setInboxUnread(previewUnread);
+      return;
+    }
     const supabase = getSupabaseBrowserClient();
     let alive = true;
 
@@ -76,7 +79,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
       window.removeEventListener('focus', onFocus);
       void supabase.removeChannel(channel);
     };
-  }, [preview, active]);
+  }, [preview, previewUnread, active]);
 
   function toggleTheme() {
     const next: Theme = theme === 'light' ? 'dark' : 'light';
