@@ -1,0 +1,128 @@
+.shell {
+  width: min(1180px, calc(100vw - 124px));
+  margin: 0 auto;
+  padding: 42px 0 92px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 26px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e7e7e2;
+}
+
+.headerCopy {
+  max-width: 760px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #9a7a11;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: #171717;
+  font: 850 clamp(36px, 4vw, 54px)/.98 var(--font-inter), system-ui, sans-serif;
+  letter-spacing: -.05em;
+}
+
+.lead {
+  max-width: 720px;
+  margin: 12px 0 0;
+  color: #73736d;
+  font-size: 14px;
+  line-height: 1.62;
+}
+
+.actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.actions a {
+  min-height: 42px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #deded8;
+  border-radius: 12px;
+  background: #fff;
+  color: #30302d;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.actions a:hover {
+  border-color: #d5bd64;
+  background: #fff9e8;
+}
+
+.content {
+  display: grid;
+  gap: 24px;
+}
+
+:global(html[data-aspire-theme='dark']) .header {
+  border-color: #292924;
+}
+
+:global(html[data-aspire-theme='dark']) .title {
+  color: #f4f1e9;
+}
+
+:global(html[data-aspire-theme='dark']) .lead {
+  color: #9b968d;
+}
+
+:global(html[data-aspire-theme='dark']) .actions a {
+  border-color: #34342f;
+  background: #171715;
+  color: #eeeae2;
+}
+
+:global(html[data-aspire-theme='dark']) .actions a:hover {
+  border-color: rgba(255,199,44,.35);
+  background: rgba(255,199,44,.07);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    width: min(100% - 28px, 720px);
+    padding: 28px 0 108px;
+  }
+
+  .title {
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 620px) {
+  .header {
+    display: grid;
+    align-items: start;
+    gap: 18px;
+  }
+
+  .actions {
+    width: 100%;
+  }
+
+  .actions a {
+    flex: 1;
+  }
+
+  .lead {
+    font-size: 13px;
+  }
+}
