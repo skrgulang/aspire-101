@@ -1,10 +1,10 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { DiscoverRequest } from '../lib/supabase/discovery';
 import { requestLanguageLabel } from '../lib/supabase/requests';
 import UiIcon from './UiIcon';
-import { campusFeedCategory, campusFeedPrice, campusFeedRelativeTime } from './campusFeedPresentation';
+import { campusFeedCategory, campusFeedHref, campusFeedPrice, campusFeedRelativeTime } from './campusFeedPresentation';
 import styles from './CampusFeedCard.module.css';
 
 type Props = {
@@ -17,8 +17,31 @@ type Props = {
   footerRight?: ReactNode;
 };
 
+type SavedPost = {
+  id: string;
+  title: string;
+  category?: string;
+  campus?: string;
+  meta?: string;
+  image?: string;
+  href?: string;
+};
+
+const LEGACY_SAVED_KEY = 'aspire-saved-posts';
+const savedKey = (userId: string) => `aspire-saved-posts:${userId}`;
+
 function initialFor(name: string) {
   return name.trim().charAt(0).toUpperCase() || 'A';
+}
+
+function readSaved(key: string): SavedPost[] {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 export default function CampusFeedCard({
@@ -40,12 +63,56 @@ export default function CampusFeedCard({
   const paid = item.amount_cents != null;
   const pending = mine && item.moderation_status && item.moderation_status !== 'approved';
   const language = requestLanguageLabel(item.language_code);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!currentUserId || mine) {
+      setSaved(false);
+      return;
+    }
+    setSaved(readSaved(savedKey(currentUserId)).some((entry) => entry.id === item.id));
+  }, [currentUserId, item.id, mine]);
+
+  function toggleSaved() {
+    if (!currentUserId || mine) return;
+    const key = savedKey(currentUserId);
+    const current = readSaved(key);
+    const exists = current.some((entry) => entry.id === item.id);
+    const next = exists
+      ? current.filter((entry) => entry.id !== item.id)
+      : [{
+          id: item.id,
+          title: item.title,
+          category: category.label,
+          campus: campusLabel,
+          meta: `${language} · ${campusFeedRelativeTime(item.created_at)}`,
+          image,
+          href: campusFeedHref(item)
+        }, ...current];
+    window.localStorage.setItem(key, JSON.stringify(next));
+    if (!window.localStorage.getItem(LEGACY_SAVED_KEY)) {
+      window.localStorage.removeItem(LEGACY_SAVED_KEY);
+    }
+    setSaved(!exists);
+  }
 
   return (
     <article className={styles.card} data-request-id={item.id}>
       <div className={styles.media}>
         {image ? <img src={image} alt="" /> : <UiIcon name={category.icon} />}
         <span className={styles.category} data-tone={category.tone}>{category.label}</span>
+        {!mine && currentUserId && (
+          <button
+            type="button"
+            className={`${styles.saveButton} ${saved ? styles.saved : ''}`.trim()}
+            onClick={toggleSaved}
+            aria-pressed={saved}
+            aria-label={saved ? 'Remove from saved posts' : 'Save this post'}
+            title={saved ? 'Saved' : 'Save post'}
+          >
+            <UiIcon name="bookmark" />
+          </button>
+        )}
         {item.media?.length > 1 && <span className={styles.mediaCount}>+{item.media.length - 1}</span>}
       </div>
 
