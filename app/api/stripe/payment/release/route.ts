@@ -84,7 +84,37 @@ export async function POST(request: Request) {
     const marketOrder = marketOrderResult.data;
     const openResolutionCase = resolutionCaseResult.data;
 
-    if (!payment) throw new Error('PAYMENT_NOT_SECURED');
+    // For paid help / split-cost connections, the activity lifecycle must not depend on
+    // whether checkout happened, Stripe has finished processing, or the provider can
+    // receive a payout yet. Two completion confirmations are enough to move it to History.
+    if (!marketOrder) {
+      const completedIds = new Set((completions ?? []).map((row) => row.user_id as string));
+      const mutuallyCompleted = completedIds.has(connection.requester_id) && completedIds.has(connection.responder_id);
+      if (!mutuallyCompleted && connection.status !== 'completed') {
+        throw new Error('COMPLETION_NOT_READY');
+      }
+
+      const lifecycleNow = new Date().toISOString();
+      const [connectionUpdate, requestUpdate] = await Promise.all([
+        supabase.from('connections').update({ status: 'completed', updated_at: lifecycleNow }).eq('id', connection.id).neq('status', 'cancelled'),
+        supabase.from('requests').update({ status: 'completed', updated_at: lifecycleNow }).eq('id', connection.request_id).neq('status', 'cancelled')
+      ]);
+      if (connectionUpdate.error) throw connectionUpdate.error;
+      if (requestUpdate.error) throw requestUpdate.error;
+    }
+
+    // A completed activity may legitimately have no secured payment: for example the
+    // requester never finished checkout. Keep the lifecycle closed and report the money
+    // state separately instead of leaving the connection stuck active.
+    if (!payment) {
+      if (!marketOrder) {
+        return NextResponse.json({
+          error: 'Activity completed and moved to History. There is no secured Aspire payment to release.',
+          code: 'COMPLETED_WITHOUT_SECURED_PAYMENT'
+        }, { status: 409 });
+      }
+      throw new Error('PAYMENT_NOT_SECURED');
+    }
 
     const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
     if (payment.status === 'released' && payment.stripe_transfer_id) {
@@ -97,7 +127,16 @@ export async function POST(request: Request) {
         duplicate: true
       });
     }
-    if (payment.status !== 'secured') throw new Error('PAYMENT_NOT_SECURED');
+    if (payment.status !== 'secured') {
+      if (!marketOrder) {
+        return NextResponse.json({
+          error: 'Activity completed and moved to History. The Aspire payment is not secured, so no payout was released.',
+          code: 'COMPLETED_WITHOUT_SECURED_PAYMENT',
+          paymentStatus: payment.status
+        }, { status: 409 });
+      }
+      throw new Error('PAYMENT_NOT_SECURED');
+    }
 
     if (marketOrder) {
       if (user.id !== marketOrder.buyer_id && user.id !== marketOrder.seller_id) {
@@ -116,22 +155,6 @@ export async function POST(request: Request) {
       if (marketOrder.status !== 'release_ready' || !marketOrder.seller_handed_off_at || !marketOrder.buyer_received_at) {
         return NextResponse.json({ error: 'Buyer receipt confirmation is required before the seller payout can be released.', code: 'MARKET_RECEIPT_NOT_CONFIRMED' }, { status: 409 });
       }
-    } else {
-      const completedIds = new Set((completions ?? []).map((row) => row.user_id as string));
-      if (!completedIds.has(connection.requester_id) || !completedIds.has(connection.responder_id)) {
-        throw new Error('COMPLETION_NOT_READY');
-      }
-
-      // Completion is a connection-lifecycle fact, not a payout-success fact. Move the
-      // activity to History as soon as both participants confirm, even when Stripe payout
-      // setup is incomplete or a protected payout must remain paused for review.
-      const lifecycleNow = new Date().toISOString();
-      const [connectionUpdate, requestUpdate] = await Promise.all([
-        supabase.from('connections').update({ status: 'completed', updated_at: lifecycleNow }).eq('id', connection.id).neq('status', 'cancelled'),
-        supabase.from('requests').update({ status: 'completed', updated_at: lifecycleNow }).eq('id', connection.request_id).neq('status', 'cancelled')
-      ]);
-      if (connectionUpdate.error) throw connectionUpdate.error;
-      if (requestUpdate.error) throw requestUpdate.error;
     }
 
     // Payout protection is fail-closed, but a temporary Resolution Center lookup problem
