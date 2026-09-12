@@ -14,6 +14,7 @@ type Props = {
   currentUserId: string;
   otherUserId: string;
   otherName: string;
+  initialReason?: ResolutionReason;
   onClose: () => void;
   onOpened: () => void | Promise<void>;
 };
@@ -28,9 +29,9 @@ const reasons: { value: ResolutionReason; label: string; detail: string }[] = [
   { value: 'other', label: 'Something else', detail: 'Tell Aspire what happened in your own words.' }
 ];
 
-export default function ResolutionCenterModal({ connection, currentUserId, otherUserId, otherName, onClose, onOpened }: Props) {
+export default function ResolutionCenterModal({ connection, currentUserId, otherUserId, otherName, initialReason, onClose, onOpened }: Props) {
   void currentUserId;
-  const [reason, setReason] = useState<ResolutionReason>('cancellation');
+  const [reason, setReason] = useState<ResolutionReason>(initialReason ?? 'cancellation');
   const [requestedResolution, setRequestedResolution] = useState<RequestedResolution>('review');
   const [details, setDetails] = useState('');
   const [busy, setBusy] = useState(false);
