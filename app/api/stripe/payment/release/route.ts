@@ -99,13 +99,6 @@ export async function POST(request: Request) {
     }
     if (payment.status !== 'secured') throw new Error('PAYMENT_NOT_SECURED');
 
-    if (resolutionCaseResult.error) {
-      return NextResponse.json({
-        error: 'Aspire could not verify Resolution Center protection, so this payout was not released. Try again later.',
-        code: 'RESOLUTION_PROTECTION_UNAVAILABLE'
-      }, { status: 503 });
-    }
-
     if (marketOrder) {
       if (user.id !== marketOrder.buyer_id && user.id !== marketOrder.seller_id) {
         return NextResponse.json({ error: 'You are not part of this marketplace order.' }, { status: 403 });
@@ -141,6 +134,14 @@ export async function POST(request: Request) {
       if (requestUpdate.error) throw requestUpdate.error;
     }
 
+    // Payout protection is fail-closed, but a temporary Resolution Center lookup problem
+    // must not keep an already-completed service connection stuck in the active lifecycle.
+    if (resolutionCaseResult.error) {
+      return NextResponse.json({
+        error: 'Aspire could not verify Resolution Center protection, so this payout was not released. Try again later.',
+        code: 'RESOLUTION_PROTECTION_UNAVAILABLE'
+      }, { status: 503 });
+    }
     if (openResolutionCase) {
       return NextResponse.json({
         error: 'Provider payout is paused while an Aspire Resolution Center case is open.',
@@ -183,6 +184,29 @@ export async function POST(request: Request) {
 
     if (!Number.isInteger(providerNet) || providerNet <= 0) {
       return NextResponse.json({ error: 'No seller/provider payout is due for this payment.' }, { status: 409 });
+    }
+
+    // Recheck immediately before creating the irreversible Stripe transfer. This narrows
+    // the race window for a case opened while payout-account readiness was being checked.
+    const lateResolutionCheck = await supabase
+      .from('connection_resolution_cases')
+      .select('id,status')
+      .eq('connection_id', connectionId)
+      .in('status', ['submitted', 'under_review'])
+      .limit(1)
+      .maybeSingle();
+    if (lateResolutionCheck.error) {
+      return NextResponse.json({
+        error: 'Aspire could not recheck Resolution Center protection, so this payout was not released. Try again later.',
+        code: 'RESOLUTION_PROTECTION_UNAVAILABLE'
+      }, { status: 503 });
+    }
+    if (lateResolutionCheck.data) {
+      return NextResponse.json({
+        error: 'Provider payout is paused while an Aspire Resolution Center case is open.',
+        code: 'RESOLUTION_CASE_OPEN',
+        caseId: lateResolutionCheck.data.id
+      }, { status: 409 });
     }
 
     const transfer = await stripeFormRequest<StripeTransfer>('/v1/transfers', {
