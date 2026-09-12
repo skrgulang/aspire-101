@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
+import { resolveUniversityByEmail } from '../../lib/supabase/universities';
 import { fetchMyRole } from '../../lib/supabase/trust';
 import type { AppRole } from '../../lib/supabase/trust';
 import AppDock from '../AppDock';
@@ -70,8 +71,8 @@ export default function ProfilePage() {
       }
 
       const [{ data: profileRow }, { data: schoolVerification }, { data: identityVerification }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
-        supabase.from('profiles').select('display_name,name,full_name,school,home_campus_id,avatar_url,image_url,major,graduation_year,bio,interests,created_at').eq('id', user.id).maybeSingle(),
-        supabase.from('school_verifications').select('status,verification_method,school_email').eq('user_id', user.id).maybeSingle(),
+        supabase.from('profiles').select('display_name,name,full_name,school,home_campus_id,current_campus_id,avatar_url,image_url,major,graduation_year,bio,interests,created_at').eq('id', user.id).maybeSingle(),
+        supabase.from('school_verifications').select('status,verification_method,school_email,school,university_id').eq('user_id', user.id).maybeSingle(),
         supabase.from('identity_verifications').select('status').eq('user_id', user.id).maybeSingle(),
         supabase.from('user_preferences').select('profile_visibility').eq('user_id', user.id).maybeSingle(),
         supabase.from('connections').select('id', { count: 'exact', head: true }).eq('status', 'completed').or(`requester_id.eq.${user.id},responder_id.eq.${user.id}`),
@@ -80,14 +81,38 @@ export default function ProfilePage() {
 
       const metadata = user.user_metadata ?? {};
       const backendName = profileRow?.display_name || profileRow?.full_name || profileRow?.name;
-      const backendSchool = profileRow?.school;
+      const backendSchool = typeof profileRow?.school === 'string' && profileRow.school.trim() ? profileRow.school.trim() : '';
+      const verifiedSchool = schoolVerification?.status === 'verified' && typeof schoolVerification.school === 'string' && schoolVerification.school.trim()
+        ? schoolVerification.school.trim()
+        : '';
+      const verifiedUniversityId = schoolVerification?.status === 'verified' && typeof schoolVerification.university_id === 'string' && schoolVerification.university_id.trim()
+        ? schoolVerification.university_id.trim()
+        : '';
+
+      let resolvedUniversity: Awaited<ReturnType<typeof resolveUniversityByEmail>> = null;
+      if (user.email && ((!profileRow?.home_campus_id && !verifiedUniversityId) || (!backendSchool && !verifiedSchool))) {
+        resolvedUniversity = await resolveUniversityByEmail(user.email).catch(() => null);
+      }
+
+      const metadataSchool = typeof metadata.school === 'string' && metadata.school.trim() ? metadata.school.trim() : '';
+      const resolvedSchool = verifiedSchool || backendSchool || resolvedUniversity?.name || metadataSchool || 'Campus not set';
+      const inferredUniversityId = verifiedUniversityId || resolvedUniversity?.id || '';
+
+      const repairPayload: Record<string, string> = {};
+      if (!profileRow?.home_campus_id && inferredUniversityId) repairPayload.home_campus_id = inferredUniversityId;
+      if (!profileRow?.current_campus_id && inferredUniversityId) repairPayload.current_campus_id = inferredUniversityId;
+      if (!backendSchool && resolvedSchool !== 'Campus not set') repairPayload.school = resolvedSchool;
+      if (Object.keys(repairPayload).length) {
+        await supabase.from('profiles').update(repairPayload).eq('id', user.id);
+      }
+
       const nextProfile: ProfileView = {
         name: typeof backendName === 'string' && backendName.trim()
           ? backendName.trim()
           : typeof metadata.display_name === 'string' && metadata.display_name.trim()
             ? metadata.display_name.trim()
             : user.email?.split('@')[0] || 'Aspire student',
-        school: typeof backendSchool === 'string' && backendSchool.trim() ? backendSchool.trim() : 'Unsupported / unknown campus',
+        school: resolvedSchool,
         emailVerified: Boolean(user.email_confirmed_at),
         schoolVerified: schoolVerification?.status === 'verified',
         phone: user.phone || '',

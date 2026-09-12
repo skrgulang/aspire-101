@@ -35,7 +35,7 @@ export default function PostPage() {
           <aside className="postRightRail" aria-label="Posting help">
             <section className="postVerifiedCard">
               <div className="postVerifiedIcon"><UiIcon name="check" /></div>
-              <div><strong>Purdue Verified</strong><span>Your post is visible only to students in the selected campus community.</span></div>
+              <div><strong>Campus verified</strong><span>Your post stays inside the selected campus community.</span></div>
             </section>
 
             <section className="postRailCard">
@@ -65,7 +65,7 @@ export default function PostPage() {
                 <div className="postPreviewMeta"><span>POST PREVIEW</span><small>Just now</small></div>
                 <strong>Your post will appear here.</strong>
                 <p>As you add a title, campus, photos, and details, this card shows the visual style students will see in Browse.</p>
-                <div className="postPreviewFooter"><UiIcon name="mapPin" /><span>Purdue community</span></div>
+                <div className="postPreviewFooter"><UiIcon name="mapPin" /><span>Selected campus community</span></div>
               </article>
             </section>
           </aside>
