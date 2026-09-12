@@ -86,6 +86,8 @@ export default function SettingsPage() {
   const [password, setPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState('');
   const [accountBusy, setAccountBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [dataMessage, setDataMessage] = useState('');
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -201,6 +203,38 @@ export default function SettingsPage() {
     }
   }
 
+  async function downloadData() {
+    if (exporting) return;
+    setExporting(true);
+    setDataMessage('');
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session?.access_token) throw new Error('Your session expired. Sign in again and retry.');
+      const response = await fetch('/api/account/export', { headers: { Authorization: `Bearer ${data.session.access_token}` } });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || 'Could not prepare your data export.');
+      }
+      const blob = await response.blob();
+      const disposition = response.headers.get('content-disposition') || '';
+      const filename = disposition.match(/filename="([^"]+)"/)?.[1] || 'aspire-101-data.json';
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      setDataMessage('Your Aspire data export is ready.');
+    } catch (error) {
+      setDataMessage(error instanceof Error ? error.message : 'Could not prepare your data export.');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
     await supabase.auth.signOut();
@@ -230,6 +264,7 @@ export default function SettingsPage() {
           <a href="#privacy">Privacy</a>
           <a href="#notifications">Notifications</a>
           <a href="#personalization">Personalization</a>
+          <a href="#data">Data & account</a>
         </nav>
 
         <section className="settingsSection" id="account">
@@ -358,6 +393,27 @@ export default function SettingsPage() {
                   <i />
                 </label>
               </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="settingsSection" id="data">
+          <div className="settingsSectionHeading">
+            <div><span>DATA & ACCOUNT</span><h2>Keep control of your Aspire data.</h2></div>
+            <p>Download a structured copy of your account data or permanently close the account when you are ready.</p>
+          </div>
+
+          <div className="settingsGrid two">
+            <article className="settingsCard">
+              <div className="settingsCardTitle"><i><UiIcon name="activity" /></i><div><strong>Download my data</strong><span>Profile, settings, requests, media metadata, connections, messages, reviews, payments, and Resolution Center history.</span></div></div>
+              {dataMessage && <p className="settingsMessage">{dataMessage}</p>}
+              <button className="settingsButton secondary" type="button" onClick={downloadData} disabled={exporting}>{exporting ? 'Preparing export…' : 'Download JSON export'}</button>
+            </article>
+
+            <article className="settingsCard">
+              <div className="settingsCardTitle"><i><UiIcon name="shield" /></i><div><strong>Delete account</strong><span>Remove or anonymize direct account data and permanently close your Aspire login.</span></div></div>
+              <p className="settingsMessage">Active connections, unsettled payments or orders, and open Resolution Center cases must be resolved first. Limited accounting, dispute, moderation, fraud-prevention, and safety records may be retained when needed.</p>
+              <button className="settingsButton secondary" type="button" onClick={() => router.push('/account/delete')}>Review deletion options</button>
             </article>
           </div>
         </section>
