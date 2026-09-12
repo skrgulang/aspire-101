@@ -7,7 +7,7 @@ export default function ResolutionPage() {
   return (
     <main className="connectionsPage">
       <AppDock active="resolution" />
-      <div className={`connectionsShell shell ${styles.shell}`}>
+      <div className={styles.shell}>
         <header className={styles.header}>
           <div className={styles.headerCopy}>
             <p className={styles.eyebrow}>ASPIRE PROTECTION</p>
