@@ -87,8 +87,12 @@ export default function CampusFeedCard({
           image,
           href: campusFeedHref(item)
         }, ...current];
-    window.localStorage.setItem(key, JSON.stringify(next));
-    setSaved(!exists);
+    try {
+      window.localStorage.setItem(key, JSON.stringify(next));
+      setSaved(!exists);
+    } catch {
+      // Saving is optional; keep the card usable when browser storage is blocked.
+    }
   }
 
   if (previewHidden) return null;
