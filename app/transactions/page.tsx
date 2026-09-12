@@ -7,7 +7,7 @@ export default function TransactionsPage() {
   return (
     <main className="connectionsPage">
       <AppDock active="transactions" />
-      <div className={`connectionsShell shell ${styles.shell}`}>
+      <div className={styles.shell}>
         <header className={styles.header}>
           <div className={styles.headerCopy}>
             <p className={styles.eyebrow}>YOUR ASPIRE · MONEY</p>
