@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchMyConnections } from '../lib/supabase/connections';
 import {
-  confirmConnectionCompletion,
   createAspireCheckout,
   fetchAspireFeeQuote,
   fetchCompletionConfirmations,
@@ -100,28 +99,6 @@ export default function ConnectionPaymentsPanel() {
     }
   }
 
-  async function complete(connectionId: string) {
-    setBusy(`complete-${connectionId}`);
-    setNotice('');
-    try {
-      const count = await confirmConnectionCompletion(connectionId);
-      await reload(true);
-      if (count >= 2) {
-        try {
-          await releaseAspirePayment(connectionId);
-          setNotice('Both people confirmed completion. Payout released through Stripe ✓');
-        } catch (releaseError) {
-          setNotice(releaseError instanceof Error ? `Completion saved. ${releaseError.message}` : 'Completion saved. Payout is waiting to release.');
-        }
-        await reload(true);
-      } else {
-        setNotice('Marked complete. Waiting for the other person.');
-      }
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not update completion.');
-    } finally { setBusy(''); }
-  }
-
   async function retryRelease(connectionId: string) {
     setBusy(`release-${connectionId}`);
     setNotice('');
@@ -141,7 +118,7 @@ export default function ConnectionPaymentsPanel() {
     <section className="connectionPayments" aria-label="Aspire service payments">
       <header className="connectionPaymentsHead">
         <div><span>SERVICE PAYMENTS</span><h2>Money stays attached to the connection.</h2><a href="/money">Open Aspire Money →</a></div>
-        <p>Paid help and shared-cost payments use the regular Aspire completion flow. Marketplace purchases use the separate Aspire Protected order flow below.</p>
+        <p>Transactions manages payment only. Finish, cancel, or report an activity from Close the Loop in Connections so the activity and payment record stay in sync.</p>
       </header>
       {notice && <div className="connectionPaymentsNotice" role="status">{notice}</div>}
       <div className="connectionPaymentList">
@@ -170,9 +147,9 @@ export default function ConnectionPaymentsPanel() {
                 {!payWithAspire && isRequester && canWork && Number(base || 0) > 0 && <button type="button" className="button buttonGold" onClick={() => chooseAspire(connection.id)} disabled={busy === `method-${connection.id}`}>Use Pay with Aspire →</button>}
                 {payWithAspire && isRequester && canWork && (!payment || ['failed','checkout_created'].includes(payment.status)) && <button type="button" className="button buttonGold" onClick={() => checkout(connection.id)} disabled={busy === `pay-${connection.id}`}>{busy === `pay-${connection.id}` ? 'Opening Stripe…' : `Secure ${money(total, request.currency)} →`}</button>}
                 {payWithAspire && isResponder && canWork && !payment && <a href="/profile">Set up payouts →</a>}
-                {secured && !selfComplete && <button type="button" className="button buttonGold" onClick={() => complete(connection.id)} disabled={busy === `complete-${connection.id}`}>Mark complete ✓</button>}
-                {secured && selfComplete && !bothComplete && <span className="paymentWaiting">You marked complete · waiting for the other person</span>}
-                {secured && bothComplete && <button type="button" className="button buttonGold" onClick={() => retryRelease(connection.id)} disabled={busy === `release-${connection.id}`}>{busy === `release-${connection.id}` ? 'Releasing…' : 'Release payout →'}</button>}
+                {secured && !selfComplete && <a className="button buttonGold" href="/connections#connection-closeout">Finish activity in Connections →</a>}
+                {secured && selfComplete && !bothComplete && <span className="paymentWaiting">You marked complete · waiting for the other person in Close the Loop</span>}
+                {secured && bothComplete && <button type="button" className="button buttonGold" onClick={() => retryRelease(connection.id)} disabled={busy === `release-${connection.id}`}>{busy === `release-${connection.id}` ? 'Releasing…' : 'Retry payout release →'}</button>}
                 {released && <span className="paymentReleased">Released through Stripe ✓ · <a href="/money">View money trail</a></span>}
               </div>
             </article>
