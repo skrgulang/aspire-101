@@ -1,19 +1,27 @@
 import MarketOrdersPanel from '../MarketOrdersPanel';
 import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
 import AppDock from '../AppDock';
+import styles from '../UtilityWorkspace.module.css';
 
 export default function TransactionsPage() {
   return (
     <main className="connectionsPage">
       <AppDock active="transactions" />
-      <div className="connectionsShell shell">
-        <header style={{ marginBottom: 28 }}>
-          <p className="eyebrow">YOUR ASPIRE</p>
-          <h1 style={{ margin: '10px 0 8px', fontSize: 'clamp(38px, 5vw, 68px)', lineHeight: 0.96, letterSpacing: '-.055em' }}>Transactions</h1>
-          <p style={{ margin: 0, color: '#8f897d', maxWidth: 720 }}>Track protected campus orders, payments, handoff, receipt confirmation, refunds, and payouts in one place.</p>
+      <div className={styles.shell}>
+        <header className={styles.header}>
+          <div className={styles.headerCopy}>
+            <p className={styles.eyebrow}>YOUR ASPIRE · MONEY</p>
+            <h1 className={styles.title}>Transactions</h1>
+            <p className={styles.lead}>Track Aspire Protected orders, payments, handoff, receipt confirmation, refunds, and payouts without losing the activity trail.</p>
+          </div>
+          <div className={styles.actions}>
+            <a href="/resolution">Resolution Center</a>
+          </div>
         </header>
-        <MarketOrdersPanel />
-        <ConnectionPaymentsPanel />
+        <div className={styles.content}>
+          <MarketOrdersPanel />
+          <ConnectionPaymentsPanel />
+        </div>
       </div>
     </main>
   );
