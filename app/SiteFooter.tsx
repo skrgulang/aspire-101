@@ -48,6 +48,8 @@ export default function SiteFooter() {
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
             <a href="/guidelines">Community Guidelines</a>
+            <a href="/marketplace-rules">Marketplace rules</a>
+            <a href="/resolution-policy">Resolution policy</a>
             <a href="mailto:business@aspires101.com">Business inquiries ↗</a>
           </nav>
         </section>
