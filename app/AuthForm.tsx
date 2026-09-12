@@ -35,6 +35,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [nextPath, setNextPath] = useState('/campus');
   const [detectedCampus, setDetectedCampus] = useState<University | null>(null);
+  const [checkedSchoolEmail, setCheckedSchoolEmail] = useState('');
   const [checkingSchool, setCheckingSchool] = useState(false);
   const [schoolChecked, setSchoolChecked] = useState(false);
   const [nearbyCampuses, setNearbyCampuses] = useState<NearbyUniversity[]>([]);
@@ -60,6 +61,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail.includes('@') || emailDomain(cleanEmail).length < 4) {
       setDetectedCampus(null);
+      setCheckedSchoolEmail('');
       setSchoolChecked(false);
       setCheckingSchool(false);
       return;
@@ -72,10 +74,12 @@ export default function AuthForm({ mode }: { mode: Mode }) {
         const campus = await resolveUniversityByEmail(cleanEmail);
         if (!active) return;
         setDetectedCampus(campus);
+        setCheckedSchoolEmail(cleanEmail);
         setSchoolChecked(true);
       } catch {
         if (active) {
           setDetectedCampus(null);
+          setCheckedSchoolEmail(cleanEmail);
           setSchoolChecked(true);
         }
       } finally {
@@ -147,7 +151,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    setMessage('');
+    setMessage(signup ? 'Creating your account and handing off the verification email…' : '');
     setPendingConfirmation(false);
 
     try {
@@ -155,14 +159,20 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       const cleanEmail = email.trim().toLowerCase();
 
       if (signup) {
-        const campus = await resolveUniversityByEmail(cleanEmail);
+        let campus = checkedSchoolEmail === cleanEmail ? detectedCampus : null;
+        if (checkedSchoolEmail !== cleanEmail) {
+          campus = await resolveUniversityByEmail(cleanEmail);
+          setDetectedCampus(campus);
+          setCheckedSchoolEmail(cleanEmail);
+          setSchoolChecked(true);
+        }
+
         if (!campus) {
           const domain = emailDomain(cleanEmail);
           if (!domain.endsWith('.edu')) throw new Error('Use your university .edu email to create an Aspire account.');
           throw new Error('Aspire is not open for this university email yet.');
         }
 
-        setDetectedCampus(campus);
         const nextQuery = `&next=${encodeURIComponent(nextPath)}`;
         const { data, error } = await supabase.auth.signUp({
           email: cleanEmail,
@@ -178,7 +188,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           enterCircle(nextPath);
         } else {
           setPendingConfirmation(true);
-          setMessage(`Check ${cleanEmail} to confirm your ${campus.short_name} account.`);
+          setMessage(`Verification email sent to ${cleanEmail}. Confirm it to finish your ${campus.short_name} account.`);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
@@ -222,7 +232,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   async function resendConfirmation() {
     if (!email.trim()) return;
     setResending(true);
-    setMessage('');
+    setMessage('Sending another verification email…');
     try {
       const supabase = getSupabaseBrowserClient();
       const { error } = await supabase.auth.resend({
@@ -339,7 +349,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
             <label><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} autoComplete={signup ? 'new-password' : 'current-password'} required /></label>
             {!signup && <div className="authUtilityRow"><span>Two-step verification runs automatically if enabled.</span><a href={recoveryHref}>Forgot password?</a></div>}
 
-            <button className="button buttonGold authSubmit" type="submit" disabled={busy || (signup && checkingSchool)}>{busy ? (signup ? 'Creating account…' : 'Signing in…') : signup ? 'Create school account →' : 'Continue securely →'}</button>
+            <button className="button buttonGold authSubmit" type="submit" disabled={busy || (signup && checkingSchool)}>{busy ? (signup ? 'Sending verification…' : 'Signing in…') : signup ? 'Create school account →' : 'Continue securely →'}</button>
 
             {pendingConfirmation && <div className="authEmailActions"><button type="button" onClick={resendConfirmation} disabled={resending}>{resending ? 'Sending…' : 'Resend confirmation'}</button><a href={recoveryHref}>I already had an account</a></div>}
             {message && <p className="authMessage" role="status">{message}</p>}
