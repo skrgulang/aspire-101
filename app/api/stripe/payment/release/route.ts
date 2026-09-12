@@ -66,11 +66,23 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    const [{ data: payment }, { data: completions }, { data: marketOrder }] = await Promise.all([
+    const [paymentResult, completionsResult, marketOrderResult, resolutionCaseResult] = await Promise.all([
       supabase.from('connection_payments').select('*').eq('connection_id', connectionId).maybeSingle(),
       supabase.from('connection_completion_confirmations').select('user_id').eq('connection_id', connectionId),
-      supabase.from('market_orders').select('*').eq('connection_id', connectionId).maybeSingle()
+      supabase.from('market_orders').select('*').eq('connection_id', connectionId).maybeSingle(),
+      supabase
+        .from('connection_resolution_cases')
+        .select('id,status')
+        .eq('connection_id', connectionId)
+        .in('status', ['submitted', 'under_review'])
+        .limit(1)
+        .maybeSingle()
     ]);
+
+    const payment = paymentResult.data;
+    const completions = completionsResult.data;
+    const marketOrder = marketOrderResult.data;
+    const openResolutionCase = resolutionCaseResult.data;
 
     if (!payment) throw new Error('PAYMENT_NOT_SECURED');
 
@@ -86,6 +98,13 @@ export async function POST(request: Request) {
       });
     }
     if (payment.status !== 'secured') throw new Error('PAYMENT_NOT_SECURED');
+
+    if (resolutionCaseResult.error) {
+      return NextResponse.json({
+        error: 'Aspire could not verify Resolution Center protection, so this payout was not released. Try again later.',
+        code: 'RESOLUTION_PROTECTION_UNAVAILABLE'
+      }, { status: 503 });
+    }
 
     if (marketOrder) {
       if (user.id !== marketOrder.buyer_id && user.id !== marketOrder.seller_id) {
@@ -109,6 +128,25 @@ export async function POST(request: Request) {
       if (!completedIds.has(connection.requester_id) || !completedIds.has(connection.responder_id)) {
         throw new Error('COMPLETION_NOT_READY');
       }
+
+      // Completion is a connection-lifecycle fact, not a payout-success fact. Move the
+      // activity to History as soon as both participants confirm, even when Stripe payout
+      // setup is incomplete or a protected payout must remain paused for review.
+      const lifecycleNow = new Date().toISOString();
+      const [connectionUpdate, requestUpdate] = await Promise.all([
+        supabase.from('connections').update({ status: 'completed', updated_at: lifecycleNow }).eq('id', connection.id).neq('status', 'cancelled'),
+        supabase.from('requests').update({ status: 'completed', updated_at: lifecycleNow }).eq('id', connection.request_id).neq('status', 'cancelled')
+      ]);
+      if (connectionUpdate.error) throw connectionUpdate.error;
+      if (requestUpdate.error) throw requestUpdate.error;
+    }
+
+    if (openResolutionCase) {
+      return NextResponse.json({
+        error: 'Provider payout is paused while an Aspire Resolution Center case is open.',
+        code: 'RESOLUTION_CASE_OPEN',
+        caseId: openResolutionCase.id
+      }, { status: 409 });
     }
 
     const { data: payoutAccount } = await supabase
