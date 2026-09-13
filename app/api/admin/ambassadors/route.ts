@@ -4,6 +4,7 @@ import { getAuthenticatedUser, getSupabaseServiceClient } from '../../../../lib/
 export const runtime = 'nodejs';
 
 const allowedStatuses = new Set(['new', 'reviewing', 'interview', 'accepted', 'declined']);
+const applicationSelect = 'id,full_name,school,school_email,school_email_domain,school_email_status,school_email_suggestion,matched_university_id,major_year,why_aspire,campus_involvement,social_links,availability,interested_in,status,internal_notes,reviewed_by,reviewed_at,created_at,updated_at';
 
 async function requireAdmin(request: Request) {
   const { user } = await getAuthenticatedUser(request);
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
     const { supabase } = await requireAdmin(request);
     const { data, error } = await supabase
       .from('campus_ambassador_applications')
-      .select('id,full_name,school,school_email,major_year,why_aspire,campus_involvement,social_links,availability,interested_in,status,internal_notes,reviewed_by,reviewed_at,created_at,updated_at')
+      .select(applicationSelect)
       .order('created_at', { ascending: false })
       .limit(500);
     if (error) throw error;
@@ -76,7 +77,7 @@ export async function PATCH(request: Request) {
       .from('campus_ambassador_applications')
       .update(update)
       .eq('id', id)
-      .select('id,full_name,school,school_email,major_year,why_aspire,campus_involvement,social_links,availability,interested_in,status,internal_notes,reviewed_by,reviewed_at,created_at,updated_at')
+      .select(applicationSelect)
       .maybeSingle();
     if (error) throw error;
     if (!data) return NextResponse.json({ error: 'Application not found.' }, { status: 404 });
