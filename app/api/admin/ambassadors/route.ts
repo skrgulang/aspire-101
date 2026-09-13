@@ -51,7 +51,8 @@ export async function GET(request: Request) {
       applications: applications ?? [],
       emailEvents: emailEvents ?? [],
       emailConfigured: ambassadorEmailConfigured(),
-      replyToConfigured: Boolean(process.env.AMBASSADOR_REPLY_TO_EMAIL || process.env.AMBASSADOR_ADMIN_EMAIL)
+      replyToConfigured: true,
+      emailProvider: 'Namecheap Private Email'
     });
   } catch (error) {
     return errorResponse(error);
