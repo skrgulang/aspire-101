@@ -30,7 +30,6 @@ type SendOptions = {
 
 type EmailTemplate = {
   subject: string;
-  preview: string;
   html: string;
   text: string;
 };
@@ -70,7 +69,6 @@ function templateFor(type: AmbassadorEmailType, application: AmbassadorEmailAppl
   if (type === 'application_received') {
     return {
       subject: 'We received your Aspire 101 Campus Ambassador application',
-      preview: 'Your Campus Ambassador application is in.',
       html: emailShell(
         'Application received.',
         `<p style="color:#b7b0a5;line-height:1.7;margin:0">Hi ${safeName},</p><p style="color:#b7b0a5;line-height:1.7">Thanks for applying to help build Aspire 101 at ${safeSchool}. Your application is in our review queue. If there is a fit, our team will follow up using this school email.</p><p style="color:#b7b0a5;line-height:1.7;margin-bottom:0">You do not need to submit again.</p>`,
@@ -84,7 +82,6 @@ function templateFor(type: AmbassadorEmailType, application: AmbassadorEmailAppl
     const interests = (application.interested_in || []).join(', ') || 'Not specified';
     return {
       subject: `New Campus Ambassador application · ${application.full_name}`,
-      preview: `${application.full_name} applied from ${application.school}.`,
       html: emailShell(
         'New ambassador application.',
         `<p style="color:#b7b0a5;line-height:1.7;margin:0"><strong style="color:#fff">${escapeHtml(application.full_name)}</strong> applied from ${safeSchool}.</p><p style="color:#8f887e;line-height:1.7">School email: ${escapeHtml(application.school_email)}<br>Major / year: ${escapeHtml(application.major_year || 'Not provided')}<br>Availability: ${escapeHtml(application.availability || 'Not provided')}<br>Interested in: ${escapeHtml(interests)}</p>`,
@@ -97,7 +94,6 @@ function templateFor(type: AmbassadorEmailType, application: AmbassadorEmailAppl
   if (type === 'interview_invite') {
     return {
       subject: 'Aspire 101 Campus Ambassador · next step',
-      preview: 'We would like to learn more about you and your campus.',
       html: emailShell(
         'We’d like to talk.',
         `<p style="color:#b7b0a5;line-height:1.7;margin:0">Hi ${safeName},</p><p style="color:#b7b0a5;line-height:1.7">Thanks again for your Campus Ambassador application. We’d like to learn more about you, ${safeSchool}, and how you would approach building a student community there.</p><p style="color:#b7b0a5;line-height:1.7;margin-bottom:0">Reply to this email with a few times that work for you and we’ll coordinate the next step.</p>`
@@ -109,7 +105,6 @@ function templateFor(type: AmbassadorEmailType, application: AmbassadorEmailAppl
   if (type === 'accepted') {
     return {
       subject: 'Welcome to the Aspire 101 Campus Ambassador program',
-      preview: 'We would like to welcome you to the Campus Ambassador program.',
       html: emailShell(
         'Welcome to Aspire 101.',
         `<p style="color:#b7b0a5;line-height:1.7;margin:0">Hi ${safeName},</p><p style="color:#b7b0a5;line-height:1.7">We’d like to welcome you to the Aspire 101 Campus Ambassador program for ${safeSchool}. We’re excited to have you help us learn what students need and build a strong local campus presence.</p><p style="color:#b7b0a5;line-height:1.7;margin-bottom:0">We’ll follow up with onboarding details and your first steps.</p>`
@@ -121,7 +116,6 @@ function templateFor(type: AmbassadorEmailType, application: AmbassadorEmailAppl
   if (type === 'declined') {
     return {
       subject: 'Aspire 101 Campus Ambassador application update',
-      preview: 'An update on your Campus Ambassador application.',
       html: emailShell(
         'Thank you for applying.',
         `<p style="color:#b7b0a5;line-height:1.7;margin:0">Hi ${safeName},</p><p style="color:#b7b0a5;line-height:1.7">Thank you for taking the time to apply to the Aspire 101 Campus Ambassador program. We’re not moving forward with your application at this time.</p><p style="color:#b7b0a5;line-height:1.7;margin-bottom:0">We appreciate your interest in Aspire 101 and hope you’ll continue to be part of the campus community.</p>`
@@ -132,7 +126,6 @@ function templateFor(type: AmbassadorEmailType, application: AmbassadorEmailAppl
 
   return {
     subject: 'Aspire 101 Campus Ambassador · follow-up',
-    preview: 'A quick follow-up from the Aspire 101 team.',
     html: emailShell(
       'A quick follow-up.',
       `<p style="color:#b7b0a5;line-height:1.7;margin:0">Hi ${safeName},</p><p style="color:#b7b0a5;line-height:1.7;margin-bottom:0">We’re following up on your Aspire 101 Campus Ambassador application. Reply to this email if you have any questions or updates you’d like us to know.</p>`
@@ -199,6 +192,7 @@ export async function sendAmbassadorEmail({ supabase, application, type, created
     .select('id,email_type,recipient,status,provider,provider_message_id,error_message,created_at,sent_at')
     .single();
   if (eventError) throw eventError;
+  if (!event) throw new Error('Could not create an email delivery event.');
 
   try {
     const response = await fetch('https://api.resend.com/emails', {
