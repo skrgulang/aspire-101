@@ -7,12 +7,17 @@ import styles from './ambassador-admin.module.css';
 
 type Status = 'new' | 'reviewing' | 'interview' | 'accepted' | 'declined';
 type Filter = 'all' | Status;
+type EmailStatus = 'matched' | 'unmatched' | 'unreviewed';
 
 type Application = {
   id: string;
   full_name: string;
   school: string;
   school_email: string;
+  school_email_domain: string | null;
+  school_email_status: EmailStatus;
+  school_email_suggestion: string | null;
+  matched_university_id: string | null;
   major_year: string | null;
   why_aspire: string;
   campus_involvement: string | null;
@@ -92,12 +97,13 @@ export default function AmbassadorAdminDashboard() {
   useEffect(() => { void load(); }, [load]);
 
   const counts = useMemo(() => Object.fromEntries(statusOrder.map((status) => [status, applications.filter((item) => item.status === status).length])) as Record<Status, number>, [applications]);
+  const emailReviewCount = useMemo(() => applications.filter((item) => item.school_email_status !== 'matched').length, [applications]);
   const filtered = useMemo(() => {
     const clean = query.trim().toLowerCase();
     return applications.filter((item) => {
       if (filter !== 'all' && item.status !== filter) return false;
       if (!clean) return true;
-      return [item.full_name, item.school, item.school_email, item.major_year || '', ...(item.interested_in || [])].join(' ').toLowerCase().includes(clean);
+      return [item.full_name, item.school, item.school_email, item.school_email_domain || '', item.major_year || '', ...(item.interested_in || [])].join(' ').toLowerCase().includes(clean);
     });
   }, [applications, filter, query]);
   const selected = useMemo(() => applications.find((item) => item.id === selectedId) || null, [applications, selectedId]);
@@ -144,6 +150,7 @@ export default function AmbassadorAdminDashboard() {
       <section className={styles.stats} aria-label="Application overview">
         <article><span>TOTAL</span><strong>{applications.length}</strong><small>All applications</small></article>
         <article className={counts.new ? styles.attention : ''}><span>NEW</span><strong>{counts.new}</strong><small>Need first review</small></article>
+        <article className={emailReviewCount ? styles.warning : ''}><span>EMAIL CHECK</span><strong>{emailReviewCount}</strong><small>Domain not matched</small></article>
         <article><span>INTERVIEW</span><strong>{counts.interview}</strong><small>Conversation stage</small></article>
         <article><span>ACCEPTED</span><strong>{counts.accepted}</strong><small>Campus builders</small></article>
       </section>
@@ -165,7 +172,7 @@ export default function AmbassadorAdminDashboard() {
           {filtered.map((item) => (
             <button type="button" key={item.id} className={`${styles.applicant} ${selectedId === item.id ? styles.selected : ''}`} onClick={() => setSelectedId(item.id)}>
               <i>{initials(item.full_name)}</i>
-              <span><strong>{item.full_name}</strong><small>{item.school}</small><em>{formatDate(item.created_at)}</em></span>
+              <span><strong>{item.full_name}</strong><small>{item.school}{item.school_email_status !== 'matched' ? ' · ⚠ Email check' : ''}</small><em>{formatDate(item.created_at)}</em></span>
               <b data-status={item.status}>{statusLabels[item.status]}</b>
             </button>
           ))}
@@ -184,7 +191,14 @@ export default function AmbassadorAdminDashboard() {
               </div>
 
               <div className={styles.infoGrid}>
-                <article><span>SCHOOL EMAIL</span><strong>{selected.school_email}</strong></article>
+                <article className={selected.school_email_status !== 'matched' ? styles.emailWarning : ''}>
+                  <span>SCHOOL EMAIL</span>
+                  <strong>{selected.school_email}</strong>
+                  <small className={styles.emailSignal} data-status={selected.school_email_status}>
+                    {selected.school_email_status === 'matched' ? '✓ Campus domain matched' : selected.school_email_status === 'unmatched' ? '⚠ Domain needs review' : 'Domain not checked'}
+                  </small>
+                  {selected.school_email_suggestion && <small className={styles.emailSuggestion}>Possible domain: @{selected.school_email_suggestion}</small>}
+                </article>
                 <article><span>AVAILABILITY</span><strong>{selected.availability || 'Not provided'}</strong></article>
                 <article className={styles.wide}><span>INTERESTED IN</span><div>{selected.interested_in?.length ? selected.interested_in.map((interest) => <b key={interest}>{interest}</b>) : <strong>Not specified</strong>}</div></article>
               </div>
