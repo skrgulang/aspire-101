@@ -3,76 +3,58 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
+import { fetchSavedRequests, removeSavedRequest, type SavedRequestSnapshot } from '../../lib/supabase/savedRequests';
 import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
 import UiIcon from '../UiIcon';
 import styles from './SavedPage.module.css';
 
-type SavedPost = {
-  id: string;
-  title: string;
-  category?: string;
-  campus?: string;
-  meta?: string;
-  image?: string;
-  href?: string;
-};
-
-const LEGACY_STORAGE_KEY = 'aspire-saved-posts';
-const savedKey = (userId: string) => `aspire-saved-posts:${userId}`;
-
 export default function SavedPage() {
   const router = useRouter();
-  const [items, setItems] = useState<SavedPost[]>([]);
-  const [currentUserId, setCurrentUserId] = useState('');
+  const [items, setItems] = useState<SavedRequestSnapshot[]>([]);
   const [ready, setReady] = useState(false);
+  const [removingId, setRemovingId] = useState('');
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     let alive = true;
     const supabase = getSupabaseBrowserClient();
 
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!alive) return;
-      const user = data.user;
-      if (!user) {
+      if (!data.user) {
         router.replace('/login?next=%2Fsaved');
         return;
       }
 
-      setCurrentUserId(user.id);
       try {
-        const key = savedKey(user.id);
-        let raw = window.localStorage.getItem(key);
-        if (!raw) {
-          const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
-          if (legacy) {
-            raw = legacy;
-            window.localStorage.setItem(key, legacy);
-            window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-          }
-        }
-        const parsed = raw ? JSON.parse(raw) : [];
-        setItems(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        setItems([]);
+        const next = await fetchSavedRequests();
+        if (alive) setItems(next);
+      } catch (error) {
+        if (alive) setNotice(error instanceof Error ? error.message : 'Could not load your saved posts.');
       } finally {
-        setReady(true);
+        if (alive) setReady(true);
       }
     }).catch(() => {
-      if (alive) setReady(true);
+      if (alive) {
+        setNotice('Could not load your saved posts.');
+        setReady(true);
+      }
     });
 
     return () => { alive = false; };
   }, [router]);
 
-  function removeSaved(id: string) {
-    if (!currentUserId) return;
-    const next = items.filter((item) => item.id !== id);
-    setItems(next);
+  async function removeSaved(id: string) {
+    setRemovingId(id);
+    setNotice('');
     try {
-      window.localStorage.setItem(savedKey(currentUserId), JSON.stringify(next));
-    } catch {
-      // Keep the visible state responsive even if browser storage is unavailable.
+      await removeSavedRequest(id);
+      setItems((current) => current.filter((item) => item.id !== id));
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not remove this saved post.');
+    } finally {
+      setRemovingId('');
     }
   }
 
@@ -86,10 +68,12 @@ export default function SavedPage() {
           <div>
             <span>YOUR STUFF</span>
             <h1>Saved</h1>
-            <p>Keep posts you want to come back to without cluttering your inbox.</p>
+            <p>Keep posts you want to come back to. Saved posts now follow your Aspire account across devices.</p>
           </div>
           <a href="/discover" className={styles.browse}><UiIcon name="search" />Browse campus</a>
         </header>
+
+        {notice && <div role="status">{notice}</div>}
 
         {items.length ? (
           <section className={styles.grid} aria-label="Saved posts">
@@ -102,7 +86,9 @@ export default function SavedPage() {
                   <p>{item.campus || 'Campus'}{item.meta ? ` · ${item.meta}` : ''}</p>
                   <div className={styles.actions}>
                     <a href={item.href || '/discover'}>View post</a>
-                    <button type="button" onClick={() => removeSaved(item.id)}>Remove</button>
+                    <button type="button" onClick={() => void removeSaved(item.id)} disabled={removingId === item.id}>
+                      {removingId === item.id ? 'Removing…' : 'Remove'}
+                    </button>
                   </div>
                 </div>
               </article>
