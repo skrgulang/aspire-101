@@ -9,6 +9,7 @@ export default function AmbassadorApplicationForm() {
   const startedAt = useMemo(() => Date.now(), []);
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successNotice, setSuccessNotice] = useState('');
   const [error, setError] = useState('');
   const [interests, setInterests] = useState<string[]>([]);
 
@@ -17,6 +18,7 @@ export default function AmbassadorApplicationForm() {
     if (busy) return;
     setBusy(true);
     setError('');
+    setSuccessNotice('');
 
     const form = new FormData(event.currentTarget);
     try {
@@ -39,6 +41,7 @@ export default function AmbassadorApplicationForm() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.error || 'Could not submit your application.');
+      setSuccessNotice(typeof payload?.emailNotice === 'string' ? payload.emailNotice : '');
       setSuccess(true);
       event.currentTarget.reset();
       setInterests([]);
@@ -56,7 +59,8 @@ export default function AmbassadorApplicationForm() {
         <p className={styles.cardEyebrow}>APPLICATION RECEIVED</p>
         <h2>Thanks for raising your hand.</h2>
         <p>We received your Campus Ambassador application. If there’s a fit, the Aspire 101 team will follow up using your school email.</p>
-        <button type="button" className={styles.resetButton} onClick={() => setSuccess(false)}>Submit another application</button>
+        {successNotice && <p className={styles.formNotice}>{successNotice}</p>}
+        <button type="button" className={styles.resetButton} onClick={() => { setSuccess(false); setSuccessNotice(''); }}>Submit another application</button>
       </aside>
     );
   }
@@ -71,7 +75,7 @@ export default function AmbassadorApplicationForm() {
         <div className={styles.formGrid}>
           <label><span>Full name *</span><input name="fullName" required maxLength={120} placeholder="Your name" /></label>
           <label><span>School *</span><input name="school" required maxLength={160} placeholder="Purdue University" /></label>
-          <label><span>School email *</span><input name="schoolEmail" required type="email" maxLength={254} placeholder="you@school.edu" /></label>
+          <label><span>School email *</span><input name="schoolEmail" required type="email" maxLength={254} placeholder="you@school.edu" autoCapitalize="none" autoCorrect="off" /></label>
           <label><span>Major / year</span><input name="majorYear" maxLength={160} placeholder="Computer Science · Junior" /></label>
         </div>
         <label><span>Why do you want to be an ambassador? *</span><textarea name="whyAspire" required minLength={10} maxLength={3000} rows={4} placeholder="What interests you about building Aspire 101 on your campus?" /></label>
