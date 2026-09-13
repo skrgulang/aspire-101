@@ -35,6 +35,8 @@ type EmailTemplate = {
 };
 
 const onceOnlyTypes = new Set<AmbassadorEmailType>(['application_received', 'admin_new_application']);
+const defaultTeamEmail = 'team@aspires101.com';
+const defaultFromEmail = `Aspire 101 <${defaultTeamEmail}>`;
 
 function escapeHtml(value: string) {
   return value
@@ -135,11 +137,12 @@ function templateFor(type: AmbassadorEmailType, application: AmbassadorEmailAppl
 }
 
 export function ambassadorEmailConfigured() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.AMBASSADOR_FROM_EMAIL);
+  return Boolean(process.env.RESEND_API_KEY);
 }
 
 export async function sendAmbassadorEmail({ supabase, application, type, createdBy = null }: SendOptions) {
-  const adminEmail = (process.env.AMBASSADOR_ADMIN_EMAIL || '').trim();
+  const adminEmail = (process.env.AMBASSADOR_ADMIN_EMAIL || defaultTeamEmail).trim();
+  const fromEmail = (process.env.AMBASSADOR_FROM_EMAIL || defaultFromEmail).trim();
   const recipient = type === 'admin_new_application' ? adminEmail : application.school_email.trim().toLowerCase();
 
   if (!recipient) {
@@ -177,7 +180,7 @@ export async function sendAmbassadorEmail({ supabase, application, type, created
   }
 
   const template = templateFor(type, application);
-  const replyTo = (process.env.AMBASSADOR_REPLY_TO_EMAIL || process.env.AMBASSADOR_ADMIN_EMAIL || '').trim();
+  const replyTo = (process.env.AMBASSADOR_REPLY_TO_EMAIL || adminEmail || defaultTeamEmail).trim();
   const eventInsert = {
     application_id: application.id,
     email_type: type,
@@ -203,7 +206,7 @@ export async function sendAmbassadorEmail({ supabase, application, type, created
         'Idempotency-Key': `ambassador-${application.id}-${type}-${event.id}`
       },
       body: JSON.stringify({
-        from: process.env.AMBASSADOR_FROM_EMAIL,
+        from: fromEmail,
         to: [recipient],
         subject: template.subject,
         html: template.html,
