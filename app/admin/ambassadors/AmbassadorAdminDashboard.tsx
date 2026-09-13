@@ -8,6 +8,8 @@ import styles from './ambassador-admin.module.css';
 type Status = 'new' | 'reviewing' | 'interview' | 'accepted' | 'declined';
 type Filter = 'all' | Status;
 type EmailStatus = 'matched' | 'unmatched' | 'unreviewed';
+type EmailType = 'application_received' | 'admin_new_application' | 'interview_invite' | 'accepted' | 'declined' | 'follow_up';
+type DeliveryStatus = 'queued' | 'sent' | 'failed' | 'skipped';
 
 type Application = {
   id: string;
@@ -32,9 +34,31 @@ type Application = {
   updated_at: string;
 };
 
+type EmailEvent = {
+  id: string;
+  application_id: string;
+  email_type: EmailType;
+  recipient: string;
+  status: DeliveryStatus;
+  provider: string | null;
+  provider_message_id: string | null;
+  error_message: string | null;
+  created_by: string | null;
+  created_at: string;
+  sent_at: string | null;
+};
+
 const statusOrder: Status[] = ['new', 'reviewing', 'interview', 'accepted', 'declined'];
 const statusLabels: Record<Status, string> = {
   new: 'New', reviewing: 'Reviewing', interview: 'Interview', accepted: 'Accepted', declined: 'Declined'
+};
+const emailLabels: Record<EmailType, string> = {
+  application_received: 'Application confirmation',
+  admin_new_application: 'Admin notification',
+  interview_invite: 'Interview invite',
+  accepted: 'Acceptance email',
+  declined: 'Decline email',
+  follow_up: 'Follow-up email'
 };
 
 function formatDate(value: string) {
@@ -55,6 +79,9 @@ async function accessToken() {
 export default function AmbassadorAdminDashboard() {
   const router = useRouter();
   const [applications, setApplications] = useState<Application[]>([]);
+  const [emailEvents, setEmailEvents] = useState<EmailEvent[]>([]);
+  const [emailConfigured, setEmailConfigured] = useState(false);
+  const [replyToConfigured, setReplyToConfigured] = useState(false);
   const [selectedId, setSelectedId] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
@@ -86,6 +113,9 @@ export default function AmbassadorAdminDashboard() {
       if (!response.ok) throw new Error(payload?.error || 'Could not load applications.');
       const rows = (payload.applications || []) as Application[];
       setApplications(rows);
+      setEmailEvents((payload.emailEvents || []) as EmailEvent[]);
+      setEmailConfigured(Boolean(payload.emailConfigured));
+      setReplyToConfigured(Boolean(payload.replyToConfigured));
       setSelectedId((current) => current && rows.some((row) => row.id === current) ? current : (rows[0]?.id || ''));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load applications.');
@@ -107,6 +137,10 @@ export default function AmbassadorAdminDashboard() {
     });
   }, [applications, filter, query]);
   const selected = useMemo(() => applications.find((item) => item.id === selectedId) || null, [applications, selectedId]);
+  const selectedEmailEvents = useMemo(
+    () => selected ? emailEvents.filter((event) => event.application_id === selected.id).slice(0, 6) : [],
+    [emailEvents, selected]
+  );
 
   useEffect(() => { setNotesDraft(selected?.internal_notes || ''); }, [selected?.id, selected?.internal_notes]);
 
@@ -133,6 +167,31 @@ export default function AmbassadorAdminDashboard() {
     }
   }
 
+  async function sendEmail(id: string, emailType: EmailType) {
+    setBusy(`email:${id}`);
+    setNotice('');
+    try {
+      const token = await accessToken();
+      if (!token) throw new Error('Sign in again to continue.');
+      const response = await fetch('/api/admin/ambassadors', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, emailType })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (payload?.event) {
+        const event = payload.event as EmailEvent;
+        setEmailEvents((current) => [event, ...current.filter((item) => item.id !== event.id)]);
+      }
+      if (!response.ok) throw new Error(payload?.error || 'Could not send email.');
+      setNotice(`${emailLabels[emailType]} sent.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not send email.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   if (loading) return <main className={styles.state}><div className={styles.spinner} /><strong>Opening ambassador recruiting…</strong><span>Loading applications securely</span></main>;
   if (denied) return <main className={styles.state}><strong>Admin access required.</strong><span>This page contains private applicant information.</span><a href="/profile">Back to Aspire →</a></main>;
 
@@ -142,7 +201,7 @@ export default function AmbassadorAdminDashboard() {
         <div>
           <p>ASPIRE 101 · CAMPUS TEAM</p>
           <h1>Ambassador recruiting</h1>
-          <span>Review applicants, manage interview stages, and keep private recruiting notes in one place.</span>
+          <span>Review applicants, manage interview stages, keep private notes, and handle applicant follow-up in one place.</span>
         </div>
         <nav><a href="/ambassadors" target="_blank" rel="noreferrer">Public page ↗</a><a href="/moderator">Trust &amp; Safety</a><a href="/profile">Back to Aspire →</a></nav>
       </header>
@@ -189,6 +248,27 @@ export default function AmbassadorAdminDashboard() {
               <div className={styles.statusActions} aria-label="Applicant status">
                 {statusOrder.map((status) => <button key={status} disabled={busy === selected.id} className={selected.status === status ? styles.currentStatus : ''} type="button" onClick={() => void patchApplication(selected.id, { status }, `Moved ${selected.full_name} to ${statusLabels[status]}.`)}>{statusLabels[status]}</button>)}
               </div>
+
+              <section className={styles.emailWorkflow}>
+                <div className={styles.emailWorkflowHead}>
+                  <div><span>EMAIL WORKFLOW</span><strong>{emailConfigured ? 'Automated delivery ready' : 'Delivery provider not configured'}</strong></div>
+                  <small>{emailConfigured ? (replyToConfigured ? 'Replies route back to the Aspire team.' : 'Add a reply-to address before sending interview emails.') : 'Manual mailto remains available above.'}</small>
+                </div>
+                <div className={styles.emailActions}>
+                  {selected.status === 'interview' && <button disabled={!emailConfigured || busy === `email:${selected.id}`} type="button" onClick={() => void sendEmail(selected.id, 'interview_invite')}>Send interview invite</button>}
+                  {selected.status === 'accepted' && <button disabled={!emailConfigured || busy === `email:${selected.id}`} type="button" onClick={() => void sendEmail(selected.id, 'accepted')}>Send acceptance</button>}
+                  {selected.status === 'declined' && <button disabled={!emailConfigured || busy === `email:${selected.id}`} type="button" onClick={() => void sendEmail(selected.id, 'declined')}>Send decline email</button>}
+                  <button disabled={!emailConfigured || busy === `email:${selected.id}`} type="button" onClick={() => void sendEmail(selected.id, 'follow_up')}>Send follow-up</button>
+                </div>
+                <div className={styles.emailHistory}>
+                  {selectedEmailEvents.length ? selectedEmailEvents.map((event) => (
+                    <div className={styles.emailEvent} key={event.id}>
+                      <span><strong>{emailLabels[event.email_type]}</strong><small>{formatDate(event.sent_at || event.created_at)}</small></span>
+                      <b data-delivery={event.status}>{event.status}</b>
+                    </div>
+                  )) : <small className={styles.emailEmpty}>No email activity recorded for this applicant yet.</small>}
+                </div>
+              </section>
 
               <div className={styles.infoGrid}>
                 <article style={selected.school_email_status !== 'matched' ? { borderColor: 'rgba(255,199,44,.28)', background: 'rgba(255,199,44,.035)' } : undefined}>
