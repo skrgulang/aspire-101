@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
+import { sendAmbassadorEmail } from '../../../../lib/server/ambassadorEmail';
 
 const allowedAvailability = new Set(['1–3 hrs/week', '3–5 hrs/week', '5–10 hrs/week', '10+ hrs/week']);
 const allowedInterests = new Set(['Campus growth', 'Events', 'Content', 'Partnerships', 'Product feedback']);
@@ -213,16 +214,31 @@ export async function POST(request: Request) {
       user_agent: clean(request.headers.get('user-agent'), 500),
       updated_at: new Date().toISOString()
     };
+    const { status: _newStatus, ...updatePayload } = payload;
 
+    const savedFields = 'id,full_name,school,school_email,major_year,why_aspire,campus_involvement,availability,interested_in,status';
     const query = existing
-      ? supabase.from('campus_ambassador_applications').update(payload).eq('id', existing.id)
-      : supabase.from('campus_ambassador_applications').insert(payload);
-    const { error } = await query;
+      ? supabase.from('campus_ambassador_applications').update(updatePayload).eq('id', existing.id).select(savedFields).maybeSingle()
+      : supabase.from('campus_ambassador_applications').insert(payload).select(savedFields).single();
+    const { data: savedApplication, error } = await query;
     if (error) throw error;
+    if (!savedApplication) throw new Error('Application could not be loaded after saving.');
+
+    const [confirmationDelivery] = await Promise.allSettled([
+      sendAmbassadorEmail({ supabase, application: savedApplication, type: 'application_received' }),
+      sendAmbassadorEmail({ supabase, application: savedApplication, type: 'admin_new_application' })
+    ]);
+    const confirmationResult = confirmationDelivery.status === 'fulfilled' ? confirmationDelivery.value : null;
+    const confirmationEmail = confirmationResult?.ok
+      ? 'sent'
+      : confirmationResult && 'skipped' in confirmationResult && confirmationResult.skipped
+        ? 'not_configured'
+        : 'failed';
 
     return NextResponse.json({
       ok: true,
       emailStatus: domainSignal.status,
+      confirmationEmail,
       emailNotice: domainSignal.status === 'unmatched'
         ? 'Your application was saved. This school email domain is not in Aspire’s campus directory yet, so we’ll verify it during review.'
         : null
