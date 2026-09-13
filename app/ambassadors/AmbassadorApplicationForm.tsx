@@ -59,7 +59,7 @@ export default function AmbassadorApplicationForm() {
         <p className={styles.cardEyebrow}>APPLICATION RECEIVED</p>
         <h2>Thanks for raising your hand.</h2>
         <p>We received your Campus Ambassador application. If there’s a fit, the Aspire 101 team will follow up using your school email.</p>
-        {successNotice && <p className={styles.formNotice}>{successNotice}</p>}
+        {successNotice && <p style={{ marginTop: 14, padding: '10px 12px', border: '1px solid rgba(255,199,44,.24)', borderRadius: 10, background: 'rgba(255,199,44,.06)', color: '#d8c98f', fontSize: 10, lineHeight: 1.5 }}>{successNotice}</p>}
         <button type="button" className={styles.resetButton} onClick={() => { setSuccess(false); setSuccessNotice(''); }}>Submit another application</button>
       </aside>
     );
