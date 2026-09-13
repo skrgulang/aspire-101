@@ -2,7 +2,10 @@ import { inferIntentHints, inferNavigationIntent, rankCandidatesForIntent } from
 
 const classificationCases = [
   ['Need a ride to SFO Friday, can split $30', { category: 'Ride', kind: 'split_cost', amount_cents: 3000 }],
+  ['Need a ride to IND, I can pay 25 dollars', { category: 'Ride', kind: 'split_cost', amount_cents: 2500 }],
+  ['airport carpool budget 40 bucks', { category: 'Ride', kind: 'split_cost', amount_cents: 4000 }],
   ['selling my used monitor for $80', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 8000 }],
+  ['WTS laptop for USD 1,200', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 120000 }],
   ['looking for a math study group', { category: 'Study', kind: 'community' }],
   ['Need help moving a desk tomorrow', { category: 'Moving / help', kind: 'paid_help' }],
   ['Looking for a teammate for a hackathon project', { category: 'Project / collab', kind: 'collaboration' }],
@@ -37,11 +40,30 @@ if (buyRanked[0]?.id !== 'seller') throw new Error(`buyer reciprocal ranking fai
 const sellRanked = rankCandidatesForIntent('WTS bike', marketplaceCandidates, 2);
 if (sellRanked[0]?.id !== 'buyer') throw new Error(`seller reciprocal ranking failed: ${sellRanked.map((item) => item.id).join(',')}`);
 
+const studyDistractors = [
+  { id: 'textbook', title: 'Math textbook for sale', details: 'calculus book', category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell' },
+  { id: 'study-partner', title: 'Math study partner', details: 'review homework together', category: 'Study', kind: 'community', market_intent: null }
+];
+const studyRanked = rankCandidatesForIntent('looking for math study help', studyDistractors, 2);
+if (studyRanked[0]?.id !== 'study-partner') throw new Error(`category precision failed: ${studyRanked.map((item) => item.id).join(',')}`);
+if (studyRanked.some((item) => item.id === 'textbook')) throw new Error('wrong-category keyword distractor should not survive structured ranking');
+
+const onlyWrongCategory = [
+  { id: 'math-book', title: 'Math book', details: 'textbook for sale', category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell' }
+];
+const noMatch = rankCandidatesForIntent('need a math study group', onlyWrongCategory, 12);
+if (noMatch.length !== 0) throw new Error('structured intent should not fall back to irrelevant recent candidates');
+
 const navigationCases = [
   ['open connections', '/connections'],
+  ['show my inbox', '/connections'],
+  ['open my messages', '/connections'],
   ['show me saved', '/saved'],
+  ['open my saved', '/saved'],
   ['go to profile', '/profile'],
+  ['show my profile', '/profile'],
   ['payments', '/money'],
+  ['open my wallet', '/money'],
   ['take me to discover', '/discover'],
   ['create post', '/post'],
   ['view activity', '/activity'],
@@ -57,11 +79,12 @@ const negativeNavigationCases = [
   'show me people who can help with math',
   'find a study partner',
   'I need help with a payment for a ride',
-  'post a request for moving help'
+  'post a request for moving help',
+  'show my payment request for the airport'
 ];
 
 for (const input of negativeNavigationCases) {
   if (inferNavigationIntent(input)) throw new Error(`${input}: should not be treated as direct navigation`);
 }
 
-console.log('Aspire Brain regression: 22/22 passed');
+console.log('Aspire Brain regression: 32/32 passed');
