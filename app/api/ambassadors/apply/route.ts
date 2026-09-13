@@ -16,6 +16,13 @@ type UniversityRow = {
   email_domains: string[] | null;
 };
 
+type DomainSignal = {
+  status: 'matched' | 'unmatched';
+  universityId: string | null;
+  suggestion: string | null;
+  issue: 'typo' | 'mismatch' | null;
+};
+
 function clean(value: unknown, max: number) {
   return String(value ?? '').trim().slice(0, max);
 }
@@ -38,22 +45,16 @@ function normalizeInstitution(value: string) {
 }
 
 function levenshtein(a: string, b: string) {
-  const rows = b.length + 1;
-  const cols = a.length + 1;
-  const matrix = Array.from({ length: rows }, (_, row) => Array(cols).fill(0));
-  for (let col = 0; col < cols; col += 1) matrix[0][col] = col;
-  for (let row = 0; row < rows; row += 1) matrix[row][0] = row;
-  for (let row = 1; row < rows; row += 1) {
-    for (let col = 1; col < cols; col += 1) {
+  const previous = Array.from({ length: a.length + 1 }, (_, index) => index);
+  for (let row = 1; row <= b.length; row += 1) {
+    const current = [row];
+    for (let col = 1; col <= a.length; col += 1) {
       const cost = a[col - 1] === b[row - 1] ? 0 : 1;
-      matrix[row][col] = Math.min(
-        matrix[row - 1][col] + 1,
-        matrix[row][col - 1] + 1,
-        matrix[row - 1][col - 1] + cost
-      );
+      current[col] = Math.min(current[col - 1] + 1, previous[col] + 1, previous[col - 1] + cost);
     }
+    for (let col = 0; col < current.length; col += 1) previous[col] = current[col];
   }
-  return matrix[b.length][a.length];
+  return previous[a.length];
 }
 
 function schoolLooksLikeUniversity(school: string, university: UniversityRow) {
@@ -65,29 +66,47 @@ function schoolLooksLikeUniversity(school: string, university: UniversityRow) {
   return candidates.some((candidate) => entered === candidate || entered.includes(candidate) || candidate.includes(entered));
 }
 
-function findDomainSignal(school: string, domain: string, universities: UniversityRow[]) {
+function primaryDomain(university: UniversityRow) {
+  return (university.email_domains || []).map((value) => value.trim().toLowerCase()).find(Boolean) || null;
+}
+
+function findDomainSignal(school: string, domain: string, universities: UniversityRow[]): DomainSignal {
+  const schoolCandidates = universities.filter((university) => schoolLooksLikeUniversity(school, university));
   const exact = universities.find((university) => (university.email_domains || []).some((raw) => {
     const allowed = raw.trim().toLowerCase();
     return allowed && (domain === allowed || domain.endsWith(`.${allowed}`));
   }));
+
   if (exact) {
-    return { status: 'matched' as const, universityId: exact.id, suggestion: null as string | null };
+    const schoolPointsSomewhereElse = schoolCandidates.length > 0 && !schoolCandidates.some((candidate) => candidate.id === exact.id);
+    if (schoolPointsSomewhereElse) {
+      return {
+        status: 'unmatched',
+        universityId: null,
+        suggestion: primaryDomain(schoolCandidates[0]),
+        issue: 'mismatch'
+      };
+    }
+    return { status: 'matched', universityId: exact.id, suggestion: null, issue: null };
   }
 
-  const schoolCandidates = universities.filter((university) => schoolLooksLikeUniversity(school, university));
-  let best: { domain: string; distance: number } | null = null;
+  let bestDomain: string | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
   schoolCandidates.forEach((university) => {
     (university.email_domains || []).forEach((raw) => {
       const allowed = raw.trim().toLowerCase();
       if (!allowed) return;
       const distance = levenshtein(domain, allowed);
-      if (!best || distance < best.distance) best = { domain: allowed, distance };
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestDomain = allowed;
+      }
     });
   });
 
   const maxDistance = domain.length >= 8 ? 2 : 1;
-  const suggestion = best && best.distance <= maxDistance ? best.domain : null;
-  return { status: 'unmatched' as const, universityId: null as string | null, suggestion };
+  const suggestion = bestDomain && bestDistance <= maxDistance ? bestDomain : null;
+  return { status: 'unmatched', universityId: null, suggestion, issue: suggestion ? 'typo' : null };
 }
 
 function clientIp(request: Request) {
@@ -140,10 +159,17 @@ export async function POST(request: Request) {
     if (universityError) throw universityError;
 
     const domainSignal = findDomainSignal(school, domain, (universityRows || []) as UniversityRow[]);
-    if (domainSignal.suggestion) {
+    if (domainSignal.issue === 'typo' && domainSignal.suggestion) {
       return NextResponse.json({
         error: `That school email domain looks like a typo. Did you mean @${domainSignal.suggestion}?`,
         code: 'SCHOOL_EMAIL_TYPO',
+        suggestedDomain: domainSignal.suggestion
+      }, { status: 422 });
+    }
+    if (domainSignal.issue === 'mismatch' && domainSignal.suggestion) {
+      return NextResponse.json({
+        error: `That email domain does not appear to match the school you entered. ${school} usually uses @${domainSignal.suggestion}.`,
+        code: 'SCHOOL_EMAIL_MISMATCH',
         suggestedDomain: domainSignal.suggestion
       }, { status: 422 });
     }
