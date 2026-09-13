@@ -13,6 +13,7 @@ const classificationCases = [
   ['WTS textbook for $25', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 2500 }],
   ['selling my math textbook for $35', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 3500 }],
   ['buying a physics textbook for 40 dollars', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted', amount_cents: 4000 }],
+  ['grocery delivery, can someone buy food for me', { category: 'Pickup / errand', kind: 'paid_help' }],
   ['need physics tutoring before the exam', { category: 'Study', kind: 'community' }],
   ['looking for a CS study partner', { category: 'Study', kind: 'community' }]
 ];
@@ -99,4 +100,4 @@ for (const input of negativeNavigationCases) {
   if (inferNavigationIntent(input)) throw new Error(`${input}: should not be treated as direct navigation`);
 }
 
-console.log('Aspire Brain regression: 38/38 passed');
+console.log('Aspire Brain regression: 39/39 passed');
