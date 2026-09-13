@@ -45,17 +45,31 @@ function normalizeInstitution(value: string) {
     .trim();
 }
 
-function levenshtein(a: string, b: string) {
-  const previous = Array.from({ length: a.length + 1 }, (_, index) => index);
-  for (let row = 1; row <= b.length; row += 1) {
-    const current = [row];
-    for (let col = 1; col <= a.length; col += 1) {
+function damerauLevenshtein(a: string, b: string) {
+  const rows = b.length + 1;
+  const cols = a.length + 1;
+  const matrix = Array.from({ length: rows }, () => Array<number>(cols).fill(0));
+  for (let col = 0; col < cols; col += 1) matrix[0][col] = col;
+  for (let row = 0; row < rows; row += 1) matrix[row][0] = row;
+
+  for (let row = 1; row < rows; row += 1) {
+    for (let col = 1; col < cols; col += 1) {
       const cost = a[col - 1] === b[row - 1] ? 0 : 1;
-      current[col] = Math.min(current[col - 1] + 1, previous[col] + 1, previous[col - 1] + cost);
+      matrix[row][col] = Math.min(
+        matrix[row - 1][col] + 1,
+        matrix[row][col - 1] + 1,
+        matrix[row - 1][col - 1] + cost
+      );
+      if (
+        row > 1 && col > 1 &&
+        a[col - 1] === b[row - 2] &&
+        a[col - 2] === b[row - 1]
+      ) {
+        matrix[row][col] = Math.min(matrix[row][col], matrix[row - 2][col - 2] + 1);
+      }
     }
-    for (let col = 0; col < current.length; col += 1) previous[col] = current[col];
   }
-  return previous[a.length];
+  return matrix[b.length][a.length];
 }
 
 function schoolLooksLikeUniversity(school: string, university: UniversityRow) {
@@ -69,6 +83,34 @@ function schoolLooksLikeUniversity(school: string, university: UniversityRow) {
 
 function primaryDomain(university: UniversityRow) {
   return (university.email_domains || []).map((value) => value.trim().toLowerCase()).find(Boolean) || null;
+}
+
+function domainTld(domain: string) {
+  const parts = domain.toLowerCase().split('.').filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : '';
+}
+
+function closestDomain(domain: string, universities: UniversityRow[], maxDistance: number) {
+  const enteredTld = domainTld(domain);
+  let bestDistance = Number.POSITIVE_INFINITY;
+  const best = new Set<string>();
+
+  for (const university of universities) {
+    for (const raw of university.email_domains || []) {
+      const allowed = raw.trim().toLowerCase();
+      if (!allowed || domainTld(allowed) !== enteredTld) continue;
+      const distance = damerauLevenshtein(domain, allowed);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best.clear();
+        best.add(allowed);
+      } else if (distance === bestDistance) {
+        best.add(allowed);
+      }
+    }
+  }
+
+  return bestDistance <= maxDistance && best.size === 1 ? [...best][0] : null;
 }
 
 function findDomainSignal(school: string, domain: string, universities: UniversityRow[]): DomainSignal {
@@ -91,23 +133,22 @@ function findDomainSignal(school: string, domain: string, universities: Universi
     return { status: 'matched', universityId: exact.id, suggestion: null, issue: null };
   }
 
-  let bestDomain: string | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
-  schoolCandidates.forEach((university) => {
-    (university.email_domains || []).forEach((raw) => {
-      const allowed = raw.trim().toLowerCase();
-      if (!allowed) return;
-      const distance = levenshtein(domain, allowed);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestDomain = allowed;
-      }
-    });
-  });
+  const schoolSuggestion = schoolCandidates.length
+    ? closestDomain(domain, schoolCandidates, domain.length >= 8 ? 2 : 1)
+    : null;
+  if (schoolSuggestion) {
+    return { status: 'unmatched', universityId: null, suggestion: schoolSuggestion, issue: 'typo' };
+  }
 
-  const maxDistance = domain.length >= 8 ? 2 : 1;
-  const suggestion = bestDomain && bestDistance <= maxDistance ? bestDomain : null;
-  return { status: 'unmatched', universityId: null, suggestion, issue: suggestion ? 'typo' : null };
+  // Catch high-confidence transposition / one-character mistakes even when the applicant
+  // entered an abbreviated or vague school name (for example prudue.edu → purdue.edu).
+  const globalSuggestion = closestDomain(domain, universities, 1);
+  return {
+    status: 'unmatched',
+    universityId: null,
+    suggestion: globalSuggestion,
+    issue: globalSuggestion ? 'typo' : null
+  };
 }
 
 function clientIp(request: Request) {
