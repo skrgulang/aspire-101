@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
 import { ambassadorEmailConfigured, sendAmbassadorEmail, type AmbassadorEmailType } from '../../../../lib/server/ambassadorEmail';
+import { ambassadorBounceSyncConfigured, syncAmbassadorBounces } from '../../../../lib/server/ambassadorBounceSync';
 
 export const runtime = 'nodejs';
 
 const allowedStatuses = new Set(['new', 'reviewing', 'interview', 'accepted', 'declined']);
 const allowedEmailTypes = new Set<AmbassadorEmailType>(['interview_invite', 'accepted', 'declined', 'follow_up']);
 const applicationSelect = 'id,full_name,school,school_email,school_email_domain,school_email_status,school_email_suggestion,matched_university_id,major_year,why_aspire,campus_involvement,social_links,availability,interested_in,status,internal_notes,reviewed_by,reviewed_at,created_at,updated_at';
-const emailEventSelect = 'id,application_id,email_type,recipient,status,provider,provider_message_id,error_message,created_by,created_at,sent_at';
+const emailEventSelect = 'id,application_id,email_type,recipient,status,provider,provider_message_id,error_message,created_by,created_at,sent_at,bounced_at';
 
 async function requireAdmin(request: Request) {
   const { user } = await getAuthenticatedUser(request);
@@ -33,6 +34,23 @@ function errorResponse(error: unknown) {
 export async function GET(request: Request) {
   try {
     const { supabase } = await requireAdmin(request);
+    let bounceSync: Awaited<ReturnType<typeof syncAmbassadorBounces>> | { ok: false; skipped: false; checked: number; bounced: number; reason: string } | null = null;
+
+    if (ambassadorBounceSyncConfigured()) {
+      try {
+        bounceSync = await syncAmbassadorBounces(supabase);
+      } catch (error) {
+        console.error('ambassador bounce sync failed', error);
+        bounceSync = {
+          ok: false,
+          skipped: false,
+          checked: 0,
+          bounced: 0,
+          reason: error instanceof Error ? error.message.slice(0, 300) : 'Bounce sync failed.'
+        };
+      }
+    }
+
     const [{ data: applications, error: applicationError }, { data: emailEvents, error: emailError }] = await Promise.all([
       supabase
         .from('campus_ambassador_applications')
@@ -52,7 +70,8 @@ export async function GET(request: Request) {
       emailEvents: emailEvents ?? [],
       emailConfigured: ambassadorEmailConfigured(),
       replyToConfigured: true,
-      emailProvider: 'Namecheap Private Email'
+      emailProvider: 'Namecheap Private Email',
+      bounceSync
     });
   } catch (error) {
     return errorResponse(error);
