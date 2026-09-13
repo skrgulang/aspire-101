@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { DiscoverRequest } from '../lib/supabase/discovery';
 import { requestLanguageLabel } from '../lib/supabase/requests';
+import { isRequestSaved, removeSavedRequest, saveRequest } from '../lib/supabase/savedRequests';
 import UiIcon from './UiIcon';
 import { campusFeedCategory, campusFeedHref, campusFeedPrice, campusFeedRelativeTime } from './campusFeedPresentation';
 import styles from './CampusFeedCard.module.css';
@@ -17,30 +18,8 @@ type Props = {
   footerRight?: ReactNode;
 };
 
-type SavedPost = {
-  id: string;
-  title: string;
-  category?: string;
-  campus?: string;
-  meta?: string;
-  image?: string;
-  href?: string;
-};
-
-const savedKey = (userId: string) => `aspire-saved-posts:${userId}`;
-
 function initialFor(name: string) {
   return name.trim().charAt(0).toUpperCase() || 'A';
-}
-
-function readSaved(key: string): SavedPost[] {
-  try {
-    const raw = window.localStorage.getItem(key);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }
 
 export default function CampusFeedCard({
@@ -62,23 +41,31 @@ export default function CampusFeedCard({
   const pending = mine && item.moderation_status && item.moderation_status !== 'approved';
   const language = requestLanguageLabel(item.language_code);
   const [saved, setSaved] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     if (!currentUserId || mine || previewHidden) {
       setSaved(false);
-      return;
+      return () => { cancelled = true; };
     }
-    setSaved(readSaved(savedKey(currentUserId)).some((entry) => entry.id === item.id));
+
+    void isRequestSaved(item.id)
+      .then((value) => { if (!cancelled) setSaved(value); })
+      .catch(() => { if (!cancelled) setSaved(false); });
+
+    return () => { cancelled = true; };
   }, [currentUserId, item.id, mine, previewHidden]);
 
-  function toggleSaved() {
-    if (!currentUserId || mine || previewHidden) return;
-    const key = savedKey(currentUserId);
-    const current = readSaved(key);
-    const exists = current.some((entry) => entry.id === item.id);
-    const next = exists
-      ? current.filter((entry) => entry.id !== item.id)
-      : [{
+  async function toggleSaved() {
+    if (!currentUserId || mine || previewHidden || saveBusy) return;
+    setSaveBusy(true);
+    try {
+      if (saved) {
+        await removeSavedRequest(item.id);
+        setSaved(false);
+      } else {
+        await saveRequest({
           id: item.id,
           title: item.title,
           category: category.label,
@@ -86,12 +73,13 @@ export default function CampusFeedCard({
           meta: `${language} · ${campusFeedRelativeTime(item.created_at)}`,
           image,
           href: campusFeedHref(item)
-        }, ...current];
-    try {
-      window.localStorage.setItem(key, JSON.stringify(next));
-      setSaved(!exists);
+        });
+        setSaved(true);
+      }
     } catch {
-      // Saving is optional; keep the card usable when browser storage is blocked.
+      // Saving is optional; keep the card usable if the network is temporarily unavailable.
+    } finally {
+      setSaveBusy(false);
     }
   }
 
@@ -106,10 +94,11 @@ export default function CampusFeedCard({
           <button
             type="button"
             className={`${styles.saveButton} ${saved ? styles.saved : ''}`.trim()}
-            onClick={toggleSaved}
+            onClick={() => void toggleSaved()}
+            disabled={saveBusy}
             aria-pressed={saved}
             aria-label={saved ? 'Remove from saved posts' : 'Save this post'}
-            title={saved ? 'Saved' : 'Save post'}
+            title={saveBusy ? 'Saving…' : saved ? 'Saved' : 'Save post'}
           >
             <UiIcon name="bookmark" />
           </button>
