@@ -1,3 +1,4 @@
+import nodemailer from 'nodemailer';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export type AmbassadorEmailType =
@@ -37,6 +38,9 @@ type EmailTemplate = {
 const onceOnlyTypes = new Set<AmbassadorEmailType>(['application_received', 'admin_new_application']);
 const defaultTeamEmail = 'team@aspires101.com';
 const defaultFromEmail = `Aspire 101 <${defaultTeamEmail}>`;
+const defaultSmtpHost = 'mail.privateemail.com';
+const defaultSmtpPort = 465;
+const providerName = 'namecheap_private_email';
 
 function escapeHtml(value: string) {
   return value
@@ -136,8 +140,24 @@ function templateFor(type: AmbassadorEmailType, application: AmbassadorEmailAppl
   };
 }
 
+function smtpPort() {
+  const configured = Number(process.env.AMBASSADOR_SMTP_PORT || defaultSmtpPort);
+  return Number.isFinite(configured) && configured > 0 ? configured : defaultSmtpPort;
+}
+
+function smtpSecure(port: number) {
+  const configured = process.env.AMBASSADOR_SMTP_SECURE?.trim().toLowerCase();
+  if (configured === 'true') return true;
+  if (configured === 'false') return false;
+  return port === 465;
+}
+
+function smtpUser() {
+  return (process.env.AMBASSADOR_SMTP_USER || defaultTeamEmail).trim();
+}
+
 export function ambassadorEmailConfigured() {
-  return Boolean(process.env.RESEND_API_KEY);
+  return Boolean(smtpUser() && process.env.AMBASSADOR_SMTP_PASSWORD);
 }
 
 export async function sendAmbassadorEmail({ supabase, application, type, createdBy = null }: SendOptions) {
@@ -170,13 +190,13 @@ export async function sendAmbassadorEmail({ supabase, application, type, created
         email_type: type,
         recipient,
         status: 'skipped',
-        provider: 'resend',
-        error_message: 'Email provider is not configured.',
+        provider: providerName,
+        error_message: 'Namecheap SMTP is not configured.',
         created_by: createdBy
       })
       .select('id,email_type,recipient,status,provider,provider_message_id,error_message,created_at,sent_at')
       .single();
-    return { ok: false, skipped: true, reason: 'Email provider is not configured.', event: skippedEvent } as const;
+    return { ok: false, skipped: true, reason: 'Namecheap SMTP is not configured.', event: skippedEvent } as const;
   }
 
   const template = templateFor(type, application);
@@ -186,7 +206,7 @@ export async function sendAmbassadorEmail({ supabase, application, type, created
     email_type: type,
     recipient,
     status: 'queued',
-    provider: 'resend',
+    provider: providerName,
     created_by: createdBy
   };
   const { data: event, error: eventError } = await supabase
@@ -197,32 +217,38 @@ export async function sendAmbassadorEmail({ supabase, application, type, created
   if (eventError) throw eventError;
   if (!event) throw new Error('Could not create an email delivery event.');
 
+  const port = smtpPort();
+  const transporter = nodemailer.createTransport({
+    host: (process.env.AMBASSADOR_SMTP_HOST || defaultSmtpHost).trim(),
+    port,
+    secure: smtpSecure(port),
+    auth: {
+      user: smtpUser(),
+      pass: process.env.AMBASSADOR_SMTP_PASSWORD
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000
+  });
+
   try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const info = await transporter.sendMail({
+      from: fromEmail,
+      to: recipient,
+      replyTo,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
       headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': `ambassador-${application.id}-${type}-${event.id}`
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [recipient],
-        subject: template.subject,
-        html: template.html,
-        text: template.text,
-        ...(replyTo ? { reply_to: replyTo } : {})
-      })
+        'X-Aspire-Email-Type': type,
+        'X-Aspire-Application-Id': application.id
+      }
     });
-    const payload = await response.json().catch(() => ({})) as { id?: string; message?: string; error?: { message?: string } };
-    if (!response.ok || !payload.id) {
-      throw new Error(payload.error?.message || payload.message || `Email provider returned ${response.status}.`);
-    }
 
     const now = new Date().toISOString();
     const { data: sentEvent, error: updateError } = await supabase
       .from('ambassador_email_events')
-      .update({ status: 'sent', provider_message_id: payload.id, sent_at: now, error_message: null })
+      .update({ status: 'sent', provider_message_id: info.messageId || null, sent_at: now, error_message: null })
       .eq('id', event.id)
       .select('id,email_type,recipient,status,provider,provider_message_id,error_message,created_at,sent_at')
       .single();
@@ -237,5 +263,7 @@ export async function sendAmbassadorEmail({ supabase, application, type, created
       .select('id,email_type,recipient,status,provider,provider_message_id,error_message,created_at,sent_at')
       .single();
     return { ok: false, reason: message, event: failedEvent } as const;
+  } finally {
+    transporter.close();
   }
 }
