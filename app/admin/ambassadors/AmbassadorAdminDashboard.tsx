@@ -147,7 +147,7 @@ export default function AmbassadorAdminDashboard() {
         <nav><a href="/ambassadors" target="_blank" rel="noreferrer">Public page ↗</a><a href="/moderator">Trust &amp; Safety</a><a href="/profile">Back to Aspire →</a></nav>
       </header>
 
-      <section className={styles.stats} aria-label="Application overview">
+      <section className={styles.stats} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }} aria-label="Application overview">
         <article><span>TOTAL</span><strong>{applications.length}</strong><small>All applications</small></article>
         <article className={counts.new ? styles.attention : ''}><span>NEW</span><strong>{counts.new}</strong><small>Need first review</small></article>
         <article className={emailReviewCount ? styles.attention : ''}><span>EMAIL CHECK</span><strong>{emailReviewCount}</strong><small>Domain not matched</small></article>
