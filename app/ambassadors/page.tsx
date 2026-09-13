@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { aspireLogo } from '../logo';
 import AmbassadorApplicationForm from './AmbassadorApplicationForm';
 import styles from './ambassadors.module.css';
+import alignment from './ambassadorsAlignment.module.css';
 
 export const metadata: Metadata = {
   title: 'Campus Ambassador Program — Aspire 101',
@@ -36,31 +37,32 @@ const ideal = [
 
 export default function AmbassadorsPage() {
   return (
-    <main className={styles.page}>
-      <header className={styles.nav}>
-        <a className={styles.brand} href="/">
+    <main className={`${styles.page} ${alignment.page}`}>
+      <header className={`${styles.nav} ${alignment.nav}`}>
+        <a className={`${styles.brand} ${alignment.brand}`} href="/">
           <img src={aspireLogo} alt="" />
           <span>Aspire <b>101</b></span>
         </a>
-        <nav className={styles.navLinks} aria-label="Campus ambassador navigation">
+        <nav className={`${styles.navLinks} ${alignment.navLinks}`} aria-label="Campus ambassador navigation">
+          <a href="/">Back to Aspire</a>
           <a href="#role">The role</a>
           <a href="#process">How it works</a>
           <a href="#faq">FAQ</a>
         </nav>
-        <a className={styles.navCta} href={applicationHref} target={applicationTarget} rel={applicationTarget ? 'noreferrer' : undefined}>Apply now</a>
+        <a className={`${styles.navCta} ${alignment.navCta}`} href={applicationHref} target={applicationTarget} rel={applicationTarget ? 'noreferrer' : undefined}>Apply now</a>
       </header>
 
-      <section className={styles.hero}>
+      <section className={`${styles.hero} ${alignment.hero}`}>
         <div className={styles.heroGlow} aria-hidden="true" />
         <div className={styles.heroCopy}>
           <p className={styles.eyebrow}>CAMPUS AMBASSADOR PROGRAM</p>
           <h1>Build Aspire 101<br /><span>at your campus.</span></h1>
-          <p className={styles.heroLead}>Be one of the students who helps Aspire 101 become useful locally. Build community, create opportunities, and help shape the product from the beginning.</p>
-          <div className={styles.heroActions}>
+          <p className={`${styles.heroLead} ${alignment.heroLead}`}>Be one of the students who helps Aspire 101 become useful locally. Build community, create opportunities, and help shape the product from the beginning.</p>
+          <div className={`${styles.heroActions} ${alignment.heroActions}`}>
             <a className={styles.primaryCta} href={applicationHref} target={applicationTarget} rel={applicationTarget ? 'noreferrer' : undefined}>Apply to your campus <span>→</span></a>
             <a className={styles.secondaryCta} href="#role">See what you’ll do</a>
           </div>
-          <div className={styles.heroMeta}>
+          <div className={`${styles.heroMeta} ${alignment.heroMeta}`}>
             <span><b>Student-led</b><small>Built around real campus communities</small></span>
             <span><b>Early-stage</b><small>Direct input into growth and product</small></span>
             <span><b>Multi-campus</b><small>Recruiting across U.S. universities</small></span>
@@ -84,7 +86,7 @@ export default function AmbassadorsPage() {
         ) : <AmbassadorApplicationForm />}
       </section>
 
-      <section className={styles.section} id="role">
+      <section className={`${styles.section} ${alignment.section}`} id="role">
         <div className={styles.sectionIntro}>
           <p className={styles.eyebrow}>WHY JOIN</p>
           <h2>More than a title.<br />A real campus-building role.</h2>
@@ -101,7 +103,7 @@ export default function AmbassadorsPage() {
         </div>
       </section>
 
-      <section className={`${styles.section} ${styles.twoColumn}`}>
+      <section className={`${styles.section} ${styles.twoColumn} ${alignment.section}`}>
         <div className={styles.panel}>
           <p className={styles.eyebrow}>WHAT YOU’LL DO</p>
           <h2>Launch with intention.</h2>
@@ -114,7 +116,7 @@ export default function AmbassadorsPage() {
         </div>
       </section>
 
-      <section className={styles.process} id="process">
+      <section className={`${styles.process} ${alignment.process}`} id="process">
         <div className={styles.processHead}>
           <div><p className={styles.eyebrow}>HOW IT WORKS</p><h2>Simple application. Real ownership.</h2></div>
           <p>We care more about initiative and campus understanding than having a perfect résumé.</p>
@@ -127,13 +129,13 @@ export default function AmbassadorsPage() {
         </div>
       </section>
 
-      <section className={styles.schools}>
+      <section className={`${styles.schools} ${alignment.schools}`}>
         <p className={styles.eyebrow}>EARLY CAMPUS RECRUITING</p>
         <h2>UC Berkeley · UCLA · UC Davis · UC Irvine · UC San Diego · Purdue · and more.</h2>
         <p>Don’t see your school? Apply anyway. Strong campus builders can help us decide where Aspire 101 launches next.</p>
       </section>
 
-      <section className={styles.faq} id="faq">
+      <section className={`${styles.faq} ${alignment.faq}`} id="faq">
         <div><p className={styles.eyebrow}>COMMON QUESTIONS</p><h2>Before you apply.</h2></div>
         <div className={styles.faqList}>
           <details><summary>Is this a paid position?</summary><p>Campus Ambassador participation is a student leadership and growth program. Any paid project, internship, stipend, reward, or other compensation opportunity will be described separately in writing before you accept it.</p></details>
@@ -143,13 +145,13 @@ export default function AmbassadorsPage() {
         </div>
       </section>
 
-      <section className={styles.finalCta}>
+      <section className={`${styles.finalCta} ${alignment.finalCta}`}>
         <div><p className={styles.eyebrow}>READY?</p><h2>Build something students at your campus will actually use.</h2></div>
         <a href={applicationHref} target={applicationTarget} rel={applicationTarget ? 'noreferrer' : undefined}>Apply for Campus Ambassador <span>→</span></a>
       </section>
 
-      <footer className={styles.footer}>
-        <a className={styles.brand} href="/"><img src={aspireLogo} alt="" /><span>Aspire <b>101</b></span></a>
+      <footer className={`${styles.footer} ${alignment.footer}`}>
+        <a className={`${styles.brand} ${alignment.brand}`} href="/"><img src={aspireLogo} alt="" /><span>Aspire <b>101</b></span></a>
         <p>Students. Ideas. Opportunities.</p>
         <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:team@aspires101.com">Contact</a></div>
       </footer>
