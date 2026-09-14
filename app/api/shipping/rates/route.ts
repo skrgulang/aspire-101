@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     if (error) throw error;
     if (!order) return NextResponse.json({ error: 'Marketplace order not found.' }, { status: 404 });
     if (user.id !== order.buyer_id && user.id !== order.seller_id) return NextResponse.json({ error: 'You are not part of this order.' }, { status: 403 });
-    if (order.fulfillment_method !== 'shipping') return NextResponse.json({ error: 'This order is set up for campus pickup.', code: 'NOT_SHIPPING_ORDER' }, { status: 409 });
+    if (order.fulfillment_method !== 'shipping') return NextResponse.json({ error: 'This order is not configured for carrier shipping.', code: 'NOT_SHIPPING_ORDER' }, { status: 409 });
     if (['released', 'refunded', 'cancelled', 'disputed'].includes(order.status)) return NextResponse.json({ error: 'Shipping cannot be changed after this order is closed or disputed.', code: 'ORDER_CLOSED' }, { status: 409 });
 
     const shipment = await createShippoShipment({
@@ -62,12 +62,14 @@ export async function POST(request: Request) {
       parcel: packageData,
       metadata: JSON.stringify({ aspire_market_order_id: order.id, request_id: order.request_id })
     });
-    const allowedCarriers = new Set((process.env.SHIPPING_ALLOWED_CARRIERS || 'fedex').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean));
+    // Shippo only returns carriers enabled for the connected account. The env var can
+    // narrow this list in production; otherwise Aspire accepts the three core carriers.
+    const allowedCarriers = new Set((process.env.SHIPPING_ALLOWED_CARRIERS || 'usps,ups,fedex').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean));
     const rates = (shipment.rates || []).filter((rate) => {
       const provider = String(rate.provider || '').toLowerCase();
       return allowedCarriers.has(provider) || allowedCarriers.has(provider.replace(/[^a-z0-9]/g, ''));
     }).filter((rate) => rate.object_id && Number.isFinite(Number(rate.amount)));
-    if (!rates.length) return NextResponse.json({ error: 'No configured shipping rates were found. Connect FedEx in Shippo or allow another carrier.', code: 'NO_SHIPPING_RATES' }, { status: 502 });
+    if (!rates.length) return NextResponse.json({ error: 'No configured shipping rates were found. Make sure USPS, UPS, or FedEx is enabled in Shippo, or update SHIPPING_ALLOWED_CARRIERS.', code: 'NO_SHIPPING_RATES' }, { status: 502 });
 
     const { error: updateError } = await supabase.from('market_orders').update({
       shipping_provider: 'shippo',
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
       shipmentId: shipment.object_id,
       rates: rates.map((rate) => ({
         id: rate.object_id,
-        carrier: rate.provider || 'FedEx',
+        carrier: rate.provider || 'Carrier',
         service: rate.servicelevel?.name || rate.servicelevel?.token || 'Standard',
         amountCents: Math.round(Number(rate.amount) * 100),
         currency: rate.currency || 'USD',
