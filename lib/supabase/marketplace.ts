@@ -20,7 +20,7 @@ export type MarketOrder = {
   seller_id: string;
   payment_id: string | null;
   listing_intent: 'sell' | 'wanted';
-  fulfillment_method: 'campus_pickup' | 'shipping';
+  fulfillment_method: 'campus_pickup' | 'shipping' | 'aspirer_delivery';
   currency: string;
   agreed_amount_cents: number;
   status: MarketOrderStatus;
