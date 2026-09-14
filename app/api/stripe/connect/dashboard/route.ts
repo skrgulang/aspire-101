@@ -3,6 +3,7 @@ import {
   apiError,
   getAuthenticatedUser,
   getSupabaseServiceClient,
+  stripeLivemode,
   stripeFormRequest
 } from '../../../../../lib/server/aspireServer';
 
@@ -12,10 +13,12 @@ export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
     const supabase = getSupabaseServiceClient();
+    const livemode = stripeLivemode();
     const { data: paymentAccount, error } = await supabase
       .from('payment_accounts')
       .select('stripe_account_id')
       .eq('user_id', user.id)
+      .eq('livemode', livemode)
       .maybeSingle();
 
     if (error) throw error;

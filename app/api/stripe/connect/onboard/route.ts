@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiError, getAuthenticatedUser, getSupabaseServiceClient, publicOrigin, stripeRequest } from '../../../../../lib/server/aspireServer';
+import { apiError, getAuthenticatedUser, getSupabaseServiceClient, publicOrigin, stripeLivemode, stripeRequest } from '../../../../../lib/server/aspireServer';
 
 type StripeAccount = { id: string };
 type StripeAccountLink = { url: string };
@@ -10,10 +10,11 @@ export async function POST(request: Request) {
     if (!user.phone_confirmed_at) throw new Error('PHONE_REQUIRED');
 
     const supabase = getSupabaseServiceClient();
+    const livemode = stripeLivemode();
     const [{ data: verification }, { data: profile }, { data: paymentAccount }] = await Promise.all([
       supabase.from('school_verifications').select('status').eq('user_id', user.id).maybeSingle(),
       supabase.from('profiles').select('display_name,name,full_name').eq('id', user.id).maybeSingle(),
-      supabase.from('payment_accounts').select('*').eq('user_id', user.id).maybeSingle()
+      supabase.from('payment_accounts').select('*').eq('user_id', user.id).eq('livemode', livemode).maybeSingle()
     ]);
 
     if (verification?.status !== 'verified') throw new Error('SCHOOL_REQUIRED');
@@ -51,6 +52,7 @@ export async function POST(request: Request) {
 
       const { error: saveError } = await supabase.from('payment_accounts').upsert({
         user_id: user.id,
+        livemode,
         stripe_account_id: stripeAccountId,
         provider: 'stripe',
         status: 'ACTION_REQUIRED',
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
         requirements_due: 1,
         last_synced_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
+      }, { onConflict: 'user_id,livemode' });
       if (saveError) throw saveError;
     }
 

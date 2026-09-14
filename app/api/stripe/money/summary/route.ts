@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiError, getAuthenticatedUser, getSupabaseServiceClient } from '../../../../../lib/server/aspireServer';
+import { apiError, getAuthenticatedUser, getSupabaseServiceClient, stripeLivemode } from '../../../../../lib/server/aspireServer';
 
 type Payment = {
   id: string;
@@ -29,6 +29,7 @@ export async function GET(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
     const supabase = getSupabaseServiceClient();
+    const livemode = stripeLivemode();
 
     const [{ data: payments, error: paymentError }, { data: payoutAccount }] = await Promise.all([
       supabase
@@ -41,6 +42,7 @@ export async function GET(request: Request) {
         .from('payment_accounts')
         .select('status,transfers_enabled,requirements_due,last_synced_at')
         .eq('user_id', user.id)
+        .eq('livemode', livemode)
         .maybeSingle()
     ]);
 

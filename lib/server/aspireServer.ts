@@ -5,6 +5,31 @@ const stripeApiBase = 'https://api.stripe.com';
 // Accounts v2 is preview-only. Current Stripe MCP/OpenAPI schema is 2026-08-26.preview.
 const stripeV2PreviewVersion = '2026-08-26.preview';
 
+export type StripePayoutState = {
+  ready: boolean;
+  status: 'NOT_STARTED' | 'ACTION_REQUIRED' | 'UNDER_REVIEW' | 'READY' | 'RESTRICTED';
+  requirementsDue: number;
+};
+
+type StripeV2Account = {
+  configuration?: {
+    recipient?: {
+      capabilities?: {
+        stripe_balance?: {
+          stripe_transfers?: { status?: string | null };
+        };
+      };
+    };
+  };
+  requirements?: {
+    entries?: Array<{
+      status?: string | null;
+      awaiting_action_from?: string | null;
+      minimum_deadline?: { status?: string | null } | null;
+    }>;
+  };
+};
+
 export function requireBearerToken(request: Request) {
   const header = request.headers.get('authorization') || '';
   const match = header.match(/^Bearer\s+(.+)$/i);
@@ -16,6 +41,14 @@ export function requireEnv(name: string) {
   const value = process.env[name];
   if (!value) throw new Error(`MISSING_ENV:${name}`);
   return value;
+}
+
+/** Derive data mode from the credential itself so configuration cannot drift. */
+export function stripeLivemode() {
+  const secret = requireEnv('STRIPE_SECRET_KEY');
+  if (/^(sk|rk)_live_/.test(secret)) return true;
+  if (/^(sk|rk)_test_/.test(secret)) return false;
+  throw new Error('INVALID_ENV:STRIPE_SECRET_KEY');
 }
 
 export async function getAuthenticatedUser(request: Request): Promise<{ user: User; accessToken: string }> {
@@ -102,6 +135,31 @@ export async function stripeGet<T>(path: string) {
   return payload as T;
 }
 
+/** Read recipient transfer readiness from the same Accounts v2 model used at onboarding. */
+export async function getStripePayoutState(accountId: string): Promise<StripePayoutState> {
+  const account = await stripeRequest<StripeV2Account>(
+    `/v2/core/accounts/${encodeURIComponent(accountId)}?include[]=configuration.recipient&include[]=requirements`
+  );
+  const transferStatus = account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || '';
+  const entries = account.requirements?.entries ?? [];
+  const requirementsDue = entries.length;
+  const pastDue = entries.some((entry) =>
+    entry.status === 'past_due' || entry.minimum_deadline?.status === 'past_due'
+  );
+  const awaitingStripe = entries.length > 0 && entries.every((entry) => entry.awaiting_action_from === 'stripe');
+
+  if (transferStatus === 'active') {
+    return { ready: true, status: 'READY', requirementsDue };
+  }
+  if (transferStatus === 'restricted' || pastDue) {
+    return { ready: false, status: 'RESTRICTED', requirementsDue };
+  }
+  if (transferStatus === 'pending' || awaitingStripe) {
+    return { ready: false, status: 'UNDER_REVIEW', requirementsDue };
+  }
+  return { ready: false, status: 'ACTION_REQUIRED', requirementsDue };
+}
+
 export function calculatePlatformFee(grossAmountCents: number) {
   const rawBps = Number.parseInt(process.env.ASPIRE_PLATFORM_FEE_BPS || '0', 10);
   const rawFixed = Number.parseInt(process.env.ASPIRE_PLATFORM_FEE_FIXED_CENTS || '0', 10);
@@ -152,6 +210,7 @@ export function apiError(error: unknown) {
   if (raw === 'PAYMENT_NOT_SECURED') return { status: 409, body: { error: 'Payment must be secured before it can be released.', code: raw } };
   if (raw === 'WEBHOOK_SIGNATURE') return { status: 400, body: { error: 'Invalid Stripe webhook signature.' } };
   if (raw.startsWith('MISSING_ENV:')) return { status: 503, body: { error: 'Payments are not connected to this deployment yet.', code: raw } };
+  if (raw.startsWith('INVALID_ENV:')) return { status: 503, body: { error: 'Payments are not configured correctly for this deployment.', code: raw } };
   if (raw.startsWith('STRIPE:')) return { status: 502, body: { error: raw.slice(7), code: 'STRIPE_ERROR' } };
   return { status: 500, body: { error: 'Could not complete that payment step.' } };
 }

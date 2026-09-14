@@ -1,4 +1,5 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { stripeLivemode } from './aspireServer';
 
 type ServiceClient = SupabaseClient;
 
@@ -16,6 +17,7 @@ async function expectOk<T>(promise: PromiseLike<{ data: T; error: { message: str
 
 export async function buildAccountExport(supabase: ServiceClient, user: User) {
   const userId = user.id;
+  const livemode = stripeLivemode();
 
   const [profile, preferences, schoolVerification, identityVerification, requests, responses, connections, reviews, payments, resolutionCases, resolutionResponses, notifications, circleChoices, completionConfirmations, paymentAccount, requestMedia] = await Promise.all([
     expectOk(supabase.from('profiles').select('*').eq('id', userId).maybeSingle(), 'profile_export'),
@@ -32,7 +34,7 @@ export async function buildAccountExport(supabase: ServiceClient, user: User) {
     expectOk(supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }), 'notifications_export'),
     expectOk(supabase.from('connection_circle_choices').select('*').eq('user_id', userId).order('created_at', { ascending: false }), 'circle_export'),
     expectOk(supabase.from('connection_completion_confirmations').select('*').eq('user_id', userId).order('confirmed_at', { ascending: false }), 'completion_export'),
-    expectOk(supabase.from('payment_accounts').select('provider,status,transfers_enabled,requirements_due,created_at,updated_at').eq('user_id', userId).maybeSingle(), 'payment_account_export'),
+    expectOk(supabase.from('payment_accounts').select('provider,livemode,status,transfers_enabled,requirements_due,created_at,updated_at').eq('user_id', userId).eq('livemode', livemode).maybeSingle(), 'payment_account_export'),
     expectOk(supabase.from('request_media').select('id,request_id,uploader_id,storage_path,mime_type,sort_order,created_at').eq('uploader_id', userId).order('created_at', { ascending: false }), 'request_media_export')
   ]);
 
