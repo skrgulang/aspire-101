@@ -45,7 +45,7 @@ function candidate(
 
 export function looksLikeAspireAction(message: string) {
   const value = message.trim().toLowerCase();
-  return /\b(ride|drive|driving|airport|ind|ord|mdw|sfo|oak|sjc|lax|pickup|pick up|errand|package|move|moving|carry|lift|study partner|study buddy|classmate|tutor|tutoring|project teammate|teammate|hackathon|startup|frontend|backend|developer|designer|engineer|coder|programmer|collab|collaboration|sell|selling|for sale|buy|buying|looking for|marketplace|campus|request|post)\b/i.test(value)
+  return /\b(ride|drive|driving|airport|ind|ord|mdw|sfo|oak|sjc|lax|pickup|pick up|errand|package|move|moving|carry|lift|study partner|study buddy|classmate|tutor|tutoring|project teammate|teammate|hackathon|startup|frontend|backend|developer|designer|engineer|coder|programmer|collab|collaboration|sell|selling|for sale|buy|buying|wtb|wts|looking for|marketplace|campus|request|post)\b/i.test(value)
     || /\b(can someone|could someone|need someone|anyone able|looking for someone)\b/i.test(value);
 }
 
@@ -65,14 +65,16 @@ export function parseAspireIntent(message: string): AspireIntent {
   {
     let score = 0;
     const signals: string[] = [];
+    if (hit(value, /\b(wts)\b/i)) { score += 95; signals.push('wts'); }
     if (hit(value, /\b(sell|selling|for sale|list my|listing my|put my .* up for sale)\b/i)) { score += 85; signals.push('sell-language'); }
-    if (hit(value, /\$\s*\d|\b\d+(?:\.\d{1,2})?\s*(?:dollars?|bucks?)\b/i)) { score += 15; signals.push('price'); }
+    if (hit(value, /(?:\$\s*|\busd\s*)\d|\b\d+(?:\.\d{1,2})?\s*(?:dollars?|bucks?)\b/i)) { score += 15; signals.push('price'); }
     if (score > 0) results.push(candidate('SELL_ITEM', 'Buy & sell', 'buy_sell', 'sell', score, signals));
   }
 
   {
     let score = 0;
     const signals: string[] = [];
+    if (hit(value, /\b(wtb)\b/i)) { score += 95; signals.push('wtb'); }
     if (hit(value, /\b(anyone selling|looking for|want to buy|need to buy|trying to buy|where can i get|does anyone have)\b/i)) { score += 75; signals.push('wanted-language'); }
     if (hit(value, /\b(marketplace|for sale|buy|buying)\b/i)) { score += 30; signals.push('market-language'); }
     if (score > 0) results.push(candidate('FIND_ITEM', 'Buy & sell', 'buy_sell', 'wanted', score, signals));
