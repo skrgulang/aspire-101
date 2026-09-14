@@ -79,6 +79,9 @@
 .marketFulfillment small { display: block; margin-top: 3px; color: #777065; font-size: 10px; line-height: 1.4; }
 .marketFulfillment { display: block; }
 .marketFulfillment > span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .12em; }
+.marketFulfillmentChoices { display: flex; gap: 6px; margin: 8px 0 4px; flex-wrap: wrap; }
+.marketFulfillmentChoices button { border: 1px solid rgba(255,255,255,.12); background: transparent; color: #aaa298; border-radius: 999px; padding: 7px 10px; font: inherit; font-size: 11px; cursor: pointer; }
+.marketFulfillmentChoices button.active { border-color: var(--gold); color: var(--gold); background: rgba(216,174,87,.09); }
 .marketProtectionNote {
   display: flex;
   gap: 12px;

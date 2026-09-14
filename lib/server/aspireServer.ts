@@ -212,5 +212,6 @@ export function apiError(error: unknown) {
   if (raw.startsWith('MISSING_ENV:')) return { status: 503, body: { error: 'Payments are not connected to this deployment yet.', code: raw } };
   if (raw.startsWith('INVALID_ENV:')) return { status: 503, body: { error: 'Payments are not configured correctly for this deployment.', code: raw } };
   if (raw.startsWith('STRIPE:')) return { status: 502, body: { error: raw.slice(7), code: 'STRIPE_ERROR' } };
+  if (raw.startsWith('SHIPPO:')) return { status: 502, body: { error: raw.slice(7), code: 'SHIPPING_PROVIDER_ERROR' } };
   return { status: 500, body: { error: 'Could not complete that payment step.' } };
 }
