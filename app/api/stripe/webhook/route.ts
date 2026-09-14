@@ -14,6 +14,10 @@ function objectId(value: unknown) {
   return null;
 }
 
+function requireDatabaseWrite(error: unknown) {
+  if (error) throw error;
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   let verified = false;
@@ -30,15 +34,16 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseServiceClient();
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('stripe_webhook_events')
       .select('status')
       .eq('event_id', event.id)
       .maybeSingle();
+    requireDatabaseWrite(existingError);
 
     if (existing?.status === 'processed') return NextResponse.json({ received: true, duplicate: true });
 
-    await supabase.from('stripe_webhook_events').upsert({
+    const { error: receivedError } = await supabase.from('stripe_webhook_events').upsert({
       event_id: event.id,
       event_type: event.type,
       livemode: Boolean(event.livemode),
@@ -46,6 +51,7 @@ export async function POST(request: Request) {
       received_at: new Date().toISOString(),
       processing_error: null
     }, { onConflict: 'event_id' });
+    requireDatabaseWrite(receivedError);
 
     const object = event.data.object;
 
@@ -71,43 +77,48 @@ export async function POST(request: Request) {
       };
 
       if (aspireUserId) {
-        await supabase.from('identity_verifications').upsert({ user_id: aspireUserId, ...identityPatch }, { onConflict: 'user_id' });
+        const { error } = await supabase.from('identity_verifications').upsert({ user_id: aspireUserId, ...identityPatch }, { onConflict: 'user_id' });
+        requireDatabaseWrite(error);
       } else if (sessionId) {
-        await supabase.from('identity_verifications').update(identityPatch).eq('provider_session_id', sessionId);
+        const { error } = await supabase.from('identity_verifications').update(identityPatch).eq('provider_session_id', sessionId);
+        requireDatabaseWrite(error);
       }
     }
 
     if (event.type === 'checkout.session.completed') {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
-        await supabase.from('connection_payments').update({
+        const { error } = await supabase.from('connection_payments').update({
           status: 'processing',
           stripe_checkout_session_id: object.id || null,
           stripe_payment_intent_id: objectId(object.payment_intent),
           updated_at: new Date().toISOString()
         }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
+        requireDatabaseWrite(error);
       }
     }
 
     if (event.type === 'checkout.session.async_payment_failed') {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
-        await supabase.from('connection_payments').update({
+        const { error } = await supabase.from('connection_payments').update({
           status: 'failed',
           failure_reason: 'Stripe reported that the asynchronous payment failed.',
           updated_at: new Date().toISOString()
         }).eq('id', paymentId).in('status', ['checkout_created', 'processing']);
+        requireDatabaseWrite(error);
       }
     }
 
     if (event.type === 'payment_intent.succeeded') {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
-        const { data: payment } = await supabase
+        const { data: payment, error: paymentError } = await supabase
           .from('connection_payments')
           .select('id,status,customer_total_cents,gross_amount_cents,currency')
           .eq('id', paymentId)
           .maybeSingle();
+        requireDatabaseWrite(paymentError);
 
         if (!payment) throw new Error('STRIPE:Aspire payment record was not found for the completed PaymentIntent.');
         const expectedAmount = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
@@ -118,7 +129,7 @@ export async function POST(request: Request) {
           throw new Error('STRIPE:Stripe payment amount or currency did not match the Aspire fee snapshot.');
         }
 
-        await supabase.from('connection_payments').update({
+        const { error } = await supabase.from('connection_payments').update({
           status: 'secured',
           stripe_payment_intent_id: object.id || null,
           stripe_charge_id: objectId(object.latest_charge),
@@ -126,45 +137,50 @@ export async function POST(request: Request) {
           paid_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'processing', 'failed', 'secured']);
+        requireDatabaseWrite(error);
       }
     }
 
     if (event.type === 'payment_intent.payment_failed') {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
-        await supabase.from('connection_payments').update({
+        const { error } = await supabase.from('connection_payments').update({
           status: 'failed',
           stripe_payment_intent_id: object.id || null,
           failure_reason: object.last_payment_error?.message || 'Stripe reported that the payment failed.',
           updated_at: new Date().toISOString()
         }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'processing', 'failed']);
+        requireDatabaseWrite(error);
       }
     }
 
     if (event.type === 'charge.dispute.created') {
       const chargeId = objectId(object.charge);
       if (chargeId) {
-        await supabase.from('connection_payments').update({
+        const { error } = await supabase.from('connection_payments').update({
           status: 'disputed',
           disputed_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }).eq('stripe_charge_id', chargeId).neq('status', 'refunded');
+        requireDatabaseWrite(error);
       }
     }
 
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {
-      await supabase.from('connection_payments').update({
+      const { error } = await supabase.from('connection_payments').update({
         status: 'refunded',
         refunded_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }).eq('stripe_charge_id', object.id).neq('status', 'released');
+      requireDatabaseWrite(error);
     }
 
-    await supabase.from('stripe_webhook_events').update({
+    const { error: processedError } = await supabase.from('stripe_webhook_events').update({
       status: 'processed',
       processed_at: new Date().toISOString(),
       processing_error: null
     }).eq('event_id', event.id);
+    requireDatabaseWrite(processedError);
 
     return NextResponse.json({ received: true });
   } catch (error) {
