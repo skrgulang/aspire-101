@@ -58,6 +58,10 @@ try {
   check(sellEntities.item.toLowerCase() === 'laptop', `WTS item extraction failed: ${sellEntities.item}`);
   check(sellEntities.amountCents === 120000, `USD comma amount failed: ${sellEntities.amountCents}`);
 
+  const compactSellEntities = extractAspireEntities('WTS monitor $80', 'SELL_ITEM');
+  check(compactSellEntities.item.toLowerCase() === 'monitor', `compact WTS item extraction failed: ${compactSellEntities.item}`);
+  check(compactSellEntities.amountCents === 8000, `compact WTS amount failed: ${compactSellEntities.amountCents}`);
+
   const rideEntities = extractAspireEntities('Need a ride to IND, I can pay 25 dollars', 'FIND_OR_CREATE_RIDE');
   check(rideEntities.amountCents === 2500, `word amount failed: ${rideEntities.amountCents}`);
 
