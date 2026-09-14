@@ -16,7 +16,13 @@ Configure these in Vercel. Never expose server secrets through `NEXT_PUBLIC_*` v
 - `NEXT_PUBLIC_SITE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_WEBHOOK_SECRET_LIVE` (signing secret for the live endpoint)
+- `STRIPE_WEBHOOK_SECRET_TEST` (signing secret for the sandbox endpoint)
+- `STRIPE_WEBHOOK_SECRET` (temporary legacy fallback during secret rotation)
+
+Sandbox and live Stripe endpoints can share `/api/stripe/webhook`; the handler
+verifies the signature against the configured endpoint secrets before parsing the
+event. Do not select a secret from the unverified `livemode` field.
 
 Marketplace fees are configured server-side in Supabase `public.fee_policies`; they are not client configuration.
 

@@ -122,7 +122,7 @@ export default function PostRequestForm() {
     setTitle(plan.title || '');
     setDetails(plan.details || '');
     setAmount(plan.amount_cents != null ? (plan.amount_cents / 100).toFixed(plan.amount_cents % 100 === 0 ? 0 : 2) : '');
-    setPaymentMethod(plan.payment_method);
+    setPaymentMethod(plan.kind === 'paid_help' || plan.kind === 'split_cost' || plan.kind === 'buy_sell' ? 'aspire' : 'none');
     if (plan.market_intent) setMarketIntent(plan.market_intent);
     if (plan.item_condition) setItemCondition(plan.item_condition);
     setPriceNegotiable(Boolean(plan.price_negotiable));
@@ -236,8 +236,7 @@ export default function PostRequestForm() {
     if (kind === 'paid_help' && (!amount || Number(amount) <= 0)) return setError('Add the amount you are offering for paid help.');
     if (isMarket && (!amount || Number(amount) <= 0)) return setError(marketIntent === 'sell' ? 'Add the item price.' : 'Add your budget.');
     if (isMarket && marketIntent === 'sell' && photos.length < 1) return setError('Add at least one real photo of the item you are selling.');
-    if (moneyInvolved && paymentMethod === 'none') return setError('Choose online Aspire Protected payment or pay in person.');
-    if (paymentMethod === 'aspire' && (!amount || Number(amount) <= 0)) return setError('Add a positive amount before choosing Pay with Aspire.');
+    if (moneyInvolved && (!amount || Number(amount) <= 0)) return setError(isMarket ? (marketIntent === 'sell' ? 'Add the item price.' : 'Add your budget.') : 'Add a positive amount for this paid request.');
     try {
       validateRequestImages(photos);
     } catch (photoError) {
@@ -266,7 +265,7 @@ export default function PostRequestForm() {
         timezone: scheduledStartAt ? timezone : undefined,
         meeting_label: meetingLabel,
         amount_cents: amountCents,
-        payment_method: moneyInvolved ? paymentMethod : 'none',
+        payment_method: moneyInvolved ? 'aspire' : 'none',
         market_intent: isMarket ? marketIntent : undefined,
         item_condition: isMarket && marketIntent === 'sell' ? itemCondition : undefined,
         price_negotiable: isMarket ? priceNegotiable : false,
@@ -372,9 +371,9 @@ export default function PostRequestForm() {
 
       <label className="postField postLanguageField"><span>Post language</span><select value={language} onChange={(event) => setLanguage(event.target.value as RequestLanguageCode)}>{requestLanguages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><small>This helps students filter the campus feed for the audience and language they prefer.</small></label>
 
-      {moneyInvolved && !isMarket && <section className="marketPaymentChoice servicePaymentChoice"><div><span>PAID POST</span><strong>Set the amount and choose how it will be paid.</strong></div><label className="postField serviceAmount"><span>{kind === 'paid_help' ? 'What are you offering?' : 'Amount / share'}</span><div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" /></div></label><label className={paymentMethod === 'aspire' ? 'active' : ''}><input type="radio" name="service-payment" checked={paymentMethod === 'aspire'} onChange={() => setPaymentMethod('aspire')} /><span><b>Pay online · Aspire Protected</b><small>Stripe secures the payment. Release happens only after the work is confirmed complete; disputes can pause payout.</small></span></label><label className={paymentMethod === 'in_person' ? 'active offPlatform' : 'offPlatform'}><input type="radio" name="service-payment" checked={paymentMethod === 'in_person'} onChange={() => setPaymentMethod('in_person')} /><span><b>Pay in person · no payment protection</b><small>Aspire can record the connection, but does not hold, refund, or guarantee cash or other off-platform payments.</small></span></label>{paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}</section>}
+      {moneyInvolved && !isMarket && <section className="marketPaymentChoice servicePaymentChoice"><div><span>PAID POST</span><strong>Set the amount — paid requests use Aspire Protected.</strong></div><label className="postField serviceAmount"><span>{kind === 'paid_help' ? 'What are you offering?' : 'Amount / share'}</span><div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" /></div></label><div className="marketProtectionNote"><i>✓</i><div><strong>Pay online · Aspire Protected</strong><p>Stripe secures the payment. Release happens only after the work is confirmed complete; disputes can pause payout. Free Community posts do not create a payment.</p></div></div><PaymentFeePreview amount={amount} campusId={campusId} /></section>}
 
-      {isMarket && <section className="marketPaymentChoice"><div><span>PAYMENT</span><strong>Choose online protection or an offline handoff.</strong></div><label className={paymentMethod === 'aspire' ? 'active' : ''}><input type="radio" name="market-payment" checked={paymentMethod === 'aspire'} onChange={() => setPaymentMethod('aspire')} /><span><b>Pay online · Aspire Protected</b><small>Buyer pays through Stripe. Seller payout waits for handoff or delivery confirmation; disputes can pause release.</small></span></label><label className={paymentMethod === 'in_person' ? 'active offPlatform' : 'offPlatform'}><input type="radio" name="market-payment" checked={paymentMethod === 'in_person'} onChange={() => setPaymentMethod('in_person')} /><span><b>Pay in person · no payment protection</b><small>Aspire does not hold, refund, or guarantee cash or other off-platform payments.</small></span></label>{paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}</section>}
+      {isMarket && <section className="marketPaymentChoice"><div><span>PAYMENT</span><strong>Marketplace sales use Aspire Protected.</strong></div><div className="marketProtectionNote"><i>✓</i><div><strong>Pay online · Aspire Protected</strong><p>The buyer pays through Stripe. Aspire holds the seller payout until handoff or delivery confirmation; a dispute pauses release. Offline cash is not supported for marketplace orders.</p></div></div><PaymentFeePreview amount={amount} campusId={campusId} /></section>}
 
       <label className="postField postDetailsField"><span>{isMarket ? 'Description' : 'Anything else?'} <em>optional</em></span><textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} placeholder={isMarket ? 'Model, size, included accessories, defects, approximate pickup area, or anything a buyer should know.' : 'What to bring, access notes, or anything that helps someone decide. Keep exact private addresses for the connection chat.'} /></label>
       <div className="postContextCard"><div><span>SAFETY FOR THIS REQUEST</span><strong>{context.title}</strong></div><p>{context.note}</p><a href="/safety">Safety center ↗</a></div>{error && <p className="postError" role="alert">{error}</p>}

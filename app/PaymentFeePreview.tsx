@@ -66,7 +66,7 @@ export default function PaymentFeePreview({ amount, campusId }: { amount: string
       <div><span>Aspire 101 Service Fee</span><strong>{money(quote.requester_fee_cents)}</strong></div>
       <div className="total"><span>You would pay</span><strong>{money(quote.customer_total_cents)}</strong></div>
       {belowMinimum ? (
-        <p>Pay with Aspire currently starts at {money(quote.minimum_paid_order_cents)}. You can raise the amount or choose an off-platform payment method.</p>
+        <p>Protected payments currently start at {money(quote.minimum_paid_order_cents)}. Raise the amount to continue; free Community posts do not create a payment.</p>
       ) : (
         <p>The provider sees their own fee and net earnings before payment. Final fees are recalculated and snapshotted server-side at checkout.</p>
       )}
