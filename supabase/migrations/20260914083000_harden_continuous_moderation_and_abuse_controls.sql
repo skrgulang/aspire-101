@@ -47,6 +47,7 @@ begin
   return flags;
 end;
 $$;
+revoke all on function public.aspire_content_flags(text) from public, anon, authenticated;
 
 create or replace function public.guard_request_content()
 returns trigger
@@ -78,12 +79,13 @@ begin
   return new;
 end;
 $$;
+revoke all on function public.guard_request_content() from public, anon, authenticated;
 
 create or replace function public.guard_request_velocity()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path=public
 as $$
 declare
   v_hour integer;
@@ -108,12 +110,13 @@ begin
   return new;
 end;
 $$;
+revoke all on function public.guard_request_velocity() from public, anon, authenticated;
 
 create or replace function public.guard_response_velocity()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path=public
 as $$
 declare
   v_five_min integer;
@@ -130,12 +133,13 @@ begin
   return new;
 end;
 $$;
+revoke all on function public.guard_response_velocity() from public, anon, authenticated;
 
 create or replace function public.guard_message_velocity()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path=public
 as $$
 declare
   v_ten_seconds integer;
@@ -160,26 +164,32 @@ begin
   return new;
 end;
 $$;
+revoke all on function public.guard_message_velocity() from public, anon, authenticated;
 
-create index if not exists connection_messages_sender_created_idx on public.connection_messages(sender_id, created_at desc);
-create index if not exists request_responses_responder_created_idx on public.request_responses(responder_id, created_at desc);
+create index if not exists connection_messages_sender_created_idx
+  on public.connection_messages(sender_id, created_at desc);
+create index if not exists request_responses_responder_created_idx
+  on public.request_responses(responder_id, created_at desc);
 
 create schema if not exists private;
-create table if not exists private.payment_checkout_attempts(
+create table if not exists private.payment_checkout_attempts (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
   connection_id uuid not null references public.connections(id) on delete cascade,
   created_at timestamptz not null default now()
 );
-create index if not exists payment_checkout_attempts_user_created_idx on private.payment_checkout_attempts(user_id, created_at desc);
+create index if not exists payment_checkout_attempts_user_created_idx
+  on private.payment_checkout_attempts(user_id, created_at desc);
 alter table private.payment_checkout_attempts enable row level security;
 revoke all on table private.payment_checkout_attempts from public, anon, authenticated;
+grant select, insert, delete on table private.payment_checkout_attempts to service_role;
+grant usage, select on sequence private.payment_checkout_attempts_id_seq to service_role;
 
 create or replace function public.claim_payment_checkout_attempt(p_user_id uuid, p_connection_id uuid)
 returns void
 language plpgsql
 security definer
-set search_path = public, private, pg_temp
+set search_path=public,private,pg_temp
 as $$
 declare
   v_ten_min integer;
@@ -205,5 +215,6 @@ begin
   delete from private.payment_checkout_attempts where created_at < now()-interval '7 days';
 end;
 $$;
-revoke all on function public.claim_payment_checkout_attempt(uuid,uuid) from public, anon, authenticated;
+revoke all on function public.claim_payment_checkout_attempt(uuid,uuid) from public,anon,authenticated;
 grant execute on function public.claim_payment_checkout_attempt(uuid,uuid) to service_role;
+

@@ -170,7 +170,15 @@ export function calculatePlatformFee(grossAmountCents: number) {
 
 export function verifyStripeWebhookSignature(payload: string, signatureHeader: string | null) {
   if (!signatureHeader) throw new Error('WEBHOOK_SIGNATURE');
-  const secret = requireEnv('STRIPE_WEBHOOK_SECRET');
+  // Stripe sends sandbox and live events to the same endpoint in this deployment.
+  // The livemode bit is inside the signed payload, so it cannot be used to choose
+  // a secret before verification. Try the configured endpoint secrets instead.
+  const secrets = [
+    process.env.STRIPE_WEBHOOK_SECRET_LIVE,
+    process.env.STRIPE_WEBHOOK_SECRET_TEST,
+    process.env.STRIPE_WEBHOOK_SECRET
+  ].filter((value): value is string => Boolean(value?.trim()));
+  if (!secrets.length) throw new Error('MISSING_ENV:STRIPE_WEBHOOK_SECRET');
   const pieces = signatureHeader.split(',').map((piece) => piece.trim());
   const timestamp = pieces.find((piece) => piece.startsWith('t='))?.slice(2);
   const signatures = pieces.filter((piece) => piece.startsWith('v1=')).map((piece) => piece.slice(3));
@@ -181,11 +189,13 @@ export function verifyStripeWebhookSignature(payload: string, signatureHeader: s
     throw new Error('WEBHOOK_SIGNATURE');
   }
 
-  const expected = createHmac('sha256', secret).update(`${timestamp}.${payload}`, 'utf8').digest('hex');
-  const expectedBuffer = Buffer.from(expected, 'utf8');
-  const valid = signatures.some((candidate) => {
-    const candidateBuffer = Buffer.from(candidate, 'utf8');
-    return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
+  const valid = secrets.some((secret) => {
+    const expected = createHmac('sha256', secret).update(`${timestamp}.${payload}`, 'utf8').digest('hex');
+    const expectedBuffer = Buffer.from(expected, 'utf8');
+    return signatures.some((candidate) => {
+      const candidateBuffer = Buffer.from(candidate, 'utf8');
+      return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
+    });
   });
   if (!valid) throw new Error('WEBHOOK_SIGNATURE');
 }
