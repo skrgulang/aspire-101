@@ -83,6 +83,7 @@ export type AspireRequest = {
   cover_image_url?: string | null;
   cover_image_source?: RequestCoverSource;
   cover_image_asset_id?: string | null;
+  listing_expires_at?: string | null;
   moderation_status?: RequestModerationStatus;
   moderation_flags?: string[];
   moderation_version?: string;
@@ -124,6 +125,7 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
   cover_image_url?: string | null;
   cover_image_source?: RequestCoverSource;
   cover_image_asset_id?: string | null;
+  listing_expires_at?: string | null;
 };
 
 function friendlyPolicyError(error: { message?: string; details?: string; hint?: string }, fallback: string) {
@@ -233,7 +235,10 @@ export async function createRequest(input: CreateRequestInput) {
       language_code: input.language_code || readPreferredPostLanguage(),
       cover_image_url: coverImageUrl,
       cover_image_source: coverImageSource,
-      cover_image_asset_id: coverImageAssetId
+      cover_image_asset_id: coverImageAssetId,
+      listing_expires_at: isMarket && input.market_intent !== 'wanted'
+        ? input.listing_expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        : null
     })
     .select('*')
     .single();
@@ -258,4 +263,20 @@ export async function respondToRequest(requestId: string, message?: string) {
     .single();
   if (error) throw friendlyPolicyError(error, 'Could not send your response.');
   return data;
+}
+
+export async function buyMarketplaceListing(requestId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error('You must be signed in to buy an item.');
+  const { data, error } = await supabase.rpc('purchase_marketplace_listing', { p_request_id: requestId });
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''}`;
+    if (/CANNOT_BUY_OWN_LISTING/i.test(detail)) throw new Error('You cannot buy your own listing.');
+    if (/LISTING_EXPIRED/i.test(detail)) throw new Error('This listing has expired.');
+    if (/LISTING_UNAVAILABLE/i.test(detail)) throw new Error('This item was just reserved or is no longer available.');
+    throw new Error(error.message || 'Could not reserve this item.');
+  }
+  return String(data);
 }
