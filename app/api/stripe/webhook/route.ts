@@ -14,6 +14,17 @@ function objectId(value: unknown) {
   return null;
 }
 
+function latestRefundId(value: unknown) {
+  if (!value || typeof value !== 'object') return null;
+  const data = (value as { data?: unknown }).data;
+  if (!Array.isArray(data)) return null;
+  for (let index = data.length - 1; index >= 0; index -= 1) {
+    const id = objectId(data[index]);
+    if (id) return id;
+  }
+  return null;
+}
+
 function requireDatabaseWrite(error: unknown) {
   if (error) throw error;
 }
@@ -167,12 +178,30 @@ export async function POST(request: Request) {
     }
 
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {
-      const { error } = await supabase.from('connection_payments').update({
-        status: 'refunded',
-        refunded_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('stripe_charge_id', object.id).neq('status', 'released');
-      requireDatabaseWrite(error);
+      const { data: payment, error: paymentError } = await supabase
+        .from('connection_payments')
+        .select('id,status,stripe_refund_id')
+        .eq('stripe_charge_id', object.id)
+        .maybeSingle();
+      requireDatabaseWrite(paymentError);
+
+      // A released transfer needs manual recovery; do not erase that liability by
+      // flattening it into the ordinary refunded state. All normal app refunds are
+      // serialized against payout release before Stripe receives the request.
+      if (payment && payment.status !== 'released') {
+        const refundId = latestRefundId(object.refunds) || payment.stripe_refund_id;
+        if (!refundId) throw new Error('STRIPE:Full refund event did not include a refund identifier.');
+        const { error } = await supabase.rpc('finalize_connection_payment_refund', {
+          p_payment_id: payment.id,
+          p_refund_id: refundId,
+          p_amount_cents: Number(object.amount_refunded || object.amount || 0),
+          p_actor_id: null,
+          p_resolution_case_id: null,
+          p_note: 'Stripe confirmed a full refund.',
+          p_stripe_status: 'succeeded'
+        });
+        requireDatabaseWrite(error);
+      }
     }
 
     const { error: processedError } = await supabase.from('stripe_webhook_events').update({

@@ -173,6 +173,17 @@ export async function openResolutionCase(input: {
   if (error) {
     const text = `${error.message || ''} ${error.details || ''}`;
     if (/NO_SHOW_GRACE_PERIOD/i.test(text)) throw new Error('No-show reports unlock 10 minutes after the agreed start time. Use chat or “Running late” before then.');
+    if (/issue is already open|case is already open|duplicate key.*connection_resolution_one_open_case/i.test(text)) {
+      const { data: existing, error: existingError } = await supabase
+        .from('connection_resolution_cases')
+        .select('id')
+        .eq('connection_id', input.connectionId)
+        .in('status', ['submitted', 'under_review'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!existingError && existing?.id) return String(existing.id);
+    }
     if (/function .*open_connection_resolution_case.*does not exist|could not find the function/i.test(text)) throw new Error('Resolution Center is not enabled in this preview database yet.');
     throw error;
   }
