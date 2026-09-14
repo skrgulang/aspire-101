@@ -186,8 +186,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No seller/provider payout is due for this payment.' }, { status: 409 });
     }
 
-    // Recheck immediately before creating the irreversible Stripe transfer. This narrows
-    // the race window for a case opened while payout-account readiness was being checked.
+    // Keep the ordinary late check for a clear user-facing case id. The database claim
+    // below is the actual commit boundary: it locks the payment row, rechecks every
+    // financial hold, and makes a simultaneous new hold wait until this decision commits.
     const lateResolutionCheck = await supabase
       .from('connection_resolution_cases')
       .select('id,status')
@@ -209,18 +210,51 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    const transfer = await stripeFormRequest<StripeTransfer>('/v1/transfers', {
-      amount: providerNet,
-      currency: String(payment.currency || 'USD').toLowerCase(),
-      destination: payoutAccount.stripe_account_id,
-      transfer_group: payment.transfer_group,
-      source_transaction: chargeId,
-      'metadata[aspire_payment_id]': payment.id,
-      'metadata[connection_id]': connection.id,
-      'metadata[request_id]': payment.request_id,
-      'metadata[transaction_type]': marketOrder ? 'marketplace' : 'connection',
-      'metadata[fee_policy_version]': payment.fee_policy_version || 'legacy_v0'
-    }, { idempotencyKey: `aspire_release_${payment.id}` });
+    const { data: claimedAtValue, error: claimError } = await supabase.rpc('claim_connection_payment_release', {
+      p_payment_id: payment.id
+    });
+    if (claimError) {
+      const claimText = `${claimError.message || ''} ${claimError.details || ''}`;
+      if (/PAYOUT_HOLD_OPEN/i.test(claimText)) {
+        return NextResponse.json({
+          error: 'Provider payout is paused because a refund, dispute, or Resolution Center review is open.',
+          code: 'PAYOUT_HOLD_OPEN'
+        }, { status: 409 });
+      }
+      if (/CONNECTION_CANCELLED/i.test(claimText)) {
+        return NextResponse.json({
+          error: 'This connection was cancelled. Provider payout remains paused for review.',
+          code: 'CONNECTION_CANCELLED'
+        }, { status: 409 });
+      }
+      throw claimError;
+    }
+
+    const claimedAt = typeof claimedAtValue === 'string' ? claimedAtValue : String(claimedAtValue || '');
+    let transfer: StripeTransfer;
+    try {
+      transfer = await stripeFormRequest<StripeTransfer>('/v1/transfers', {
+        amount: providerNet,
+        currency: String(payment.currency || 'USD').toLowerCase(),
+        destination: payoutAccount.stripe_account_id,
+        transfer_group: payment.transfer_group,
+        source_transaction: chargeId,
+        'metadata[aspire_payment_id]': payment.id,
+        'metadata[connection_id]': connection.id,
+        'metadata[request_id]': payment.request_id,
+        'metadata[transaction_type]': marketOrder ? 'marketplace' : 'connection',
+        'metadata[fee_policy_version]': payment.fee_policy_version || 'legacy_v0'
+      }, { idempotencyKey: `aspire_release_${payment.id}` });
+    } catch (error) {
+      if (claimedAt) {
+        const { error: clearClaimError } = await supabase.rpc('clear_connection_payment_release_claim', {
+          p_payment_id: payment.id,
+          p_claimed_at: claimedAt
+        });
+        if (clearClaimError) console.error('Could not clear failed payout release claim', clearClaimError);
+      }
+      throw error;
+    }
 
     const now = new Date().toISOString();
     const { data: updated, error: updateError } = await supabase.from('connection_payments').update({
