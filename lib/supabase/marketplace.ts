@@ -32,6 +32,43 @@ export type MarketOrder = {
   cancelled_at: string | null;
   created_at: string;
   updated_at: string;
+  shipping_provider?: 'shippo' | null;
+  shipping_carrier?: string | null;
+  shipping_service?: string | null;
+  shipping_shipment_id?: string | null;
+  shipping_rate_id?: string | null;
+  shipping_rate_cents?: number | null;
+  shipping_currency?: string | null;
+  shipping_transaction_id?: string | null;
+  shipping_label_url?: string | null;
+  shipping_tracking_number?: string | null;
+  shipping_tracking_url?: string | null;
+  shipping_status?: 'not_started' | 'rates_ready' | 'label_purchasing' | 'label_failed' | 'label_purchased' | 'in_transit' | 'delivered' | 'exception' | 'cancelled' | null;
+  shipping_last_event_at?: string | null;
+};
+
+export type ShippingAddress = {
+  name: string;
+  street1: string;
+  street2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  email?: string;
+  phone?: string;
+};
+
+export type ShippingParcel = { length: string; width: string; height: string; weight: string };
+
+export type ShippingRate = {
+  id: string;
+  carrier: string;
+  service: string;
+  amountCents: number;
+  currency: string;
+  estimatedDays: number | null;
+  durationTerms: string | null;
 };
 
 export type MarketDispute = {
@@ -117,4 +154,20 @@ export async function requestMarketRefund(connectionId: string) {
     throw error;
   }
   return payload as { status: 'refunded'; refundId: string };
+}
+
+export async function getShippingRates(orderId: string, addressFrom: ShippingAddress, addressTo: ShippingAddress, parcel: ShippingParcel) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/shipping/rates', { method: 'POST', headers, body: JSON.stringify({ orderId, addressFrom, addressTo, parcel }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'Could not calculate shipping rates.');
+  return payload as { shipmentId: string; rates: ShippingRate[] };
+}
+
+export async function purchaseShippingLabel(orderId: string, rateId: string) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/shipping/label', { method: 'POST', headers, body: JSON.stringify({ orderId, rateId }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'Could not purchase the shipping label.');
+  return payload as { status: string; transactionId: string | null; labelUrl: string; trackingNumber: string; trackingUrl: string | null; duplicate?: boolean };
 }

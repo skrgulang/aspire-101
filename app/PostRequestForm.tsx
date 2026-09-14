@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import {
   createRequest,
   detectRequestLanguage,
+  FulfillmentMethod,
   ItemCondition,
   MarketIntent,
   requestLanguageLabel,
@@ -75,6 +76,7 @@ export default function PostRequestForm() {
   const [marketIntent, setMarketIntent] = useState<MarketIntent>('sell');
   const [itemCondition, setItemCondition] = useState<ItemCondition>('good');
   const [priceNegotiable, setPriceNegotiable] = useState(false);
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<FulfillmentMethod>('campus_pickup');
   const [scheduleMode, setScheduleMode] = useState<RequestScheduleMode>('flexible');
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
@@ -164,6 +166,7 @@ export default function PostRequestForm() {
       setPaymentMethod('aspire');
       setMarketIntent('sell');
       setItemCondition('good');
+      setFulfillmentMethod('campus_pickup');
     } else if (item.defaultKind === 'community' || item.defaultKind === 'collaboration') {
       setAmount('');
       setPaymentMethod('none');
@@ -208,6 +211,7 @@ export default function PostRequestForm() {
     setStartLocal('');
     setEndLocal('');
     setMeetingLabel('');
+    setFulfillmentMethod('campus_pickup');
   }
 
   function openConfirmation(event: FormEvent<HTMLFormElement>) {
@@ -261,7 +265,7 @@ export default function PostRequestForm() {
         market_intent: isMarket ? marketIntent : undefined,
         item_condition: isMarket && marketIntent === 'sell' ? itemCondition : undefined,
         price_negotiable: isMarket ? priceNegotiable : false,
-        fulfillment_method: isMarket ? 'campus_pickup' : undefined,
+        fulfillment_method: isMarket ? fulfillmentMethod : undefined,
         quantity: isMarket ? 1 : undefined,
         language_code: language
       });
@@ -342,7 +346,7 @@ export default function PostRequestForm() {
             {marketIntent === 'sell' && <label className="postField"><span>Condition</span><select value={itemCondition} onChange={(e) => setItemCondition(e.target.value as ItemCondition)}>{conditions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>}
             <label className="postField"><span>{marketIntent === 'sell' ? 'Price' : 'Budget'}</span><div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="40" /></div></label>
             <label className="marketCheck"><input type="checkbox" checked={priceNegotiable} onChange={(e) => setPriceNegotiable(e.target.checked)} /><span><strong>Price is negotiable</strong><small>Final price is locked when you connect.</small></span></label>
-            <div className="marketFulfillment"><span>HANDOFF</span><strong>Campus pickup</strong><small>Meet in a sensible public campus location. Shipping support is coming later.</small></div>
+            <div className="marketFulfillment"><span>FULFILLMENT</span><div className="marketFulfillmentChoices"><button type="button" className={fulfillmentMethod === 'campus_pickup' ? 'active' : ''} onClick={() => setFulfillmentMethod('campus_pickup')}>Campus pickup</button><button type="button" className={fulfillmentMethod === 'shipping' ? 'active' : ''} onClick={() => setFulfillmentMethod('shipping')}>Ship with FedEx</button></div><small>{fulfillmentMethod === 'shipping' ? 'After a match, the buyer enters a destination and the seller buys a FedEx label through Shippo.' : 'Meet in a sensible public campus location.'}</small></div>
           </div>
           <div className="marketProtectionNote"><i>✓</i><div><strong>Aspire Protected</strong><p>For on-platform payments, the buyer pays first. Aspire waits to transfer the seller payout until the seller marks handoff and the buyer confirms receipt. A dispute pauses release.</p></div></div>
           <p className="marketPhysicalOnly">Physical goods only in this beta. No account credentials, gift-card codes, prohibited goods, stolen items, counterfeit goods, or off-platform transaction tricks.</p>
