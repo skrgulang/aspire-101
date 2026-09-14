@@ -264,8 +264,23 @@ export async function POST(request: Request) {
         transfer_group: transferGroup,
         ...paymentValues
       }).select('*').single();
-      if (error) throw error;
-      payment = data as PaymentRow;
+
+      if (error) {
+        // Two first-click requests can both observe "no payment" before either insert
+        // commits. The unique connection_id row is the lock: the loser reuses the
+        // row that just won instead of surfacing a duplicate-key failure to the user.
+        if (error.code !== '23505') throw error;
+        const { data: concurrentPayment, error: concurrentPaymentError } = await supabase
+          .from('connection_payments')
+          .select('*')
+          .eq('connection_id', connection.id)
+          .maybeSingle();
+        if (concurrentPaymentError) throw concurrentPaymentError;
+        if (!concurrentPayment) throw error;
+        payment = concurrentPayment as PaymentRow;
+      } else {
+        payment = data as PaymentRow;
+      }
     } else {
       const { data, error } = await supabase.from('connection_payments').update({
         ...paymentValues,
