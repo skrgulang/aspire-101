@@ -52,6 +52,7 @@ function trimItemCandidate(value: string) {
   return normalizeSpaces(value)
     .replace(/^(?:my|a|an|the)\s+/i, '')
     .replace(/\s+(?:for|at)\s+(?:\$\s*|usd\s*)?\d[\d,]*(?:\.\d{1,2})?.*$/i, '')
+    .replace(/\s+(?:\$\s*|usd\s*)\d[\d,]*(?:\.\d{1,2})?\s*$/i, '')
     .replace(/\b(?:today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b.*$/i, '')
     .replace(/[?.!,]+$/g, '')
     .trim();
