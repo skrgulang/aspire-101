@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { fetchMyConnections } from '../lib/supabase/connections';
 import {
   createAspireCheckout,
@@ -17,7 +17,11 @@ import {
   MarketDispute,
   MarketOrder,
   openMarketDispute,
-  requestMarketRefund
+  requestMarketRefund,
+  getShippingRates,
+  purchaseShippingLabel,
+  ShippingRate,
+  ShippingAddress
 } from '../lib/supabase/marketplace';
 
 function money(cents: number | null | undefined, currency = 'USD') {
@@ -50,6 +54,46 @@ const disputeReasons: { value: MarketDispute['reason']; label: string }[] = [
   { value: 'unsafe_handoff', label: 'Unsafe handoff / meetup' },
   { value: 'other', label: 'Something else' }
 ];
+
+const emptyAddress: ShippingAddress = { name: '', street1: '', city: '', state: '', zip: '', country: 'US' };
+
+function ShippingOrderTools({ order, isSeller, secured, onDone }: { order: MarketOrder; isSeller: boolean; secured: boolean; onDone: () => void }) {
+  const [from, setFrom] = useState<ShippingAddress>(emptyAddress);
+  const [to, setTo] = useState<ShippingAddress>(emptyAddress);
+  const [parcel, setParcel] = useState({ length: '12', width: '8', height: '4', weight: '2' });
+  const [rates, setRates] = useState<ShippingRate[]>([]);
+  const [selectedRate, setSelectedRate] = useState('');
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const shippingStatus = order.shipping_status || 'not_started';
+
+  async function quote() {
+    setBusy('quote'); setError('');
+    try {
+      const result = await getShippingRates(order.id, from, to, parcel);
+      setRates(result.rates); setSelectedRate(result.rates[0]?.id || '');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not calculate shipping rates.'); }
+    finally { setBusy(''); }
+  }
+
+  async function buyLabel() {
+    if (!selectedRate) return;
+    setBusy('label'); setError('');
+    try { await purchaseShippingLabel(order.id, selectedRate); onDone(); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not purchase the shipping label.'); }
+    finally { setBusy(''); }
+  }
+
+  function updateAddress(setter: Dispatch<SetStateAction<ShippingAddress>>, key: keyof ShippingAddress, value: string) {
+    setter((current) => ({ ...current, [key]: value }));
+  }
+
+  if (shippingStatus === 'label_purchased' || shippingStatus === 'in_transit' || shippingStatus === 'delivered' || shippingStatus === 'exception') {
+    return <div className="shippingTrackingBox"><span>FEDEX SHIPPING · {shippingStatus.replace('_', ' ')}</span>{order.shipping_tracking_number && <strong>Tracking {order.shipping_tracking_number}</strong>}{order.shipping_label_url && <a href={order.shipping_label_url} target="_blank" rel="noreferrer">Open label ↗</a>}{order.shipping_tracking_url && <a href={order.shipping_tracking_url} target="_blank" rel="noreferrer">Track package ↗</a>}</div>;
+  }
+
+  return <div className="shippingTools"><div className="shippingToolsHead"><span>FEDEX SHIPPING</span><strong>{isSeller ? 'Get a quote, then buy the label' : 'Enter the shipping addresses'}</strong><small>Use a safe address you are comfortable sending to the shipping carrier. Shippo stores the address; Aspire stores only the shipment ID.</small></div><div className="shippingAddressGrid"><div><label>Ship from</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`from-${key}`} value={from[key] || ''} onChange={(event) => updateAddress(setFrom, key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}</div><div><label>Ship to</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`to-${key}`} value={to[key] || ''} onChange={(event) => updateAddress(setTo, key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}</div></div><div className="shippingParcelRow"><label>Package (in / lb)<input value={parcel.length} onChange={(event) => setParcel({ ...parcel, length: event.target.value })} placeholder="L" /></label><label><span>&nbsp;</span><input value={parcel.width} onChange={(event) => setParcel({ ...parcel, width: event.target.value })} placeholder="W" /></label><label><span>&nbsp;</span><input value={parcel.height} onChange={(event) => setParcel({ ...parcel, height: event.target.value })} placeholder="H" /></label><label><span>&nbsp;</span><input value={parcel.weight} onChange={(event) => setParcel({ ...parcel, weight: event.target.value })} placeholder="Weight" /></label></div>{rates.length > 0 && <div className="shippingRateList">{rates.map((rate) => <label key={rate.id} className={selectedRate === rate.id ? 'active' : ''}><input type="radio" name={`shipping-rate-${order.id}`} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /><span><b>{rate.carrier} · {rate.service}</b><small>{money(rate.amountCents, rate.currency)}{rate.estimatedDays ? ` · ${rate.estimatedDays} business days` : ''}</small></span></label>)}</div>}{error && <p className="shippingError">{error}</p>}<div className="shippingToolsActions"><button type="button" className="marketSecondary" onClick={quote} disabled={busy !== ''}>{busy === 'quote' ? 'Getting FedEx rates…' : 'Get FedEx rates'}</button>{isSeller && secured && rates.length > 0 && <button type="button" className="button buttonGold" onClick={buyLabel} disabled={busy !== '' || !selectedRate}>{busy === 'label' ? 'Buying label…' : 'Buy label'}</button>}</div></div>;
+}
 
 export default function MarketOrdersPanel() {
   const [base, setBase] = useState<Awaited<ReturnType<typeof fetchMyConnections>> | null>(null);
@@ -262,9 +306,11 @@ export default function MarketOrdersPanel() {
                 {order.status === 'refunded' && <span className="marketComplete">Buyer refunded ✓</span>}
               </div>
 
+              {order.fulfillment_method === 'shipping' && <ShippingOrderTools order={order} isSeller={isSeller} secured={secured} onDone={() => void reload(true)} />}
+
               {disputeFor === order.connection_id && canDispute && <div className="marketDisputeComposer"><div><span>PAUSE PAYOUT + REPORT</span><strong>What went wrong?</strong></div><select value={disputeReason} onChange={(event) => setDisputeReason(event.target.value as MarketDispute['reason'])}>{disputeReasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><textarea rows={3} value={disputeDetails} onChange={(event) => setDisputeDetails(event.target.value)} placeholder="Describe the item, handoff, payment, or safety issue. Keep the details factual." maxLength={2000} /><div><button type="button" className="marketSecondary" onClick={() => setDisputeFor(null)}>Never mind</button><button type="button" className="marketDanger solid" onClick={() => submitDispute(order.connection_id)} disabled={busy === `dispute-${order.connection_id}`}>Submit report + pause payout</button></div></div>}
 
-              <footer className="marketOrderFinePrint"><span>Campus pickup · {request.item_condition ? request.item_condition.replace('_', ' ') : 'condition not listed'}{request.price_negotiable ? ' · price was negotiable' : ''}</span><span>Order #{order.id.slice(0, 8)}</span></footer>
+              <footer className="marketOrderFinePrint"><span>{order.fulfillment_method === 'shipping' ? `FedEx shipping · ${order.shipping_status || 'not started'}` : 'Campus pickup'} · {request.item_condition ? request.item_condition.replace('_', ' ') : 'condition not listed'}{request.price_negotiable ? ' · price was negotiable' : ''}</span><span>Order #{order.id.slice(0, 8)}</span></footer>
             </article>
           );
         })}
