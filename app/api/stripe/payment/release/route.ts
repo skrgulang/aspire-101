@@ -2,48 +2,20 @@ import { NextResponse } from 'next/server';
 import {
   apiError,
   getAuthenticatedUser,
+  getStripePayoutState,
   getSupabaseServiceClient,
   stripeFormRequest,
-  stripeGet
+  stripeGet,
+  stripeLivemode
 } from '../../../../../lib/server/aspireServer';
 
 type StripePaymentIntent = { latest_charge?: string | { id?: string } | null };
 type StripeTransfer = { id: string };
-type StripeConnectAccount = {
-  capabilities?: { transfers?: string | null };
-  payouts_enabled?: boolean;
-  details_submitted?: boolean;
-  requirements?: {
-    currently_due?: string[];
-    past_due?: string[];
-    pending_verification?: string[];
-    disabled_reason?: string | null;
-  };
-};
 
 function stripeId(value: unknown) {
   if (typeof value === 'string') return value;
   if (value && typeof value === 'object' && typeof (value as { id?: unknown }).id === 'string') return (value as { id: string }).id;
   return null;
-}
-
-function stripePayoutState(account: StripeConnectAccount) {
-  const transferActive = account.capabilities?.transfers === 'active';
-  const payoutsEnabled = account.payouts_enabled === true;
-  const currentlyDue = account.requirements?.currently_due ?? [];
-  const pastDue = account.requirements?.past_due ?? [];
-  const disabledReason = account.requirements?.disabled_reason || '';
-  const requirementsDue = new Set([...currentlyDue, ...pastDue]).size;
-  const ready = transferActive && payoutsEnabled;
-  const status = ready
-    ? 'READY'
-    : pastDue.length > 0 || disabledReason.includes('past_due')
-      ? 'RESTRICTED'
-      : currentlyDue.length > 0 || account.details_submitted === false
-        ? 'ACTION_REQUIRED'
-        : 'UNDER_REVIEW';
-
-  return { ready, status, requirementsDue };
 }
 
 export async function POST(request: Request) {
@@ -54,6 +26,7 @@ export async function POST(request: Request) {
     if (!connectionId) return NextResponse.json({ error: 'Missing connection.' }, { status: 400 });
 
     const supabase = getSupabaseServiceClient();
+    const livemode = stripeLivemode();
     const { data: connection } = await supabase.from('connections').select('*').eq('id', connectionId).maybeSingle();
     if (!connection) return NextResponse.json({ error: 'Connection not found.' }, { status: 404 });
     if (user.id !== connection.requester_id && user.id !== connection.responder_id) {
@@ -159,13 +132,11 @@ export async function POST(request: Request) {
       .from('payment_accounts')
       .select('stripe_account_id,status,transfers_enabled')
       .eq('user_id', payment.payee_id)
+      .eq('livemode', livemode)
       .maybeSingle();
     if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
 
-    const stripeAccount = await stripeGet<StripeConnectAccount>(
-      `/v1/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}`
-    );
-    const payoutState = stripePayoutState(stripeAccount);
+    const payoutState = await getStripePayoutState(payoutAccount.stripe_account_id);
 
     await supabase.from('payment_accounts').update({
       status: payoutState.status,
@@ -173,7 +144,7 @@ export async function POST(request: Request) {
       requirements_due: payoutState.requirementsDue,
       last_synced_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
-    }).eq('user_id', payment.payee_id);
+    }).eq('user_id', payment.payee_id).eq('livemode', livemode);
 
     if (!payoutState.ready) throw new Error('PAYOUT_NOT_READY');
 

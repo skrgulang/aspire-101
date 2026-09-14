@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import {
   apiError,
   getAuthenticatedUser,
+  getStripePayoutState,
   getSupabaseServiceClient,
   publicOrigin,
   stripeFormRequest,
-  stripeGet
+  stripeGet,
+  stripeLivemode
 } from '../../../../../lib/server/aspireServer';
 
 type CheckoutSession = {
@@ -13,18 +15,6 @@ type CheckoutSession = {
   url: string | null;
   status?: 'open' | 'complete' | 'expired' | null;
   payment_status?: 'paid' | 'unpaid' | 'no_payment_required' | null;
-};
-
-type StripeConnectAccount = {
-  capabilities?: { transfers?: string | null };
-  payouts_enabled?: boolean;
-  details_submitted?: boolean;
-  requirements?: {
-    currently_due?: string[];
-    past_due?: string[];
-    pending_verification?: string[];
-    disabled_reason?: string | null;
-  };
 };
 
 type PaymentRow = {
@@ -73,25 +63,6 @@ type FeeQuote = {
   standard_payout_cadence: string;
 };
 
-function stripePayoutState(account: StripeConnectAccount) {
-  const transferActive = account.capabilities?.transfers === 'active';
-  const payoutsEnabled = account.payouts_enabled === true;
-  const currentlyDue = account.requirements?.currently_due ?? [];
-  const pastDue = account.requirements?.past_due ?? [];
-  const disabledReason = account.requirements?.disabled_reason || '';
-  const requirementsDue = new Set([...currentlyDue, ...pastDue]).size;
-  const ready = transferActive && payoutsEnabled;
-  const status = ready
-    ? 'READY'
-    : pastDue.length > 0 || disabledReason.includes('past_due')
-      ? 'RESTRICTED'
-      : currentlyDue.length > 0 || account.details_submitted === false
-        ? 'ACTION_REQUIRED'
-        : 'UNDER_REVIEW';
-
-  return { ready, status, requirementsDue };
-}
-
 function quoteFromPayment(payment: PaymentRow): FeeQuote | null {
   if (
     payment.base_amount_cents == null ||
@@ -133,6 +104,7 @@ export async function POST(request: Request) {
     if (!connectionId) return NextResponse.json({ error: 'Missing connection.' }, { status: 400 });
 
     const supabase = getSupabaseServiceClient();
+    const livemode = stripeLivemode();
     const [{ data: verification }, { data: connection }] = await Promise.all([
       supabase.from('school_verifications').select('status').eq('user_id', user.id).maybeSingle(),
       supabase.from('connections').select('*').eq('id', connectionId).maybeSingle()
@@ -170,23 +142,20 @@ export async function POST(request: Request) {
       .from('payment_accounts')
       .select('stripe_account_id,status,transfers_enabled')
       .eq('user_id', payeeId)
+      .eq('livemode', livemode)
       .maybeSingle();
 
     if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
 
-    // Do not trust a stale local READY/RESTRICTED flag. Stripe's stable Connect
-    // account endpoint is the source of truth immediately before checkout.
-    const stripeAccount = await stripeGet<StripeConnectAccount>(
-      `/v1/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}`
-    );
-    const payoutState = stripePayoutState(stripeAccount);
+    // Do not trust a stale local flag. Accounts v2 is the source of truth immediately before checkout.
+    const payoutState = await getStripePayoutState(payoutAccount.stripe_account_id);
     await supabase.from('payment_accounts').update({
       status: payoutState.status,
       transfers_enabled: payoutState.ready,
       requirements_due: payoutState.requirementsDue,
       last_synced_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
-    }).eq('user_id', payeeId);
+    }).eq('user_id', payeeId).eq('livemode', livemode);
     if (!payoutState.ready) throw new Error('PAYOUT_NOT_READY');
 
     if (existingPayment && ['secured', 'released'].includes(existingPayment.status)) throw new Error('PAYMENT_ALREADY_SECURED');
