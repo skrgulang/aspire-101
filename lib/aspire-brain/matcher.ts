@@ -45,6 +45,26 @@ function marketCompatible(intent: AspireIntent, candidate: BrainCandidate) {
   return true;
 }
 
+export function rankFallbackCandidates(message: string, candidates: BrainCandidate[], limit = 12) {
+  const queryTokens = tokens(message);
+  if (!candidates.length || limit <= 0) return [];
+
+  const scored = candidates.map((candidate, index) => {
+    const title = candidate.title.toLowerCase();
+    const details = (candidate.details || '').toLowerCase();
+    let score = 0;
+    for (const token of queryTokens) {
+      if (title.includes(token)) score += 4;
+      if (details.includes(token)) score += 1;
+    }
+    return { candidate, score, index };
+  });
+
+  scored.sort((a, b) => b.score - a.score || a.index - b.index);
+  const meaningful = scored.filter((entry) => entry.score > 0);
+  return (meaningful.length ? meaningful : scored).slice(0, limit).map((entry) => entry.candidate);
+}
+
 export function rankAspireCandidates(
   message: string,
   intent: AspireIntent,
