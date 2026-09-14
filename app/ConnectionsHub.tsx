@@ -30,6 +30,7 @@ import { useConnectionRealtimeRoom } from '../lib/supabase/connection-realtime';
 import { confirmConnectionCompletion } from '../lib/supabase/payments';
 import type { AspireRequest } from '../lib/supabase/requests';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { blockUser, reportSafety, type SafetyReason } from '../lib/supabase/safety';
 import NotificationCenter from './NotificationCenter';
 import ConnectionEventTimeline from './ConnectionEventTimeline';
 
@@ -277,6 +278,41 @@ export default function ConnectionsHub() {
       await markConnectionRead(chatId, sent.id);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not send message.');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function reportChat(connectionId: string, targetUserId: string) {
+    const details = window.prompt('What happened? Start with spam, scam, harassment, hate, sexual, illegal, unsafe, or other, then add any useful details.');
+    if (details === null) return;
+    const clean = details.trim();
+    const firstWord = clean.toLowerCase().split(/\s|:|-/)[0];
+    const allowedReasons: SafetyReason[] = ['spam', 'scam', 'harassment', 'hate', 'sexual', 'illegal', 'unsafe', 'other'];
+    const reason: SafetyReason = allowedReasons.includes(firstWord as SafetyReason) ? firstWord as SafetyReason : 'other';
+    setBusyId(`report-${connectionId}`);
+    setNotice('');
+    try {
+      await reportSafety({ connectionId, targetUserId, reason, details: clean || 'Reported from a private connection chat.' });
+      setNotice('Report submitted to Aspire Safety. The other person was not notified.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not submit the report.');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  async function blockChatUser(connectionId: string, targetUserId: string) {
+    if (!window.confirm('Block this person? They will no longer be able to message or connect with you.')) return;
+    setBusyId(`block-${connectionId}`);
+    setNotice('');
+    try {
+      await blockUser(targetUserId);
+      closeChat();
+      setNotice('User blocked. New messages and connections between you are disabled.');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not block this user.');
     } finally {
       setBusyId('');
     }
@@ -657,12 +693,16 @@ export default function ConnectionsHub() {
                 <button type="button" onClick={closeChat} aria-label="Close chat">×</button>
               </header>
               <div className="chatSafetyBar">
-                {fromCircle
+                <span>{fromCircle
                   ? 'You both chose to keep in touch after completing a connection.'
                   : archived
                     ? 'This connection is closed. The transcript stays available for your records, but new messages are disabled.'
                     : 'Both sides confirmed. Keep timing, location, scope, and money clear.'}{' '}
-                <a href="/safety">Safety center ↗</a>
+                <a href="/safety">Safety center ↗</a></span>
+                {otherId && <div className="chatSafetyActions">
+                  <button type="button" onClick={() => reportChat(chatId, otherId)} disabled={busyId === `report-${chatId}`}>Report</button>
+                  <button type="button" className="danger" onClick={() => blockChatUser(chatId, otherId)} disabled={busyId === `block-${chatId}`}>Block</button>
+                </div>}
               </div>
               <div className="chatMessages" ref={chatMessagesRef}>
                 {connection && (

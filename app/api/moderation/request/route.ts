@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'node:crypto';
 import { getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
 
 export const runtime = 'nodejs';
@@ -167,13 +168,24 @@ async function canScanRequest(userId: string, posterId: string, supabase: Return
   return data?.role === 'moderator' || data?.role === 'admin';
 }
 
+function isCronAuthorized(request: Request) {
+  const secret = process.env.CRON_SECRET;
+  const authorization = request.headers.get('authorization') || '';
+  if (!secret) return false;
+  const expected = `Bearer ${secret}`;
+  const receivedBytes = Buffer.from(authorization);
+  const expectedBytes = Buffer.from(expected);
+  return receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes);
+}
+
 export async function POST(request: Request) {
   const supabase = getSupabaseServiceClient();
   let requestId = '';
   let behavior: BehaviorContext | null = null;
 
   try {
-    const { user } = await getAuthenticatedUser(request);
+    const cronAuthorized = isCronAuthorized(request);
+    const auth = cronAuthorized ? null : await getAuthenticatedUser(request);
     const body = await request.json().catch(() => ({})) as { requestId?: string };
     requestId = String(body.requestId || '').trim();
     if (!requestId) return NextResponse.json({ error: 'Request id is required.' }, { status: 400 });
@@ -186,7 +198,7 @@ export async function POST(request: Request) {
     if (requestError) throw requestError;
     if (!requestRow) return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
     const aspireRequest = requestRow as RequestForScan;
-    if (!await canScanRequest(user.id, aspireRequest.poster_id, supabase)) return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
+    if (!cronAuthorized && (!auth?.user || !await canScanRequest(auth.user.id, aspireRequest.poster_id, supabase))) return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
 
     behavior = await loadBehaviorContext(aspireRequest, supabase);
     const { error: scanStateError } = await supabase.from('requests').update({
@@ -215,6 +227,17 @@ export async function POST(request: Request) {
     const { payload, result } = await callOpenAiModeration(text, imageUrls);
     const assessment = classifyRisk(result, platformFlags, ruleFlags, behavior);
     const combinedFlags = [...new Set([...platformFlags, ...ruleFlags, ...behavior.flags])];
+    const moderationStatus: 'pending' | 'approved' | 'blocked' = assessment.recommendedAction === 'approve' && assessment.riskLevel === 'low' && behavior.riskScore < 25 && combinedFlags.length === 0
+      ? 'approved'
+      : assessment.recommendedAction === 'block' || assessment.riskLevel === 'critical'
+        ? 'blocked'
+        : 'pending';
+    const moderatedAt = moderationStatus === 'pending' ? null : new Date().toISOString();
+    const moderationReason = moderationStatus === 'approved'
+      ? 'Automatically approved by Aspire Safety Intelligence (low risk).'
+      : moderationStatus === 'blocked'
+        ? `Automatically blocked by Aspire Safety Intelligence: ${combinedFlags.slice(0, 6).join(', ') || assessment.summary}`
+        : null;
 
     const { error: insertError } = await supabase.from('request_ai_assessments').insert({
       request_id: requestId,
@@ -238,6 +261,11 @@ export async function POST(request: Request) {
     if (insertError) throw insertError;
 
     const { error: updateError } = await supabase.from('requests').update({
+      moderation_status: moderationStatus,
+      moderation_version: 'ai_v2',
+      moderated_by: null,
+      moderated_at: moderatedAt,
+      moderation_reason: moderationReason,
       ai_moderation_status: 'complete',
       ai_risk_level: assessment.riskLevel,
       ai_risk_score: assessment.riskScore,
@@ -248,7 +276,7 @@ export async function POST(request: Request) {
     }).eq('id', requestId);
     if (updateError) throw updateError;
 
-    return NextResponse.json({ ok: true, requestId, riskLevel: assessment.riskLevel, riskScore: assessment.riskScore, recommendedAction: assessment.recommendedAction, flags: combinedFlags, behaviorFlags: behavior.flags, trustScore: behavior.trustScore, trustBand: behavior.trustBand, imageCount: imageUrls.length });
+    return NextResponse.json({ ok: true, requestId, moderationStatus, riskLevel: assessment.riskLevel, riskScore: assessment.riskScore, recommendedAction: assessment.recommendedAction, flags: combinedFlags, behaviorFlags: behavior.flags, trustScore: behavior.trustScore, trustBand: behavior.trustBand, imageCount: imageUrls.length });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'UNKNOWN';
     if (requestId) {

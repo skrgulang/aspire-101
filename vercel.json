@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/connection-reminders",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/moderation-retry",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

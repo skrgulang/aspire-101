@@ -309,6 +309,20 @@ export async function POST(request: Request) {
       }
     }
 
+    const { error: checkoutRateError } = await supabase.rpc('claim_payment_checkout_attempt', {
+      p_user_id: user.id,
+      p_connection_id: connection.id
+    });
+    if (checkoutRateError) {
+      if (checkoutRateError.message.includes('CHECKOUT_RATE_LIMIT')) {
+        return NextResponse.json({
+          error: 'Too many new checkout attempts. Wait a few minutes and use the existing checkout link if one is still open.',
+          code: 'CHECKOUT_RATE_LIMIT'
+        }, { status: 429 });
+      }
+      throw checkoutRateError;
+    }
+
     const attempt = Number(payment.checkout_attempt || 0) + 1;
     const origin = publicOrigin(request);
     if (!origin.startsWith('https://')) throw new Error('MISSING_ENV:NEXT_PUBLIC_SITE_URL');

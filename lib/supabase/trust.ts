@@ -62,6 +62,7 @@ export type RequestAiSafetyResult = {
   trustScore: number | null;
   trustBand: TrustBand | null;
   imageCount: number;
+  moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked';
 };
 
 export async function fetchMySchoolVerification() {
