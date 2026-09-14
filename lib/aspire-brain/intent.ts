@@ -45,7 +45,8 @@ function candidate(
 
 export function looksLikeAspireAction(message: string) {
   const value = message.trim().toLowerCase();
-  return /\b(ride|drive|driving|airport|ind|ord|mdw|sfo|oak|sjc|lax|pickup|pick up|errand|package|move|moving|carry|lift|study partner|study buddy|classmate|tutor|tutoring|project teammate|teammate|hackathon|startup|frontend|backend|developer|designer|engineer|coder|programmer|collab|collaboration|sell|selling|for sale|buy|buying|wtb|wts|looking for|marketplace|campus|request|post)\b/i.test(value)
+  return /\b(ride|drive|driving|airport|ind|ord|mdw|sfo|oak|sjc|lax|pickup|pick up|errand|package|move|moving|carry|lift|study partner|study buddy|classmate|tutor|tutoring|project teammate|teammate|hackathon|startup|frontend|backend|developer|designer|engineer|coder|programmer|collab|collaboration|sell|selling|for sale|buy|buying|looking for|marketplace|campus|request|post)\b/i.test(value)
+    || /\b(?:wtb|wts)\b\s+\S+/i.test(value)
     || /\b(can someone|could someone|need someone|anyone able|looking for someone)\b/i.test(value);
 }
 
