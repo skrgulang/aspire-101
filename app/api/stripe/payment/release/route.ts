@@ -88,6 +88,11 @@ export async function POST(request: Request) {
 
     const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
     if (payment.status === 'released' && payment.stripe_transfer_id) {
+      const { error: reconcileError } = await supabase.rpc('finalize_connection_payment_release', {
+        p_payment_id: payment.id,
+        p_transfer_id: payment.stripe_transfer_id
+      });
+      if (reconcileError) throw reconcileError;
       return NextResponse.json({
         status: 'released',
         transactionType: marketOrder ? 'marketplace' : 'connection',
@@ -221,6 +226,12 @@ export async function POST(request: Request) {
           code: 'PAYOUT_HOLD_OPEN'
         }, { status: 409 });
       }
+      if (/REFUND_IN_PROGRESS/i.test(claimText)) {
+        return NextResponse.json({
+          error: 'Provider payout is paused because a refund is already being processed.',
+          code: 'REFUND_IN_PROGRESS'
+        }, { status: 409 });
+      }
       if (/CONNECTION_CANCELLED/i.test(claimText)) {
         return NextResponse.json({
           error: 'This connection was cancelled. Provider payout remains paused for review.',
@@ -256,35 +267,19 @@ export async function POST(request: Request) {
       throw error;
     }
 
-    const now = new Date().toISOString();
-    const { data: updated, error: updateError } = await supabase.from('connection_payments').update({
-      status: 'released',
-      stripe_transfer_id: transfer.id,
-      released_at: now,
-      failure_reason: null,
-      updated_at: now
-    }).eq('id', payment.id).eq('status', 'secured').select('id,status,stripe_transfer_id').maybeSingle();
-    if (updateError) throw updateError;
-
-    if (!updated) {
-      const { data: latest } = await supabase.from('connection_payments').select('status,stripe_transfer_id').eq('id', payment.id).maybeSingle();
-      if (latest?.status !== 'released' || !latest?.stripe_transfer_id) {
-        throw new Error('STRIPE:Transfer was created but Aspire could not finalize the payment record. Retry this payout step.');
-      }
-    }
-
-    await Promise.all([
-      supabase.from('connections').update({ status: 'completed', updated_at: now }).eq('id', connection.id),
-      supabase.from('requests').update({ status: 'completed', updated_at: now }).eq('id', connection.request_id),
-      marketOrder ? supabase.from('market_orders').update({ status: 'released', released_at: now, updated_at: now }).eq('id', marketOrder.id) : Promise.resolve()
-    ]);
+    const { data: finalized, error: finalizeError } = await supabase.rpc('finalize_connection_payment_release', {
+      p_payment_id: payment.id,
+      p_transfer_id: transfer.id
+    });
+    if (finalizeError) throw finalizeError;
 
     return NextResponse.json({
       status: 'released',
       transactionType: marketOrder ? 'marketplace' : 'connection',
       transferId: transfer.id,
       providerNetCents: providerNet,
-      feePolicyVersion: payment.fee_policy_version || 'legacy_v0'
+      feePolicyVersion: payment.fee_policy_version || 'legacy_v0',
+      duplicate: Boolean(finalized?.duplicate)
     });
   } catch (error) {
     const resolved = apiError(error);
