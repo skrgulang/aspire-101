@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run test:brain && next build",
     "start": "next start",
     "test:brain": "node scripts/aspire-brain-regression.mjs"
   },
