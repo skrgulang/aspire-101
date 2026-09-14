@@ -8,7 +8,12 @@ import {
   stripeGet
 } from '../../../../../lib/server/aspireServer';
 
-type CheckoutSession = { id: string; url: string | null };
+type CheckoutSession = {
+  id: string;
+  url: string | null;
+  status?: 'open' | 'complete' | 'expired' | null;
+  payment_status?: 'paid' | 'unpaid' | 'no_payment_required' | null;
+};
 
 type StripeConnectAccount = {
   capabilities?: { transfers?: string | null };
@@ -27,6 +32,7 @@ type PaymentRow = {
   status: string;
   transfer_group: string;
   checkout_attempt: number;
+  stripe_checkout_session_id: string | null;
   payer_id?: string;
   payee_id?: string;
   base_amount_cents: number | null;
@@ -269,6 +275,56 @@ export async function POST(request: Request) {
       payment = data as PaymentRow;
     }
 
+    if (payment.status === 'processing') {
+      return NextResponse.json({
+        error: 'Payment has already been submitted and is still being confirmed by Stripe.',
+        code: 'PAYMENT_PROCESSING'
+      }, { status: 409 });
+    }
+
+    if (payment.stripe_checkout_session_id && ['checkout_created', 'failed'].includes(payment.status)) {
+      const previousSession = await stripeGet<CheckoutSession>(
+        `/v1/checkout/sessions/${encodeURIComponent(payment.stripe_checkout_session_id)}`
+      );
+
+      if (previousSession.payment_status === 'paid') {
+        return NextResponse.json({
+          error: 'Payment has already been submitted and is still being confirmed by Stripe.',
+          code: 'PAYMENT_PROCESSING'
+        }, { status: 409 });
+      }
+
+      if (previousSession.status === 'open') {
+        if (!previousSession.url) throw new Error('STRIPE:Existing checkout is still open but has no redirect URL.');
+        return NextResponse.json({
+          url: previousSession.url,
+          paymentId: payment.id,
+          status: 'checkout_created',
+          transactionType: isMarket ? 'marketplace' : 'connection',
+          payerId,
+          payeeId,
+          feePolicyVersion: quote.fee_policy_version,
+          baseAmountCents: quote.base_amount_cents,
+          requesterFeeCents: quote.requester_fee_cents,
+          customerTotalCents: quote.customer_total_cents,
+          providerFeeCents: quote.provider_fee_cents,
+          providerNetCents: quote.provider_net_cents,
+          tipAmountCents: quote.tip_amount_cents,
+          reusedCheckout: true
+        });
+      }
+
+      // A completed Checkout Session should not be replaced while the webhook is still
+      // advancing the local payment state. Failed asynchronous payments are the exception:
+      // those need a fresh session because the completed Checkout Session cannot be reused.
+      if (previousSession.status === 'complete' && payment.status !== 'failed') {
+        return NextResponse.json({
+          error: 'Payment has already been submitted and is still being confirmed by Stripe.',
+          code: 'PAYMENT_PROCESSING'
+        }, { status: 409 });
+      }
+    }
+
     const attempt = Number(payment.checkout_attempt || 0) + 1;
     const origin = publicOrigin(request);
     if (!origin.startsWith('https://')) throw new Error('MISSING_ENV:NEXT_PUBLIC_SITE_URL');
@@ -315,14 +371,34 @@ export async function POST(request: Request) {
 
     if (!session.url) throw new Error('STRIPE:Checkout did not return a redirect URL.');
 
-    const { error: saveError } = await supabase.from('connection_payments').update({
+    const { data: savedPayment, error: saveError } = await supabase.from('connection_payments').update({
       status: 'checkout_created',
       checkout_attempt: attempt,
       stripe_checkout_session_id: session.id,
       failure_reason: null,
       updated_at: new Date().toISOString()
-    }).eq('id', payment.id);
+    })
+      .eq('id', payment.id)
+      .in('status', ['not_started', 'checkout_created', 'failed'])
+      .select('status')
+      .maybeSingle();
     if (saveError) throw saveError;
+
+    if (!savedPayment) {
+      const { data: latestPayment, error: latestError } = await supabase
+        .from('connection_payments')
+        .select('status')
+        .eq('id', payment.id)
+        .maybeSingle();
+      if (latestError) throw latestError;
+      if (latestPayment && ['processing', 'secured', 'released'].includes(String(latestPayment.status))) {
+        return NextResponse.json({
+          error: 'Payment has already been submitted and is still being confirmed by Stripe.',
+          code: 'PAYMENT_PROCESSING'
+        }, { status: 409 });
+      }
+      throw new Error('STRIPE:Checkout state changed while creating the payment session. Try again.');
+    }
 
     return NextResponse.json({
       url: session.url,
@@ -337,7 +413,8 @@ export async function POST(request: Request) {
       customerTotalCents: quote.customer_total_cents,
       providerFeeCents: quote.provider_fee_cents,
       providerNetCents: quote.provider_net_cents,
-      tipAmountCents: quote.tip_amount_cents
+      tipAmountCents: quote.tip_amount_cents,
+      reusedCheckout: false
     });
   } catch (error) {
     const resolved = apiError(error);
