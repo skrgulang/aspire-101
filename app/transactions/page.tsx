@@ -11,8 +11,8 @@ export default function TransactionsPage() {
         <header className={styles.header}>
           <div className={styles.headerCopy}>
             <p className={styles.eyebrow}>YOUR ASPIRE · MONEY</p>
-            <h1 className={styles.title}>Transactions</h1>
-            <p className={styles.lead}>Track Aspire Protected orders, payments, handoff, receipt confirmation, refunds, and payouts without losing the activity trail.</p>
+            <h1 className={styles.title}>Orders</h1>
+            <p className={styles.lead}>Your protected marketplace orders: payment, handoff, delivery, receipt confirmation, refunds, and payouts. Your cart lives in Market.</p>
           </div>
           <div className={styles.actions}>
             <a href="/resolution">Resolution Center</a>

@@ -10,7 +10,7 @@ type DockItem = { key: AppDockTab; label: string; href: string; icon: UiIconName
 
 const discoverItems: DockItem[] = [
   { key: 'home', label: 'Home', href: '/campus', icon: 'home', mobile: true },
-  { key: 'discover', label: 'Browse', href: '/discover', icon: 'search', mobile: true },
+  { key: 'discover', label: 'Market', href: '/marketplace', icon: 'search', mobile: true },
   { key: 'post', label: 'Post', href: '/post', icon: 'plus', mobile: true }
 ];
 
@@ -18,7 +18,7 @@ const personalItems: DockItem[] = [
   { key: 'connections', label: 'Inbox', href: '/connections', icon: 'message', mobile: true },
   { key: 'activity', label: 'My Activity', href: '/activity', icon: 'activity' },
   { key: 'saved', label: 'Saved', href: '/saved', icon: 'bookmark' },
-  { key: 'transactions', label: 'Transactions', href: '/transactions', icon: 'wallet' },
+  { key: 'transactions', label: 'Orders', href: '/transactions', icon: 'wallet' },
   { key: 'resolution', label: 'Resolution', href: '/resolution', icon: 'shield' }
 ];
 
