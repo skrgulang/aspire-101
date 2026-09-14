@@ -33,11 +33,11 @@ function extractTimeText(message: string) {
 }
 
 function extractAmountCents(message: string) {
-  const dollar = message.match(/\$\s*(\d+(?:\.\d{1,2})?)/);
-  const words = message.match(/\b(\d+(?:\.\d{1,2})?)\s*(?:dollars?|bucks?)\b/i);
-  const raw = dollar?.[1] || words?.[1];
+  const prefixed = message.match(/(?:\$\s*|\busd\s*)(\d{1,6}(?:,\d{3})*(?:\.\d{1,2})?)/i);
+  const suffixed = message.match(/\b(\d{1,6}(?:,\d{3})*(?:\.\d{1,2})?)\s*(?:usd|dollars?|bucks?)\b/i);
+  const raw = prefixed?.[1] || suffixed?.[1];
   if (!raw) return null;
-  const amount = Number(raw);
+  const amount = Number(raw.replace(/,/g, ''));
   if (!Number.isFinite(amount) || amount < 0) return null;
   return Math.round(amount * 100);
 }
@@ -51,7 +51,7 @@ function extractCourse(message: string) {
 function trimItemCandidate(value: string) {
   return normalizeSpaces(value)
     .replace(/^(?:my|a|an|the)\s+/i, '')
-    .replace(/\s+(?:for|at)\s+\$?\d+(?:\.\d{1,2})?.*$/i, '')
+    .replace(/\s+(?:for|at)\s+(?:\$\s*|usd\s*)?\d[\d,]*(?:\.\d{1,2})?.*$/i, '')
     .replace(/\b(?:today|tonight|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b.*$/i, '')
     .replace(/[?.!,]+$/g, '')
     .trim();
@@ -60,12 +60,12 @@ function trimItemCandidate(value: string) {
 function extractItem(message: string, intent: AspireIntentName) {
   const value = normalizeSpaces(message);
   if (intent === 'SELL_ITEM') {
-    const match = value.match(/\b(?:sell|selling|list|listing)\s+(?:my\s+)?(.+?)(?:\s+for\s+\$?\d|$)/i)
+    const match = value.match(/\b(?:wts|sell|selling|list|listing)\s+(?:my\s+)?(.+?)(?:\s+for\s+(?:\$\s*|usd\s*)?\d|$)/i)
       || value.match(/\b(.+?)\s+for sale\b/i);
     return match ? trimItemCandidate(match[1]) : '';
   }
   if (intent === 'FIND_ITEM') {
-    const match = value.match(/\b(?:looking for|want to buy|need to buy|trying to buy|anyone selling|does anyone have)\s+(?:a\s+|an\s+|the\s+)?(.+)$/i);
+    const match = value.match(/\b(?:wtb|looking for|want to buy|need to buy|trying to buy|anyone selling|does anyone have)\s+(?:a\s+|an\s+|the\s+)?(.+)$/i);
     return match ? trimItemCandidate(match[1]) : '';
   }
   return '';
