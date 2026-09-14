@@ -165,12 +165,15 @@ export async function POST(request: Request) {
       }
     }
 
-    if (event.type === 'charge.dispute.created') {
+    if (event.type === 'charge.dispute.created' || event.type === 'radar.early_fraud_warning.created') {
       const chargeId = objectId(object.charge);
       if (chargeId) {
         const { error } = await supabase.from('connection_payments').update({
           status: 'disputed',
           disputed_at: new Date().toISOString(),
+          failure_reason: event.type === 'radar.early_fraud_warning.created'
+            ? 'Stripe Radar issued an early fraud warning. Payout is paused for review.'
+            : 'Stripe opened a payment dispute. Payout is paused for review.',
           updated_at: new Date().toISOString()
         }).eq('stripe_charge_id', chargeId).neq('status', 'refunded');
         requireDatabaseWrite(error);

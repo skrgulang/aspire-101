@@ -16,6 +16,7 @@ import {
 } from '../lib/supabase/requests';
 import { uploadRequestMedia, validateRequestImages } from '../lib/supabase/requestMedia';
 import { acknowledgeSafety } from '../lib/supabase/safety';
+import { runRequestAiSafety } from '../lib/supabase/trust';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
 import { clearAspireAgentDraft, markAspireAgentOutcome, readAspireAgentDraft } from '../lib/supabase/aspireAi';
 import CampusPicker from './CampusPicker';
@@ -84,7 +85,7 @@ export default function PostRequestForm() {
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
-  const [posted, setPosted] = useState<{ id: string; title: string; campus: string; warning?: string } | null>(null);
+  const [posted, setPosted] = useState<{ id: string; title: string; campus: string; moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked'; warning?: string } | null>(null);
   const [agentPrepared, setAgentPrepared] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
 
@@ -281,6 +282,14 @@ export default function PostRequestForm() {
           warning = mediaError instanceof Error ? `Request submitted, but photos could not upload: ${mediaError.message}` : 'Request submitted, but photos could not upload.';
         }
       }
+      let moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked' = 'pending';
+      try {
+        const safetyResult = await runRequestAiSafety(request.id);
+        moderationStatus = safetyResult.moderationStatus;
+      } catch (scanError) {
+        const scanWarning = scanError instanceof Error ? scanError.message : 'The automated safety scan could not finish.';
+        warning = [warning, `${scanWarning} Your post remains private and queued for review.`].filter(Boolean).join(' ');
+      }
       await acknowledgeSafety(`${category}:${kind}`, request.id).catch(() => undefined);
       const supabase = getSupabaseBrowserClient();
       try {
@@ -291,7 +300,7 @@ export default function PostRequestForm() {
       if (agentSessionId) await markAspireAgentOutcome(agentSessionId, 'posted').catch(() => undefined);
       clearAspireAgentDraft();
       setAgentPrepared(false);
-      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, warning });
+      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, moderationStatus, warning });
       setConfirming(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit this request. Try again.');
@@ -305,11 +314,11 @@ export default function PostRequestForm() {
 
   if (posted) return (
     <section className="postSuccess">
-      <p className="eyebrow">SUBMITTED FOR REVIEW</p>
-      <h1>Almost there.</h1>
-      <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · {schedulePreview} · {requestLanguageLabel(language)} · #{posted.id.slice(0, 8)} · pending review</small></article>
+      <p className="eyebrow">{posted.moderationStatus === 'approved' ? 'PUBLISHED' : posted.moderationStatus === 'pending' ? 'SUBMITTED FOR REVIEW' : 'NOT PUBLISHED'}</p>
+      <h1>{posted.moderationStatus === 'approved' ? 'You’re live.' : posted.moderationStatus === 'pending' ? 'Almost there.' : 'Safety check required.'}</h1>
+      <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · {schedulePreview} · {requestLanguageLabel(language)} · #{posted.id.slice(0, 8)} · {posted.moderationStatus === 'approved' ? 'published' : posted.moderationStatus === 'pending' ? 'pending review' : 'blocked by safety review'}</small></article>
       {posted.warning && <p className="postError">{posted.warning}</p>}
-      <p className="postSuccessNote">{isMarket ? 'Your marketplace listing is saved but is not public yet. Aspire reviews new listings before they appear in Discover.' : 'Your request is saved but is not public yet. Aspire reviews new posts before they appear in the campus feed.'}</p>
+      <p className="postSuccessNote">{posted.moderationStatus === 'approved' ? (isMarket ? 'Your listing passed the automated review and is now visible in Aspire Market.' : 'Your post passed the automated review and is now visible in the campus feed.') : posted.moderationStatus === 'pending' ? (isMarket ? 'Your marketplace listing is saved but stays private until the remaining review is complete.' : 'Your request is saved but stays private until the remaining review is complete.') : 'This post was not published because the automated safety review found a serious policy concern. Contact Aspire Safety if you believe this was a mistake.'}</p>
       <div className="postSuccessActions"><a className="button buttonGold" href="/connections">View my activity <span>↗</span></a><button className="quietPostButton" type="button" onClick={resetPost}>Submit another</button></div>
     </section>
   );
