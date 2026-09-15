@@ -37,7 +37,7 @@ function expiry(item: DiscoverRequest) {
 
 function availableMethods(item: MarketListing): FlexibleFulfillmentMethod[] {
   if (item.fulfillment_methods?.length) return item.fulfillment_methods;
-  const legacy = item.fulfillment_method === 'shipping' ? 'shipping' : 'campus_pickup';
+  const legacy: FlexibleFulfillmentMethod = item.fulfillment_method === 'shipping' ? 'shipping' : 'campus_pickup';
   return [legacy];
 }
 
@@ -150,7 +150,7 @@ export default function Marketplace() {
           rows: await fetchCampusFeedRequests({ campusId: target.id, category: 'Buy & sell', limit: scope === 'campus' ? 60 : 24 })
         })));
 
-        const flattened = rowsByCampus.flatMap(({ campus: sourceCampus, rows }) => rows
+        const flattened: MarketListing[] = rowsByCampus.flatMap(({ campus: sourceCampus, rows }) => rows
           .filter((item) => item.kind === 'buy_sell' && item.market_intent === 'sell' && item.payment_method === 'aspire' && item.poster_id !== userId)
           .map((item) => ({
             ...item,
@@ -161,9 +161,9 @@ export default function Marketplace() {
           })));
 
         const methods = await fetchListingFulfillmentMethods(flattened.map((item) => item.id));
-        const enriched = flattened.map((item) => ({
+        const enriched: MarketListing[] = flattened.map((item) => ({
           ...item,
-          fulfillment_methods: methods.get(item.id)?.fulfillment_methods || [item.fulfillment_method === 'shipping' ? 'shipping' : 'campus_pickup'] as FlexibleFulfillmentMethod[]
+          fulfillment_methods: methods.get(item.id)?.fulfillment_methods || availableMethods(item)
         }));
 
         const visible = enriched.filter((item) => {
