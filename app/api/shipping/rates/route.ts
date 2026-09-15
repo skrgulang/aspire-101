@@ -56,6 +56,16 @@ export async function POST(request: Request) {
     if (order.fulfillment_method !== 'shipping') return NextResponse.json({ error: 'This order is not configured for carrier shipping.', code: 'NOT_SHIPPING_ORDER' }, { status: 409 });
     if (['released', 'refunded', 'cancelled', 'disputed'].includes(order.status)) return NextResponse.json({ error: 'Shipping cannot be changed after this order is closed or disputed.', code: 'ORDER_CLOSED' }, { status: 409 });
 
+    const { data: payment, error: paymentError } = await supabase
+      .from('connection_payments')
+      .select('status')
+      .eq('connection_id', order.connection_id)
+      .maybeSingle();
+    if (paymentError) throw paymentError;
+    if (payment && !['not_started', 'failed'].includes(String(payment.status))) {
+      return NextResponse.json({ error: 'Shipping details are locked because checkout has already started.', code: 'PAYMENT_TERMS_LOCKED' }, { status: 409 });
+    }
+
     const shipment = await createShippoShipment({
       addressFrom,
       addressTo,
@@ -71,12 +81,18 @@ export async function POST(request: Request) {
     }).filter((rate) => rate.object_id && Number.isFinite(Number(rate.amount)));
     if (!rates.length) return NextResponse.json({ error: 'No configured shipping rates were found. Make sure USPS, UPS, or FedEx is enabled in Shippo, or update SHIPPING_ALLOWED_CARRIERS.', code: 'NO_SHIPPING_RATES' }, { status: 502 });
 
+    const now = new Date().toISOString();
     const { error: updateError } = await supabase.from('market_orders').update({
       shipping_provider: 'shippo',
       shipping_shipment_id: shipment.object_id,
+      shipping_rate_id: null,
+      shipping_rate_cents: null,
+      shipping_currency: null,
+      shipping_carrier: null,
+      shipping_service: null,
       shipping_status: 'rates_ready',
-      shipping_last_event_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      shipping_last_event_at: now,
+      updated_at: now
     }).eq('id', order.id);
     if (updateError) throw updateError;
 
