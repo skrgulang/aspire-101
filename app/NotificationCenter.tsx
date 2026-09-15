@@ -28,6 +28,7 @@ function iconFor(kind: AspireNotification['kind']) {
   if (kind === 'connection_cancelled' || kind === 'delivery_cancelled') return '×';
   if (kind === 'delivery_offer' || kind === 'delivery_counter') return '$';
   if (kind === 'delivery_status' || kind === 'delivery_matched') return '→';
+  if (kind === 'shipping_status') return '▣';
   return '✓';
 }
 
@@ -78,6 +79,10 @@ export default function NotificationCenter({
       window.location.assign(`/delivery?job=${encodeURIComponent(item.delivery_job_id)}`);
       return;
     }
+    if (item.kind === 'shipping_status' && item.connection_id) {
+      window.location.assign(`/transactions?connection=${encodeURIComponent(item.connection_id)}`);
+      return;
+    }
     if (item.kind === 'request_response') {
       onShowRequests();
       return;
@@ -109,7 +114,7 @@ export default function NotificationCenter({
 
             <div className="notificationList">
               {loading && !items.length && <p className="notificationEmpty">Loading activity…</p>}
-              {!loading && !items.length && <div className="notificationEmpty"><strong>All quiet for now.</strong><p>Responses, connection updates, messages, Circle activity, and delivery handoffs will appear here.</p></div>}
+              {!loading && !items.length && <div className="notificationEmpty"><strong>All quiet for now.</strong><p>Responses, connection updates, messages, Circle activity, delivery handoffs, and shipping updates will appear here.</p></div>}
               {items.map((item) => (
                 <button type="button" className={`notificationItem ${item.read_at ? '' : 'unread'}`} key={item.id} onClick={() => read(item)}>
                   <i>{iconFor(item.kind)}</i>
