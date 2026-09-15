@@ -14,6 +14,11 @@ export type ShippoAddress = {
   phone?: string;
 };
 
+export type ShippoAddressObject = ShippoAddress & {
+  object_id: string;
+  validation_results?: { is_valid?: boolean; messages?: Array<{ text?: string | null }> } | null;
+};
+
 export type ShippoParcel = {
   length: string;
   width: string;
@@ -80,9 +85,16 @@ export async function shippoRequest<T>(path: string, init: RequestInit = {}) {
   return payload as T;
 }
 
+export async function createShippoAddress(address: ShippoAddress) {
+  return shippoRequest<ShippoAddressObject>('/addresses/', {
+    method: 'POST',
+    body: JSON.stringify({ ...address, validate: true })
+  });
+}
+
 export async function createShippoShipment(input: {
-  addressFrom: ShippoAddress;
-  addressTo: ShippoAddress;
+  addressFrom: ShippoAddress | string;
+  addressTo: ShippoAddress | string;
   parcel: ShippoParcel;
   metadata: string;
 }) {
