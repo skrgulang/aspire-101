@@ -158,3 +158,50 @@ as $$
       email = coalesce(excluded.email, public.profiles.email),
       updated_at = now();
 $$;
+
+create or replace function public.claim_task(p_task_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_task record;
+  v_me uuid := auth.uid();
+  v_name text;
+begin
+  if v_me is null then raise exception 'not signed in'; end if;
+  select * into v_task from public.tasks where id = p_task_id for update;
+  if v_task is null then raise exception 'task not found'; end if;
+  if v_task.user_id = v_me then raise exception 'cannot claim own task'; end if;
+  if v_task.status is distinct from 'approved' then raise exception 'cannot claim until task is approved'; end if;
+  if v_task.accepted_by is not null then raise exception 'already claimed'; end if;
+  select coalesce(u.raw_user_meta_data->>'full_name', u.email, 'Member') into v_name from auth.users u where u.id = v_me;
+  update public.tasks set accepted_by = v_me, accepted_name = v_name, status = 'claimed', updated_at = now() where id = p_task_id;
+  return jsonb_build_object('ok', true);
+end;
+$$;
+
+-- The following legacy functions only need their historical signatures to exist so later
+-- hardening migrations can revoke/grant privileges during a clean preview replay. V2 does not
+-- route new product behavior through them.
+create or replace function public.get_or_create_room(p_task_id uuid)
+returns uuid language plpgsql security definer set search_path = public, auth
+as $$ begin raise exception 'legacy room bootstrap only'; end; $$;
+
+create or replace function public.create_room_on_claim()
+returns trigger language plpgsql security definer set search_path = public, auth
+as $$ begin return new; end; $$;
+
+create or replace function public.set_poster_name()
+returns trigger language plpgsql security definer set search_path = public
+as $$ begin
+  if new.poster_name is null or new.poster_name = '' then
+    select coalesce(p.username::text, 'Member') into new.poster_name from public.profiles p where p.id = new.user_id;
+  end if;
+  return new;
+end; $$;
+
+create or replace function public.sfb_set_creator()
+returns trigger language plpgsql security definer set search_path = public
+as $$ begin if new.created_by is null then new.created_by := auth.uid(); end if; return new; end; $$;
