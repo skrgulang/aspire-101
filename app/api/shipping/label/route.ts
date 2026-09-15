@@ -8,6 +8,35 @@ function normalizedCarrier(value: unknown) {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
+async function flagPaidRateProblem(input: {
+  supabase: ReturnType<typeof getSupabaseServiceClient>;
+  order: any;
+  actorId: string;
+  code: 'SHIPPING_RATE_EXPIRED_AFTER_PAYMENT' | 'SHIPPING_RATE_CHANGED_AFTER_PAYMENT';
+  detail: Record<string, unknown>;
+}) {
+  const now = new Date().toISOString();
+  await input.supabase.from('market_orders').update({
+    shipping_status: 'label_failed',
+    shipping_last_event_at: now,
+    updated_at: now
+  }).eq('id', input.order.id);
+
+  await input.supabase.from('market_order_events').insert({
+    market_order_id: input.order.id,
+    actor_id: input.actorId,
+    event_type: input.code === 'SHIPPING_RATE_EXPIRED_AFTER_PAYMENT'
+      ? 'shipping_rate_expired_after_payment'
+      : 'shipping_rate_changed_after_payment',
+    payload: {
+      selected_rate_id: input.order.shipping_rate_id,
+      selected_rate_cents: input.order.shipping_rate_cents,
+      selected_currency: input.order.shipping_currency || input.order.currency || 'USD',
+      ...input.detail
+    }
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
@@ -34,7 +63,19 @@ export async function POST(request: Request) {
     const shipmentMetadata = String(shipment.metadata || '');
     if (!shipmentMetadata.includes(order.id)) return NextResponse.json({ error: 'This shipping quote does not belong to this order.', code: 'SHIPPING_QUOTE_MISMATCH' }, { status: 409 });
     const rate = (shipment.rates || []).find((candidate) => candidate.object_id === rateId);
-    if (!rate || String(rate.object_status || '').toUpperCase() !== 'VALID') return NextResponse.json({ error: 'That shipping rate expired. Request a fresh quote.', code: 'SHIPPING_RATE_EXPIRED' }, { status: 409 });
+    if (!rate || String(rate.object_status || '').toUpperCase() !== 'VALID') {
+      await flagPaidRateProblem({
+        supabase,
+        order,
+        actorId: user.id,
+        code: 'SHIPPING_RATE_EXPIRED_AFTER_PAYMENT',
+        detail: { shipment_id: order.shipping_shipment_id }
+      });
+      return NextResponse.json({
+        error: 'The buyer already paid the selected shipping amount, but that Shippo rate is no longer valid. Aspire will not silently requote or charge a different amount. Use the Resolution Center to reconcile shipping before fulfillment.',
+        code: 'SHIPPING_RATE_EXPIRED_AFTER_PAYMENT'
+      }, { status: 409 });
+    }
 
     const allowedCarriers = new Set((process.env.SHIPPING_ALLOWED_CARRIERS || 'usps,ups,fedex')
       .split(',')
@@ -42,13 +83,27 @@ export async function POST(request: Request) {
       .filter(Boolean));
     const carrier = normalizedCarrier(rate.provider);
     if (!carrier || !allowedCarriers.has(carrier)) {
-      return NextResponse.json({ error: 'That carrier is not enabled for Aspire shipping. Request a fresh quote.', code: 'SHIPPING_CARRIER_NOT_ALLOWED' }, { status: 409 });
+      return NextResponse.json({ error: 'That carrier is not enabled for Aspire shipping.', code: 'SHIPPING_CARRIER_NOT_ALLOWED' }, { status: 409 });
     }
 
     const rateCents = Math.round(Number(rate.amount || 0) * 100);
     const rateCurrency = String(rate.currency || 'USD').toUpperCase();
     if (rateCents !== Number(order.shipping_rate_cents) || rateCurrency !== String(order.shipping_currency || order.currency || 'USD').toUpperCase()) {
-      return NextResponse.json({ error: 'The selected shipping rate changed. Request fresh rates before continuing.', code: 'SHIPPING_RATE_CHANGED' }, { status: 409 });
+      await flagPaidRateProblem({
+        supabase,
+        order,
+        actorId: user.id,
+        code: 'SHIPPING_RATE_CHANGED_AFTER_PAYMENT',
+        detail: {
+          current_rate_cents: rateCents,
+          current_currency: rateCurrency,
+          shipment_id: order.shipping_shipment_id
+        }
+      });
+      return NextResponse.json({
+        error: 'The carrier price changed after buyer payment. Aspire will not substitute the new price or change the protected total. Use the Resolution Center to reconcile shipping before fulfillment.',
+        code: 'SHIPPING_RATE_CHANGED_AFTER_PAYMENT'
+      }, { status: 409 });
     }
 
     const claimTime = new Date().toISOString();
