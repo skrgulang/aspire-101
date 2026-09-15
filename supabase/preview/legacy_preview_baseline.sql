@@ -54,6 +54,46 @@ create table if not exists public.banned_words (
   word citext primary key
 );
 
+create table if not exists public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid,
+  title text not null,
+  description text,
+  budget numeric,
+  status text not null default 'pending',
+  created_at timestamptz default now(),
+  owner uuid,
+  details text,
+  city text,
+  latitude double precision,
+  longitude double precision,
+  updated_at timestamptz,
+  owner_id uuid default auth.uid(),
+  lat double precision,
+  lng double precision,
+  poster_name text,
+  ip_location text,
+  accepted_by uuid,
+  accepted_at timestamptz,
+  accepted_name text,
+  moderation_reason text,
+  moderated_by uuid,
+  moderated_at timestamptz,
+  created_by uuid,
+  anonymous boolean not null default false,
+  has_detailed_address boolean not null default false,
+  detailed_address text,
+  reviewed_by uuid,
+  reviewed_at timestamptz,
+  mod_reason text
+);
+
+create table if not exists public.wallets (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  balance_cents integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+
 create or replace function public.make_obf_regex(raw text)
 returns text
 language sql
