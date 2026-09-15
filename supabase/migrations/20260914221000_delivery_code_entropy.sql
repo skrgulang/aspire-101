@@ -9,7 +9,7 @@ security definer
 set search_path = public
 as $$
   with entropy as (
-    select gen_random_bytes(2) as bytes
+    select extensions.gen_random_bytes(2) as bytes
   )
   select lpad(
     (((get_byte(bytes, 0) * 256) + get_byte(bytes, 1)) % 10000)::text,
