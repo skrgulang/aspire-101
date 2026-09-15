@@ -68,7 +68,6 @@ export async function POST(request: Request) {
       ? { shipping_from_address_id: shippoAddress.object_id, shipping_from_address_ready_at: now }
       : { shipping_to_address_id: shippoAddress.object_id, shipping_to_address_ready_at: now };
 
-    // Any address change invalidates earlier rates and prevents stale quotes from being paid.
     const { data: updated, error: updateError } = await supabase.from('market_orders').update({
       ...patch,
       shipping_shipment_id: null,
@@ -77,6 +76,7 @@ export async function POST(request: Request) {
       shipping_currency: null,
       shipping_carrier: null,
       shipping_service: null,
+      shipping_rate_options: [],
       shipping_status: 'not_started',
       shipping_last_event_at: now,
       updated_at: now
