@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppDock from '../../AppDock';
 import { getSupabaseBrowserClient } from '../../../lib/supabase/client';
 import {
+  acceptDeliveryOffer,
   cancelOpenDelivery,
   fetchDeliveryBoard,
   rewardLabel,
@@ -28,6 +29,7 @@ function errorText(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || 'Something went wrong.');
   if (/MATCHED_DELIVERY_USE_RESOLUTION/i.test(message)) return 'This delivery is already matched. Use Resolution Center instead of cancelling the public request.';
   if (/DELIVERY_ALREADY_MATCHED/i.test(message)) return 'This offer cannot be withdrawn because the delivery is already matched.';
+  if (/OFFER_NOT_ACTIVE|WAITING_FOR_REQUESTER/i.test(message)) return 'This counteroffer is no longer waiting for your response. Refresh the delivery and review the latest offer state.';
   return message;
 }
 
@@ -77,6 +79,11 @@ export default function DeliveryManageCenter() {
     return Boolean(job && ['looking_for_aspirer', 'offer_received'].includes(job.status) && !job.matched_aspirer_id);
   }), [board.jobs, board.offers, userId]);
 
+  const countersWaitingForYou = useMemo(() => withdrawableOffers.filter((offer) => {
+    const job = board.jobs.find((entry) => entry.id === offer.delivery_job_id);
+    return Boolean(job && offer.status === 'countered' && offer.last_actor_id === job.requester_id && offer.aspirer_id === userId);
+  }), [board.jobs, withdrawableOffers, userId]);
+
   const matched = useMemo(() => board.jobs.filter((job) =>
     !['looking_for_aspirer', 'offer_received', 'cancelled', 'completed'].includes(job.status)
     && (job.requester_id === userId || job.pickup_party_id === userId || job.dropoff_party_id === userId || job.matched_aspirer_id === userId)
@@ -119,6 +126,29 @@ export default function DeliveryManageCenter() {
     }
   }
 
+  async function acceptCounter(offer: DeliveryOffer) {
+    const job = board.jobs.find((entry) => entry.id === offer.delivery_job_id);
+    if (!job || offer.status !== 'countered' || offer.last_actor_id !== job.requester_id || offer.aspirer_id !== userId) {
+      setNotice('This counteroffer is not waiting for your acceptance. Refresh and review the latest state.');
+      return;
+    }
+    const confirmed = window.confirm(`Accept the requester’s ${money(offer.amount_cents)} counteroffer and match this delivery?`);
+    if (!confirmed) return;
+    setBusy(`accept-counter:${offer.id}`);
+    setNotice('');
+    try {
+      const matchedJob = await acceptDeliveryOffer(offer.id);
+      setNotice(Number(matchedJob.agreed_reward_cents || 0) > 0
+        ? `Counter accepted at ${money(Number(matchedJob.agreed_reward_cents || 0))}. The requester must secure the protected reward before pickup.`
+        : 'Counter accepted. This delivery is matched as free community help.');
+      await refresh();
+    } catch (error) {
+      setNotice(errorText(error));
+    } finally {
+      setBusy('');
+    }
+  }
+
   return <main className={styles.page}>
     <AppDock active="delivery" />
     <div className={styles.shell}>
@@ -126,7 +156,7 @@ export default function DeliveryManageCenter() {
         <div>
           <p className={styles.eyebrow}>ASPIRE DELIVERY · MANAGE</p>
           <h1>Change plans without bypassing protection.</h1>
-          <p>Unmatched requests can be cancelled and unmatched offers can be withdrawn here. Once a delivery is matched, issues move through the connection and Resolution Center so payment and dispute protections stay intact.</p>
+          <p>Unmatched requests can be cancelled and unmatched offers can be withdrawn here. Requester counteroffers can also be accepted here. Once a delivery is matched, issues move through the connection and Resolution Center so payment and dispute protections stay intact.</p>
         </div>
         <div className={styles.heroActions}>
           <a className={styles.gold} href="/delivery">Delivery Board</a>
@@ -138,7 +168,8 @@ export default function DeliveryManageCenter() {
 
       <section className={styles.summary}>
         <div><strong>{cancellableRequests.length}</strong><span>Requests you can cancel</span></div>
-        <div><strong>{withdrawableOffers.length}</strong><span>Offers you can withdraw</span></div>
+        <div><strong>{withdrawableOffers.length}</strong><span>Active offers</span></div>
+        <div><strong>{countersWaitingForYou.length}</strong><span>Counters need your reply</span></div>
         <div><strong>{matched.length}</strong><span>Matched / active</span></div>
       </section>
 
@@ -154,13 +185,22 @@ export default function DeliveryManageCenter() {
         </section>
 
         <section className={styles.panel}>
-          <div className={styles.panelTop}><div><p className={styles.eyebrow}>YOUR OFFERS</p><h2>Withdraw before matching</h2></div><span>Pre-match only</span></div>
-          {!withdrawableOffers.length ? <div className={styles.empty}>No active delivery offers can be withdrawn right now.</div> : <div className={styles.list}>
+          <div className={styles.panelTop}><div><p className={styles.eyebrow}>YOUR OFFERS</p><h2>Respond or withdraw before matching</h2></div><span>Pre-match only</span></div>
+          {!withdrawableOffers.length ? <div className={styles.empty}>No active delivery offers need management right now.</div> : <div className={styles.list}>
             {withdrawableOffers.map((offer) => {
               const job = board.jobs.find((entry) => entry.id === offer.delivery_job_id)!;
+              const counterWaiting = offer.status === 'countered' && offer.last_actor_id === job.requester_id && offer.aspirer_id === userId;
               return <article className={styles.card} key={offer.id}>
-                <div className={styles.cardMain}><strong>{titleFor(board, job)}</strong><span>{job.pickup_area} → {job.dropoff_area}</span><small>Your offer: {money(offer.amount_cents)} · {offer.status}</small></div>
-                <div className={styles.actions}><a className={styles.outline} href={`/delivery?job=${encodeURIComponent(job.id)}`}>View</a><button className={styles.danger} type="button" onClick={() => void withdraw(offer)} disabled={busy === `withdraw:${offer.id}`}>{busy === `withdraw:${offer.id}` ? 'Withdrawing…' : 'Withdraw offer'}</button></div>
+                <div className={styles.cardMain}>
+                  <strong>{titleFor(board, job)}</strong>
+                  <span>{job.pickup_area} → {job.dropoff_area}</span>
+                  <small>{counterWaiting ? `Requester counter: ${money(offer.amount_cents)} · waiting for you` : `Your offer: ${money(offer.amount_cents)} · ${offer.status}`}</small>
+                </div>
+                <div className={styles.actions}>
+                  <a className={styles.outline} href={`/delivery?job=${encodeURIComponent(job.id)}`}>View</a>
+                  {counterWaiting && <button className={styles.gold} type="button" onClick={() => void acceptCounter(offer)} disabled={busy === `accept-counter:${offer.id}`}>{busy === `accept-counter:${offer.id}` ? 'Accepting…' : `Accept ${money(offer.amount_cents)}`}</button>}
+                  <button className={styles.danger} type="button" onClick={() => void withdraw(offer)} disabled={busy === `withdraw:${offer.id}`}>{busy === `withdraw:${offer.id}` ? 'Withdrawing…' : 'Withdraw offer'}</button>
+                </div>
               </article>;
             })}
           </div>}
