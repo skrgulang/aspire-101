@@ -3,6 +3,7 @@ import { apiError, getAuthenticatedUser, getSupabaseServiceClient } from '../../
 import { buyShippoLabel, getShippoShipment, normalizeShippingStatus } from '../../../../lib/server/shippo';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const staleLabelPurchaseMs = 10 * 60 * 1000;
 
 function normalizedCarrier(value: unknown) {
   return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -37,6 +38,17 @@ async function flagPaidRateProblem(input: {
   });
 }
 
+function existingLabelResponse(order: any) {
+  return NextResponse.json({
+    status: order.shipping_status,
+    transactionId: order.shipping_transaction_id,
+    labelUrl: order.shipping_label_url,
+    trackingNumber: order.shipping_tracking_number,
+    trackingUrl: order.shipping_tracking_url,
+    duplicate: true
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
@@ -55,8 +67,26 @@ export async function POST(request: Request) {
     if (!order.shipping_rate_id || !order.shipping_rate_cents) return NextResponse.json({ error: 'The buyer must choose a shipping rate before the seller can buy a label.', code: 'SHIPPING_RATE_REQUIRED' }, { status: 409 });
     if (rateId !== order.shipping_rate_id) return NextResponse.json({ error: 'The shipping label must use the rate the buyer selected before payment.', code: 'SHIPPING_RATE_MISMATCH' }, { status: 409 });
     if (!['paid', 'handoff_confirmed'].includes(order.status)) return NextResponse.json({ error: 'The buyer payment must be secured before purchasing a label.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
-    if (order.shipping_status === 'label_purchased' && order.shipping_label_url) {
-      return NextResponse.json({ status: 'label_purchased', transactionId: order.shipping_transaction_id, labelUrl: order.shipping_label_url, trackingNumber: order.shipping_tracking_number, trackingUrl: order.shipping_tracking_url, duplicate: true });
+
+    // Once a label exists, every later shipping state is idempotently the same purchase.
+    // Never try to buy another label merely because tracking has advanced beyond PRE_TRANSIT.
+    if (order.shipping_label_url && order.shipping_transaction_id && ['label_purchased', 'in_transit', 'delivered', 'exception'].includes(order.shipping_status)) {
+      return existingLabelResponse(order);
+    }
+
+    if (order.shipping_status === 'label_purchasing') {
+      const startedAt = new Date(order.shipping_last_event_at || order.updated_at || order.created_at || 0).getTime();
+      const ageMs = Number.isFinite(startedAt) ? Date.now() - startedAt : 0;
+      if (ageMs >= staleLabelPurchaseMs) {
+        return NextResponse.json({
+          error: 'The carrier label purchase has been processing unusually long. Aspire will not automatically retry because the carrier may already have charged for a label even if the final database write was interrupted. Open the Resolution Center so the existing Shippo transaction can be reconciled before any second purchase.',
+          code: 'LABEL_RECONCILIATION_REQUIRED'
+        }, { status: 409 });
+      }
+      return NextResponse.json({
+        error: 'A shipping label purchase is already in progress. Wait a moment and refresh before trying again.',
+        code: 'LABEL_IN_PROGRESS'
+      }, { status: 409 });
     }
 
     // Market-order state can lag a concurrent refund/dispute update by a few milliseconds.
@@ -135,25 +165,36 @@ export async function POST(request: Request) {
     try {
       transaction = await buyShippoLabel({ rateId: rate.object_id, metadata: JSON.stringify({ aspire_market_order_id: order.id, request_id: order.request_id }) });
     } catch (purchaseError) {
-      await supabase.from('market_orders').update({ shipping_status: 'label_failed', updated_at: new Date().toISOString() }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
+      await supabase.from('market_orders').update({ shipping_status: 'label_failed', shipping_last_event_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
       throw purchaseError;
     }
     if (String(transaction.status).toUpperCase() !== 'SUCCESS' || !transaction.label_url || !transaction.tracking_number) {
-      await supabase.from('market_orders').update({ shipping_status: 'label_failed', updated_at: new Date().toISOString() }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
+      await supabase.from('market_orders').update({ shipping_status: 'label_failed', shipping_last_event_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
       const message = transaction.messages?.map((item) => item.text).filter(Boolean).join(' ') || 'Shippo could not purchase this label.';
       return NextResponse.json({ error: message, code: 'SHIPPING_LABEL_FAILED' }, { status: 502 });
     }
 
     const nextStatus = normalizeShippingStatus(transaction.tracking_status?.status);
-    const { error: finalizeError } = await supabase.from('market_orders').update({
+    const finalizedAt = new Date().toISOString();
+    const { data: finalized, error: finalizeError } = await supabase.from('market_orders').update({
       shipping_transaction_id: transaction.object_id,
       shipping_label_url: transaction.label_url,
       shipping_tracking_number: transaction.tracking_number,
       shipping_tracking_url: transaction.tracking_url_provider || null,
       shipping_status: nextStatus,
-      shipping_last_event_at: new Date().toISOString(), updated_at: new Date().toISOString()
-    }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
+      shipping_last_event_at: finalizedAt,
+      updated_at: finalizedAt
+    }).eq('id', order.id).eq('shipping_status', 'label_purchasing').select('id').maybeSingle();
     if (finalizeError) throw finalizeError;
+    if (!finalized) {
+      // Shippo may already have charged for this label. Failing closed here prevents a
+      // second purchase if another state transition won the database race.
+      return NextResponse.json({
+        error: 'The carrier created a label, but Aspire could not safely attach it to the order because the order changed during purchase. Do not retry. Use the Resolution Center for reconciliation.',
+        code: 'LABEL_RECONCILIATION_REQUIRED'
+      }, { status: 409 });
+    }
+
     await supabase.from('market_order_events').insert({ market_order_id: order.id, actor_id: user.id, event_type: 'shipping_label_purchased', payload: { carrier: transaction.rate?.provider || rate.provider || 'Carrier', service: transaction.rate?.servicelevel?.name || rate.servicelevel?.name || null, tracking_number: transaction.tracking_number } });
 
     return NextResponse.json({ status: nextStatus, transactionId: transaction.object_id, labelUrl: transaction.label_url, trackingNumber: transaction.tracking_number, trackingUrl: transaction.tracking_url_provider || null });
