@@ -15,7 +15,8 @@ export type AspireNotification = {
     | 'delivery_counter'
     | 'delivery_matched'
     | 'delivery_status'
-    | 'delivery_cancelled';
+    | 'delivery_cancelled'
+    | 'shipping_status';
   actor_id: string | null;
   request_id: string | null;
   response_id: string | null;
