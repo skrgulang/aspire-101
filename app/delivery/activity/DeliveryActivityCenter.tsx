@@ -8,6 +8,7 @@ import styles from './DeliveryActivity.module.css';
 
 type View = 'all' | 'action' | 'unread' | 'active' | 'completed';
 type AlertTone = 'action' | 'update' | 'complete';
+type Urgency = 'overdue' | 'soon' | null;
 
 type DeliveryAlert = {
   id: string;
@@ -20,7 +21,7 @@ type DeliveryAlert = {
   secondaryHref?: string;
   secondaryLabel?: string;
   unreadKey: string;
-  urgent: boolean;
+  urgency: Urgency;
 };
 
 const EMPTY_BOARD: DeliveryBoardData = { jobs: [], requests: new Map(), offers: [], profiles: new Map() };
@@ -43,17 +44,27 @@ function timeAgo(value: string) {
   return `${days}d ago`;
 }
 
-function isUrgent(job: DeliveryJob) {
-  if (!job.preferred_at || ['completed', 'cancelled'].includes(job.status)) return false;
-  const diff = new Date(job.preferred_at).getTime() - Date.now();
-  return diff <= 2 * 60 * 60 * 1000;
+function urgencyFor(job: DeliveryJob): Urgency {
+  if (!job.preferred_at || ['completed', 'cancelled'].includes(job.status)) return null;
+  const preferred = new Date(job.preferred_at).getTime();
+  if (!Number.isFinite(preferred)) return null;
+  const diff = preferred - Date.now();
+  if (diff < 0) return 'overdue';
+  if (diff <= 2 * 60 * 60 * 1000) return 'soon';
+  return null;
 }
 
 function pendingOfferForRequester(offers: DeliveryOffer[], userId: string | null) {
   return offers.filter((offer) => ['pending', 'countered'].includes(offer.status) && offer.last_actor_id !== userId);
 }
 
-function buildAlert(job: DeliveryJob, board: DeliveryBoardData, userId: string | null, offers: DeliveryOffer[]): DeliveryAlert | null {
+function buildAlert(
+  job: DeliveryJob,
+  board: DeliveryBoardData,
+  userId: string | null,
+  offers: DeliveryOffer[],
+  paymentStatusByConnection: Record<string, string>
+): DeliveryAlert | null {
   const request = board.requests.get(job.request_id);
   const title = request?.title || 'Delivery request';
   const isRequester = job.requester_id === userId;
@@ -63,7 +74,8 @@ function buildAlert(job: DeliveryJob, board: DeliveryBoardData, userId: string |
   const ownOffer = offers.find((offer) => offer.aspirer_id === userId);
   const actionHref = `/delivery?job=${encodeURIComponent(job.id)}`;
   const unreadKey = `${job.id}:${job.updated_at}`;
-  const urgent = isUrgent(job);
+  const urgency = urgencyFor(job);
+  const paymentStatus = job.connection_id ? paymentStatusByConnection[job.connection_id] : undefined;
 
   if (isRequester && job.status === 'offer_received') {
     const actionable = pendingOfferForRequester(offers, userId);
@@ -72,74 +84,83 @@ function buildAlert(job: DeliveryJob, board: DeliveryBoardData, userId: string |
       job,
       title: `${actionable.length} offer${actionable.length === 1 ? '' : 's'} need your response`,
       body: `${title} · review pricing, messages, and counteroffers before choosing an Aspirer.`,
-      tone: 'action', href: actionHref, actionLabel: 'Review offers', unreadKey, urgent
+      tone: 'action', href: actionHref, actionLabel: 'Review offers', unreadKey, urgency
     };
   }
 
-  if (isRequester && job.connection_id && Number(job.agreed_reward_cents || 0) > 0 && ['matched', 'heading_to_pickup'].includes(job.status)) {
+  if (
+    isRequester
+    && job.connection_id
+    && Number(job.agreed_reward_cents || 0) > 0
+    && ['matched', 'heading_to_pickup'].includes(job.status)
+    && !['secured', 'released'].includes(paymentStatus || '')
+  ) {
+    const paymentKnown = Boolean(paymentStatus);
     return {
       id: `secure:${job.id}`,
       job,
-      title: 'Secure the delivery reward',
-      body: `${title} matched with ${profileName(board, job.matched_aspirer_id)}. The protected reward must be secured before pickup can begin.`,
+      title: paymentKnown ? 'Secure the delivery reward' : 'Review the delivery reward',
+      body: paymentKnown
+        ? `${title} matched with ${profileName(board, job.matched_aspirer_id)}. The protected reward must be secured before pickup can begin.`
+        : `${title} matched with ${profileName(board, job.matched_aspirer_id)}. Open payment details to verify the protected reward status before pickup.`,
       tone: 'action', href: `/transactions?connection=${encodeURIComponent(job.connection_id)}`, actionLabel: 'Open payment',
-      secondaryHref: actionHref, secondaryLabel: 'View delivery', unreadKey, urgent
+      secondaryHref: actionHref, secondaryLabel: 'View delivery', unreadKey, urgency
     };
   }
 
   if (isAspirer && job.status === 'matched') return {
     id: `heading:${job.id}`, job, title: 'Ready to head to pickup', body: `${title} is matched to you. Open the delivery when you are ready to start moving toward pickup.`,
-    tone: 'action', href: actionHref, actionLabel: 'Start pickup', unreadKey, urgent
+    tone: 'action', href: actionHref, actionLabel: 'Start pickup', unreadKey, urgency
   };
 
   if (isPickupParty && ['matched', 'heading_to_pickup'].includes(job.status)) return {
     id: `pickup-code:${job.id}`, job, title: 'Pickup code will be needed', body: `${title} is approaching pickup. Show the one-time code only after the item is physically handed over.`,
-    tone: 'action', href: actionHref, actionLabel: 'Open pickup', unreadKey, urgent
+    tone: 'action', href: actionHref, actionLabel: 'Open pickup', unreadKey, urgency
   };
 
   if (isAspirer && ['matched', 'heading_to_pickup'].includes(job.status)) return {
     id: `pickup-confirm:${job.id}`, job, title: 'Confirm pickup with the 4-digit code', body: `${title} is ready for pickup confirmation. Ask the pickup party for the code after the handoff.`,
-    tone: 'action', href: actionHref, actionLabel: 'Confirm pickup', unreadKey, urgent
+    tone: 'action', href: actionHref, actionLabel: 'Confirm pickup', unreadKey, urgency
   };
 
   if (isDropoffParty && ['picked_up', 'on_the_way'].includes(job.status)) return {
     id: `delivery-code:${job.id}`, job, title: 'Prepare the delivery code', body: `${title} is on the way. Give the one-time delivery code only after you receive the item.`,
-    tone: 'action', href: actionHref, actionLabel: 'Open delivery', unreadKey, urgent
+    tone: 'action', href: actionHref, actionLabel: 'Open delivery', unreadKey, urgency
   };
 
   if (isAspirer && ['picked_up', 'on_the_way'].includes(job.status)) return {
     id: `deliver:${job.id}`, job, title: job.status === 'picked_up' ? 'Start the delivery leg' : 'Complete delivery with the receiver code', body: `${title} is in your active delivery queue.`,
-    tone: 'action', href: actionHref, actionLabel: job.status === 'picked_up' ? 'Start delivery' : 'Confirm delivery', unreadKey, urgent
+    tone: 'action', href: actionHref, actionLabel: job.status === 'picked_up' ? 'Start delivery' : 'Confirm delivery', unreadKey, urgency
   };
 
   if ((isRequester || isDropoffParty) && job.status === 'delivered') return {
     id: `closeout:${job.id}`, job, title: 'Confirm you received the delivery', body: `${title} was marked delivered. Complete the receiver side of closeout after you verify the handoff.`,
-    tone: 'action', href: actionHref, actionLabel: 'Complete delivery', unreadKey, urgent
+    tone: 'action', href: actionHref, actionLabel: 'Complete delivery', unreadKey, urgency
   };
 
   if (isRequester && job.status === 'completed' && job.connection_id && Number(job.agreed_reward_cents || 0) > 0) return {
     id: `release:${job.id}`, job, title: 'Review protected reward release', body: `${title} is completed. Review payout status, disputes, and release eligibility before sending the reward.`,
     tone: 'complete', href: `/transactions?connection=${encodeURIComponent(job.connection_id)}`, actionLabel: 'Payment details',
-    secondaryHref: actionHref, secondaryLabel: 'Review delivery', unreadKey, urgent: false
+    secondaryHref: actionHref, secondaryLabel: 'Review delivery', unreadKey, urgency: null
   };
 
   if (ownOffer && ['pending', 'countered'].includes(ownOffer.status) && ['looking_for_aspirer', 'offer_received'].includes(job.status)) return {
     id: `offer-wait:${job.id}`, job, title: ownOffer.status === 'countered' && ownOffer.last_actor_id !== userId ? 'Requester sent a counteroffer' : 'Your delivery offer is active',
     body: `${title} · current offer ${new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(ownOffer.amount_cents / 100)}.`,
     tone: ownOffer.status === 'countered' && ownOffer.last_actor_id !== userId ? 'action' : 'update', href: actionHref,
-    actionLabel: ownOffer.status === 'countered' && ownOffer.last_actor_id !== userId ? 'Review counter' : 'View offer', unreadKey, urgent
+    actionLabel: ownOffer.status === 'countered' && ownOffer.last_actor_id !== userId ? 'Review counter' : 'View offer', unreadKey, urgency
   };
 
   if ((isRequester || isAspirer || isPickupParty || isDropoffParty) && job.status === 'completed') return {
     id: `done:${job.id}`, job, title: 'Delivery completed', body: `${title} is closed. Review the connection history or leave a review.`,
     tone: 'complete', href: actionHref, actionLabel: 'View completed delivery',
     secondaryHref: job.connection_id ? `/connections?connection=${encodeURIComponent(job.connection_id)}&tab=history` : undefined,
-    secondaryLabel: job.connection_id ? 'Connection history' : undefined, unreadKey, urgent: false
+    secondaryLabel: job.connection_id ? 'Connection history' : undefined, unreadKey, urgency: null
   };
 
   if (isRequester || isAspirer || ownOffer) return {
     id: `update:${job.id}`, job, title: deliveryStatusLabel(job.status), body: `${title} · ${job.pickup_area} → ${job.dropoff_area}`,
-    tone: 'update', href: actionHref, actionLabel: 'View delivery', unreadKey, urgent
+    tone: 'update', href: actionHref, actionLabel: 'View delivery', unreadKey, urgency
   };
 
   return null;
@@ -149,10 +170,35 @@ export default function DeliveryActivityCenter() {
   const [userId, setUserId] = useState<string | null>(null);
   const [campusId, setCampusId] = useState<string | null>(null);
   const [board, setBoard] = useState<DeliveryBoardData>(EMPTY_BOARD);
+  const [paymentStatusByConnection, setPaymentStatusByConnection] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
   const [view, setView] = useState<View>('action');
   const [seen, setSeen] = useState<Set<string>>(new Set());
+
+  async function loadActivity(nextCampusId: string) {
+    const supabase = getSupabaseBrowserClient();
+    const nextBoard = await fetchDeliveryBoard(nextCampusId);
+    setBoard(nextBoard);
+
+    const connectionIds = [...new Set(nextBoard.jobs.map((job) => job.connection_id).filter((id): id is string => Boolean(id)))];
+    if (!connectionIds.length) {
+      setPaymentStatusByConnection({});
+      return;
+    }
+
+    const { data: payments, error: paymentError } = await supabase
+      .from('connection_payments')
+      .select('connection_id,status')
+      .in('connection_id', connectionIds);
+
+    if (paymentError) {
+      setPaymentStatusByConnection({});
+      return;
+    }
+
+    setPaymentStatusByConnection(Object.fromEntries((payments || []).map((payment) => [payment.connection_id, payment.status])));
+  }
 
   useEffect(() => {
     try { setSeen(new Set(JSON.parse(window.localStorage.getItem(SEEN_KEY) || '[]'))); } catch { setSeen(new Set()); }
@@ -166,7 +212,7 @@ export default function DeliveryActivityCenter() {
       const id = profile?.current_campus_id || profile?.home_campus_id || null;
       setCampusId(id);
       if (!id) throw new Error('Choose your campus in Profile before using Delivery Activity.');
-      setBoard(await fetchDeliveryBoard(id));
+      await loadActivity(id);
     }).catch((error) => setNotice(error instanceof Error ? error.message : 'Could not load delivery activity.')).finally(() => setLoading(false));
   }, []);
 
@@ -177,14 +223,15 @@ export default function DeliveryActivityCenter() {
   }, [board.offers]);
 
   const alerts = useMemo(() => board.jobs
-    .map((job) => buildAlert(job, board, userId, offersByJob.get(job.id) || []))
+    .map((job) => buildAlert(job, board, userId, offersByJob.get(job.id) || [], paymentStatusByConnection))
     .filter((alert): alert is DeliveryAlert => Boolean(alert))
     .sort((a, b) => {
       if (a.tone === 'action' && b.tone !== 'action') return -1;
       if (a.tone !== 'action' && b.tone === 'action') return 1;
-      if (a.urgent !== b.urgent) return a.urgent ? -1 : 1;
+      const urgencyRank = (value: Urgency) => value === 'overdue' ? 2 : value === 'soon' ? 1 : 0;
+      if (urgencyRank(a.urgency) !== urgencyRank(b.urgency)) return urgencyRank(b.urgency) - urgencyRank(a.urgency);
       return new Date(b.job.updated_at).getTime() - new Date(a.job.updated_at).getTime();
-    }), [board, offersByJob, userId]);
+    }), [board, offersByJob, paymentStatusByConnection, userId]);
 
   const unreadCount = alerts.filter((alert) => !seen.has(alert.unreadKey)).length;
   const actionCount = alerts.filter((alert) => alert.tone === 'action').length;
@@ -215,12 +262,12 @@ export default function DeliveryActivityCenter() {
 
   async function refresh() {
     if (!campusId) return;
-    try { setBoard(await fetchDeliveryBoard(campusId)); setNotice('Delivery activity refreshed.'); }
+    try { await loadActivity(campusId); setNotice('Delivery activity refreshed.'); }
     catch (error) { setNotice(error instanceof Error ? error.message : 'Could not refresh delivery activity.'); }
   }
 
   return <main className={styles.page}>
-    <AppDock active="discover" />
+    <AppDock active="delivery" />
     <div className={styles.shell}>
       <section className={styles.hero}>
         <div><p className={styles.eyebrow}>ASPIRE DELIVERY · ACTIVITY</p><h1>Your delivery inbox.</h1><p>See what needs your attention, recent offer changes, urgent handoffs, and completed delivery follow-up without scanning every request.</p></div>
@@ -251,7 +298,7 @@ export default function DeliveryActivityCenter() {
           const reward = rewardLabel(alert.job.reward_mode, alert.job.reward_cents);
           return <article key={alert.id} className={`${styles.card} ${alert.tone === 'action' ? styles.cardAction : ''} ${unread ? styles.cardUnread : ''}`}>
             <div className={styles.cardMain}>
-              <div className={styles.cardHeading}><div className={styles.icon}>{alert.tone === 'complete' ? '✓' : alert.tone === 'action' ? '!' : '•'}</div><div><div className={styles.titleRow}><h3>{alert.title}</h3>{unread && <span className={styles.newBadge}>NEW</span>}{alert.urgent && <span className={styles.urgentBadge}>TIME-SENSITIVE</span>}</div><p>{alert.body}</p></div></div>
+              <div className={styles.cardHeading}><div className={styles.icon}>{alert.tone === 'complete' ? '✓' : alert.tone === 'action' ? '!' : '•'}</div><div><div className={styles.titleRow}><h3>{alert.title}</h3>{unread && <span className={styles.newBadge}>NEW</span>}{alert.urgency && <span className={styles.urgentBadge}>{alert.urgency === 'overdue' ? 'OVERDUE' : 'TIME-SENSITIVE'}</span>}</div><p>{alert.body}</p></div></div>
               <div className={styles.meta}><span>{deliveryStatusLabel(alert.job.status)}</span><span>{reward}</span><span>{alert.job.pickup_area} → {alert.job.dropoff_area}</span><span>Updated {timeAgo(alert.job.updated_at)}</span></div>
             </div>
             <div className={styles.actions}>
