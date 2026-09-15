@@ -17,6 +17,8 @@ import flexible from './MarketplaceFlexible.module.css';
 
 type CartItem = { id: string; title: string; amountCents: number; image: string; campus: string; paymentMethod: 'aspire' };
 type MarketplaceScope = 'campus' | 'nearby' | 'shipping';
+type MarketplaceMethodFilter = 'all' | FlexibleFulfillmentMethod;
+type MarketplaceSort = 'newest' | 'price_low' | 'price_high';
 type MarketListing = DiscoverRequest & {
   fulfillment_methods?: FlexibleFulfillmentMethod[];
   campus_name?: string;
@@ -88,6 +90,10 @@ export default function Marketplace() {
   const [scope, setScope] = useState<MarketplaceScope>('campus');
   const [authReady, setAuthReady] = useState(false);
   const [items, setItems] = useState<MarketListing[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [methodFilter, setMethodFilter] = useState<MarketplaceMethodFilter>('all');
+  const [campusFilter, setCampusFilter] = useState('all');
+  const [sort, setSort] = useState<MarketplaceSort>('newest');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selected, setSelected] = useState<MarketListing | null>(null);
   const [checkout, setCheckout] = useState<MarketListing | null>(null);
@@ -123,6 +129,11 @@ export default function Marketplace() {
       setLoading(false);
     });
   }, [router]);
+
+  useEffect(() => {
+    setCampusFilter('all');
+    if (scope === 'shipping' && methodFilter !== 'all' && methodFilter !== 'shipping') setMethodFilter('shipping');
+  }, [scope, methodFilter]);
 
   useEffect(() => {
     if (!authReady || !userId || !campus) return;
@@ -191,8 +202,32 @@ export default function Marketplace() {
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + item.amountCents, 0), [cart]);
   const copy = scopeCopy(scope);
-  function persist(next: CartItem[]) { setCart(next); window.localStorage.setItem(CART_KEY, JSON.stringify(next)); }
+  const visibleCampuses = useMemo(() => {
+    const ids = new Set(items.map((item) => item.campus_id));
+    return universities.filter((entry) => ids.has(entry.id));
+  }, [items, universities]);
+  const filteredItems = useMemo(() => {
+    const needle = searchQuery.trim().toLowerCase();
+    return items.filter((item) => {
+      if (campusFilter !== 'all' && item.campus_id !== campusFilter) return false;
+      if (methodFilter !== 'all' && !availableMethods(item).includes(methodFilter)) return false;
+      if (needle && !`${item.title} ${item.details || ''} ${item.category || ''} ${item.campus_name || ''} ${item.campus_short_name || ''}`.toLowerCase().includes(needle)) return false;
+      return true;
+    }).sort((a, b) => {
+      if (sort === 'price_low') return Number(a.amount_cents ?? Number.MAX_SAFE_INTEGER) - Number(b.amount_cents ?? Number.MAX_SAFE_INTEGER);
+      if (sort === 'price_high') return Number(b.amount_cents ?? -1) - Number(a.amount_cents ?? -1);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [items, searchQuery, campusFilter, methodFilter, sort]);
+  const hasFilters = Boolean(searchQuery.trim() || methodFilter !== 'all' || campusFilter !== 'all' || sort !== 'newest');
 
+  function persist(next: CartItem[]) { setCart(next); window.localStorage.setItem(CART_KEY, JSON.stringify(next)); }
+  function clearFilters() {
+    setSearchQuery('');
+    setMethodFilter(scope === 'shipping' ? 'shipping' : 'all');
+    setCampusFilter('all');
+    setSort('newest');
+  }
   function listingCampus(item: MarketListing) {
     return item.campus_short_name || item.campus_name || 'Aspire campus';
   }
@@ -282,9 +317,17 @@ export default function Marketplace() {
         <button type="button" className={`${flexible.scopeButton} ${scope === 'shipping' ? flexible.scopeButtonActive : ''}`} onClick={() => setScope('shipping')}><strong>Shippable Anywhere</strong><small>Across Aspire campuses</small></button>
       </div>
 
+      <div className={flexible.filterBar}>
+        <label className={flexible.searchField}><span>Search marketplace</span><input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Textbooks, monitors, bikes…" /></label>
+        {scope !== 'campus' && <label className={flexible.filterField}><span>Campus</span><select value={campusFilter} onChange={(event) => setCampusFilter(event.target.value)}><option value="all">All visible campuses</option>{visibleCampuses.map((entry) => <option key={entry.id} value={entry.id}>{entry.short_name} · {entry.city || entry.name}{entry.state ? `, ${entry.state}` : ''}</option>)}</select></label>}
+        <label className={flexible.filterField}><span>Fulfillment</span><select value={methodFilter} onChange={(event) => setMethodFilter(event.target.value as MarketplaceMethodFilter)}><option value="all">All methods</option><option value="shipping">Carrier shipping</option><option value="aspirer_delivery">Aspirer delivery</option><option value="campus_pickup">Local meetup</option></select></label>
+        <label className={flexible.filterField}><span>Sort</span><select value={sort} onChange={(event) => setSort(event.target.value as MarketplaceSort)}><option value="newest">Newest</option><option value="price_low">Price: low to high</option><option value="price_high">Price: high to low</option></select></label>
+      </div>
+      <div className={flexible.resultBar}><span><strong>{filteredItems.length}</strong> listing{filteredItems.length === 1 ? '' : 's'} shown{scope !== 'campus' ? ` across ${new Set(filteredItems.map((item) => item.campus_id)).size} campus${new Set(filteredItems.map((item) => item.campus_id)).size === 1 ? '' : 'es'}` : ''}</span>{hasFilters && <button type="button" onClick={clearFilters}>Clear filters</button>}</div>
+
       <div className="marketplaceExplainer"><div><strong>Flexible fulfillment</strong><span>The seller chooses which delivery methods they accept; you choose from those options at checkout.</span></div><div><strong>Cross-campus shipping</strong><span>Remote listings shown outside your campus must support carrier shipping. Shipping rates and labels stay inside the protected Shippo flow.</span></div></div>
       {notice && <div className="marketplaceNotice" role="status">{notice}</div>}
-      {loading ? <div className="marketplaceEmpty">Loading {scope === 'campus' ? 'campus' : 'network'} listings…</div> : !items.length ? <div className="marketplaceEmpty"><UiIcon name="tag" /><h2>No matching listings yet</h2><p>{scope === 'shipping' ? 'No carrier-shippable listings are available across active campuses yet.' : scope === 'nearby' ? 'No nearby cross-campus listings are available yet.' : 'Be the first person to post something for sale.'}</p><a className="button buttonGold" href="/post">Post an item →</a></div> : <div className="marketGrid">{items.map((item) => <article className="marketProduct" key={item.id}>
+      {loading ? <div className="marketplaceEmpty">Loading {scope === 'campus' ? 'campus' : 'network'} listings…</div> : !filteredItems.length ? <div className="marketplaceEmpty"><UiIcon name="tag" /><h2>No matching listings yet</h2><p>{items.length && hasFilters ? 'Try clearing a filter or searching for something else.' : scope === 'shipping' ? 'No carrier-shippable listings are available across active campuses yet.' : scope === 'nearby' ? 'No nearby cross-campus listings are available yet.' : 'Be the first person to post something for sale.'}</p>{items.length && hasFilters ? <button className="button buttonGold" type="button" onClick={clearFilters}>Clear filters</button> : <a className="button buttonGold" href="/post">Post an item →</a>}</div> : <div className="marketGrid">{filteredItems.map((item) => <article className="marketProduct" key={item.id}>
         <button className="marketProductMedia" type="button" onClick={() => setSelected(item)}>{item.media?.[0]?.public_url || item.cover_image_url ? <img src={item.media?.[0]?.public_url || item.cover_image_url || ''} alt="" /> : <UiIcon name="tag" />}<span>{item.campus_id === campus?.id ? 'Your campus' : listingCampus(item)}</span></button>
         <div className="marketProductBody"><button className="marketProductTitle" type="button" onClick={() => setSelected(item)}>{item.title}</button><strong>{money(item.amount_cents)}</strong><small>{item.item_condition?.replace('_', ' ') || 'Good condition'} · {listingCampus(item)}{item.campus_city ? ` · ${item.campus_city}${item.campus_state ? `, ${item.campus_state}` : ''}` : ''}</small><div className={flexible.methods}>{availableMethods(item).map((method) => <span className={flexible.methodPill} key={method}>{methodLabel(method)}</span>)}</div>{item.campus_id !== campus?.id && availableMethods(item).includes('shipping') && <span className={flexible.remoteBadge}>Cross-campus · Ships to you</span>}<span className="marketProtectionBadge">Aspire Protected checkout</span><Countdown until={expiry(item)} /><div className="marketProductActions"><button type="button" className="marketAdd" onClick={() => addToCart(item)}>Add to cart</button><button type="button" className="button buttonGold" onClick={() => beginCheckout(item)}>Buy now</button></div></div>
       </article>)}</div>}
