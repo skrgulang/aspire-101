@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchMyConnections } from '../lib/supabase/connections';
 import {
   createAspireCheckout,
@@ -19,9 +19,9 @@ import {
   openMarketDispute,
   requestMarketRefund,
   getShippingRates,
+  saveShippingAddress,
   selectShippingRate,
   purchaseShippingLabel,
-  ShippingRate,
   ShippingAddress
 } from '../lib/supabase/marketplace';
 
@@ -59,23 +59,42 @@ const disputeReasons: { value: MarketDispute['reason']; label: string }[] = [
 const emptyAddress: ShippingAddress = { name: '', street1: '', city: '', state: '', zip: '', country: 'US' };
 
 function ShippingOrderTools({ order, isBuyer, isSeller, secured, onDone }: { order: MarketOrder; isBuyer: boolean; isSeller: boolean; secured: boolean; onDone: () => void }) {
-  const [from, setFrom] = useState<ShippingAddress>(emptyAddress);
-  const [to, setTo] = useState<ShippingAddress>(emptyAddress);
+  const [myAddress, setMyAddress] = useState<ShippingAddress>(emptyAddress);
   const [parcel, setParcel] = useState({ length: '12', width: '8', height: '4', weight: '2' });
-  const [rates, setRates] = useState<ShippingRate[]>([]);
-  const [selectedRate, setSelectedRate] = useState(order.shipping_rate_id || '');
+  const rateOptions = order.shipping_rate_options || [];
+  const [selectedRate, setSelectedRate] = useState(order.shipping_rate_id || rateOptions[0]?.id || '');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const shippingStatus = order.shipping_status || 'not_started';
   const rateLocked = Boolean(order.shipping_rate_id && order.shipping_rate_cents);
   const paymentLocked = secured || ['payment_processing','paid','handoff_confirmed','release_ready','released'].includes(order.status);
+  const fromReady = Boolean(order.shipping_from_address_id);
+  const toReady = Boolean(order.shipping_to_address_id);
+
+  useEffect(() => {
+    if (order.shipping_rate_id) setSelectedRate(order.shipping_rate_id);
+    else if (rateOptions.length && !rateOptions.some((rate) => rate.id === selectedRate)) setSelectedRate(rateOptions[0].id);
+  }, [order.shipping_rate_id, rateOptions, selectedRate]);
+
+  function updateAddress(key: keyof ShippingAddress, value: string) {
+    setMyAddress((current) => ({ ...current, [key]: value }));
+  }
+
+  async function saveAddress() {
+    const role = isSeller ? 'from' : 'to';
+    setBusy('address'); setError('');
+    try {
+      await saveShippingAddress(order.id, role, myAddress);
+      setMyAddress(emptyAddress);
+      onDone();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not save the shipping address.'); }
+    finally { setBusy(''); }
+  }
 
   async function quote() {
     setBusy('quote'); setError('');
     try {
-      const result = await getShippingRates(order.id, from, to, parcel);
-      setRates(result.rates);
-      setSelectedRate(result.rates[0]?.id || '');
+      await getShippingRates(order.id, parcel);
       onDone();
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not calculate shipping rates.'); }
     finally { setBusy(''); }
@@ -102,24 +121,22 @@ function ShippingOrderTools({ order, isBuyer, isSeller, secured, onDone }: { ord
     finally { setBusy(''); }
   }
 
-  function updateAddress(setter: Dispatch<SetStateAction<ShippingAddress>>, key: keyof ShippingAddress, value: string) {
-    setter((current) => ({ ...current, [key]: value }));
-  }
-
   if (shippingStatus === 'label_purchased' || shippingStatus === 'in_transit' || shippingStatus === 'delivered' || shippingStatus === 'exception') {
     return <div className="shippingTrackingBox"><span>CARRIER SHIPPING · {shippingStatus.replaceAll('_', ' ')}</span><strong>{order.shipping_carrier || 'Carrier'}{order.shipping_service ? ` · ${order.shipping_service}` : ''}</strong>{order.shipping_tracking_number && <strong>Tracking {order.shipping_tracking_number}</strong>}{order.shipping_label_url && isSeller && <a href={order.shipping_label_url} target="_blank" rel="noreferrer">Open label ↗</a>}{order.shipping_tracking_url && <a href={order.shipping_tracking_url} target="_blank" rel="noreferrer">Track package ↗</a>}</div>;
   }
 
-  return <details className="shippingTools" open={!rateLocked && isBuyer}>
-    <summary className="shippingToolsHead"><span>CARRIER SHIPPING</span><strong>{rateLocked ? `${order.shipping_carrier || 'Carrier'} · ${order.shipping_service || 'Selected service'}` : 'Compare shipping rates'}</strong><small>{rateLocked ? `${money(order.shipping_rate_cents, order.shipping_currency || order.currency)} selected before payment` : 'Compare enabled USPS, UPS, and FedEx services through Shippo, then lock one rate before payment.'}</small></summary>
+  return <details className="shippingTools" open={!rateLocked}>
+    <summary className="shippingToolsHead"><span>CARRIER SHIPPING</span><strong>{rateLocked ? `${order.shipping_carrier || 'Carrier'} · ${order.shipping_service || 'Selected service'}` : 'Private address setup + carrier rate'}</strong><small>{rateLocked ? `${money(order.shipping_rate_cents, order.shipping_currency || order.currency)} selected before payment` : 'Seller origin and buyer destination are entered separately. Aspire stores only opaque Shippo address IDs, not the other person’s exact address.'}</small></summary>
     <div className="shippingToolsBody">
-      {!paymentLocked && <><div className="shippingAddressGrid"><div><label>Ship from</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`from-${key}`} value={from[key] || ''} onChange={(event) => updateAddress(setFrom, key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}</div><div><label>Ship to</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`to-${key}`} value={to[key] || ''} onChange={(event) => updateAddress(setTo, key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}</div></div><div className="shippingParcelRow"><label>Package (in / lb)<input value={parcel.length} onChange={(event) => setParcel({ ...parcel, length: event.target.value })} placeholder="L" /></label><label><span>&nbsp;</span><input value={parcel.width} onChange={(event) => setParcel({ ...parcel, width: event.target.value })} placeholder="W" /></label><label><span>&nbsp;</span><input value={parcel.height} onChange={(event) => setParcel({ ...parcel, height: event.target.value })} placeholder="H" /></label><label><span>&nbsp;</span><input value={parcel.weight} onChange={(event) => setParcel({ ...parcel, weight: event.target.value })} placeholder="Weight" /></label></div></>}
-      {rates.length > 0 && !paymentLocked && <div className="shippingRateList">{rates.map((rate) => <label key={rate.id} className={selectedRate === rate.id ? 'active' : ''}><input type="radio" name={`shipping-rate-${order.id}`} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /><span><b>{rate.carrier} · {rate.service}</b><small>{money(rate.amountCents, rate.currency)}{rate.estimatedDays ? ` · ${rate.estimatedDays} business days` : ''}</small></span></label>)}</div>}
+      {!paymentLocked && <>
+        <div className="shippingTrackingBox"><span>ADDRESS PRIVACY</span><strong>{fromReady ? 'Seller origin ready ✓' : 'Seller origin needed'} · {toReady ? 'Buyer destination ready ✓' : 'Buyer destination needed'}</strong><small>{isSeller ? 'You only enter your ship-from address. The buyer enters the private destination on their account.' : 'You only enter your delivery address. The seller enters the private ship-from address on their account.'}</small></div>
+        <div className="shippingAddressGrid"><div><label>{isSeller ? 'Your ship-from address' : 'Your delivery address'}</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`mine-${key}`} value={myAddress[key] || ''} onChange={(event) => updateAddress(key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}<button type="button" className="marketSecondary" onClick={saveAddress} disabled={busy !== ''}>{busy === 'address' ? 'Saving privately…' : isSeller ? 'Save my ship-from address' : 'Save my delivery address'}</button></div>{isSeller ? <div><label>Package (in / lb)</label><div className="shippingParcelRow"><label>Length<input value={parcel.length} onChange={(event) => setParcel({ ...parcel, length: event.target.value })} placeholder="L" /></label><label>Width<input value={parcel.width} onChange={(event) => setParcel({ ...parcel, width: event.target.value })} placeholder="W" /></label><label>Height<input value={parcel.height} onChange={(event) => setParcel({ ...parcel, height: event.target.value })} placeholder="H" /></label><label>Weight<input value={parcel.weight} onChange={(event) => setParcel({ ...parcel, weight: event.target.value })} placeholder="lb" /></label></div>{fromReady && toReady ? <button type="button" className="marketSecondary" onClick={quote} disabled={busy !== ''}>{busy === 'quote' ? 'Getting carrier rates…' : 'Create carrier rate options'}</button> : <small>Carrier rates become available after both private addresses are ready.</small>}</div> : <div><label>Rate options</label><p>{rateOptions.length ? 'The seller entered package dimensions. Choose one of the carrier options below.' : fromReady && toReady ? 'Waiting for the seller to create carrier rate options.' : 'Waiting for both address sides to be ready.'}</p></div>}</div>
+      </>}
+      {rateOptions.length > 0 && !paymentLocked && <div className="shippingRateList">{rateOptions.map((rate) => <label key={rate.id} className={selectedRate === rate.id ? 'active' : ''}><input type="radio" name={`shipping-rate-${order.id}`} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} disabled={!isBuyer} /><span><b>{rate.carrier} · {rate.service}</b><small>{money(rate.amountCents, rate.currency)}{rate.estimatedDays ? ` · ${rate.estimatedDays} business days` : ''}</small></span></label>)}</div>}
       {rateLocked && <div className="shippingTrackingBox"><span>SELECTED RATE</span><strong>{order.shipping_carrier || 'Carrier'} · {order.shipping_service || 'Standard'}</strong><strong>{money(order.shipping_rate_cents, order.shipping_currency || order.currency)}</strong><small>The shipping charge is added to the buyer total but is not part of the seller payout.</small></div>}
       {error && <p className="shippingError">{error}</p>}
       <div className="shippingToolsActions">
-        {!paymentLocked && <button type="button" className="marketSecondary" onClick={quote} disabled={busy !== ''}>{busy === 'quote' ? 'Getting carrier rates…' : rateLocked ? 'Refresh rates' : 'Compare shipping rates'}</button>}
-        {isBuyer && !paymentLocked && rates.length > 0 && <button type="button" className="button buttonGold" onClick={chooseRate} disabled={busy !== '' || !selectedRate}>{busy === 'select' ? 'Saving rate…' : 'Use selected rate'}</button>}
+        {isBuyer && !paymentLocked && rateOptions.length > 0 && <button type="button" className="button buttonGold" onClick={chooseRate} disabled={busy !== '' || !selectedRate}>{busy === 'select' ? 'Saving rate…' : rateLocked ? 'Update selected rate' : 'Use selected rate'}</button>}
         {isSeller && secured && rateLocked && <button type="button" className="button buttonGold" onClick={buyLabel} disabled={busy !== ''}>{busy === 'label' ? 'Buying label…' : `Buy ${order.shipping_carrier || 'carrier'} label`}</button>}
       </div>
     </div>
