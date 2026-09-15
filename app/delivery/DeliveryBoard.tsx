@@ -22,6 +22,7 @@ import {
   type DeliveryOffer,
   type DeliveryStatus
 } from '../../lib/supabase/delivery';
+import { releaseAspirePayment } from '../../lib/supabase/payments';
 import type { DeliveryRewardMode } from '../../lib/supabase/marketplacePurchase';
 import styles from './DeliveryBoard.module.css';
 
@@ -65,7 +66,10 @@ function friendlyError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || 'Something went wrong.');
   if (/VERIFY_EMAIL_AND_PHONE/i.test(message)) return 'Verify both your email and phone number in Profile before offering to deliver.';
   if (/REQUEST_NOT_APPROVED/i.test(message)) return 'This request is still in safety review. Try again after it is approved.';
-  if (/PAYOUT_NOT_READY/i.test(message)) return 'The matched Aspirer must finish payout setup before a paid reward can be secured.';
+  if (/PAYOUT_NOT_READY/i.test(message)) return 'The matched Aspirer must finish payout setup before a paid reward can be released.';
+  if (/PAYMENT_NOT_SECURED/i.test(message)) return 'The delivery reward has not been secured yet.';
+  if (/COMPLETION_NOT_READY/i.test(message)) return 'Both delivery completion confirmations are required before releasing the reward.';
+  if (/RESOLUTION_CASE_OPEN|PAYOUT_HOLD_OPEN/i.test(message)) return 'The reward payout is paused while an Aspire Resolution Center case or payment hold is open.';
   if (/DELIVERY_PAYMENT_NOT_SECURED/i.test(message)) return 'The paid delivery reward must be secured through Aspire before pickup can begin.';
   if (/CANNOT_SELF_DELIVER/i.test(message)) return 'The buyer, seller, or requester cannot claim their own Aspirer delivery reward.';
   if (/ACCOUNT_RESTRICTED/i.test(message)) return 'This account is currently restricted from new Aspire interactions.';
@@ -310,7 +314,7 @@ export default function DeliveryBoard() {
         return;
       }
       setCodeInput((previous) => ({ ...previous, [key]: '' }));
-      setNotice(kind === 'pickup' ? 'Pickup confirmed.' : 'Delivery confirmed.');
+      setNotice(kind === 'pickup' ? 'Pickup confirmed.' : 'Delivery confirmed. The Aspirer side of closeout is recorded.');
       await refresh();
     } catch (error) {
       setNotice(friendlyError(error));
@@ -323,7 +327,22 @@ export default function DeliveryBoard() {
     setBusy(`complete:${job.id}`);
     try {
       await completeDelivery(job.id);
-      setNotice('Delivery completed. Finish the connection closeout to release any protected paid reward.');
+      setNotice('Delivery completed. Review the Aspirer below; if this was paid help, the requester can release the protected reward here too.');
+      await refresh();
+    } catch (error) {
+      setNotice(friendlyError(error));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function releaseReward(job: DeliveryJob) {
+    if (!job.connection_id) return;
+    setBusy(`release:${job.id}`);
+    setNotice('');
+    try {
+      await releaseAspirePayment(job.connection_id);
+      setNotice('Protected delivery reward released to the Aspirer ✓ You can now leave a review.');
       await refresh();
     } catch (error) {
       setNotice(friendlyError(error));
@@ -497,12 +516,12 @@ export default function DeliveryBoard() {
                   <div className={styles.actionRow}>
                     <strong>Matched with {job.matched_aspirer_id ? profileName(board, job.matched_aspirer_id) : 'an Aspirer'}</strong>
                     <a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>Message / connection</a>
-                    {paid && isRequester && <a className={styles.goldButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>Secure delivery reward</a>}
+                    {paid && isRequester && job.status !== 'completed' && <a className={styles.goldButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>Secure delivery reward</a>}
                   </div>
-                  {paid && <span className={styles.waiting}>Paid reward is a separate Aspire Protected connection and is not released until connection completion.</span>}
+                  {paid && job.status !== 'completed' && <span className={styles.waiting}>Paid reward is a separate Aspire Protected connection and is not released until both proof-backed completion confirmations exist.</span>}
                 </div>}
 
-                {!['looking_for_aspirer','offer_received','cancelled'].includes(job.status) && (isRequester || isPickupParty || isDropoffParty || isMatchedAspirer) && <div className={styles.actionBox}>
+                {!['looking_for_aspirer','offer_received','cancelled','completed'].includes(job.status) && (isRequester || isPickupParty || isDropoffParty || isMatchedAspirer) && <div className={styles.actionBox}>
                   <strong>Private handoff details</strong>
                   {(isRequester || isPickupParty || isDropoffParty) && <>
                     {(isPickupParty || isRequester) && <input className={styles.input} placeholder="Exact pickup instructions" value={pd.pickup} onChange={(event) => setPrivateDraft({ ...privateDraft, [job.id]: { ...pd, pickup: event.target.value } })} />}
@@ -543,7 +562,18 @@ export default function DeliveryBoard() {
 
                 {(isRequester || isDropoffParty) && job.status === 'delivered' && <div className={styles.actionBox}>
                   <button className={styles.goldButton} type="button" onClick={() => void finishDelivery(job)} disabled={busy === `complete:${job.id}`}>Delivery received · Complete</button>
-                  <span className={styles.waiting}>After this, use the connection closeout for reviews and any protected payout release.</span>
+                  <span className={styles.waiting}>This records the receiver side of closeout. Paid rewards remain protected until payout release succeeds.</span>
+                </div>}
+
+                {job.connection_id && job.status === 'completed' && (isRequester || isMatchedAspirer || isDropoffParty) && <div className={styles.actionBox}>
+                  <strong>Delivery complete ✓</strong>
+                  <div className={styles.actionRow}>
+                    {paid && isRequester && <button className={styles.goldButton} type="button" onClick={() => void releaseReward(job)} disabled={busy === `release:${job.id}`}>{busy === `release:${job.id}` ? 'Releasing reward…' : 'Release protected reward'}</button>}
+                    <a className={styles.goldButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}&tab=history`}>Review this delivery</a>
+                    <a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>View connection</a>
+                    {paid && <a className={styles.outlineButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>Payment details</a>}
+                  </div>
+                  <span className={styles.waiting}>{paid ? 'Completion is recorded. Reward release still respects payout readiness, disputes, refunds, and Resolution Center holds.' : 'Free delivery is closed with no Stripe payment. You can now leave a review.'}</span>
                 </div>}
               </article>;
             })}
