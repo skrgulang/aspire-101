@@ -15,7 +15,11 @@ alter table public.market_orders
       and shipping_currency is not null
       and char_length(shipping_currency) = 3
     )
-  );
+  ) not valid;
+
+-- NOT VALID avoids blocking deployment on legacy rows created before flexible shipping.
+-- PostgreSQL still enforces the constraint for new or updated rows; production can validate
+-- it later after any historical data cleanup is complete.
 
 create or replace function public.guard_market_order_shipping_terms()
 returns trigger
