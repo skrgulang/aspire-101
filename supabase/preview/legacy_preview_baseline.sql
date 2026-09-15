@@ -205,3 +205,60 @@ end; $$;
 create or replace function public.sfb_set_creator()
 returns trigger language plpgsql security definer set search_path = public
 as $$ begin if new.created_by is null then new.created_by := auth.uid(); end if; return new; end; $$;
+
+create or replace function public.allow_claim_only_if_approved()
+returns trigger language plpgsql as $$ begin return new; end; $$;
+
+create or replace function public.contains_banned(text)
+returns boolean language sql immutable as $$ select false $$;
+
+create or replace function public.is_valid_username(text)
+returns boolean language sql immutable as $$ select true $$;
+
+create or replace function public.nearby_posts(double precision, double precision, double precision)
+returns jsonb language sql stable as $$ select '[]'::jsonb $$;
+
+create or replace function public.nearby_profiles(double precision, double precision, double precision)
+returns jsonb language sql stable as $$ select '[]'::jsonb $$;
+
+create or replace function public.nearby_tasks(double precision, double precision, double precision)
+returns jsonb language sql stable as $$ select '[]'::jsonb $$;
+
+create or replace function public.nearby_tasks(double precision, double precision, integer)
+returns jsonb language sql stable as $$ select '[]'::jsonb $$;
+
+create or replace function public.normalize_username()
+returns trigger language plpgsql as $$ begin return new; end; $$;
+
+create or replace function public.normalize_username(text)
+returns text language sql immutable as $$ select lower(btrim($1)) $$;
+
+create or replace function public.profiles_username_guard_tg()
+returns trigger language plpgsql as $$ begin return new; end; $$;
+
+create or replace function public.profiles_username_norm_tg()
+returns trigger language plpgsql as $$ begin new.username_norm := lower(btrim(coalesce(new.username::text, ''))); return new; end; $$;
+
+create or replace function public.set_task_created_by()
+returns trigger language plpgsql as $$ begin if new.created_by is null then new.created_by := auth.uid(); end if; return new; end; $$;
+
+create or replace function public.set_updated_at()
+returns trigger language plpgsql as $$ begin new.updated_at := now(); return new; end; $$;
+
+create or replace function public.set_updated_at_tasks()
+returns trigger language plpgsql as $$ begin new.updated_at := now(); return new; end; $$;
+
+create or replace function public.tasks_force_pending()
+returns trigger language plpgsql as $$ begin new.status := 'pending'; return new; end; $$;
+
+create or replace function public.touch_updated_at()
+returns trigger language plpgsql as $$ begin new.updated_at := now(); return new; end; $$;
+
+create or replace function public.user_participates_task(public.tasks)
+returns boolean language sql stable as $$ select false $$;
+
+create or replace function public.username_clean(text)
+returns text language sql immutable as $$ select lower(btrim($1)) $$;
+
+create or replace function public.username_violation(text)
+returns text language sql immutable as $$ select null::text $$;
