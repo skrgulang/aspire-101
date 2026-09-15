@@ -59,6 +59,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'label_purchased', transactionId: order.shipping_transaction_id, labelUrl: order.shipping_label_url, trackingNumber: order.shipping_tracking_number, trackingUrl: order.shipping_tracking_url, duplicate: true });
     }
 
+    // Market-order state can lag a concurrent refund/dispute update by a few milliseconds.
+    // Re-read the protected payment immediately before any external Shippo purchase so a
+    // stale `paid` order cannot spend shipping funds after the payment stopped being secured.
+    const { data: payment, error: paymentError } = await supabase
+      .from('connection_payments')
+      .select('status,stripe_transfer_id')
+      .eq('connection_id', order.connection_id)
+      .maybeSingle();
+    if (paymentError) throw paymentError;
+    if (!payment || payment.status !== 'secured' || payment.stripe_transfer_id) {
+      return NextResponse.json({
+        error: 'The protected buyer payment is no longer in a secured, unreleased state. Do not purchase a carrier label; review the order or Resolution Center instead.',
+        code: 'PAYMENT_NOT_SECURED'
+      }, { status: 409 });
+    }
+
     const shipment = await getShippoShipment(order.shipping_shipment_id);
     const shipmentMetadata = String(shipment.metadata || '');
     if (!shipmentMetadata.includes(order.id)) return NextResponse.json({ error: 'This shipping quote does not belong to this order.', code: 'SHIPPING_QUOTE_MISMATCH' }, { status: 409 });
@@ -111,9 +127,9 @@ export async function POST(request: Request) {
       shipping_status: 'label_purchasing',
       shipping_last_event_at: claimTime,
       updated_at: claimTime
-    }).eq('id', order.id).eq('shipping_rate_id', order.shipping_rate_id).in('shipping_status', ['rates_ready', 'label_failed']).select('*').maybeSingle();
+    }).eq('id', order.id).eq('status', order.status).eq('shipping_rate_id', order.shipping_rate_id).in('shipping_status', ['rates_ready', 'label_failed']).select('*').maybeSingle();
     if (claimError) throw claimError;
-    if (!claimed) return NextResponse.json({ error: 'A shipping label is already being purchased. Refresh in a moment.', code: 'LABEL_IN_PROGRESS' }, { status: 409 });
+    if (!claimed) return NextResponse.json({ error: 'The order changed or a shipping label is already being purchased. Refresh before continuing.', code: 'LABEL_IN_PROGRESS' }, { status: 409 });
 
     let transaction;
     try {
