@@ -117,11 +117,12 @@ export async function POST(request: Request) {
     }
 
     // Market-order state can lag a concurrent refund/dispute update by a few milliseconds.
-    // Re-read the protected payment immediately before any external Shippo purchase so a
-    // stale `paid` order cannot spend shipping funds after the payment stopped being secured.
+    // Re-read the protected payment before doing carrier-side validation for useful errors;
+    // the atomic claim RPC below is still the financial commit boundary immediately before
+    // the external Shippo purchase.
     const { data: payment, error: paymentError } = await supabase
       .from('connection_payments')
-      .select('status,stripe_transfer_id')
+      .select('status,stripe_transfer_id,refund_claimed_at,release_claimed_at')
       .eq('connection_id', order.connection_id)
       .maybeSingle();
     if (paymentError) throw paymentError;
@@ -130,6 +131,12 @@ export async function POST(request: Request) {
         error: 'The protected buyer payment is no longer in a secured, unreleased state. Do not purchase a carrier label; review the order or Resolution Center instead.',
         code: 'PAYMENT_NOT_SECURED'
       }, { status: 409 });
+    }
+    if (payment.refund_claimed_at) {
+      return NextResponse.json({ error: 'A refund is already being reconciled for this order. Do not purchase a carrier label.', code: 'REFUND_IN_PROGRESS' }, { status: 409 });
+    }
+    if (payment.release_claimed_at) {
+      return NextResponse.json({ error: 'Seller payout is already being released. Do not purchase a new carrier label.', code: 'PAYOUT_RELEASE_IN_PROGRESS' }, { status: 409 });
     }
 
     const shipment = await getShippoShipment(order.shipping_shipment_id);
@@ -179,14 +186,33 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    const claimTime = new Date().toISOString();
-    const { data: claimed, error: claimError } = await supabase.from('market_orders').update({
-      shipping_status: 'label_purchasing',
-      shipping_last_event_at: claimTime,
-      updated_at: claimTime
-    }).eq('id', order.id).eq('status', order.status).eq('shipping_rate_id', order.shipping_rate_id).in('shipping_status', ['rates_ready', 'label_failed']).select('*').maybeSingle();
-    if (claimError) throw claimError;
-    if (!claimed) return NextResponse.json({ error: 'The order changed or a shipping label is already being purchased. Refresh before continuing.', code: 'LABEL_IN_PROGRESS' }, { status: 409 });
+    // Serialize label purchase against refund/release by locking payment first and order second
+    // inside one DB function. Do not replace this with a direct market_orders update: that
+    // would restore the opposite order->payment lock order and reintroduce the money race.
+    const { data: claimed, error: claimError } = await supabase.rpc('claim_market_shipping_label_purchase', {
+      p_order_id: order.id,
+      p_expected_rate_id: order.shipping_rate_id
+    });
+    if (claimError) {
+      const claimText = `${claimError.message || ''} ${claimError.details || ''}`;
+      if (/REFUND_IN_PROGRESS/i.test(claimText)) {
+        return NextResponse.json({ error: 'A refund is already being reconciled for this order. Do not purchase a carrier label.', code: 'REFUND_IN_PROGRESS' }, { status: 409 });
+      }
+      if (/PAYOUT_RELEASE_IN_PROGRESS/i.test(claimText)) {
+        return NextResponse.json({ error: 'Seller payout is already being released. Do not purchase a carrier label.', code: 'PAYOUT_RELEASE_IN_PROGRESS' }, { status: 409 });
+      }
+      if (/PAYMENT_NOT_SECURED/i.test(claimText)) {
+        return NextResponse.json({ error: 'The buyer payment must remain secured before purchasing a carrier label.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
+      }
+      if (/LABEL_ALREADY_COMMITTED|LABEL_IN_PROGRESS/i.test(claimText)) {
+        return NextResponse.json({ error: 'The order changed or a shipping label is already being purchased. Refresh before continuing.', code: 'LABEL_IN_PROGRESS' }, { status: 409 });
+      }
+      if (/SHIPPING_RATE_MISMATCH/i.test(claimText)) {
+        return NextResponse.json({ error: 'The selected shipping rate changed. Refresh the order before continuing.', code: 'SHIPPING_RATE_MISMATCH' }, { status: 409 });
+      }
+      throw claimError;
+    }
+    if (!claimed) return NextResponse.json({ error: 'The order changed before the carrier-label claim could be reserved. Refresh before continuing.', code: 'LABEL_IN_PROGRESS' }, { status: 409 });
 
     let transaction;
     try {
