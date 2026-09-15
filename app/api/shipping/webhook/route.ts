@@ -18,6 +18,22 @@ function metadataOrderId(value: unknown) {
   } catch { return ''; }
 }
 
+function shouldApplyShippingStatus(current: string | null | undefined, next: string) {
+  const previous = current || 'not_started';
+  if (previous === next) return false;
+  if (previous === 'cancelled') return false;
+
+  // Carrier webhooks can arrive out of order. A stale pre-transit scan must never move a
+  // package backwards after real carrier movement, and a delivered package is terminal.
+  if (previous === 'delivered') return false;
+  if (previous === 'in_transit' && next === 'label_purchased') return false;
+  if (previous === 'exception' && next === 'label_purchased') return false;
+
+  // Exception is intentionally recoverable: carriers can resume transit after a temporary
+  // delay/exception, so exception -> in_transit/delivered is allowed.
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
     if (!webhookAuthorized(request)) return NextResponse.json({ error: 'Invalid webhook token.' }, { status: 401 });
@@ -43,18 +59,20 @@ export async function POST(request: Request) {
 
     const nextStatus = normalizeShippingStatus(statusValue);
     const now = new Date().toISOString();
-    const shippingChanged = order.shipping_status !== nextStatus;
+    const applyStatus = shouldApplyShippingStatus(order.shipping_status, nextStatus);
 
-    if (shippingChanged || (trackingNumber && !order.shipping_tracking_number)) {
-      const { error: updateError } = await supabase.from('market_orders').update({
-        shipping_status: nextStatus,
+    if (applyStatus || (trackingNumber && !order.shipping_tracking_number)) {
+      const update: Record<string, unknown> = {
         shipping_tracking_number: order.shipping_tracking_number || trackingNumber || null,
         shipping_last_event_at: now,
         updated_at: now
-      }).eq('id', order.id);
+      };
+      if (applyStatus) update.shipping_status = nextStatus;
+
+      const { error: updateError } = await supabase.from('market_orders').update(update).eq('id', order.id);
       if (updateError) throw updateError;
 
-      if (shippingChanged) {
+      if (applyStatus) {
         await supabase.from('market_order_events').insert({
           market_order_id: order.id,
           actor_id: null,
@@ -62,6 +80,17 @@ export async function POST(request: Request) {
           payload: { status: nextStatus, tracking_number: trackingNumber || order.shipping_tracking_number || null }
         });
       }
+    } else if (order.shipping_status !== nextStatus) {
+      await supabase.from('market_order_events').insert({
+        market_order_id: order.id,
+        actor_id: null,
+        event_type: 'shipping_status_regression_ignored',
+        payload: {
+          current_status: order.shipping_status || 'not_started',
+          incoming_status: nextStatus,
+          tracking_number: trackingNumber || order.shipping_tracking_number || null
+        }
+      });
     }
 
     // Carrier movement is authoritative evidence that the seller handed the package to
