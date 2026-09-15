@@ -241,7 +241,7 @@ export async function verifyDeliveryConfirmationCode(deliveryJobId: string, kind
     p_code: code
   });
   if (error) throw error;
-  return data as { ok: boolean; status?: DeliveryStatus; error?: string; attempts_remaining?: number };
+  return data as { ok: boolean; status?: DeliveryStatus; error?: string; attempts_remaining?: number; aspirer_closeout_confirmed?: boolean };
 }
 
 export async function completeDelivery(deliveryJobId: string) {
