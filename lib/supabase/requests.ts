@@ -208,6 +208,10 @@ export async function createRequest(input: CreateRequestInput) {
   }
 
   const isMarket = input.kind === 'buy_sell';
+  const moneyInvolved = input.kind === 'paid_help' || input.kind === 'split_cost' || isMarket;
+  // Monetary requests always use the protected on-platform flow. Free community
+  // and collaboration posts deliberately carry no payment method or amount.
+  const paymentMethod = moneyInvolved ? 'aspire' : 'none';
   const scheduled = Boolean(input.scheduled_start_at);
   const { data, error } = await supabase
     .from('requests')
@@ -224,9 +228,9 @@ export async function createRequest(input: CreateRequestInput) {
       scheduled_end_at: scheduled ? input.scheduled_end_at || null : null,
       timezone: scheduled ? input.timezone?.trim().slice(0, 100) || 'UTC' : null,
       meeting_label: input.meeting_label?.trim().slice(0, 240) || null,
-      amount_cents: input.amount_cents ?? null,
+      amount_cents: moneyInvolved ? input.amount_cents ?? null : null,
       currency: input.currency || 'USD',
-      payment_method: input.payment_method || 'none',
+      payment_method: paymentMethod,
       market_intent: isMarket ? input.market_intent || 'sell' : null,
       item_condition: isMarket && input.market_intent !== 'wanted' ? input.item_condition || 'good' : null,
       price_negotiable: isMarket ? Boolean(input.price_negotiable) : false,
@@ -276,6 +280,7 @@ export async function buyMarketplaceListing(requestId: string) {
     if (/CANNOT_BUY_OWN_LISTING/i.test(detail)) throw new Error('You cannot buy your own listing.');
     if (/LISTING_EXPIRED/i.test(detail)) throw new Error('This listing has expired.');
     if (/LISTING_UNAVAILABLE/i.test(detail)) throw new Error('This item was just reserved or is no longer available.');
+    if (/MARKETPLACE_REQUIRES_ASPIRE/i.test(detail)) throw new Error('Marketplace purchases must use Aspire Protected checkout.');
     throw new Error(error.message || 'Could not reserve this item.');
   }
   return String(data);
