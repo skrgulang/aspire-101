@@ -48,6 +48,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The seller already marked handoff. Open a problem report instead of using instant cancellation.', code: 'HANDOFF_ALREADY_STARTED' }, { status: 409 });
     }
 
+    const shippingCommitted = order.fulfillment_method === 'shipping'
+      && Boolean(order.shipping_transaction_id || order.shipping_label_url || order.shipping_tracking_number)
+      && ['label_purchased', 'in_transit', 'delivered', 'exception'].includes(String(order.shipping_status || ''));
+    if (shippingCommitted) {
+      return NextResponse.json({
+        error: 'A carrier label has already been purchased for this order. Use Report a problem / Resolution Center so the shipping cost and protected payment can be reconciled together instead of issuing an instant refund.',
+        code: 'SHIPPING_LABEL_ALREADY_PURCHASED'
+      }, { status: 409 });
+    }
+
     if (!payment || payment.status !== 'secured' || !payment.stripe_payment_intent_id) {
       return NextResponse.json({ error: 'There is no secured Aspire payment to refund.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
     }
