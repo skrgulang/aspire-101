@@ -26,10 +26,12 @@ Critical Flexible Fulfillment sequence:
 16. `20260914225000_shipping_notification_transition_keys.sql`
 17. `20260914225200_shipping_state_transition_guard.sql`
 18. `20260914225500_delivery_open_cancel_integrity.sql`
+19. `20260914226000_delivery_closeout_integrity.sql`
+20. `20260914227000_delivery_status_transition_guard.sql`
 
-Verify migration version uniqueness before running anything. The shipping notification transition and shipping state guard deliberately use different versions (`14225000` and `14225200`), and delivery cancellation integrity comes after them at `14225500`.
+Verify migration version uniqueness before running anything. The shipping notification transition and shipping state guard deliberately use different versions (`14225000` and `14225200`), delivery cancellation integrity comes after them at `14225500`, and the final closeout/lifecycle guards are `14226000` and `14227000`.
 
-Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must not release money; shipping terms must lock after checkout starts; shipping lifecycle must not move backward; pre-match cancellation must not race through a newly matched request; and the final negotiation functions must use delivery-job-first locking.
+Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must require the Aspirer proof-backed confirmation plus the receiver/requester confirmation and must not release money; shipping terms must lock after checkout starts; shipping lifecycle must not move backward; delivery lifecycle must not skip or regress protected states; pre-match cancellation must not race through a newly matched request; and the final negotiation functions must use delivery-job-first locking.
 
 ## 2. Aspirer Delivery test matrix
 
@@ -44,6 +46,9 @@ Run each case with two distinct test users unless the case explicitly checks sel
 - Cancel-vs-accept race: run requester cancellation while an offer is being accepted. Exactly one outcome may commit; if the match wins, cancellation must route to Resolution Center instead of unwinding it.
 - Post-match cancellation: direct Delivery cancellation must fail/reroute to the protected connection/Resolution Center path. A secured reward must not be automatically refunded or released.
 - Confirmation-code abuse: wrong codes increment attempts and stop at the configured limit; used codes cannot be reused.
+- Closeout proof integrity: force/test a `delivered` job without a responder/Aspirer completion confirmation and confirm `delivery_complete` rejects it with `ASPIRER_DELIVERY_CONFIRMATION_REQUIRED`.
+- Paid closeout integrity: a paid delivery with a reward that is no longer `secured`/`released` must not be completed through the delivery RPC.
+- Delivery status regression: direct/service-role attempts to jump `matched → delivered`, regress `picked_up → matched`, or reopen `completed/cancelled` must fail at the database trigger.
 - Privacy: unmatched/public users never receive exact pickup/drop-off instructions.
 - Delivery Activity: overdue jobs show `OVERDUE`, jobs due within two hours show `TIME-SENSITIVE`, and already secured/released rewards do not continue to show a stale “Secure reward” action.
 - Delivery Board payment UI: secured rewards show payment details, released rewards do not offer a second release action, and payment-status lookup failure uses conservative review copy rather than claiming the reward is unpaid.
@@ -105,6 +110,8 @@ Before PR #91 can leave Draft:
 - Never compensate for a post-payment rate change by silently changing the protected total.
 - Never retry an uncertain Shippo label purchase automatically.
 - Never auto-release a paid Aspirer reward solely because a delivery confirmation code succeeded.
+- Never mark a delivery completed unless both proof-backed participant confirmations exist.
+- Never skip or regress Aspirer Delivery lifecycle states through a direct table/service-role write.
 - Never unwind a matched/secured delivery through a direct client-side cancellation.
 - Never treat a missing client-side payment status lookup as proof that a reward is unpaid.
 - If financial, carrier, or lifecycle state is ambiguous, preserve payment/payout holds and route the case to Resolution Center rather than guessing.
