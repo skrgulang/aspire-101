@@ -61,6 +61,33 @@ export async function POST(request: Request) {
     const quote = (quoteRows?.[0] || null) as FeeQuote | null;
     if (!quote) return NextResponse.json({ error: 'Aspire fee policy is unavailable.' }, { status: 503 });
 
+    let shippingReady = true;
+    let shippingAmountCents = 0;
+    let shippingCarrier: string | null = null;
+    let shippingService: string | null = null;
+    let shippingRateId: string | null = null;
+    let shippingCurrency: string | null = null;
+
+    if (aspireRequest.kind === 'buy_sell') {
+      const { data: marketOrder, error: marketError } = await supabase
+        .from('market_orders')
+        .select('fulfillment_method,shipping_rate_id,shipping_rate_cents,shipping_currency,shipping_carrier,shipping_service')
+        .eq('connection_id', connectionId)
+        .maybeSingle();
+      if (marketError) throw marketError;
+      if (marketOrder?.fulfillment_method === 'shipping') {
+        shippingRateId = marketOrder.shipping_rate_id || null;
+        shippingAmountCents = Number(marketOrder.shipping_rate_cents || 0);
+        shippingCurrency = marketOrder.shipping_currency || null;
+        shippingCarrier = marketOrder.shipping_carrier || null;
+        shippingService = marketOrder.shipping_service || null;
+        shippingReady = Boolean(shippingRateId && Number.isInteger(shippingAmountCents) && shippingAmountCents > 0);
+        if (shippingReady && String(shippingCurrency || 'USD').toUpperCase() !== String(aspireRequest.currency || 'USD').toUpperCase()) {
+          shippingReady = false;
+        }
+      }
+    }
+
     return NextResponse.json({
       connectionId,
       requestId: aspireRequest.id,
@@ -72,11 +99,16 @@ export async function POST(request: Request) {
       requesterFeeCents: quote.requester_fee_cents,
       providerFeeCents: quote.provider_fee_cents,
       tipAmountCents: quote.tip_amount_cents,
-      customerTotalCents: quote.customer_total_cents,
+      customerTotalCents: quote.customer_total_cents + (shippingReady ? shippingAmountCents : 0),
       providerNetCents: quote.provider_net_cents,
       platformFeeRevenueCents: quote.platform_fee_revenue_cents,
       minimumPaidOrderCents: quote.minimum_paid_order_cents,
       standardPayoutCadence: quote.standard_payout_cadence,
+      shippingReady,
+      shippingAmountCents: shippingReady ? shippingAmountCents : 0,
+      shippingCarrier,
+      shippingService,
+      shippingRateId,
       requester: {
         percentBps: quote.requester_fee_percent_bps,
         fixedCents: quote.requester_fee_fixed_cents,
