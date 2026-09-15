@@ -132,11 +132,20 @@ export async function getShippoTracking(carrier: string, trackingNumber: string)
 
 export function normalizeShippingStatus(value: string | null | undefined) {
   switch ((value || '').toUpperCase()) {
-    case 'TRANSIT': return 'in_transit' as const;
-    case 'DELIVERED': return 'delivered' as const;
+    case 'PRE_TRANSIT':
+    case 'UNKNOWN':
+      return 'label_purchased' as const;
+    case 'TRANSIT':
+    case 'OUT_FOR_DELIVERY':
+    case 'AVAILABLE_FOR_PICKUP':
+      return 'in_transit' as const;
+    case 'DELIVERED':
+      return 'delivered' as const;
     case 'FAILURE':
-    case 'RETURNED': return 'exception' as const;
-    case 'UNKNOWN': return 'label_purchased' as const;
-    default: return 'label_purchased' as const;
+    case 'RETURNED':
+    case 'ERROR':
+      return 'exception' as const;
+    default:
+      return 'label_purchased' as const;
   }
 }
