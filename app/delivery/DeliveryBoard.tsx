@@ -27,6 +27,8 @@ import type { DeliveryRewardMode } from '../../lib/supabase/marketplacePurchase'
 import styles from './DeliveryBoard.module.css';
 
 type RewardPreset = 'free' | '500' | '1000' | 'custom' | 'negotiable';
+type DeliveryBoardView = 'open' | 'my_requests' | 'my_deliveries' | 'active' | 'completed';
+type DeliveryRewardFilter = 'all' | 'free' | 'paid' | 'negotiable';
 
 type Draft = {
   title: string;
@@ -96,6 +98,13 @@ function statusProgress(status: DeliveryStatus) {
   return index < 0 ? 0 : index;
 }
 
+function rewardMatches(job: DeliveryJob, filter: DeliveryRewardFilter) {
+  if (filter === 'all') return true;
+  if (filter === 'free') return job.reward_mode === 'free' || Number(job.reward_cents || 0) === 0;
+  if (filter === 'negotiable') return job.reward_mode === 'negotiable';
+  return Number(job.reward_cents || job.agreed_reward_cents || 0) > 0;
+}
+
 export default function DeliveryBoard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [campusId, setCampusId] = useState<string | null>(null);
@@ -104,6 +113,9 @@ export default function DeliveryBoard() {
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
   const [focusJobId, setFocusJobId] = useState('');
+  const [boardView, setBoardView] = useState<DeliveryBoardView>('open');
+  const [boardSearch, setBoardSearch] = useState('');
+  const [rewardFilter, setRewardFilter] = useState<DeliveryRewardFilter>('all');
   const [offerAmount, setOfferAmount] = useState<Record<string, string>>({});
   const [offerMessage, setOfferMessage] = useState<Record<string, string>>({});
   const [codeInput, setCodeInput] = useState<Record<string, string>>({});
@@ -166,6 +178,51 @@ export default function DeliveryBoard() {
     return map;
   }, [board.offers]);
 
+  const boardStats = useMemo(() => {
+    const open = board.jobs.filter((job) => ['looking_for_aspirer', 'offer_received'].includes(job.status)).length;
+    const active = board.jobs.filter((job) => ['matched', 'heading_to_pickup', 'picked_up', 'on_the_way', 'delivered'].includes(job.status)).length;
+    const mine = board.jobs.filter((job) => job.requester_id === userId).length;
+    const helping = board.jobs.filter((job) => job.matched_aspirer_id === userId || (offersByJob.get(job.id) || []).some((offer) => offer.aspirer_id === userId)).length;
+    const completed = board.jobs.filter((job) => job.status === 'completed').length;
+    return { open, active, mine, helping, completed };
+  }, [board.jobs, offersByJob, userId]);
+
+  const visibleJobs = useMemo(() => {
+    const needle = boardSearch.trim().toLowerCase();
+    return board.jobs.filter((job) => {
+      const offers = offersByJob.get(job.id) || [];
+      const isRequester = job.requester_id === userId;
+      const isMatchedAspirer = job.matched_aspirer_id === userId;
+      const hasOwnOffer = offers.some((offer) => offer.aspirer_id === userId);
+      const isOpen = ['looking_for_aspirer', 'offer_received'].includes(job.status);
+      const isActive = ['matched', 'heading_to_pickup', 'picked_up', 'on_the_way', 'delivered'].includes(job.status);
+
+      if (boardView === 'open' && !isOpen) return false;
+      if (boardView === 'my_requests' && !isRequester) return false;
+      if (boardView === 'my_deliveries' && !isMatchedAspirer && !hasOwnOffer) return false;
+      if (boardView === 'active' && !isActive) return false;
+      if (boardView === 'completed' && job.status !== 'completed') return false;
+      if (!rewardMatches(job, rewardFilter)) return false;
+
+      if (needle) {
+        const request = board.requests.get(job.request_id);
+        const haystack = `${request?.title || ''} ${request?.details || ''} ${job.pickup_area || ''} ${job.dropoff_area || ''}`.toLowerCase();
+        if (!haystack.includes(needle)) return false;
+      }
+      return true;
+    });
+  }, [board.jobs, board.requests, boardSearch, boardView, offersByJob, rewardFilter, userId]);
+
+  useEffect(() => {
+    if (!focusJobId || loading) return;
+    const job = board.jobs.find((item) => item.id === focusJobId);
+    if (!job) return;
+    if (job.status === 'completed') setBoardView('completed');
+    else if (job.requester_id === userId) setBoardView('my_requests');
+    else if (job.matched_aspirer_id === userId) setBoardView('my_deliveries');
+    window.setTimeout(() => document.getElementById(`delivery-job-${focusJobId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+  }, [board.jobs, focusJobId, loading, userId]);
+
   async function refresh() {
     await load();
   }
@@ -203,6 +260,7 @@ export default function DeliveryBoard() {
         preferredAt: '', rewardPreset: 'negotiable', customReward: ''
       });
       setFocusJobId(job.id);
+      setBoardView('my_requests');
       setNotice('Delivery request posted. Only the public areas are visible before a match.');
       await refresh();
     } catch (error) {
@@ -227,6 +285,7 @@ export default function DeliveryBoard() {
     try {
       await makeDeliveryOffer(job.id, amount, offerMessage[job.id]);
       setNotice(amount === 0 ? 'Volunteer offer sent.' : `Offer sent for ${money(amount)}.`);
+      setBoardView('my_deliveries');
       await refresh();
     } catch (error) {
       setNotice(friendlyError(error));
@@ -327,6 +386,7 @@ export default function DeliveryBoard() {
     setBusy(`complete:${job.id}`);
     try {
       await completeDelivery(job.id);
+      setBoardView('completed');
       setNotice('Delivery completed. Review the Aspirer below; if this was paid help, the requester can release the protected reward here too.');
       await refresh();
     } catch (error) {
@@ -446,11 +506,42 @@ export default function DeliveryBoard() {
 
         <section className={styles.panel}>
           <div className={styles.boardHeader}>
-            <div><p className={styles.eyebrow}>NEARBY NETWORK</p><h2>Delivery requests</h2></div>
+            <div><p className={styles.eyebrow}>ASPIRE DELIVERY BOARD</p><h2>Find help or help someone</h2></div>
             <button className={styles.outlineButton} type="button" onClick={() => void refresh()} disabled={!campusId || Boolean(busy)}>Refresh</button>
           </div>
-          {loading ? <div className={styles.empty}>Loading delivery requests…</div> : !board.jobs.length ? <div className={styles.empty}>No delivery requests are visible on this campus yet.</div> : <div className={styles.jobList}>
-            {board.jobs.map((job) => {
+
+          <div className={styles.statsGrid}>
+            <div className={styles.statCard}><strong>{boardStats.open}</strong><span>Need an Aspirer</span></div>
+            <div className={styles.statCard}><strong>{boardStats.active}</strong><span>Active now</span></div>
+            <div className={styles.statCard}><strong>{boardStats.mine}</strong><span>Your requests</span></div>
+            <div className={styles.statCard}><strong>{boardStats.helping}</strong><span>You’re helping</span></div>
+          </div>
+
+          <div className={styles.viewTabs} aria-label="Delivery board view">
+            {([
+              ['open', 'Open', boardStats.open],
+              ['my_requests', 'My Requests', boardStats.mine],
+              ['my_deliveries', 'My Deliveries', boardStats.helping],
+              ['active', 'Active', boardStats.active],
+              ['completed', 'Completed', boardStats.completed]
+            ] as [DeliveryBoardView, string, number][]).map(([value, label, count]) => <button key={value} type="button" className={`${styles.viewTab} ${boardView === value ? styles.viewTabActive : ''}`} onClick={() => setBoardView(value)}><span>{label}</span><b>{count}</b></button>)}
+          </div>
+
+          <div className={styles.boardFilters}>
+            <input className={styles.input} value={boardSearch} onChange={(event) => setBoardSearch(event.target.value)} placeholder="Search title, route, or details" aria-label="Search delivery requests" />
+            <select className={styles.select} value={rewardFilter} onChange={(event) => setRewardFilter(event.target.value as DeliveryRewardFilter)} aria-label="Filter delivery rewards">
+              <option value="all">All rewards</option>
+              <option value="free">Free / volunteer</option>
+              <option value="paid">Paid</option>
+              <option value="negotiable">Negotiable</option>
+            </select>
+            {(boardSearch || rewardFilter !== 'all') && <button className={styles.clearButton} type="button" onClick={() => { setBoardSearch(''); setRewardFilter('all'); }}>Clear</button>}
+          </div>
+
+          <div className={styles.boardSummary}><strong>{visibleJobs.length}</strong> {visibleJobs.length === 1 ? 'delivery' : 'deliveries'} shown · public areas only until match</div>
+
+          {loading ? <div className={styles.empty}>Loading delivery requests…</div> : !visibleJobs.length ? <div className={styles.empty}><strong>No deliveries in this view.</strong><span>{boardView === 'open' ? 'Try another reward filter or post a new delivery request.' : 'Switch tabs or clear your search to see more.'}</span></div> : <div className={styles.jobList}>
+            {visibleJobs.map((job) => {
               const request = board.requests.get(job.request_id);
               const offers = offersByJob.get(job.id) || [];
               const isRequester = userId === job.requester_id;
@@ -466,7 +557,7 @@ export default function DeliveryBoard() {
               const privateValue = privateDetails[job.id];
               const pd = privateDraft[job.id] || { pickup: '', dropoff: '' };
 
-              return <article key={job.id} className={`${styles.jobCard} ${active ? styles.focused : ''}`}>
+              return <article id={`delivery-job-${job.id}`} key={job.id} className={`${styles.jobCard} ${active ? styles.focused : ''}`}>
                 <div className={styles.jobTop}>
                   <div><h3>{request?.title || 'Delivery request'}</h3><p className={styles.jobDetails}>{request?.details || 'No public description.'}</p></div>
                   <span className={`${styles.status} ${['looking_for_aspirer','offer_received'].includes(job.status) ? styles.statusOpen : ''}`}>{deliveryStatusLabel(job.status)}</span>
@@ -481,6 +572,9 @@ export default function DeliveryBoard() {
                   <span>{preferred}</span>
                   {job.approx_distance_miles != null && <span>{job.approx_distance_miles.toFixed(1)} mi approx.</span>}
                   {job.market_order_id && <span>Marketplace delivery</span>}
+                  {isRequester && <span className={styles.roleBadge}>Your request</span>}
+                  {isMatchedAspirer && <span className={styles.roleBadge}>You’re delivering</span>}
+                  {!isMatchedAspirer && ownOffer && <span className={styles.roleBadge}>You offered {money(ownOffer.amount_cents)}</span>}
                 </div>
 
                 {!['cancelled'].includes(job.status) && <div className={styles.timeline} aria-label="Delivery progress">
@@ -488,6 +582,7 @@ export default function DeliveryBoard() {
                 </div>}
 
                 {canOffer && <div className={styles.actionBox}>
+                  <strong>{job.reward_mode === 'negotiable' ? 'Make your offer' : job.reward_mode === 'free' ? 'Volunteer to help' : 'Take this delivery'}</strong>
                   {job.reward_mode === 'negotiable' && <div className={styles.actionRow}>
                     <input className={styles.input} type="number" min="0" step="0.01" placeholder="Your offer, e.g. 6" value={offerAmount[job.id] || ''} onChange={(event) => setOfferAmount({ ...offerAmount, [job.id]: event.target.value })} />
                   </div>}
@@ -501,11 +596,11 @@ export default function DeliveryBoard() {
                 </div>}
 
                 {isRequester && offers.length > 0 && ['offer_received','matched','heading_to_pickup','picked_up','on_the_way','delivered','completed'].includes(job.status) && <div className={styles.actionBox}>
-                  <strong>Offers</strong>
-                  <div className={styles.offerList}>{offers.map((offer) => <div className={styles.offer} key={offer.id}>
-                    <div><strong>{profileName(board, offer.aspirer_id)} · {money(offer.amount_cents)}</strong><small>{offer.status === 'countered' ? 'Counter offer' : 'Offer'}</small></div>
+                  <div className={styles.sectionHeading}><strong>Offers</strong><span>{offers.length} received</span></div>
+                  <div className={styles.offerList}>{offers.map((offer) => <div className={`${styles.offer} ${['pending','countered'].includes(offer.status) ? styles.offerActionable : ''}`} key={offer.id}>
+                    <div><strong>{profileName(board, offer.aspirer_id)} · {money(offer.amount_cents)}</strong><small>{offer.status === 'countered' ? 'Counter offer' : offer.status === 'pending' ? 'Ready for your response' : offer.status}</small></div>
                     {['pending','countered'].includes(offer.status) && job.status === 'offer_received' && <div className={styles.actionRow}>
-                      {offer.last_actor_id !== userId ? <button className={styles.smallButton} type="button" disabled={busy === `accept:${offer.id}`} onClick={() => void acceptOffer(offer)}>Accept</button> : <span className={styles.waiting}>Waiting for Aspirer</span>}
+                      {offer.last_actor_id !== userId ? <button className={styles.smallButton} type="button" disabled={busy === `accept:${offer.id}`} onClick={() => void acceptOffer(offer)}>Accept offer</button> : <span className={styles.waiting}>Waiting for Aspirer</span>}
                       {job.reward_mode === 'negotiable' && offer.last_actor_id !== userId && <button className={styles.outlineButton} type="button" onClick={() => void counterOffer(offer)}>Counter</button>}
                     </div>}
                     {offer.message && <p className={styles.offerMessage}>{offer.message}</p>}
