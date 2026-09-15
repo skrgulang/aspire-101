@@ -267,3 +267,33 @@ export async function setPrivateDeliveryLocations(deliveryJobId: string, pickupI
   });
   if (error) throw error;
 }
+
+export async function cancelOpenDelivery(deliveryJobId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('delivery_cancel_open_request', {
+    p_delivery_job_id: deliveryJobId
+  });
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''}`;
+    if (/MATCHED_DELIVERY_USE_RESOLUTION/i.test(detail)) {
+      throw new Error('This delivery is already matched. Use the connection / Resolution Center flow instead of cancelling the public request directly.');
+    }
+    if (/NOT_REQUESTER/i.test(detail)) throw new Error('Only the requester can cancel this delivery request.');
+    throw error;
+  }
+  return data as DeliveryJob;
+}
+
+export async function withdrawDeliveryOffer(offerId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('delivery_withdraw_offer', { p_offer_id: offerId });
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''}`;
+    if (/DELIVERY_ALREADY_MATCHED|OFFER_NOT_ACTIVE/i.test(detail)) {
+      throw new Error('This offer can no longer be withdrawn because the delivery is already matched or the offer is no longer active.');
+    }
+    if (/NOT_OFFER_OWNER/i.test(detail)) throw new Error('You can only withdraw your own delivery offer.');
+    throw error;
+  }
+  return data as DeliveryOffer;
+}
