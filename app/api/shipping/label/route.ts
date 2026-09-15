@@ -23,6 +23,8 @@ export async function POST(request: Request) {
     if (user.id !== order.seller_id) return NextResponse.json({ error: 'Only the seller can purchase the shipping label.' }, { status: 403 });
     if (order.fulfillment_method !== 'shipping') return NextResponse.json({ error: 'This order is not configured for carrier shipping.', code: 'NOT_SHIPPING_ORDER' }, { status: 409 });
     if (!order.shipping_shipment_id) return NextResponse.json({ error: 'Get a shipping quote before buying a label.', code: 'SHIPPING_RATES_REQUIRED' }, { status: 409 });
+    if (!order.shipping_rate_id || !order.shipping_rate_cents) return NextResponse.json({ error: 'The buyer must choose a shipping rate before the seller can buy a label.', code: 'SHIPPING_RATE_REQUIRED' }, { status: 409 });
+    if (rateId !== order.shipping_rate_id) return NextResponse.json({ error: 'The shipping label must use the rate the buyer selected before payment.', code: 'SHIPPING_RATE_MISMATCH' }, { status: 409 });
     if (!['paid', 'handoff_confirmed'].includes(order.status)) return NextResponse.json({ error: 'The buyer payment must be secured before purchasing a label.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
     if (order.shipping_status === 'label_purchased' && order.shipping_label_url) {
       return NextResponse.json({ status: 'label_purchased', transactionId: order.shipping_transaction_id, labelUrl: order.shipping_label_url, trackingNumber: order.shipping_tracking_number, trackingUrl: order.shipping_tracking_url, duplicate: true });
@@ -43,13 +45,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'That carrier is not enabled for Aspire shipping. Request a fresh quote.', code: 'SHIPPING_CARRIER_NOT_ALLOWED' }, { status: 409 });
     }
 
+    const rateCents = Math.round(Number(rate.amount || 0) * 100);
+    const rateCurrency = String(rate.currency || 'USD').toUpperCase();
+    if (rateCents !== Number(order.shipping_rate_cents) || rateCurrency !== String(order.shipping_currency || order.currency || 'USD').toUpperCase()) {
+      return NextResponse.json({ error: 'The selected shipping rate changed. Request fresh rates before continuing.', code: 'SHIPPING_RATE_CHANGED' }, { status: 409 });
+    }
+
     const claimTime = new Date().toISOString();
     const { data: claimed, error: claimError } = await supabase.from('market_orders').update({
-      shipping_status: 'label_purchasing', shipping_rate_id: rate.object_id,
-      shipping_rate_cents: Math.round(Number(rate.amount || 0) * 100), shipping_currency: rate.currency || 'USD',
-      shipping_carrier: rate.provider || 'Carrier', shipping_service: rate.servicelevel?.name || rate.servicelevel?.token || 'Standard',
-      shipping_last_event_at: claimTime, updated_at: claimTime
-    }).eq('id', order.id).in('shipping_status', ['rates_ready', 'label_failed']).select('*').maybeSingle();
+      shipping_status: 'label_purchasing',
+      shipping_last_event_at: claimTime,
+      updated_at: claimTime
+    }).eq('id', order.id).eq('shipping_rate_id', order.shipping_rate_id).in('shipping_status', ['rates_ready', 'label_failed']).select('*').maybeSingle();
     if (claimError) throw claimError;
     if (!claimed) return NextResponse.json({ error: 'A shipping label is already being purchased. Refresh in a moment.', code: 'LABEL_IN_PROGRESS' }, { status: 409 });
 
