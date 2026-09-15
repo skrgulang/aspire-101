@@ -76,6 +76,8 @@ type MarketOrderRow = {
   shipping_service: string | null;
 };
 
+const ASPIRER_DELIVERY_MINIMUM_CENTS = 500;
+
 function quoteFromPayment(payment: PaymentRow): FeeQuote | null {
   if (
     payment.base_amount_cents == null ||
@@ -141,6 +143,7 @@ export async function POST(request: Request) {
     if (connection.payment_method !== 'aspire') throw new Error('PAYMENT_NOT_REQUIRED');
 
     const isMarket = aspireRequest.kind === 'buy_sell';
+    const isAspirerDelivery = String(connection.agreed_terms?.source || '') === 'aspirer_delivery';
     const marketOrder = marketOrderData as MarketOrderRow | null;
     if (isMarket && !marketOrder) {
       return NextResponse.json({ error: 'This marketplace order is not initialized yet. Reconnect to the listing and try again.', code: 'MARKET_ORDER_NOT_READY' }, { status: 409 });
@@ -212,9 +215,12 @@ export async function POST(request: Request) {
     }
 
     if (!quote) return NextResponse.json({ error: 'Aspire fee policy is unavailable.' }, { status: 503 });
-    if (baseAmount < quote.minimum_paid_order_cents) {
+    const minimumPaidOrderCents = isAspirerDelivery
+      ? Math.min(quote.minimum_paid_order_cents, ASPIRER_DELIVERY_MINIMUM_CENTS)
+      : quote.minimum_paid_order_cents;
+    if (baseAmount < minimumPaidOrderCents) {
       return NextResponse.json({
-        error: `Pay with Aspire currently requires a minimum paid order of $${(quote.minimum_paid_order_cents / 100).toFixed(2)}.`,
+        error: `Pay with Aspire currently requires a minimum paid order of $${(minimumPaidOrderCents / 100).toFixed(2)}.`,
         code: 'MINIMUM_PAID_ORDER'
       }, { status: 409 });
     }
@@ -229,9 +235,9 @@ export async function POST(request: Request) {
       requester_fee_max_cents: quote.requester_fee_max_cents,
       provider_fee_percent_bps: quote.provider_fee_percent_bps,
       tip_fee_percent_bps: quote.tip_fee_percent_bps,
-      minimum_paid_order_cents: quote.minimum_paid_order_cents,
+      minimum_paid_order_cents: minimumPaidOrderCents,
       standard_payout_cadence: quote.standard_payout_cadence,
-      transaction_type: isMarket ? 'marketplace_physical_goods' : 'connection_service',
+      transaction_type: isMarket ? 'marketplace_physical_goods' : isAspirerDelivery ? 'aspirer_delivery_reward' : 'connection_service',
       shipping_amount_cents: shippingAmountCents,
       shipping_rate_id: shippingRateId,
       shipping_carrier: shippingCarrier,
@@ -258,7 +264,7 @@ export async function POST(request: Request) {
       requester_fee_max_cents: quote.requester_fee_max_cents,
       provider_fee_percent_bps: quote.provider_fee_percent_bps,
       tip_fee_percent_bps: quote.tip_fee_percent_bps,
-      minimum_paid_order_cents: quote.minimum_paid_order_cents,
+      minimum_paid_order_cents: minimumPaidOrderCents,
       fee_snapshot: feeSnapshot,
       gross_amount_cents: checkoutCustomerTotal,
       platform_fee_cents: quote.platform_fee_revenue_cents,
@@ -311,7 +317,7 @@ export async function POST(request: Request) {
           url: previousSession.url,
           paymentId: payment.id,
           status: 'checkout_created',
-          transactionType: isMarket ? 'marketplace' : 'connection',
+          transactionType: isMarket ? 'marketplace' : isAspirerDelivery ? 'aspirer_delivery' : 'connection',
           payerId,
           payeeId,
           feePolicyVersion: quote.fee_policy_version,
@@ -345,12 +351,13 @@ export async function POST(request: Request) {
     const origin = publicOrigin(request);
     if (!origin.startsWith('https://')) throw new Error('MISSING_ENV:NEXT_PUBLIC_SITE_URL');
 
+    const transactionType = isMarket ? 'marketplace' : isAspirerDelivery ? 'aspirer_delivery' : 'connection';
     const checkoutParams: Record<string, string | number | boolean | null | undefined> = {
       mode: 'payment',
       customer_email: user.email || undefined,
       'line_items[0][price_data][currency]': currency.toLowerCase(),
       'line_items[0][price_data][product_data][name]': String(aspireRequest.title).slice(0, 100),
-      'line_items[0][price_data][product_data][description]': isMarket ? 'Aspire Protected campus marketplace purchase' : 'Aspire 101 connection',
+      'line_items[0][price_data][product_data][description]': isMarket ? 'Aspire Protected campus marketplace purchase' : isAspirerDelivery ? 'Aspire Protected Aspirer delivery reward' : 'Aspire 101 connection',
       'line_items[0][price_data][unit_amount]': quote.base_amount_cents,
       'line_items[0][quantity]': 1,
       'line_items[1][price_data][currency]': currency.toLowerCase(),
@@ -364,11 +371,11 @@ export async function POST(request: Request) {
       'payment_intent_data[metadata][request_id]': aspireRequest.id,
       'payment_intent_data[metadata][payer_id]': payerId,
       'payment_intent_data[metadata][payee_id]': payeeId,
-      'payment_intent_data[metadata][transaction_type]': isMarket ? 'marketplace' : 'connection',
+      'payment_intent_data[metadata][transaction_type]': transactionType,
       'payment_intent_data[metadata][fee_policy_version]': quote.fee_policy_version,
       'metadata[aspire_payment_id]': payment.id,
       'metadata[connection_id]': connection.id,
-      'metadata[transaction_type]': isMarket ? 'marketplace' : 'connection',
+      'metadata[transaction_type]': transactionType,
       'metadata[fee_policy_version]': quote.fee_policy_version,
       success_url: `${origin}/connections?payment=success&connection=${encodeURIComponent(connection.id)}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/connections?payment=cancelled&connection=${encodeURIComponent(connection.id)}`
@@ -427,7 +434,7 @@ export async function POST(request: Request) {
       url: session.url,
       paymentId: payment.id,
       status: 'checkout_created',
-      transactionType: isMarket ? 'marketplace' : 'connection',
+      transactionType,
       payerId,
       payeeId,
       feePolicyVersion: quote.fee_policy_version,
