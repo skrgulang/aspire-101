@@ -11,6 +11,56 @@
   text-decoration: none;
 }
 
+.scopeBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0 12px;
+}
+
+.scopeButton {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  border: 1px solid #dce1e7;
+  border-radius: 15px;
+  padding: 12px 14px;
+  background: #fff;
+  color: #222b37;
+  cursor: pointer;
+}
+
+.scopeButton strong {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.scopeButton small {
+  color: #727b87;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.scopeButtonActive {
+  border-color: #ffc400;
+  background: #fffaf0;
+  box-shadow: inset 0 0 0 1px #ffc400;
+}
+
+.remoteBadge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 5px 8px;
+  background: #eef6ff;
+  color: #245d9c;
+  font-size: 11px;
+  font-weight: 850;
+}
+
 .methods {
   display: flex;
   flex-wrap: wrap;
@@ -179,6 +229,10 @@
 .secondary { background: #f1f3f5; color: #222b37; }
 .primary:disabled { opacity: .5; cursor: not-allowed; }
 .error { color: #a22d2d; background: #fff0f0; border-radius: 10px; padding: 9px 10px; font-size: 12px; font-weight: 750; }
+
+@media (max-width: 700px) {
+  .scopeBar { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 600px) {
   .checkoutBackdrop { padding: 0; align-items: end; }
