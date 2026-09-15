@@ -4,6 +4,10 @@ import { buyShippoLabel, getShippoShipment, normalizeShippingStatus } from '../.
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function normalizedCarrier(value: unknown) {
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
@@ -17,7 +21,7 @@ export async function POST(request: Request) {
     if (error) throw error;
     if (!order) return NextResponse.json({ error: 'Marketplace order not found.' }, { status: 404 });
     if (user.id !== order.seller_id) return NextResponse.json({ error: 'Only the seller can purchase the shipping label.' }, { status: 403 });
-    if (order.fulfillment_method !== 'shipping') return NextResponse.json({ error: 'This order is set up for campus pickup.', code: 'NOT_SHIPPING_ORDER' }, { status: 409 });
+    if (order.fulfillment_method !== 'shipping') return NextResponse.json({ error: 'This order is not configured for carrier shipping.', code: 'NOT_SHIPPING_ORDER' }, { status: 409 });
     if (!order.shipping_shipment_id) return NextResponse.json({ error: 'Get a shipping quote before buying a label.', code: 'SHIPPING_RATES_REQUIRED' }, { status: 409 });
     if (!['paid', 'handoff_confirmed'].includes(order.status)) return NextResponse.json({ error: 'The buyer payment must be secured before purchasing a label.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
     if (order.shipping_status === 'label_purchased' && order.shipping_label_url) {
@@ -30,11 +34,20 @@ export async function POST(request: Request) {
     const rate = (shipment.rates || []).find((candidate) => candidate.object_id === rateId);
     if (!rate || String(rate.object_status || '').toUpperCase() !== 'VALID') return NextResponse.json({ error: 'That shipping rate expired. Request a fresh quote.', code: 'SHIPPING_RATE_EXPIRED' }, { status: 409 });
 
+    const allowedCarriers = new Set((process.env.SHIPPING_ALLOWED_CARRIERS || 'usps,ups,fedex')
+      .split(',')
+      .map(normalizedCarrier)
+      .filter(Boolean));
+    const carrier = normalizedCarrier(rate.provider);
+    if (!carrier || !allowedCarriers.has(carrier)) {
+      return NextResponse.json({ error: 'That carrier is not enabled for Aspire shipping. Request a fresh quote.', code: 'SHIPPING_CARRIER_NOT_ALLOWED' }, { status: 409 });
+    }
+
     const claimTime = new Date().toISOString();
     const { data: claimed, error: claimError } = await supabase.from('market_orders').update({
       shipping_status: 'label_purchasing', shipping_rate_id: rate.object_id,
       shipping_rate_cents: Math.round(Number(rate.amount || 0) * 100), shipping_currency: rate.currency || 'USD',
-      shipping_carrier: rate.provider || 'FedEx', shipping_service: rate.servicelevel?.name || rate.servicelevel?.token || 'Standard',
+      shipping_carrier: rate.provider || 'Carrier', shipping_service: rate.servicelevel?.name || rate.servicelevel?.token || 'Standard',
       shipping_last_event_at: claimTime, updated_at: claimTime
     }).eq('id', order.id).in('shipping_status', ['rates_ready', 'label_failed']).select('*').maybeSingle();
     if (claimError) throw claimError;
@@ -63,7 +76,7 @@ export async function POST(request: Request) {
       shipping_last_event_at: new Date().toISOString(), updated_at: new Date().toISOString()
     }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
     if (finalizeError) throw finalizeError;
-    await supabase.from('market_order_events').insert({ market_order_id: order.id, actor_id: user.id, event_type: 'shipping_label_purchased', payload: { carrier: transaction.rate?.provider || rate.provider || 'FedEx', service: transaction.rate?.servicelevel?.name || rate.servicelevel?.name || null, tracking_number: transaction.tracking_number } });
+    await supabase.from('market_order_events').insert({ market_order_id: order.id, actor_id: user.id, event_type: 'shipping_label_purchased', payload: { carrier: transaction.rate?.provider || rate.provider || 'Carrier', service: transaction.rate?.servicelevel?.name || rate.servicelevel?.name || null, tracking_number: transaction.tracking_number } });
 
     return NextResponse.json({ status: nextStatus, transactionId: transaction.object_id, labelUrl: transaction.label_url, trackingNumber: transaction.tracking_number, trackingUrl: transaction.tracking_url_provider || null });
   } catch (error) {
