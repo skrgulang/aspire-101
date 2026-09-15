@@ -1,0 +1,97 @@
+# Flexible Fulfillment rollout checklist
+
+This checklist is for PR #91 (`feat/flexible-fulfillment-system`). It is intentionally fail-closed. Do not merge to `main`, apply production migrations, or enable real customer traffic until the preview checks below pass.
+
+## 1. Preview database migration validation
+
+Apply the PR migrations to a disposable/preview database in repository order and confirm there are no duplicate migration versions or function-order regressions.
+
+Critical Flexible Fulfillment sequence:
+
+1. `20260914210000_flexible_fulfillment_delivery.sql`
+2. `20260914211000_delivery_payment_guard.sql`
+3. `20260914212000_marketplace_fulfillment_preferences.sql`
+4. `20260914213000_shipping_address_ownership.sql`
+5. `20260914214000_delivery_closeout_bridge.sql`
+6. `20260914215000_delivery_lifecycle_complete.sql`
+7. `20260914216000_delivery_notifications_cancellation.sql`
+8. `20260914217000_delivery_confirmation_payment_guard.sql`
+9. `20260914218000_shipping_terms_lock.sql`
+10. `20260914219000_shipping_handoff_guards.sql`
+11. `20260914220000_delivery_match_terms_guard.sql`
+12. `20260914220500_delivery_offer_lock_order.sql`
+13. `20260914221000_delivery_code_entropy.sql`
+14. `20260914223000_delivery_notification_dedupe.sql`
+15. `20260914224000_shipping_notifications.sql`
+16. `20260914225000_shipping_notification_transition_keys.sql`
+
+Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must not release money; shipping terms must lock after checkout starts; and the final negotiation functions must use delivery-job-first locking.
+
+## 2. Aspirer Delivery test matrix
+
+Run each case with two distinct test users unless the case explicitly checks self-delivery rejection.
+
+- Free delivery: create → offer at $0 → accept → pickup code → delivery code → complete. Confirm no Stripe payment is created.
+- Fixed paid delivery: create with fixed reward → accept exact amount → confirm helper cannot head to pickup before payment is secured → secure payment → pickup/deliver/complete → explicit payout release only after completion requirements.
+- Negotiable delivery: Aspirer offer → requester counter → Aspirer accepts (and the reverse actor sequence). Confirm agreed reward equals request/connection/payment terms exactly.
+- Competing offers: accept one while another offer is withdrawn/countered concurrently. Confirm one match only, no deadlock, losing offers declined.
+- Pre-match cancellation: requester cancels an open job; active offers close and notifications are emitted once.
+- Post-match cancellation: direct Delivery cancellation must fail/reroute to the protected connection/Resolution Center path. A secured reward must not be automatically refunded or released.
+- Confirmation-code abuse: wrong codes increment attempts and stop at the configured limit; used codes cannot be reused.
+- Privacy: unmatched/public users never receive exact pickup/drop-off instructions.
+
+## 3. Carrier Shipping test matrix
+
+Use Shippo test mode in preview.
+
+- Seller saves only origin; buyer saves only destination. Confirm Aspire stores opaque Shippo IDs rather than exact counterparty addresses.
+- Seller creates rates only after both addresses are ready; buyer selects a rate; changing an address invalidates stale rate selection before payment.
+- Checkout total = item + Aspire fee + selected carrier shipping. Seller payout excludes shipping and Aspire fee revenue excludes shipping.
+- After checkout starts, direct/API attempts to alter address, shipment, selected rate, carrier/service, or fulfillment method must fail.
+- Seller cannot buy a label before protected payment is secured.
+- Label purchase is idempotent once a transaction/label exists, even after tracking progresses to transit/delivered/exception.
+- Paid selected rate expired or changed: fail closed and require reconciliation; do not silently requote/recharge.
+- Label purchase stuck for >=10 minutes: persist `exception`, create `shipping_label_reconciliation_required`, return `LABEL_RECONCILIATION_REQUIRED`, and never auto-buy a second label.
+- Webhook unknown status: acknowledge/ignore without changing shipping state.
+- Webhook out of order: delivered never regresses; in-transit/exception never regress to label-purchased; exception may recover to in-transit/delivered.
+- Webhook tracking-number mismatch: ignore the event and do not advance order lifecycle.
+- Carrier movement can bridge a still-paid order to seller handoff, but must never overwrite disputed/refunded/cancelled/released lifecycle decisions.
+- Carrier exception/return creates an attention alert; a later recovery and a genuinely new later exception may each create a meaningful transition alert without retry spam.
+- Buyer receipt for shipping cannot be confirmed before carrier delivery.
+
+## 4. Refund / dispute / payout integrity
+
+- Before label purchase and before handoff, an eligible secured marketplace payment may use the instant-refund path.
+- Once a shipping label/transaction/tracking exists, do not use instant refund; route to Resolution Center reconciliation.
+- Full marketplace refund uses the shipping-inclusive protected customer total.
+- Seller payout transfers provider net only; carrier shipping is not added to seller payout.
+- Open dispute/resolution/refund claims must serialize against payout release.
+- Delivery completion and marketplace receipt are lifecycle facts; neither may silently bypass the existing protected-money release endpoint.
+
+## 5. Notifications and audit behavior
+
+- Delivery offer/counter/match/status/cancellation alerts deep-link to the relevant delivery.
+- Shipping alerts deep-link to the protected order/transaction.
+- Duplicate webhook retries or unchanged delivery state must not create duplicate user alerts.
+- Meaningful recurring shipping incidents (for example exception → recovered → exception) may create a new alert.
+- Event/audit rows should capture ignored regressions, tracking mismatches, and reconciliation-required conditions without changing financial state.
+
+## 6. Deployment gates
+
+Before PR #91 can leave Draft:
+
+- Latest PR head has a successful Vercel preview build.
+- All new migrations apply cleanly to a preview database from the current `main` schema state.
+- The test matrices above pass in preview/test mode.
+- Required preview environment variables are configured with test credentials (`SHIPPO_API_KEY`, webhook token, Stripe test configuration as applicable).
+- No production migration has been applied from the feature branch.
+- A real-money Stripe intake test for the already-merged protected-payment core is completed separately before enabling real customer traffic.
+- Production Shippo carrier accounts/allowlist are verified before enabling Carrier Shipping.
+
+## 7. Rollback / fail-closed rules
+
+- Never compensate for a post-payment rate change by silently changing the protected total.
+- Never retry an uncertain Shippo label purchase automatically.
+- Never auto-release a paid Aspirer reward solely because a delivery confirmation code succeeded.
+- Never unwind a matched/secured delivery through a direct client-side cancellation.
+- If financial, carrier, or lifecycle state is ambiguous, preserve payment/payout holds and route the case to Resolution Center rather than guessing.
