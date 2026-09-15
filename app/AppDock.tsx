@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
@@ -28,7 +28,10 @@ const accountItems: DockItem[] = [
 ];
 
 export default function AppDock({ active, preview = false }: { active: AppDockTab; preview?: boolean }) {
+  const [path, setPath] = useState('');
+
   useEffect(() => {
+    setPath(window.location.pathname);
     const stored = window.localStorage.getItem('aspire-theme');
     const next = stored === 'dark' || stored === 'light'
       ? stored
@@ -36,13 +39,15 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
     document.documentElement.dataset.aspireTheme = next;
   }, []);
 
+  const effectiveActive: AppDockTab = path.startsWith('/delivery') ? 'delivery' : active;
+
   function renderItem(item: DockItem) {
     return (
       <a
         key={item.key}
         href={preview ? '/ui-preview' : item.href}
-        className={`${styles.navItem} ${!item.mobile ? styles.desktopExtra : ''} ${item.key === active ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
-        aria-current={item.key === active ? 'page' : undefined}
+        className={`${styles.navItem} ${!item.mobile ? styles.desktopExtra : ''} ${item.key === effectiveActive ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
+        aria-current={item.key === effectiveActive ? 'page' : undefined}
         title={item.label}
         onClick={preview ? (event) => event.preventDefault() : undefined}
       >
@@ -74,7 +79,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
         <UiIcon name="shield" />
         <span>Safety & Help</span>
       </a>
-      <a className={`${styles.utilityLink} ${styles.desktopExtra} ${active === 'settings' ? styles.active : ''}`} href={preview ? '/ui-preview' : '/settings'} title="Settings" aria-current={active === 'settings' ? 'page' : undefined} onClick={preview ? (event) => event.preventDefault() : undefined}>
+      <a className={`${styles.utilityLink} ${styles.desktopExtra} ${effectiveActive === 'settings' ? styles.active : ''}`} href={preview ? '/ui-preview' : '/settings'} title="Settings" aria-current={effectiveActive === 'settings' ? 'page' : undefined} onClick={preview ? (event) => event.preventDefault() : undefined}>
         <UiIcon name="settings" />
         <span>Settings</span>
       </a>
