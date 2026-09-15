@@ -44,6 +44,21 @@ export default function MarketplaceSellForm() {
   const previews = useMemo(() => photos.map((file) => ({ file, url: URL.createObjectURL(file) })), [photos]);
   useEffect(() => () => previews.forEach((item) => URL.revokeObjectURL(item.url)), [previews]);
 
+  const reachSummary = useMemo(() => {
+    if (methods.includes('shipping')) return {
+      title: 'Network reach enabled',
+      body: 'Because Carrier Shipping is on, this listing can appear in Shippable Anywhere and remote-campus discovery. Remote buyers will use the protected Shippo rate + label flow.'
+    };
+    if (methods.includes('aspirer_delivery')) return {
+      title: 'Campus network delivery enabled',
+      body: 'Buyers can create an Aspire Network delivery request and choose Free, Paid, Custom, or Negotiable help from verified Aspirers.'
+    };
+    return {
+      title: 'Local campus only',
+      body: 'This listing stays focused on local meetup. Add Carrier Shipping if you want buyers from other Aspire campuses to discover it.'
+    };
+  }, [methods]);
+
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     void supabase.auth.getUser().then(async ({ data, error: authError }) => {
@@ -65,6 +80,12 @@ export default function MarketplaceSellForm() {
 
   function toggleMethod(method: FlexibleFulfillmentMethod) {
     setMethods((current) => current.includes(method) ? current.filter((item) => item !== method) : [...current, method]);
+  }
+
+  function setPreset(preset: 'local' | 'campus_flexible' | 'all') {
+    if (preset === 'local') setMethods(['campus_pickup']);
+    else if (preset === 'campus_flexible') setMethods(['campus_pickup', 'aspirer_delivery']);
+    else setMethods(['campus_pickup', 'shipping', 'aspirer_delivery']);
   }
 
   function choosePhotos(event: ChangeEvent<HTMLInputElement>) {
@@ -117,7 +138,9 @@ export default function MarketplaceSellForm() {
       await uploadRequestMedia(request.id, photos);
       const safety = await runRequestAiSafety(request.id);
       if (safety.moderationStatus === 'approved') {
-        setSuccess('Listing published with your selected fulfillment methods.');
+        setSuccess(methods.includes('shipping')
+          ? 'Listing published. Carrier shipping is enabled, so it can be discovered across Aspire campuses.'
+          : 'Listing published with your selected fulfillment methods.');
       } else if (safety.moderationStatus === 'pending') {
         setSuccess('Listing saved. It will stay private until the remaining safety review is complete.');
       } else {
@@ -167,11 +190,18 @@ export default function MarketplaceSellForm() {
           </label>
 
           <div className={styles.label}>Fulfillment methods · choose one or more
+            <div className={styles.presetRow}>
+              <button type="button" onClick={() => setPreset('local')}>Local only</button>
+              <button type="button" onClick={() => setPreset('campus_flexible')}>Meetup + Aspirer</button>
+              <button type="button" onClick={() => setPreset('all')}>Maximum reach</button>
+            </div>
             <div className={styles.fulfillment}>{fulfillmentOptions.map((option) => <label key={option.value} className={`${styles.option} ${methods.includes(option.value) ? styles.optionActive : ''}`}>
               <input type="checkbox" checked={methods.includes(option.value)} onChange={() => toggleMethod(option.value)} />
               <span><strong>{option.title}</strong><small>{option.description}</small></span>
             </label>)}</div>
           </div>
+
+          <div className={styles.reachNote}><strong>{reachSummary.title}</strong><span>{reachSummary.body}</span></div>
 
           {(methods.includes('campus_pickup') || methods.includes('aspirer_delivery')) && <label className={styles.label}>Public pickup area
             <input className={styles.input} value={pickupArea} onChange={(event) => setPickupArea(event.target.value)} placeholder="Hillenbrand Hall area" maxLength={160} />
