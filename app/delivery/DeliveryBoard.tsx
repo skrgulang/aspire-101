@@ -113,9 +113,10 @@ function statusProgress(status: DeliveryStatus) {
 
 function rewardMatches(job: DeliveryJob, filter: DeliveryRewardFilter) {
   if (filter === 'all') return true;
-  if (filter === 'free') return job.reward_mode === 'free' || Number(job.reward_cents || 0) === 0;
+  if (filter === 'free') return job.reward_mode === 'free';
   if (filter === 'negotiable') return job.reward_mode === 'negotiable';
-  return Number(job.reward_cents || job.agreed_reward_cents || 0) > 0;
+  const effectiveReward = Number(job.agreed_reward_cents ?? job.reward_cents ?? 0);
+  return effectiveReward > 0;
 }
 
 function needsAction(job: DeliveryJob, offers: DeliveryOffer[], userId: string | null) {
@@ -165,6 +166,7 @@ export default function DeliveryBoard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [campusId, setCampusId] = useState<string | null>(null);
   const [board, setBoard] = useState<DeliveryBoardData>(EMPTY_BOARD);
+  const [paymentStatusByConnection, setPaymentStatusByConnection] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
@@ -198,6 +200,22 @@ export default function DeliveryBoard() {
     try {
       const data = await fetchDeliveryBoard(id);
       setBoard(data);
+
+      const connectionIds = [...new Set(data.jobs.map((job) => job.connection_id).filter((connectionId): connectionId is string => Boolean(connectionId)))];
+      if (!connectionIds.length) {
+        setPaymentStatusByConnection({});
+        return;
+      }
+      const supabase = getSupabaseBrowserClient();
+      const { data: payments, error: paymentError } = await supabase
+        .from('connection_payments')
+        .select('connection_id,status')
+        .in('connection_id', connectionIds);
+      if (paymentError) {
+        setPaymentStatusByConnection({});
+      } else {
+        setPaymentStatusByConnection(Object.fromEntries((payments || []).map((payment) => [payment.connection_id, payment.status])));
+      }
     } catch (error) {
       setNotice(friendlyError(error));
     }
@@ -269,7 +287,7 @@ export default function DeliveryBoard() {
     });
 
     return filtered.sort((a, b) => {
-      if (boardSort === 'reward_high') return Number(b.agreed_reward_cents || b.reward_cents || 0) - Number(a.agreed_reward_cents || a.reward_cents || 0);
+      if (boardSort === 'reward_high') return Number(b.agreed_reward_cents ?? b.reward_cents ?? 0) - Number(a.agreed_reward_cents ?? a.reward_cents ?? 0);
       if (boardSort === 'soonest') {
         const aTime = a.preferred_at ? new Date(a.preferred_at).getTime() : Number.MAX_SAFE_INTEGER;
         const bTime = b.preferred_at ? new Date(b.preferred_at).getTime() : Number.MAX_SAFE_INTEGER;
@@ -442,7 +460,7 @@ export default function DeliveryBoard() {
   }
 
   return <main className={styles.page}>
-    <AppDock active="discover" />
+    <AppDock active="delivery" />
     <div className={styles.shell}>
       <section className={styles.hero}>
         <div>
@@ -522,7 +540,10 @@ export default function DeliveryBoard() {
               const ownOffer = offers.find((offer) => offer.aspirer_id === userId);
               const active = focusJobId === job.id;
               const preferred = job.preferred_at ? new Date(job.preferred_at).toLocaleString() : 'Flexible time';
-              const paid = Number(job.agreed_reward_cents || 0) > 0;
+              const paid = Number(job.agreed_reward_cents ?? job.reward_cents ?? 0) > 0;
+              const paymentStatus = job.connection_id ? paymentStatusByConnection[job.connection_id] : undefined;
+              const rewardSecured = paymentStatus === 'secured' || paymentStatus === 'released';
+              const rewardReleased = paymentStatus === 'released';
               const privateValue = privateDetails[job.id];
               const pd = privateDraft[job.id] || { pickup: '', dropoff: '' };
               const nextAction = nextActionText(job, offers, userId);
@@ -537,7 +558,6 @@ export default function DeliveryBoard() {
                   {job.approx_distance_miles != null && <span>{job.approx_distance_miles.toFixed(1)} mi approx.</span>}{job.market_order_id && <span>Marketplace delivery</span>}
                   {isRequester && <span className={styles.roleBadge}>Your request</span>}{isMatchedAspirer && <span className={styles.roleBadge}>You’re delivering</span>}{!isMatchedAspirer && ownOffer && <span className={styles.roleBadge}>You offered {money(ownOffer.amount_cents)}</span>}
                 </div>
-
                 {!['cancelled'].includes(job.status) && <div className={styles.timeline} aria-label="Delivery progress">{STATUS_ORDER.map((status, index) => <span key={status} className={`${styles.step} ${index <= progress ? styles.stepDone : ''}`}>{deliveryStatusLabel(status)}</span>)}</div>}
 
                 <details className={styles.activity}><summary>Activity · {activity.length} updates</summary><div className={styles.activityList}>{activity.map((item, index) => <div className={styles.activityItem} key={`${item.label}-${item.at}-${index}`}><span /><div><strong>{item.label}</strong><small>{new Date(item.at).toLocaleString()} · {timeAgo(item.at)}</small></div></div>)}</div></details>
@@ -561,7 +581,7 @@ export default function DeliveryBoard() {
                   </div>)}</div>
                 </div>}
 
-                {job.connection_id && !['looking_for_aspirer','offer_received'].includes(job.status) && <div className={styles.actionBox}><div className={styles.actionRow}><strong>Matched with {job.matched_aspirer_id ? profileName(board, job.matched_aspirer_id) : 'an Aspirer'}</strong><a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>Message / connection</a>{paid && isRequester && job.status !== 'completed' && <a className={styles.goldButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>Secure delivery reward</a>}</div>{paid && job.status !== 'completed' && <span className={styles.waiting}>Paid reward is a separate Aspire Protected connection and is not released until both proof-backed completion confirmations exist.</span>}</div>}
+                {job.connection_id && !['looking_for_aspirer','offer_received'].includes(job.status) && <div className={styles.actionBox}><div className={styles.actionRow}><strong>Matched with {job.matched_aspirer_id ? profileName(board, job.matched_aspirer_id) : 'an Aspirer'}</strong><a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>Message / connection</a>{paid && isRequester && job.status !== 'completed' && <a className={rewardSecured ? styles.outlineButton : styles.goldButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>{rewardSecured ? 'Payment details' : paymentStatus ? 'Secure delivery reward' : 'Review payment status'}</a>}</div>{paid && job.status !== 'completed' && <span className={styles.waiting}>{rewardSecured ? 'The protected reward is secured. It still will not release until proof-backed completion and payout checks pass.' : 'Paid reward is a separate Aspire Protected connection and pickup is blocked until the reward is secured.'}</span>}</div>}
 
                 {!['looking_for_aspirer','offer_received','cancelled','completed'].includes(job.status) && (isRequester || isPickupParty || isDropoffParty || isMatchedAspirer) && <div className={styles.actionBox}><strong>Private handoff details</strong>{(isRequester || isPickupParty || isDropoffParty) && <>{(isPickupParty || isRequester) && <input className={styles.input} placeholder="Exact pickup instructions" value={pd.pickup} onChange={(event) => setPrivateDraft({ ...privateDraft, [job.id]: { ...pd, pickup: event.target.value } })} />}{(isDropoffParty || isRequester) && <input className={styles.input} placeholder="Exact drop-off instructions" value={pd.dropoff} onChange={(event) => setPrivateDraft({ ...privateDraft, [job.id]: { ...pd, dropoff: event.target.value } })} />}<button className={styles.outlineButton} type="button" onClick={() => void savePrivate(job)} disabled={busy === `private-save:${job.id}`}>Save private details</button></>}<button className={styles.outlineButton} type="button" onClick={() => void revealPrivate(job)} disabled={busy === `private:${job.id}`}>View matched handoff details</button>{privateValue && <div className={styles.privateBox}><b>Pickup:</b> {privateValue.pickup_instructions || 'Not added yet'}<br /><b>Drop-off:</b> {privateValue.dropoff_instructions || 'Not added yet'}</div>}</div>}
 
@@ -573,7 +593,7 @@ export default function DeliveryBoard() {
                 {isMatchedAspirer && ['picked_up','on_the_way'].includes(job.status) && <div className={styles.actionBox}><strong>Confirm delivery</strong><div className={styles.codeBox}><input className={`${styles.input} ${styles.codeInput}`} inputMode="numeric" maxLength={4} placeholder="4-digit" value={codeInput[`${job.id}:delivery`] || ''} onChange={(event) => setCodeInput({ ...codeInput, [`${job.id}:delivery`]: event.target.value.replace(/\D/g, '').slice(0, 4) })} /><button className={styles.goldButton} type="button" onClick={() => void verifyCode(job, 'delivery')}>Confirm Delivery</button></div></div>}
                 {(isRequester || isDropoffParty) && job.status === 'delivered' && <div className={styles.actionBox}><button className={styles.goldButton} type="button" onClick={() => void finishDelivery(job)} disabled={busy === `complete:${job.id}`}>Delivery received · Complete</button><span className={styles.waiting}>This records the receiver side of closeout. Paid rewards remain protected until payout release succeeds.</span></div>}
 
-                {job.connection_id && job.status === 'completed' && (isRequester || isMatchedAspirer || isDropoffParty) && <div className={styles.actionBox}><strong>Delivery complete ✓</strong><div className={styles.actionRow}>{paid && isRequester && <button className={styles.goldButton} type="button" onClick={() => void releaseReward(job)} disabled={busy === `release:${job.id}`}>{busy === `release:${job.id}` ? 'Releasing reward…' : 'Release protected reward'}</button>}<a className={styles.goldButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}&tab=history`}>Review this delivery</a><a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>View connection</a>{paid && <a className={styles.outlineButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>Payment details</a>}</div><span className={styles.waiting}>{paid ? 'Completion is recorded. Reward release still respects payout readiness, disputes, refunds, and Resolution Center holds.' : 'Free delivery is closed with no Stripe payment. You can now leave a review.'}</span></div>}
+                {job.connection_id && job.status === 'completed' && (isRequester || isMatchedAspirer || isDropoffParty) && <div className={styles.actionBox}><strong>Delivery complete ✓</strong><div className={styles.actionRow}>{paid && isRequester && paymentStatus === 'secured' && <button className={styles.goldButton} type="button" onClick={() => void releaseReward(job)} disabled={busy === `release:${job.id}`}>{busy === `release:${job.id}` ? 'Releasing reward…' : 'Release protected reward'}</button>}{paid && isRequester && rewardReleased && <span className={styles.waiting}>Reward released ✓</span>}<a className={styles.goldButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}&tab=history`}>Review this delivery</a><a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>View connection</a>{paid && <a className={styles.outlineButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>Payment details</a>}</div><span className={styles.waiting}>{paid ? 'Completion is recorded. Reward release still respects payout readiness, disputes, refunds, and Resolution Center holds.' : 'Free delivery is closed with no Stripe payment. You can now leave a review.'}</span></div>}
               </article>;
             })}
           </div>}
