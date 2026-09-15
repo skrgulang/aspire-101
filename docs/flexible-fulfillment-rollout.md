@@ -87,6 +87,7 @@ Use Shippo test mode in preview.
 - Before label purchase and before handoff, an eligible secured marketplace payment may use the instant-refund path.
 - Once label purchase begins, or any shipping transaction/label/tracking evidence exists, do not use instant refund; route to Resolution Center reconciliation.
 - Refund API must return a controlled `409 SHIPPING_REFUND_REQUIRES_RESOLUTION` response for `label_purchasing` and database serialization conflicts rather than surfacing an internal error.
+- The shipping label route must call `claim_market_shipping_label_purchase()` immediately before the external Shippo purchase. Do not replace it with a direct `market_orders` update: the claim RPC intentionally locks payment first and market order second to match refund/release serialization.
 - Refund-vs-label race: start instant refund and seller label purchase concurrently. Exactly one claim may win. If refund wins, `label_purchasing` must be rejected before Shippo is called; if label purchase wins, refund claim must fail with shipping reconciliation required. Never allow a Stripe refund and a new Shippo label charge for the same secured state.
 - A surviving `refund_claimed_at` is fail-closed for label purchase even after five minutes; it must be reconciled rather than aged out by the shipping flow.
 - Full marketplace refund uses the shipping-inclusive protected customer total.
