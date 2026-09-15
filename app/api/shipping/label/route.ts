@@ -76,8 +76,35 @@ export async function POST(request: Request) {
 
     if (order.shipping_status === 'label_purchasing') {
       const startedAt = new Date(order.shipping_last_event_at || order.updated_at || order.created_at || 0).getTime();
-      const ageMs = Number.isFinite(startedAt) ? Date.now() - startedAt : 0;
+      const ageMs = Number.isFinite(startedAt) ? Date.now() - startedAt : staleLabelPurchaseMs;
       if (ageMs >= staleLabelPurchaseMs) {
+        const flaggedAt = new Date().toISOString();
+        const { data: flagged, error: flagError } = await supabase.from('market_orders').update({
+          // A stale external purchase is not safe to retry. `exception` makes the state
+          // visible in the order UI and still permits a later authoritative carrier webhook
+          // to recover it to in_transit/delivered if Shippo did create the original label.
+          shipping_status: 'exception',
+          shipping_last_event_at: flaggedAt,
+          updated_at: flaggedAt
+        })
+          .eq('id', order.id)
+          .eq('shipping_status', 'label_purchasing')
+          .select('id')
+          .maybeSingle();
+        if (flagError) throw flagError;
+        if (flagged) {
+          await supabase.from('market_order_events').insert({
+            market_order_id: order.id,
+            actor_id: user.id,
+            event_type: 'shipping_label_reconciliation_required',
+            payload: {
+              reason: 'label_purchase_stale',
+              purchase_started_at: order.shipping_last_event_at || order.updated_at || null,
+              stale_after_minutes: staleLabelPurchaseMs / 60000,
+              selected_rate_id: order.shipping_rate_id
+            }
+          });
+        }
         return NextResponse.json({
           error: 'The carrier label purchase has been processing unusually long. Aspire will not automatically retry because the carrier may already have charged for a label even if the final database write was interrupted. Open the Resolution Center so the existing Shippo transaction can be reconciled before any second purchase.',
           code: 'LABEL_RECONCILIATION_REQUIRED'
