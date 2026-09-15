@@ -30,10 +30,17 @@ Critical Flexible Fulfillment sequence:
 20. `20260914227000_delivery_status_transition_guard.sql`
 21. `20260914228000_serialize_shipping_label_and_refund.sql`
 22. `20260914228100_guard_label_claim_against_refund.sql`
+23. `20260914228200_delivery_helper_privilege_hardening.sql`
 
-Verify migration version uniqueness before running anything. The shipping notification transition and shipping state guard deliberately use different versions (`14225000` and `14225200`), delivery cancellation integrity comes after them at `14225500`, the final closeout/lifecycle guards are `14226000` and `14227000`, and shipping refund/label serialization is finalized by `14228000` + `14228100`.
+Verify migration version uniqueness before running anything. The shipping notification transition and shipping state guard deliberately use different versions (`14225000` and `14225200`), delivery cancellation integrity comes after them at `14225500`, the final closeout/lifecycle guards are `14226000` and `14227000`, shipping refund/label serialization is finalized by `14228000` + `14228100`, and direct access to the helper-verification probe is removed by `14228200`.
 
-Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must require the Aspirer proof-backed confirmation plus the receiver/requester confirmation and must not release money; shipping terms must lock after checkout starts; shipping lifecycle must not move backward; delivery lifecycle must not skip or regress protected states; pre-match cancellation must not race through a newly matched request; refund and Shippo label claims must serialize on the protected payment; and the final negotiation functions must use delivery-job-first locking.
+Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must require the Aspirer proof-backed confirmation plus the receiver/requester confirmation and must not release money; shipping terms must lock after checkout starts; shipping lifecycle must not move backward; delivery lifecycle must not skip or regress protected states; pre-match cancellation must not race through a newly matched request; refund and Shippo label claims must serialize on the protected payment; the final negotiation functions must use delivery-job-first locking; and authenticated clients must not have direct execute permission on `delivery_helper_is_verified(uuid)`.
+
+### Preview validation record · 2026-09-15
+
+A disposable Supabase Development Branch was repaired from the current `main` schema baseline and all PR #91 Flexible Fulfillment migrations through `20260914228200` were applied successfully. The exercise found and fixed two migration-only issues that a frontend build would not detect: `delivery_new_code()` now calls `extensions.gen_random_bytes(2)` for Supabase's pgcrypto schema, and the shipping state guard now handles nullable fulfillment methods safely while blocking `exception -> label_failed` regression.
+
+Database guard checks performed in preview include: in-transit cannot regress to label-purchased, exception cannot regress to label-failed, exception can recover to in-transit/delivered, delivered is terminal, a surviving refund claim blocks label purchase, a started label purchase blocks instant refund, delivery status cannot jump matched -> delivered, delivery completion requires the Aspirer proof confirmation, and a paid delivery cannot complete after the reward stops being secured/released. Temporary test records were removed after validation.
 
 ## 2. Aspirer Delivery test matrix
 
@@ -78,7 +85,8 @@ Use Shippo test mode in preview.
 ## 4. Refund / dispute / payout integrity
 
 - Before label purchase and before handoff, an eligible secured marketplace payment may use the instant-refund path.
-- Once a shipping label/transaction/tracking exists, do not use instant refund; route to Resolution Center reconciliation.
+- Once label purchase begins, or any shipping transaction/label/tracking evidence exists, do not use instant refund; route to Resolution Center reconciliation.
+- Refund API must return a controlled `409 SHIPPING_REFUND_REQUIRES_RESOLUTION` response for `label_purchasing` and database serialization conflicts rather than surfacing an internal error.
 - Refund-vs-label race: start instant refund and seller label purchase concurrently. Exactly one claim may win. If refund wins, `label_purchasing` must be rejected before Shippo is called; if label purchase wins, refund claim must fail with shipping reconciliation required. Never allow a Stripe refund and a new Shippo label charge for the same secured state.
 - A surviving `refund_claimed_at` is fail-closed for label purchase even after five minutes; it must be reconciled rather than aged out by the shipping flow.
 - Full marketplace refund uses the shipping-inclusive protected customer total.
@@ -119,5 +127,6 @@ Before PR #91 can leave Draft:
 - Never mark a delivery completed unless both proof-backed participant confirmations exist.
 - Never skip or regress Aspirer Delivery lifecycle states through a direct table/service-role write.
 - Never unwind a matched/secured delivery through a direct client-side cancellation.
+- Never expose arbitrary users' email/phone verification status through a directly executable helper RPC.
 - Never treat a missing client-side payment status lookup as proof that a reward is unpaid.
 - If financial, carrier, or lifecycle state is ambiguous, preserve payment/payout holds and route the case to Resolution Center rather than guessing.
