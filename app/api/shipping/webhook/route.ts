@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
 import { normalizeShippingStatus } from '../../../../lib/server/shippo';
 
+const supportedTrackingStatuses = new Set([
+  'PRE_TRANSIT',
+  'UNKNOWN',
+  'TRANSIT',
+  'OUT_FOR_DELIVERY',
+  'AVAILABLE_FOR_PICKUP',
+  'DELIVERED',
+  'FAILURE',
+  'RETURNED',
+  'ERROR'
+]);
+
 function webhookAuthorized(request: Request) {
   const token = process.env.SHIPPO_WEBHOOK_TOKEN;
   if (!token) return false;
@@ -40,10 +52,17 @@ export async function POST(request: Request) {
     const payload = await request.json().catch(() => ({}));
     const data = payload?.data || payload;
     const tracking = data?.tracking_status || data?.trackingStatus || {};
-    const statusValue = tracking?.status || data?.status;
+    const rawStatus = String(tracking?.status || data?.status || '').trim().toUpperCase();
     const orderId = metadataOrderId(data?.metadata) || metadataOrderId(payload?.metadata);
     const trackingNumber = typeof data?.tracking_number === 'string' ? data.tracking_number : '';
     if (!orderId && !trackingNumber) return NextResponse.json({ received: true, ignored: true });
+
+    // Do not let a malformed or newly introduced carrier status fall through to
+    // `label_purchased`. Unknown webhook shapes are acknowledged but ignored until Aspire
+    // explicitly understands their lifecycle meaning.
+    if (!rawStatus || !supportedTrackingStatuses.has(rawStatus)) {
+      return NextResponse.json({ received: true, ignored: true, reason: 'unsupported_tracking_status' });
+    }
 
     const supabase = getSupabaseServiceClient();
     let query = supabase
@@ -57,7 +76,7 @@ export async function POST(request: Request) {
     if (!order) return NextResponse.json({ received: true, ignored: true });
     if (order.fulfillment_method !== 'shipping') return NextResponse.json({ received: true, ignored: true });
 
-    const nextStatus = normalizeShippingStatus(statusValue);
+    const nextStatus = normalizeShippingStatus(rawStatus);
     const now = new Date().toISOString();
     const applyStatus = shouldApplyShippingStatus(order.shipping_status, nextStatus);
 
@@ -80,17 +99,6 @@ export async function POST(request: Request) {
           payload: { status: nextStatus, tracking_number: trackingNumber || order.shipping_tracking_number || null }
         });
       }
-    } else if (order.shipping_status !== nextStatus) {
-      await supabase.from('market_order_events').insert({
-        market_order_id: order.id,
-        actor_id: null,
-        event_type: 'shipping_status_regression_ignored',
-        payload: {
-          current_status: order.shipping_status || 'not_started',
-          incoming_status: nextStatus,
-          tracking_number: trackingNumber || order.shipping_tracking_number || null
-        }
-      });
     }
 
     // Carrier movement is authoritative evidence that the seller handed the package to
