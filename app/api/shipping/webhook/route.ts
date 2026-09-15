@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     const tracking = data?.tracking_status || data?.trackingStatus || {};
     const rawStatus = String(tracking?.status || data?.status || '').trim().toUpperCase();
     const orderId = metadataOrderId(data?.metadata) || metadataOrderId(payload?.metadata);
-    const trackingNumber = typeof data?.tracking_number === 'string' ? data.tracking_number : '';
+    const trackingNumber = typeof data?.tracking_number === 'string' ? data.tracking_number.trim() : '';
     if (!orderId && !trackingNumber) return NextResponse.json({ received: true, ignored: true });
 
     // Do not let a malformed or newly introduced carrier status fall through to
@@ -76,6 +76,38 @@ export async function POST(request: Request) {
     if (!order) return NextResponse.json({ received: true, ignored: true });
     if (order.fulfillment_method !== 'shipping') return NextResponse.json({ received: true, ignored: true });
 
+    // Once Aspire has bound a label to a tracking number, a webhook carrying a different
+    // number must never overwrite or advance that order. Record the mismatch for support.
+    if (order.shipping_tracking_number && trackingNumber && order.shipping_tracking_number !== trackingNumber) {
+      await supabase.from('market_order_events').insert({
+        market_order_id: order.id,
+        actor_id: null,
+        event_type: 'shipping_tracking_mismatch_ignored',
+        payload: {
+          expected_tracking_number: order.shipping_tracking_number,
+          incoming_tracking_number: trackingNumber,
+          raw_status: rawStatus
+        }
+      });
+      return NextResponse.json({ received: true, ignored: true, reason: 'tracking_number_mismatch' });
+    }
+
+    // A refunded/cancelled order is financially closed. Keep carrier noise from mutating
+    // fulfillment state or generating misleading post-close notifications.
+    if (['refunded', 'cancelled'].includes(order.status)) {
+      await supabase.from('market_order_events').insert({
+        market_order_id: order.id,
+        actor_id: null,
+        event_type: 'shipping_update_after_closed_order_ignored',
+        payload: {
+          order_status: order.status,
+          raw_status: rawStatus,
+          tracking_number: trackingNumber || order.shipping_tracking_number || null
+        }
+      });
+      return NextResponse.json({ received: true, ignored: true, reason: 'order_financially_closed' });
+    }
+
     const nextStatus = normalizeShippingStatus(rawStatus);
     const now = new Date().toISOString();
     const applyStatus = shouldApplyShippingStatus(order.shipping_status, nextStatus);
@@ -96,18 +128,35 @@ export async function POST(request: Request) {
           market_order_id: order.id,
           actor_id: null,
           event_type: 'shipping_status_changed',
-          payload: { status: nextStatus, tracking_number: trackingNumber || order.shipping_tracking_number || null }
+          payload: {
+            status: nextStatus,
+            raw_status: rawStatus,
+            tracking_number: trackingNumber || order.shipping_tracking_number || null
+          }
         });
       }
+    } else if ((order.shipping_status || 'not_started') !== nextStatus) {
+      await supabase.from('market_order_events').insert({
+        market_order_id: order.id,
+        actor_id: null,
+        event_type: 'shipping_status_regression_ignored',
+        payload: {
+          current_status: order.shipping_status || 'not_started',
+          incoming_status: nextStatus,
+          raw_status: rawStatus,
+          tracking_number: trackingNumber || order.shipping_tracking_number || null
+        }
+      });
     }
 
     // Carrier movement is authoritative evidence that the seller handed the package to
-    // the carrier. Advance only a still-paid order; never overwrite a dispute, refund,
-    // cancellation, release-ready state, or any later lifecycle decision.
+    // the carrier. Use the effective (non-regressed) shipping state so an out-of-order
+    // webhook can never manufacture a lifecycle transition from stale data.
+    const effectiveShippingStatus = applyStatus ? nextStatus : (order.shipping_status || nextStatus);
     if (
       !order.seller_handed_off_at
       && order.status === 'paid'
-      && ['in_transit', 'delivered'].includes(nextStatus)
+      && ['in_transit', 'delivered'].includes(effectiveShippingStatus)
     ) {
       const { data: advanced, error: handoffError } = await supabase.from('market_orders').update({
         seller_handed_off_at: now,
@@ -125,7 +174,11 @@ export async function POST(request: Request) {
           market_order_id: order.id,
           actor_id: null,
           event_type: 'carrier_handoff_confirmed',
-          payload: { shipping_status: nextStatus, tracking_number: trackingNumber || order.shipping_tracking_number || null }
+          payload: {
+            shipping_status: effectiveShippingStatus,
+            raw_status: rawStatus,
+            tracking_number: trackingNumber || order.shipping_tracking_number || null
+          }
         });
       }
     }
