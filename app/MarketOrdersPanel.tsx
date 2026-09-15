@@ -19,6 +19,7 @@ import {
   openMarketDispute,
   requestMarketRefund,
   getShippingRates,
+  selectShippingRate,
   purchaseShippingLabel,
   ShippingRate,
   ShippingAddress
@@ -57,29 +58,46 @@ const disputeReasons: { value: MarketDispute['reason']; label: string }[] = [
 
 const emptyAddress: ShippingAddress = { name: '', street1: '', city: '', state: '', zip: '', country: 'US' };
 
-function ShippingOrderTools({ order, isSeller, secured, onDone }: { order: MarketOrder; isSeller: boolean; secured: boolean; onDone: () => void }) {
+function ShippingOrderTools({ order, isBuyer, isSeller, secured, onDone }: { order: MarketOrder; isBuyer: boolean; isSeller: boolean; secured: boolean; onDone: () => void }) {
   const [from, setFrom] = useState<ShippingAddress>(emptyAddress);
   const [to, setTo] = useState<ShippingAddress>(emptyAddress);
   const [parcel, setParcel] = useState({ length: '12', width: '8', height: '4', weight: '2' });
   const [rates, setRates] = useState<ShippingRate[]>([]);
-  const [selectedRate, setSelectedRate] = useState('');
+  const [selectedRate, setSelectedRate] = useState(order.shipping_rate_id || '');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const shippingStatus = order.shipping_status || 'not_started';
+  const rateLocked = Boolean(order.shipping_rate_id && order.shipping_rate_cents);
+  const paymentLocked = secured || ['payment_processing','paid','handoff_confirmed','release_ready','released'].includes(order.status);
 
   async function quote() {
     setBusy('quote'); setError('');
     try {
       const result = await getShippingRates(order.id, from, to, parcel);
-      setRates(result.rates); setSelectedRate(result.rates[0]?.id || '');
+      setRates(result.rates);
+      setSelectedRate(result.rates[0]?.id || '');
+      onDone();
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not calculate shipping rates.'); }
     finally { setBusy(''); }
   }
 
-  async function buyLabel() {
+  async function chooseRate() {
     if (!selectedRate) return;
+    setBusy('select'); setError('');
+    try {
+      await selectShippingRate(order.id, selectedRate);
+      onDone();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not choose that shipping rate.'); }
+    finally { setBusy(''); }
+  }
+
+  async function buyLabel() {
+    if (!order.shipping_rate_id) {
+      setError('The buyer must choose a shipping rate before the label can be purchased.');
+      return;
+    }
     setBusy('label'); setError('');
-    try { await purchaseShippingLabel(order.id, selectedRate); onDone(); }
+    try { await purchaseShippingLabel(order.id, order.shipping_rate_id); onDone(); }
     catch (err) { setError(err instanceof Error ? err.message : 'Could not purchase the shipping label.'); }
     finally { setBusy(''); }
   }
@@ -89,10 +107,23 @@ function ShippingOrderTools({ order, isSeller, secured, onDone }: { order: Marke
   }
 
   if (shippingStatus === 'label_purchased' || shippingStatus === 'in_transit' || shippingStatus === 'delivered' || shippingStatus === 'exception') {
-    return <div className="shippingTrackingBox"><span>FEDEX SHIPPING · {shippingStatus.replace('_', ' ')}</span>{order.shipping_tracking_number && <strong>Tracking {order.shipping_tracking_number}</strong>}{order.shipping_label_url && <a href={order.shipping_label_url} target="_blank" rel="noreferrer">Open label ↗</a>}{order.shipping_tracking_url && <a href={order.shipping_tracking_url} target="_blank" rel="noreferrer">Track package ↗</a>}</div>;
+    return <div className="shippingTrackingBox"><span>CARRIER SHIPPING · {shippingStatus.replaceAll('_', ' ')}</span><strong>{order.shipping_carrier || 'Carrier'}{order.shipping_service ? ` · ${order.shipping_service}` : ''}</strong>{order.shipping_tracking_number && <strong>Tracking {order.shipping_tracking_number}</strong>}{order.shipping_label_url && isSeller && <a href={order.shipping_label_url} target="_blank" rel="noreferrer">Open label ↗</a>}{order.shipping_tracking_url && <a href={order.shipping_tracking_url} target="_blank" rel="noreferrer">Track package ↗</a>}</div>;
   }
 
-  return <details className="shippingTools"><summary className="shippingToolsHead"><span>FEDEX SHIPPING</span><strong>{isSeller ? 'Set up shipping label' : 'Add shipping details'}</strong><small>{isSeller ? 'After payment is secured, enter the package details and buy the label.' : 'Shipping is configured here after you reserve the item — it is not your cart.'}</small></summary><div className="shippingToolsBody"><div className="shippingAddressGrid"><div><label>Ship from</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`from-${key}`} value={from[key] || ''} onChange={(event) => updateAddress(setFrom, key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}</div><div><label>Ship to</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`to-${key}`} value={to[key] || ''} onChange={(event) => updateAddress(setTo, key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}</div></div><div className="shippingParcelRow"><label>Package (in / lb)<input value={parcel.length} onChange={(event) => setParcel({ ...parcel, length: event.target.value })} placeholder="L" /></label><label><span>&nbsp;</span><input value={parcel.width} onChange={(event) => setParcel({ ...parcel, width: event.target.value })} placeholder="W" /></label><label><span>&nbsp;</span><input value={parcel.height} onChange={(event) => setParcel({ ...parcel, height: event.target.value })} placeholder="H" /></label><label><span>&nbsp;</span><input value={parcel.weight} onChange={(event) => setParcel({ ...parcel, weight: event.target.value })} placeholder="Weight" /></label></div>{rates.length > 0 && <div className="shippingRateList">{rates.map((rate) => <label key={rate.id} className={selectedRate === rate.id ? 'active' : ''}><input type="radio" name={`shipping-rate-${order.id}`} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /><span><b>{rate.carrier} · {rate.service}</b><small>{money(rate.amountCents, rate.currency)}{rate.estimatedDays ? ` · ${rate.estimatedDays} business days` : ''}</small></span></label>)}</div>}{error && <p className="shippingError">{error}</p>}<div className="shippingToolsActions"><button type="button" className="marketSecondary" onClick={quote} disabled={busy !== ''}>{busy === 'quote' ? 'Getting FedEx rates…' : 'Get FedEx rates'}</button>{isSeller && secured && rates.length > 0 && <button type="button" className="button buttonGold" onClick={buyLabel} disabled={busy !== '' || !selectedRate}>{busy === 'label' ? 'Buying label…' : 'Buy label'}</button>}</div></div></details>;
+  return <details className="shippingTools" open={!rateLocked && isBuyer}>
+    <summary className="shippingToolsHead"><span>CARRIER SHIPPING</span><strong>{rateLocked ? `${order.shipping_carrier || 'Carrier'} · ${order.shipping_service || 'Selected service'}` : 'Compare shipping rates'}</strong><small>{rateLocked ? `${money(order.shipping_rate_cents, order.shipping_currency || order.currency)} selected before payment` : 'Compare enabled USPS, UPS, and FedEx services through Shippo, then lock one rate before payment.'}</small></summary>
+    <div className="shippingToolsBody">
+      {!paymentLocked && <><div className="shippingAddressGrid"><div><label>Ship from</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`from-${key}`} value={from[key] || ''} onChange={(event) => updateAddress(setFrom, key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}</div><div><label>Ship to</label>{(['name','street1','city','state','zip'] as const).map((key) => <input key={`to-${key}`} value={to[key] || ''} onChange={(event) => updateAddress(setTo, key, event.target.value)} placeholder={key === 'street1' ? 'Street address' : key[0].toUpperCase() + key.slice(1)} />)}</div></div><div className="shippingParcelRow"><label>Package (in / lb)<input value={parcel.length} onChange={(event) => setParcel({ ...parcel, length: event.target.value })} placeholder="L" /></label><label><span>&nbsp;</span><input value={parcel.width} onChange={(event) => setParcel({ ...parcel, width: event.target.value })} placeholder="W" /></label><label><span>&nbsp;</span><input value={parcel.height} onChange={(event) => setParcel({ ...parcel, height: event.target.value })} placeholder="H" /></label><label><span>&nbsp;</span><input value={parcel.weight} onChange={(event) => setParcel({ ...parcel, weight: event.target.value })} placeholder="Weight" /></label></div></>}
+      {rates.length > 0 && !paymentLocked && <div className="shippingRateList">{rates.map((rate) => <label key={rate.id} className={selectedRate === rate.id ? 'active' : ''}><input type="radio" name={`shipping-rate-${order.id}`} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} /><span><b>{rate.carrier} · {rate.service}</b><small>{money(rate.amountCents, rate.currency)}{rate.estimatedDays ? ` · ${rate.estimatedDays} business days` : ''}</small></span></label>)}</div>}
+      {rateLocked && <div className="shippingTrackingBox"><span>SELECTED RATE</span><strong>{order.shipping_carrier || 'Carrier'} · {order.shipping_service || 'Standard'}</strong><strong>{money(order.shipping_rate_cents, order.shipping_currency || order.currency)}</strong><small>The shipping charge is added to the buyer total but is not part of the seller payout.</small></div>}
+      {error && <p className="shippingError">{error}</p>}
+      <div className="shippingToolsActions">
+        {!paymentLocked && <button type="button" className="marketSecondary" onClick={quote} disabled={busy !== ''}>{busy === 'quote' ? 'Getting carrier rates…' : rateLocked ? 'Refresh rates' : 'Compare shipping rates'}</button>}
+        {isBuyer && !paymentLocked && rates.length > 0 && <button type="button" className="button buttonGold" onClick={chooseRate} disabled={busy !== '' || !selectedRate}>{busy === 'select' ? 'Saving rate…' : 'Use selected rate'}</button>}
+        {isSeller && secured && rateLocked && <button type="button" className="button buttonGold" onClick={buyLabel} disabled={busy !== ''}>{busy === 'label' ? 'Buying label…' : `Buy ${order.shipping_carrier || 'carrier'} label`}</button>}
+      </div>
+    </div>
+  </details>;
 }
 
 export default function MarketOrdersPanel() {
@@ -251,7 +282,7 @@ export default function MarketOrdersPanel() {
     <section className="marketOrders" aria-label="Aspire campus marketplace orders">
       <header className="marketOrdersHead">
         <div><span>ASPIRE MARKET · ORDER PROTECTION</span><h2>Buy on campus without losing the transaction trail.</h2></div>
-        <p>Buyer payment, seller handoff, receipt confirmation, payout release, refund, and disputes stay attached to one order. Stripe processes payments; Aspire Protected is not described as legal escrow.</p>
+        <p>Buyer payment, fulfillment, receipt confirmation, payout release, refund, and disputes stay attached to one order. Stripe processes payments; Aspire Protected is not described as legal escrow.</p>
       </header>
 
       {notice && <div className="marketNotice" role="status">{notice}</div>}
@@ -280,25 +311,32 @@ export default function MarketOrdersPanel() {
           const handoffStage = Boolean(order.seller_handed_off_at);
           const receiptStage = Boolean(order.buyer_received_at);
           const releasedStage = order.status === 'released';
+          const isShipping = order.fulfillment_method === 'shipping';
+          const shippingReady = !isShipping || Boolean(order.shipping_rate_id && order.shipping_rate_cents);
+          const shippingHandoffReady = !isShipping || ['label_purchased','in_transit','delivered'].includes(order.shipping_status || '');
+          const shippingReceiptReady = !isShipping || order.shipping_status === 'delivered';
 
           return (
             <article className={`marketOrderCard status-${order.status}`} key={order.id}>
               <div className="marketOrderTop">
-                <div><span>{order.listing_intent === 'sell' ? 'FOR SALE' : 'WANTED'} · {request.campus || 'CAMPUS PICKUP'}</span><h3>{request.title}</h3><p>{isBuyer ? 'You are the buyer' : 'You are the seller'} · with {profileName(other)}</p></div>
+                <div><span>{order.listing_intent === 'sell' ? 'FOR SALE' : 'WANTED'} · {request.campus || 'CAMPUS'}</span><h3>{request.title}</h3><p>{isBuyer ? 'You are the buyer' : 'You are the seller'} · with {profileName(other)}</p></div>
                 <div className="marketOrderPrice"><strong>{money(order.agreed_amount_cents, order.currency)}</strong><small>{payWithAspire ? 'Aspire Protected' : 'Off-platform'}</small></div>
               </div>
 
               <div className={`marketOrderState ${order.status}`}><i>{order.status === 'disputed' ? '!' : order.status === 'released' ? '✓' : '○'}</i><div><strong>{state.label}</strong><p>{state.note}</p>{dispute && <small>Report: {disputeReasons.find((item) => item.value === dispute.reason)?.label || dispute.reason} · {dispute.status.replace('_', ' ')}</small>}</div></div>
 
-              {payWithAspire && quote && <div className="marketMoneySummary">{isBuyer ? <><div><span>Item</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div><div><span>Aspire service fee</span><strong>{money(quote.requesterFeeCents, order.currency)}</strong></div><div className="total"><span>You pay</span><strong>{money(buyerTotal, order.currency)}</strong></div></> : <><div><span>Sale price</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div><div><span>Aspire platform fee</span><strong>−{money(quote.providerFeeCents, order.currency)}</strong></div><div className="total"><span>You receive</span><strong>{money(sellerNet, order.currency)}</strong></div></>}</div>}
+              {payWithAspire && quote && <div className="marketMoneySummary">{isBuyer ? <><div><span>Item</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div>{isShipping && <div><span>Carrier shipping</span><strong>{shippingReady ? money(order.shipping_rate_cents, order.shipping_currency || order.currency) : 'Choose rate'}</strong></div>}<div><span>Aspire service fee</span><strong>{money(quote.requesterFeeCents, order.currency)}</strong></div><div className="total"><span>You pay</span><strong>{shippingReady ? money(buyerTotal, order.currency) : '—'}</strong></div></> : <><div><span>Sale price</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div><div><span>Aspire platform fee</span><strong>−{money(quote.providerFeeCents, order.currency)}</strong></div>{isShipping && <div><span>Shipping</span><strong>Paid separately by buyer</strong></div>}<div className="total"><span>You receive</span><strong>{money(sellerNet, order.currency)}</strong></div></>}</div>}
 
-              <div className="marketProgress" aria-label="Marketplace order progress"><span className="done"><i>1</i><b>Matched</b></span><span className={paidStage ? 'done' : order.status === 'payment_processing' ? 'current' : ''}><i>2</i><b>Paid</b></span><span className={handoffStage ? 'done' : paidStage ? 'current' : ''}><i>3</i><b>Handoff</b></span><span className={receiptStage ? 'done' : handoffStage ? 'current' : ''}><i>4</i><b>Received</b></span><span className={releasedStage ? 'done' : receiptStage ? 'current' : ''}><i>5</i><b>Released</b></span></div>
+              <div className="marketProgress" aria-label="Marketplace order progress"><span className="done"><i>1</i><b>Matched</b></span><span className={paidStage ? 'done' : order.status === 'payment_processing' ? 'current' : ''}><i>2</i><b>Paid</b></span><span className={handoffStage ? 'done' : paidStage ? 'current' : ''}><i>3</i><b>{isShipping ? 'Shipped' : 'Handoff'}</b></span><span className={receiptStage ? 'done' : handoffStage ? 'current' : ''}><i>4</i><b>Received</b></span><span className={releasedStage ? 'done' : receiptStage ? 'current' : ''}><i>5</i><b>Released</b></span></div>
 
               <div className="marketOrderActions">
-                {payWithAspire && isBuyer && ['awaiting_payment','payment_processing'].includes(order.status) && (!payment || ['not_started','failed','checkout_created'].includes(payment.status)) && <button className="button buttonGold" type="button" onClick={() => pay(order.connection_id)} disabled={busy === `pay-${order.connection_id}`}>{busy === `pay-${order.connection_id}` ? 'Opening Stripe…' : `Secure ${money(buyerTotal, order.currency)} →`}</button>}
+                {payWithAspire && isBuyer && ['awaiting_payment','payment_processing'].includes(order.status) && (!payment || ['not_started','failed','checkout_created'].includes(payment.status)) && shippingReady && <button className="button buttonGold" type="button" onClick={() => pay(order.connection_id)} disabled={busy === `pay-${order.connection_id}`}>{busy === `pay-${order.connection_id}` ? 'Opening Stripe…' : `Secure ${money(buyerTotal, order.currency)} →`}</button>}
+                {payWithAspire && isBuyer && !shippingReady && ['awaiting_payment','payment_processing'].includes(order.status) && <span className="marketWaiting">Choose and lock a carrier shipping rate below before payment.</span>}
                 {payWithAspire && isSeller && !secured && <span className="marketWaiting">Waiting for buyer payment. Make sure payouts are ready in <a href="/profile">Profile</a>.</span>}
-                {payWithAspire && isSeller && order.status === 'paid' && !order.seller_handed_off_at && <button className="button buttonGold" type="button" onClick={() => handoff(order.connection_id)} disabled={busy === `handoff-${order.connection_id}`}>I handed over the item ✓</button>}
-                {payWithAspire && isBuyer && order.status === 'handoff_confirmed' && !order.buyer_received_at && <button className="button buttonGold" type="button" onClick={() => confirmReceipt(order.connection_id)} disabled={busy === `receipt-${order.connection_id}`}>Item received — release seller payout ✓</button>}
+                {payWithAspire && isSeller && order.status === 'paid' && !order.seller_handed_off_at && shippingHandoffReady && <button className="button buttonGold" type="button" onClick={() => handoff(order.connection_id)} disabled={busy === `handoff-${order.connection_id}`}>{isShipping ? 'Package shipped ✓' : 'I handed over the item ✓'}</button>}
+                {payWithAspire && isSeller && order.status === 'paid' && !shippingHandoffReady && <span className="marketWaiting">Purchase the buyer-selected shipping label below before marking the package shipped.</span>}
+                {payWithAspire && isBuyer && order.status === 'handoff_confirmed' && !order.buyer_received_at && shippingReceiptReady && <button className="button buttonGold" type="button" onClick={() => confirmReceipt(order.connection_id)} disabled={busy === `receipt-${order.connection_id}`}>Item received — release seller payout ✓</button>}
+                {payWithAspire && isBuyer && order.status === 'handoff_confirmed' && !shippingReceiptReady && <span className="marketWaiting">Waiting for carrier delivery before receipt confirmation.</span>}
                 {payWithAspire && order.status === 'release_ready' && <button className="button buttonGold" type="button" onClick={() => retryRelease(order.connection_id)} disabled={busy === `release-${order.connection_id}`}>Release seller payout →</button>}
                 {payWithAspire && secured && !order.seller_handed_off_at && !['disputed','released','refunded'].includes(order.status) && <button className="marketSecondary" type="button" onClick={() => refund(order.connection_id)} disabled={busy === `refund-${order.connection_id}`}>Cancel + refund</button>}
                 {canDispute && <button className="marketDanger" type="button" onClick={() => setDisputeFor(disputeFor === order.connection_id ? null : order.connection_id)}>Report a problem</button>}
@@ -306,11 +344,11 @@ export default function MarketOrdersPanel() {
                 {order.status === 'refunded' && <span className="marketComplete">Buyer refunded ✓</span>}
               </div>
 
-              {order.fulfillment_method === 'shipping' && <ShippingOrderTools order={order} isSeller={isSeller} secured={secured} onDone={() => void reload(true)} />}
+              {isShipping && <ShippingOrderTools order={order} isBuyer={isBuyer} isSeller={isSeller} secured={secured} onDone={() => void reload(true)} />}
 
               {disputeFor === order.connection_id && canDispute && <div className="marketDisputeComposer"><div><span>PAUSE PAYOUT + REPORT</span><strong>What went wrong?</strong></div><select value={disputeReason} onChange={(event) => setDisputeReason(event.target.value as MarketDispute['reason'])}>{disputeReasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><textarea rows={3} value={disputeDetails} onChange={(event) => setDisputeDetails(event.target.value)} placeholder="Describe the item, handoff, payment, or safety issue. Keep the details factual." maxLength={2000} /><div><button type="button" className="marketSecondary" onClick={() => setDisputeFor(null)}>Never mind</button><button type="button" className="marketDanger solid" onClick={() => submitDispute(order.connection_id)} disabled={busy === `dispute-${order.connection_id}`}>Submit report + pause payout</button></div></div>}
 
-              <footer className="marketOrderFinePrint"><span>{order.fulfillment_method === 'shipping' ? `FedEx shipping · ${order.shipping_status || 'not started'}` : 'Campus pickup'} · {request.item_condition ? request.item_condition.replace('_', ' ') : 'condition not listed'}{request.price_negotiable ? ' · price was negotiable' : ''}</span><span>Order #{order.id.slice(0, 8)}</span></footer>
+              <footer className="marketOrderFinePrint"><span>{isShipping ? `${order.shipping_carrier || 'Carrier'} shipping · ${(order.shipping_status || 'not started').replaceAll('_', ' ')}` : order.fulfillment_method === 'aspirer_delivery' ? 'Aspirer delivery' : 'Campus pickup'} · {request.item_condition ? request.item_condition.replace('_', ' ') : 'condition not listed'}{request.price_negotiable ? ' · price was negotiable' : ''}</span><span>Order #{order.id.slice(0, 8)}</span></footer>
             </article>
           );
         })}
