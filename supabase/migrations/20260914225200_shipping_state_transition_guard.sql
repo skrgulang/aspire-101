@@ -14,7 +14,8 @@ begin
   if old.shipping_status is not distinct from new.shipping_status then
     return new;
   end if;
-  if old.fulfillment_method <> 'shipping' and new.fulfillment_method <> 'shipping' then
+  if old.fulfillment_method is distinct from 'shipping'
+     and new.fulfillment_method is distinct from 'shipping' then
     return new;
   end if;
 
@@ -27,13 +28,14 @@ begin
   end if;
 
   -- Once the carrier has physically moved the package, stale pre-transit events must not
-  -- recreate quote/label states. Exception may recover to in_transit or delivered.
+  -- recreate quote/label states. Exception may recover only to in_transit or delivered;
+  -- it must never downgrade to label_failed because that could invite a duplicate label buy.
   if old.shipping_status = 'in_transit'
      and new.shipping_status in ('not_started','rates_ready','label_purchasing','label_failed','label_purchased') then
     raise exception 'SHIPPING_STATUS_CANNOT_MOVE_BACKWARD';
   end if;
   if old.shipping_status = 'exception'
-     and new.shipping_status in ('not_started','rates_ready','label_purchasing','label_purchased') then
+     and new.shipping_status in ('not_started','rates_ready','label_purchasing','label_failed','label_purchased') then
     raise exception 'SHIPPING_STATUS_CANNOT_MOVE_BACKWARD';
   end if;
 
