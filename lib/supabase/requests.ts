@@ -17,7 +17,7 @@ export type RequestKind =
 
 export type MarketIntent = 'sell' | 'wanted';
 export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair' | 'for_parts';
-export type FulfillmentMethod = 'campus_pickup' | 'shipping';
+export type FulfillmentMethod = 'campus_pickup' | 'shipping' | 'aspirer_delivery';
 export type RequestModerationStatus = 'pending' | 'approved' | 'rejected' | 'blocked';
 export type AiModerationStatus = 'not_scanned' | 'scanning' | 'complete' | 'error';
 export type AiRiskLevel = 'unknown' | 'low' | 'medium' | 'high' | 'critical';

@@ -48,6 +48,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The seller already marked handoff. Open a problem report instead of using instant cancellation.', code: 'HANDOFF_ALREADY_STARTED' }, { status: 409 });
     }
 
+    const shippingStatus = String(order.shipping_status || '');
+    const shippingCommitted = order.fulfillment_method === 'shipping'
+      && (
+        ['label_purchasing', 'label_purchased', 'in_transit', 'delivered', 'exception'].includes(shippingStatus)
+        || Boolean(order.shipping_transaction_id || order.shipping_label_url || order.shipping_tracking_number)
+      );
+    if (shippingCommitted) {
+      return NextResponse.json({
+        error: shippingStatus === 'label_purchasing'
+          ? 'A carrier label purchase is already in progress. Use Report a problem / Resolution Center so the shipping charge and protected payment can be reconciled safely.'
+          : 'A carrier label has already been purchased or shipping has started for this order. Use Report a problem / Resolution Center so the shipping cost and protected payment can be reconciled together instead of issuing an instant refund.',
+        code: 'SHIPPING_REFUND_REQUIRES_RESOLUTION'
+      }, { status: 409 });
+    }
+
     if (!payment || payment.status !== 'secured' || !payment.stripe_payment_intent_id) {
       return NextResponse.json({ error: 'There is no secured Aspire payment to refund.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
     }
@@ -66,6 +81,12 @@ export async function POST(request: Request) {
       }
       if (/RESOLUTION_CASE_OPEN|MARKET_DISPUTE_OPEN/i.test(claimText)) {
         return NextResponse.json({ error: 'This order already has an open review. Resolve that case instead of using instant cancellation.', code: 'ORDER_UNDER_REVIEW' }, { status: 409 });
+      }
+      if (/SHIPPING_REFUND_REQUIRES_RESOLUTION|REFUND_IN_PROGRESS/i.test(claimText)) {
+        return NextResponse.json({
+          error: 'Shipping or refund reconciliation is already in progress for this order. Open Report a problem / Resolution Center instead of starting another instant refund.',
+          code: 'SHIPPING_REFUND_REQUIRES_RESOLUTION'
+        }, { status: 409 });
       }
       throw claimError;
     }

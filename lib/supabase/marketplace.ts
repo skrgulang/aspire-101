@@ -12,6 +12,16 @@ export type MarketOrderStatus =
   | 'cancelled'
   | 'off_platform';
 
+export type ShippingRate = {
+  id: string;
+  carrier: string;
+  service: string;
+  amountCents: number;
+  currency: string;
+  estimatedDays: number | null;
+  durationTerms: string | null;
+};
+
 export type MarketOrder = {
   id: string;
   connection_id: string;
@@ -20,7 +30,7 @@ export type MarketOrder = {
   seller_id: string;
   payment_id: string | null;
   listing_intent: 'sell' | 'wanted';
-  fulfillment_method: 'campus_pickup' | 'shipping';
+  fulfillment_method: 'campus_pickup' | 'shipping' | 'aspirer_delivery';
   currency: string;
   agreed_amount_cents: number;
   status: MarketOrderStatus;
@@ -39,6 +49,11 @@ export type MarketOrder = {
   shipping_rate_id?: string | null;
   shipping_rate_cents?: number | null;
   shipping_currency?: string | null;
+  shipping_rate_options?: ShippingRate[] | null;
+  shipping_from_address_id?: string | null;
+  shipping_to_address_id?: string | null;
+  shipping_from_address_ready_at?: string | null;
+  shipping_to_address_ready_at?: string | null;
   shipping_transaction_id?: string | null;
   shipping_label_url?: string | null;
   shipping_tracking_number?: string | null;
@@ -61,16 +76,6 @@ export type ShippingAddress = {
 
 export type ShippingParcel = { length: string; width: string; height: string; weight: string };
 
-export type ShippingRate = {
-  id: string;
-  carrier: string;
-  service: string;
-  amountCents: number;
-  currency: string;
-  estimatedDays: number | null;
-  durationTerms: string | null;
-};
-
 export type MarketDispute = {
   id: string;
   market_order_id: string;
@@ -89,6 +94,12 @@ async function bearerHeaders() {
   const token = data.session?.access_token;
   if (!token) throw new Error('Sign in again to continue.');
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+function responseError(payload: any, fallback: string) {
+  const error = new Error(payload?.error || fallback) as Error & { code?: string };
+  error.code = payload?.code;
+  return error;
 }
 
 export async function fetchMarketOrders(connectionIds: string[]) {
@@ -148,26 +159,38 @@ export async function requestMarketRefund(connectionId: string) {
     body: JSON.stringify({ connectionId })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload?.error || 'Could not refund this marketplace order.') as Error & { code?: string };
-    error.code = payload?.code;
-    throw error;
-  }
+  if (!response.ok) throw responseError(payload, 'Could not refund this marketplace order.');
   return payload as { status: 'refunded'; refundId: string };
 }
 
-export async function getShippingRates(orderId: string, addressFrom: ShippingAddress, addressTo: ShippingAddress, parcel: ShippingParcel) {
+export async function saveShippingAddress(orderId: string, role: 'from' | 'to', address: ShippingAddress) {
   const headers = await bearerHeaders();
-  const response = await fetch('/api/shipping/rates', { method: 'POST', headers, body: JSON.stringify({ orderId, addressFrom, addressTo, parcel }) });
+  const response = await fetch('/api/shipping/address', { method: 'POST', headers, body: JSON.stringify({ orderId, role, address }) });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error || 'Could not calculate shipping rates.');
+  if (!response.ok) throw responseError(payload, 'Could not save the shipping address.');
+  return payload as { role: 'from' | 'to'; ready: true; fromReady: boolean; toReady: boolean };
+}
+
+export async function getShippingRates(orderId: string, parcel: ShippingParcel) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/shipping/rates', { method: 'POST', headers, body: JSON.stringify({ orderId, parcel }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw responseError(payload, 'Could not calculate shipping rates.');
   return payload as { shipmentId: string; rates: ShippingRate[] };
+}
+
+export async function selectShippingRate(orderId: string, rateId: string) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/shipping/select', { method: 'POST', headers, body: JSON.stringify({ orderId, rateId }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw responseError(payload, 'Could not choose that shipping rate.');
+  return payload as { rateId: string; amountCents: number; currency: string; carrier: string; service: string; status: string };
 }
 
 export async function purchaseShippingLabel(orderId: string, rateId: string) {
   const headers = await bearerHeaders();
   const response = await fetch('/api/shipping/label', { method: 'POST', headers, body: JSON.stringify({ orderId, rateId }) });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error || 'Could not purchase the shipping label.');
+  if (!response.ok) throw responseError(payload, 'Could not purchase the shipping label.');
   return payload as { status: string; transactionId: string | null; labelUrl: string; trackingNumber: string; trackingUrl: string | null; duplicate?: boolean };
 }

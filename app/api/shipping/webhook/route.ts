@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
 import { normalizeShippingStatus } from '../../../../lib/server/shippo';
 
+const supportedTrackingStatuses = new Set([
+  'PRE_TRANSIT',
+  'UNKNOWN',
+  'TRANSIT',
+  'OUT_FOR_DELIVERY',
+  'AVAILABLE_FOR_PICKUP',
+  'DELIVERED',
+  'FAILURE',
+  'RETURNED',
+  'ERROR'
+]);
+
 function webhookAuthorized(request: Request) {
   const token = process.env.SHIPPO_WEBHOOK_TOKEN;
   if (!token) return false;
@@ -18,32 +30,159 @@ function metadataOrderId(value: unknown) {
   } catch { return ''; }
 }
 
+function shouldApplyShippingStatus(current: string | null | undefined, next: string) {
+  const previous = current || 'not_started';
+  if (previous === next) return false;
+  if (previous === 'cancelled') return false;
+
+  // Carrier webhooks can arrive out of order. A stale pre-transit scan must never move a
+  // package backwards after real carrier movement, and a delivered package is terminal.
+  if (previous === 'delivered') return false;
+  if (previous === 'in_transit' && next === 'label_purchased') return false;
+  if (previous === 'exception' && next === 'label_purchased') return false;
+
+  // Exception is intentionally recoverable: carriers can resume transit after a temporary
+  // delay/exception, so exception -> in_transit/delivered is allowed.
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
     if (!webhookAuthorized(request)) return NextResponse.json({ error: 'Invalid webhook token.' }, { status: 401 });
     const payload = await request.json().catch(() => ({}));
     const data = payload?.data || payload;
     const tracking = data?.tracking_status || data?.trackingStatus || {};
-    const statusValue = tracking?.status || data?.status;
+    const rawStatus = String(tracking?.status || data?.status || '').trim().toUpperCase();
     const orderId = metadataOrderId(data?.metadata) || metadataOrderId(payload?.metadata);
-    const trackingNumber = typeof data?.tracking_number === 'string' ? data.tracking_number : '';
+    const trackingNumber = typeof data?.tracking_number === 'string' ? data.tracking_number.trim() : '';
     if (!orderId && !trackingNumber) return NextResponse.json({ received: true, ignored: true });
 
+    // Do not let a malformed or newly introduced carrier status fall through to
+    // `label_purchased`. Unknown webhook shapes are acknowledged but ignored until Aspire
+    // explicitly understands their lifecycle meaning.
+    if (!rawStatus || !supportedTrackingStatuses.has(rawStatus)) {
+      return NextResponse.json({ received: true, ignored: true, reason: 'unsupported_tracking_status' });
+    }
+
     const supabase = getSupabaseServiceClient();
-    let query = supabase.from('market_orders').select('id,shipping_status').limit(1);
+    let query = supabase
+      .from('market_orders')
+      .select('id,status,fulfillment_method,shipping_status,shipping_tracking_number,seller_handed_off_at,buyer_received_at')
+      .limit(1);
     if (orderId) query = query.eq('id', orderId);
     else query = query.eq('shipping_tracking_number', trackingNumber);
     const { data: order, error } = await query.maybeSingle();
     if (error) throw error;
     if (!order) return NextResponse.json({ received: true, ignored: true });
+    if (order.fulfillment_method !== 'shipping') return NextResponse.json({ received: true, ignored: true });
 
-    const nextStatus = normalizeShippingStatus(statusValue);
-    const now = new Date().toISOString();
-    if (order.shipping_status !== nextStatus) {
-      const { error: updateError } = await supabase.from('market_orders').update({ shipping_status: nextStatus, shipping_last_event_at: now, updated_at: now }).eq('id', order.id);
-      if (updateError) throw updateError;
-      await supabase.from('market_order_events').insert({ market_order_id: order.id, actor_id: null, event_type: 'shipping_status_changed', payload: { status: nextStatus, tracking_number: trackingNumber || null } });
+    // Once Aspire has bound a label to a tracking number, a webhook carrying a different
+    // number must never overwrite or advance that order. Record the mismatch for support.
+    if (order.shipping_tracking_number && trackingNumber && order.shipping_tracking_number !== trackingNumber) {
+      await supabase.from('market_order_events').insert({
+        market_order_id: order.id,
+        actor_id: null,
+        event_type: 'shipping_tracking_mismatch_ignored',
+        payload: {
+          expected_tracking_number: order.shipping_tracking_number,
+          incoming_tracking_number: trackingNumber,
+          raw_status: rawStatus
+        }
+      });
+      return NextResponse.json({ received: true, ignored: true, reason: 'tracking_number_mismatch' });
     }
+
+    // A refunded/cancelled order is financially closed. Keep carrier noise from mutating
+    // fulfillment state or generating misleading post-close notifications.
+    if (['refunded', 'cancelled'].includes(order.status)) {
+      await supabase.from('market_order_events').insert({
+        market_order_id: order.id,
+        actor_id: null,
+        event_type: 'shipping_update_after_closed_order_ignored',
+        payload: {
+          order_status: order.status,
+          raw_status: rawStatus,
+          tracking_number: trackingNumber || order.shipping_tracking_number || null
+        }
+      });
+      return NextResponse.json({ received: true, ignored: true, reason: 'order_financially_closed' });
+    }
+
+    const nextStatus = normalizeShippingStatus(rawStatus);
+    const now = new Date().toISOString();
+    const applyStatus = shouldApplyShippingStatus(order.shipping_status, nextStatus);
+
+    if (applyStatus || (trackingNumber && !order.shipping_tracking_number)) {
+      const update: Record<string, unknown> = {
+        shipping_tracking_number: order.shipping_tracking_number || trackingNumber || null,
+        shipping_last_event_at: now,
+        updated_at: now
+      };
+      if (applyStatus) update.shipping_status = nextStatus;
+
+      const { error: updateError } = await supabase.from('market_orders').update(update).eq('id', order.id);
+      if (updateError) throw updateError;
+
+      if (applyStatus) {
+        await supabase.from('market_order_events').insert({
+          market_order_id: order.id,
+          actor_id: null,
+          event_type: 'shipping_status_changed',
+          payload: {
+            status: nextStatus,
+            raw_status: rawStatus,
+            tracking_number: trackingNumber || order.shipping_tracking_number || null
+          }
+        });
+      }
+    } else if ((order.shipping_status || 'not_started') !== nextStatus) {
+      await supabase.from('market_order_events').insert({
+        market_order_id: order.id,
+        actor_id: null,
+        event_type: 'shipping_status_regression_ignored',
+        payload: {
+          current_status: order.shipping_status || 'not_started',
+          incoming_status: nextStatus,
+          raw_status: rawStatus,
+          tracking_number: trackingNumber || order.shipping_tracking_number || null
+        }
+      });
+    }
+
+    // Carrier movement is authoritative evidence that the seller handed the package to
+    // the carrier. Use the effective (non-regressed) shipping state so an out-of-order
+    // webhook can never manufacture a lifecycle transition from stale data.
+    const effectiveShippingStatus = applyStatus ? nextStatus : (order.shipping_status || nextStatus);
+    if (
+      !order.seller_handed_off_at
+      && order.status === 'paid'
+      && ['in_transit', 'delivered'].includes(effectiveShippingStatus)
+    ) {
+      const { data: advanced, error: handoffError } = await supabase.from('market_orders').update({
+        seller_handed_off_at: now,
+        status: order.buyer_received_at ? 'release_ready' : 'handoff_confirmed',
+        updated_at: now
+      })
+        .eq('id', order.id)
+        .eq('status', 'paid')
+        .is('seller_handed_off_at', null)
+        .select('id')
+        .maybeSingle();
+      if (handoffError) throw handoffError;
+      if (advanced) {
+        await supabase.from('market_order_events').insert({
+          market_order_id: order.id,
+          actor_id: null,
+          event_type: 'carrier_handoff_confirmed',
+          payload: {
+            shipping_status: effectiveShippingStatus,
+            raw_status: rawStatus,
+            tracking_number: trackingNumber || order.shipping_tracking_number || null
+          }
+        });
+      }
+    }
+
     return NextResponse.json({ received: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Webhook failed.';
