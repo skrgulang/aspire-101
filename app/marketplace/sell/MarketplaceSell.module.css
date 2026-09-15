@@ -12,11 +12,17 @@
 .textarea { min-height: 110px; resize: vertical; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .fulfillment { display: grid; gap: 9px; }
-.option { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; border: 1px solid #dce1e7; border-radius: 15px; padding: 13px; cursor: pointer; background: white; }
+.option { display: grid; grid-template-columns: 24px 1fr; gap: 10px; align-items: start; border: 1px solid #dce1e7; border-radius: 15px; padding: 13px; cursor: pointer; background: white; transition: border-color .16s ease, background .16s ease, box-shadow .16s ease; }
+.option:hover { border-color: #c9d0d9; background: #fbfcfd; }
 .optionActive { border-color: #ffc400; background: #fffdf4; box-shadow: inset 0 0 0 1px #ffc400; }
 .option input { margin-top: 4px; accent-color: #c89b00; }
 .option strong { display: block; margin-bottom: 3px; }
 .option small { color: #687385; line-height: 1.4; }
+.presetRow { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 1px; }
+.presetRow button { border: 1px solid #d8dde5; border-radius: 999px; padding: 7px 10px; background: white; color: #475467; font: inherit; font-size: 12px; font-weight: 850; cursor: pointer; }
+.presetRow button:hover { border-color: #d2a300; background: #fffaf0; color: #6f5500; }
+.reachNote { display: grid; gap: 3px; padding: 12px 13px; border: 1px solid #dce8f4; border-radius: 13px; background: #f5f9fd; color: #526071; font-size: 12px; line-height: 1.5; }
+.reachNote strong { color: #1f3f65; font-size: 13px; }
 .check { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; color: #475467; }
 .check input { margin-top: 3px; accent-color: #c89b00; }
 .photos { display: grid; gap: 9px; }
@@ -35,4 +41,4 @@
 .primary { background: #ffc400; color: #17130a; }
 .secondary { background: #eef1f4; color: #1f2937; }
 .primary:disabled { opacity: .5; cursor: not-allowed; }
-@media (max-width: 620px) { .page { padding: 16px 12px 100px; } .hero,.card { border-radius: 18px; padding: 18px; } .two { grid-template-columns: 1fr; } .previews { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 620px) { .page { padding: 16px 12px 100px; } .hero,.card { border-radius: 18px; padding: 18px; } .two { grid-template-columns: 1fr; } .previews { grid-template-columns: repeat(3, 1fr); } .presetRow { gap: 6px; } .presetRow button { flex: 1 1 30%; min-width: 110px; } }
