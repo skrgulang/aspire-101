@@ -12,6 +12,16 @@ export type MarketOrderStatus =
   | 'cancelled'
   | 'off_platform';
 
+export type ShippingRate = {
+  id: string;
+  carrier: string;
+  service: string;
+  amountCents: number;
+  currency: string;
+  estimatedDays: number | null;
+  durationTerms: string | null;
+};
+
 export type MarketOrder = {
   id: string;
   connection_id: string;
@@ -39,6 +49,11 @@ export type MarketOrder = {
   shipping_rate_id?: string | null;
   shipping_rate_cents?: number | null;
   shipping_currency?: string | null;
+  shipping_rate_options?: ShippingRate[] | null;
+  shipping_from_address_id?: string | null;
+  shipping_to_address_id?: string | null;
+  shipping_from_address_ready_at?: string | null;
+  shipping_to_address_ready_at?: string | null;
   shipping_transaction_id?: string | null;
   shipping_label_url?: string | null;
   shipping_tracking_number?: string | null;
@@ -60,16 +75,6 @@ export type ShippingAddress = {
 };
 
 export type ShippingParcel = { length: string; width: string; height: string; weight: string };
-
-export type ShippingRate = {
-  id: string;
-  carrier: string;
-  service: string;
-  amountCents: number;
-  currency: string;
-  estimatedDays: number | null;
-  durationTerms: string | null;
-};
 
 export type MarketDispute = {
   id: string;
@@ -158,9 +163,17 @@ export async function requestMarketRefund(connectionId: string) {
   return payload as { status: 'refunded'; refundId: string };
 }
 
-export async function getShippingRates(orderId: string, addressFrom: ShippingAddress, addressTo: ShippingAddress, parcel: ShippingParcel) {
+export async function saveShippingAddress(orderId: string, role: 'from' | 'to', address: ShippingAddress) {
   const headers = await bearerHeaders();
-  const response = await fetch('/api/shipping/rates', { method: 'POST', headers, body: JSON.stringify({ orderId, addressFrom, addressTo, parcel }) });
+  const response = await fetch('/api/shipping/address', { method: 'POST', headers, body: JSON.stringify({ orderId, role, address }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw responseError(payload, 'Could not save the shipping address.');
+  return payload as { role: 'from' | 'to'; ready: true; fromReady: boolean; toReady: boolean };
+}
+
+export async function getShippingRates(orderId: string, parcel: ShippingParcel) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/shipping/rates', { method: 'POST', headers, body: JSON.stringify({ orderId, parcel }) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw responseError(payload, 'Could not calculate shipping rates.');
   return payload as { shipmentId: string; rates: ShippingRate[] };
