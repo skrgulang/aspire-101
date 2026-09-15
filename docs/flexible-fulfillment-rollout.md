@@ -28,10 +28,12 @@ Critical Flexible Fulfillment sequence:
 18. `20260914225500_delivery_open_cancel_integrity.sql`
 19. `20260914226000_delivery_closeout_integrity.sql`
 20. `20260914227000_delivery_status_transition_guard.sql`
+21. `20260914228000_serialize_shipping_label_and_refund.sql`
+22. `20260914228100_guard_label_claim_against_refund.sql`
 
-Verify migration version uniqueness before running anything. The shipping notification transition and shipping state guard deliberately use different versions (`14225000` and `14225200`), delivery cancellation integrity comes after them at `14225500`, and the final closeout/lifecycle guards are `14226000` and `14227000`.
+Verify migration version uniqueness before running anything. The shipping notification transition and shipping state guard deliberately use different versions (`14225000` and `14225200`), delivery cancellation integrity comes after them at `14225500`, the final closeout/lifecycle guards are `14226000` and `14227000`, and shipping refund/label serialization is finalized by `14228000` + `14228100`.
 
-Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must require the Aspirer proof-backed confirmation plus the receiver/requester confirmation and must not release money; shipping terms must lock after checkout starts; shipping lifecycle must not move backward; delivery lifecycle must not skip or regress protected states; pre-match cancellation must not race through a newly matched request; and the final negotiation functions must use delivery-job-first locking.
+Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must require the Aspirer proof-backed confirmation plus the receiver/requester confirmation and must not release money; shipping terms must lock after checkout starts; shipping lifecycle must not move backward; delivery lifecycle must not skip or regress protected states; pre-match cancellation must not race through a newly matched request; refund and Shippo label claims must serialize on the protected payment; and the final negotiation functions must use delivery-job-first locking.
 
 ## 2. Aspirer Delivery test matrix
 
@@ -77,6 +79,8 @@ Use Shippo test mode in preview.
 
 - Before label purchase and before handoff, an eligible secured marketplace payment may use the instant-refund path.
 - Once a shipping label/transaction/tracking exists, do not use instant refund; route to Resolution Center reconciliation.
+- Refund-vs-label race: start instant refund and seller label purchase concurrently. Exactly one claim may win. If refund wins, `label_purchasing` must be rejected before Shippo is called; if label purchase wins, refund claim must fail with shipping reconciliation required. Never allow a Stripe refund and a new Shippo label charge for the same secured state.
+- A surviving `refund_claimed_at` is fail-closed for label purchase even after five minutes; it must be reconciled rather than aged out by the shipping flow.
 - Full marketplace refund uses the shipping-inclusive protected customer total.
 - Seller payout transfers provider net only; carrier shipping is not added to seller payout.
 - Open dispute/resolution/refund claims must serialize against payout release.
@@ -109,6 +113,8 @@ Before PR #91 can leave Draft:
 
 - Never compensate for a post-payment rate change by silently changing the protected total.
 - Never retry an uncertain Shippo label purchase automatically.
+- Never start a new Shippo label purchase while any refund claim remains unresolved.
+- Never instant-refund a shipping order once label purchase has started or any carrier transaction/label/tracking evidence exists.
 - Never auto-release a paid Aspirer reward solely because a delivery confirmation code succeeded.
 - Never mark a delivery completed unless both proof-backed participant confirmations exist.
 - Never skip or regress Aspirer Delivery lifecycle states through a direct table/service-role write.
