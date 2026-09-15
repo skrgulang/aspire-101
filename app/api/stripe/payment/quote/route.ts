@@ -21,6 +21,8 @@ type FeeQuote = {
   standard_payout_cadence: string;
 };
 
+const ASPIRER_DELIVERY_MINIMUM_CENTS = 500;
+
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServiceClient();
     const { data: connection } = await supabase
       .from('connections')
-      .select('id,request_id,requester_id,responder_id,agreed_amount_cents,payment_method,status')
+      .select('id,request_id,requester_id,responder_id,agreed_amount_cents,payment_method,status,agreed_terms')
       .eq('id', connectionId)
       .maybeSingle();
 
@@ -60,6 +62,11 @@ export async function POST(request: Request) {
     if (quoteError) throw quoteError;
     const quote = (quoteRows?.[0] || null) as FeeQuote | null;
     if (!quote) return NextResponse.json({ error: 'Aspire fee policy is unavailable.' }, { status: 503 });
+
+    const isAspirerDelivery = String(connection.agreed_terms?.source || '') === 'aspirer_delivery';
+    const minimumPaidOrderCents = isAspirerDelivery
+      ? Math.min(quote.minimum_paid_order_cents, ASPIRER_DELIVERY_MINIMUM_CENTS)
+      : quote.minimum_paid_order_cents;
 
     let shippingReady = true;
     let shippingAmountCents = 0;
@@ -102,13 +109,14 @@ export async function POST(request: Request) {
       customerTotalCents: quote.customer_total_cents + (shippingReady ? shippingAmountCents : 0),
       providerNetCents: quote.provider_net_cents,
       platformFeeRevenueCents: quote.platform_fee_revenue_cents,
-      minimumPaidOrderCents: quote.minimum_paid_order_cents,
+      minimumPaidOrderCents,
       standardPayoutCadence: quote.standard_payout_cadence,
       shippingReady,
       shippingAmountCents: shippingReady ? shippingAmountCents : 0,
       shippingCarrier,
       shippingService,
       shippingRateId,
+      transactionType: isAspirerDelivery ? 'aspirer_delivery' : aspireRequest.kind === 'buy_sell' ? 'marketplace' : 'connection',
       requester: {
         percentBps: quote.requester_fee_percent_bps,
         fixedCents: quote.requester_fee_fixed_cents,
