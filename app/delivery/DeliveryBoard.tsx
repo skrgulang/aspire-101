@@ -22,7 +22,7 @@ import {
   type DeliveryOffer,
   type DeliveryStatus
 } from '../../lib/supabase/delivery';
-import { releaseAspirePayment } from '../../lib/supabase/payments';
+import { fetchConnectionPayments, releaseAspirePayment } from '../../lib/supabase/payments';
 import type { DeliveryRewardMode } from '../../lib/supabase/marketplacePurchase';
 import styles from './DeliveryBoard.module.css';
 
@@ -61,6 +61,8 @@ const STATUS_ORDER: DeliveryStatus[] = [
   'completed'
 ];
 
+const MIN_PAID_DELIVERY_REWARD_CENTS = 500;
+
 function money(cents: number) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
@@ -86,6 +88,7 @@ function friendlyError(error: unknown) {
   if (/COMPLETION_NOT_READY/i.test(message)) return 'Both delivery completion confirmations are required before releasing the reward.';
   if (/RESOLUTION_CASE_OPEN|PAYOUT_HOLD_OPEN/i.test(message)) return 'The reward payout is paused while an Aspire Resolution Center case or payment hold is open.';
   if (/DELIVERY_PAYMENT_NOT_SECURED/i.test(message)) return 'The paid delivery reward must be secured through Aspire before pickup can begin.';
+  if (/delivery_(jobs|offers)_reward_minimum_check|DELIVERY_REWARD_BELOW_MINIMUM/i.test(message)) return 'Paid Aspirer rewards must be at least $5. Choose Free / Volunteer for a $0 delivery.';
   if (/CANNOT_SELF_DELIVER/i.test(message)) return 'The buyer, seller, or requester cannot claim their own Aspirer delivery reward.';
   if (/ACCOUNT_RESTRICTED/i.test(message)) return 'This account is currently restricted from new Aspire interactions.';
   if (/CONTENT_POLICY_BLOCKED/i.test(message)) return 'This delivery request contains something Aspire cannot allow. Edit the request and try again.';
@@ -125,7 +128,9 @@ function needsAction(job: DeliveryJob, offers: DeliveryOffer[], userId: string |
   const isPickupParty = job.pickup_party_id === userId;
   const isDropoffParty = job.dropoff_party_id === userId;
   const isMatchedAspirer = job.matched_aspirer_id === userId;
+  const requesterCounterForMe = offers.some((offer) => offer.aspirer_id === userId && offer.status === 'countered' && offer.last_actor_id === job.requester_id);
   if (isRequester && job.status === 'offer_received' && offers.some((offer) => ['pending', 'countered'].includes(offer.status) && offer.last_actor_id !== userId)) return true;
+  if (job.status === 'offer_received' && requesterCounterForMe) return true;
   if (isMatchedAspirer && ['matched', 'heading_to_pickup', 'picked_up', 'on_the_way'].includes(job.status)) return true;
   if (isPickupParty && ['matched', 'heading_to_pickup'].includes(job.status)) return true;
   if (isDropoffParty && ['picked_up', 'on_the_way', 'delivered'].includes(job.status)) return true;
@@ -139,7 +144,9 @@ function nextActionText(job: DeliveryJob, offers: DeliveryOffer[], userId: strin
   const isPickupParty = job.pickup_party_id === userId;
   const isDropoffParty = job.dropoff_party_id === userId;
   const isMatchedAspirer = job.matched_aspirer_id === userId;
+  const requesterCounterForMe = offers.find((offer) => offer.aspirer_id === userId && offer.status === 'countered' && offer.last_actor_id === job.requester_id);
   if (isRequester && job.status === 'offer_received' && offers.some((offer) => ['pending', 'countered'].includes(offer.status) && offer.last_actor_id !== userId)) return 'Review the latest offer — accept it or send a counter.';
+  if (job.status === 'offer_received' && requesterCounterForMe) return `Requester countered at ${money(requesterCounterForMe.amount_cents)} — accept it or update your offer.`;
   if (isPickupParty && ['matched', 'heading_to_pickup'].includes(job.status)) return 'When the item is handed over, show the Aspirer the one-time pickup code.';
   if (isMatchedAspirer && job.status === 'matched') return 'Start heading to pickup after the paid reward is secured, if applicable.';
   if (isMatchedAspirer && job.status === 'heading_to_pickup') return 'At pickup, enter the 4-digit code from the pickup party.';
@@ -206,15 +213,11 @@ export default function DeliveryBoard() {
         setPaymentStatusByConnection({});
         return;
       }
-      const supabase = getSupabaseBrowserClient();
-      const { data: payments, error: paymentError } = await supabase
-        .from('connection_payments')
-        .select('connection_id,status')
-        .in('connection_id', connectionIds);
-      if (paymentError) {
+      try {
+        const payments = await fetchConnectionPayments(connectionIds);
+        setPaymentStatusByConnection(Object.fromEntries(payments.map((payment) => [payment.connection_id, payment.status])));
+      } catch {
         setPaymentStatusByConnection({});
-      } else {
-        setPaymentStatusByConnection(Object.fromEntries((payments || []).map((payment) => [payment.connection_id, payment.status])));
       }
     } catch (error) {
       setNotice(friendlyError(error));
@@ -306,6 +309,7 @@ export default function DeliveryBoard() {
     else if (needsAction(job, offersByJob.get(job.id) || [], userId)) setBoardView('needs_action');
     else if (job.requester_id === userId) setBoardView('my_requests');
     else if (job.matched_aspirer_id === userId) setBoardView('my_deliveries');
+    else if ((offersByJob.get(job.id) || []).some((offer) => offer.aspirer_id === userId)) setBoardView('my_deliveries');
     window.setTimeout(() => document.getElementById(`delivery-job-${focusJobId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
   }, [board.jobs, focusJobId, loading, offersByJob, userId]);
 
@@ -316,7 +320,7 @@ export default function DeliveryBoard() {
     if (!campusId) return;
     const reward = rewardFromDraft(draft);
     if (!draft.title.trim() || !draft.pickupArea.trim() || !draft.dropoffArea.trim()) return setNotice('Add a title plus a public pickup area and drop-off area.');
-    if (reward.mode === 'fixed' && (!reward.cents || reward.cents <= 0)) return setNotice('Enter a paid reward greater than $0.');
+    if (reward.mode === 'fixed' && (!reward.cents || reward.cents < MIN_PAID_DELIVERY_REWARD_CENTS)) return setNotice('Paid Aspirer rewards must be at least $5. Choose Free / Volunteer for a $0 delivery.');
 
     setBusy('create');
     setNotice('');
@@ -345,6 +349,7 @@ export default function DeliveryBoard() {
   async function submitOffer(job: DeliveryJob) {
     const amount = job.reward_mode === 'free' ? 0 : job.reward_mode === 'fixed' ? Number(job.reward_cents || 0) : Math.max(0, Math.round(Number(offerAmount[job.id] || 0) * 100));
     if (job.reward_mode === 'negotiable' && !Number.isFinite(amount)) return setNotice('Enter a valid offer amount.');
+    if (amount > 0 && amount < MIN_PAID_DELIVERY_REWARD_CENTS) return setNotice('Paid Aspirer offers must be at least $5. Enter $0 only if you want to volunteer for free.');
     setBusy(`offer:${job.id}`);
     setNotice('');
     try {
@@ -372,6 +377,7 @@ export default function DeliveryBoard() {
     const raw = counterAmount[offer.id]?.trim();
     const cents = Math.round(Number(raw) * 100);
     if (!raw || !Number.isFinite(cents) || cents < 0) return setNotice('Enter a valid counter amount.');
+    if (cents > 0 && cents < MIN_PAID_DELIVERY_REWARD_CENTS) return setNotice('Paid Aspirer counters must be at least $5. Use $0 only for a free volunteer delivery.');
     setBusy(`counter:${offer.id}`);
     try {
       await counterDeliveryOffer(offer.id, cents);
@@ -496,7 +502,7 @@ export default function DeliveryBoard() {
             <div className={styles.label}>Reward<div className={styles.rewardRow}>{([
               ['free', 'Free / Volunteer'], ['500', '$5'], ['1000', '$10'], ['custom', 'Custom'], ['negotiable', 'Negotiable']
             ] as [RewardPreset, string][]).map(([value, label]) => <button key={value} type="button" className={`${styles.rewardChip} ${draft.rewardPreset === value ? styles.rewardChipActive : ''}`} onClick={() => setDraft({ ...draft, rewardPreset: value })}>{label}</button>)}</div></div>
-            {draft.rewardPreset === 'custom' && <label className={styles.label}>Custom reward in dollars<input className={styles.input} type="number" min="0.01" step="0.01" value={draft.customReward} onChange={(event) => setDraft({ ...draft, customReward: event.target.value })} placeholder="6.00" /></label>}
+            {draft.rewardPreset === 'custom' && <label className={styles.label}>Custom reward in dollars<input className={styles.input} type="number" min="5" step="0.01" value={draft.customReward} onChange={(event) => setDraft({ ...draft, customReward: event.target.value })} placeholder="6.00" /><small>Paid rewards start at $5. Use Free / Volunteer for $0.</small></label>}
             <div className={styles.privacyNote}><strong>Privacy & safety:</strong> exact addresses are not public. Alcohol, tobacco, medication, weapons, illegal items, high-value cash, and other regulated deliveries are not allowed. Aspirers must verify email and phone before offering.</div>
             <button className={styles.goldButton} type="submit" disabled={busy === 'create' || !campusId}>{busy === 'create' ? 'Posting…' : 'Post Delivery Request'}</button>
           </form>
@@ -538,6 +544,7 @@ export default function DeliveryBoard() {
               const canOffer = Boolean(userId && ['looking_for_aspirer','offer_received'].includes(job.status) && !isRequester && !isPickupParty && !isDropoffParty);
               const progress = statusProgress(job.status);
               const ownOffer = offers.find((offer) => offer.aspirer_id === userId);
+              const requesterCounterForMe = ownOffer?.status === 'countered' && ownOffer.last_actor_id === job.requester_id && job.status === 'offer_received';
               const active = focusJobId === job.id;
               const preferred = job.preferred_at ? new Date(job.preferred_at).toLocaleString() : 'Flexible time';
               const paid = Number(job.agreed_reward_cents ?? job.reward_cents ?? 0) > 0;
@@ -562,10 +569,16 @@ export default function DeliveryBoard() {
 
                 <details className={styles.activity}><summary>Activity · {activity.length} updates</summary><div className={styles.activityList}>{activity.map((item, index) => <div className={styles.activityItem} key={`${item.label}-${item.at}-${index}`}><span /><div><strong>{item.label}</strong><small>{new Date(item.at).toLocaleString()} · {timeAgo(item.at)}</small></div></div>)}</div></details>
 
+                {requesterCounterForMe && ownOffer && <div className={styles.actionBox}>
+                  <div className={styles.sectionHeading}><strong>Requester counter: {money(ownOffer.amount_cents)}</strong><span>Your response</span></div>
+                  <div className={styles.actionRow}><button className={styles.goldButton} type="button" onClick={() => void acceptOffer(ownOffer)} disabled={busy === `accept:${ownOffer.id}`}>{busy === `accept:${ownOffer.id}` ? 'Accepting…' : `Accept ${money(ownOffer.amount_cents)}`}</button><span className={styles.waiting}>Accepting locks these delivery terms and creates the matched connection. You can also revise your offer below instead.</span></div>
+                </div>}
+
                 {canOffer && <div className={styles.actionBox}>
-                  <strong>{job.reward_mode === 'negotiable' ? 'Make your offer' : job.reward_mode === 'free' ? 'Volunteer to help' : 'Take this delivery'}</strong>
+                  <strong>{job.reward_mode === 'negotiable' ? requesterCounterForMe ? 'Revise your offer' : 'Make your offer' : job.reward_mode === 'free' ? 'Volunteer to help' : 'Take this delivery'}</strong>
                   {job.reward_mode === 'negotiable' && <div className={styles.actionRow}><input className={styles.input} type="number" min="0" step="0.01" placeholder="Your offer, e.g. 6" value={offerAmount[job.id] || ''} onChange={(event) => setOfferAmount({ ...offerAmount, [job.id]: event.target.value })} /></div>}
                   <div className={styles.actionRow}><input className={styles.input} placeholder="Optional message" value={offerMessage[job.id] || ''} onChange={(event) => setOfferMessage({ ...offerMessage, [job.id]: event.target.value })} maxLength={1000} /><button className={styles.goldButton} type="button" onClick={() => void submitOffer(job)} disabled={busy === `offer:${job.id}`}>{job.reward_mode === 'free' ? 'Help for free' : job.reward_mode === 'fixed' ? `Accept ${money(job.reward_cents || 0)}` : ownOffer ? 'Update offer' : 'Make an offer'}</button></div>
+                  {job.reward_mode === 'negotiable' && <span className={styles.waiting}>Use $0 only to volunteer for free; paid offers start at $5.</span>}
                   {ownOffer && <span className={styles.waiting}>Your current offer: {money(ownOffer.amount_cents)} · {ownOffer.status} · updated {timeAgo(ownOffer.updated_at)}</span>}
                 </div>}
 
@@ -581,7 +594,7 @@ export default function DeliveryBoard() {
                   </div>)}</div>
                 </div>}
 
-                {job.connection_id && !['looking_for_aspirer','offer_received'].includes(job.status) && <div className={styles.actionBox}><div className={styles.actionRow}><strong>Matched with {job.matched_aspirer_id ? profileName(board, job.matched_aspirer_id) : 'an Aspirer'}</strong><a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>Message / connection</a>{paid && isRequester && job.status !== 'completed' && <a className={rewardSecured ? styles.outlineButton : styles.goldButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>{rewardSecured ? 'Payment details' : paymentStatus ? 'Secure delivery reward' : 'Review payment status'}</a>}</div>{paid && job.status !== 'completed' && <span className={styles.waiting}>{rewardSecured ? 'The protected reward is secured. It still will not release until proof-backed completion and payout checks pass.' : 'Paid reward is a separate Aspire Protected connection and pickup is blocked until the reward is secured.'}</span>}</div>}
+                {job.connection_id && !['looking_for_aspirer','offer_received'].includes(job.status) && <div className={styles.actionBox}><div className={styles.actionRow}><strong>Matched with {job.matched_aspirer_id ? profileName(board, job.matched_aspirer_id) : 'an Aspirer'}</strong><a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>Message / connection</a>{paid && isRequester && job.status !== 'completed' && <a className={rewardSecured ? styles.outlineButton : styles.goldButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>{rewardSecured ? 'Payment details' : paymentStatus ? 'Secure delivery reward' : 'Review payment status'}</a>}</div>{paid && job.status !== 'completed' && <span className={styles.waiting}>{rewardSecured ? 'The protected reward is secured. It still will not release until proof-backed completion and payout checks pass.' : paymentStatus ? 'Paid reward is a separate Aspire Protected connection and pickup is blocked until the reward is secured.' : 'Payment status could not be confirmed. Review payment details before pickup; Aspire will not assume the reward is secured or unpaid.'}</span>}</div>}
 
                 {!['looking_for_aspirer','offer_received','cancelled','completed'].includes(job.status) && (isRequester || isPickupParty || isDropoffParty || isMatchedAspirer) && <div className={styles.actionBox}><strong>Private handoff details</strong>{(isRequester || isPickupParty || isDropoffParty) && <>{(isPickupParty || isRequester) && <input className={styles.input} placeholder="Exact pickup instructions" value={pd.pickup} onChange={(event) => setPrivateDraft({ ...privateDraft, [job.id]: { ...pd, pickup: event.target.value } })} />}{(isDropoffParty || isRequester) && <input className={styles.input} placeholder="Exact drop-off instructions" value={pd.dropoff} onChange={(event) => setPrivateDraft({ ...privateDraft, [job.id]: { ...pd, dropoff: event.target.value } })} />}<button className={styles.outlineButton} type="button" onClick={() => void savePrivate(job)} disabled={busy === `private-save:${job.id}`}>Save private details</button></>}<button className={styles.outlineButton} type="button" onClick={() => void revealPrivate(job)} disabled={busy === `private:${job.id}`}>View matched handoff details</button>{privateValue && <div className={styles.privateBox}><b>Pickup:</b> {privateValue.pickup_instructions || 'Not added yet'}<br /><b>Drop-off:</b> {privateValue.dropoff_instructions || 'Not added yet'}</div>}</div>}
 
@@ -593,7 +606,7 @@ export default function DeliveryBoard() {
                 {isMatchedAspirer && ['picked_up','on_the_way'].includes(job.status) && <div className={styles.actionBox}><strong>Confirm delivery</strong><div className={styles.codeBox}><input className={`${styles.input} ${styles.codeInput}`} inputMode="numeric" maxLength={4} placeholder="4-digit" value={codeInput[`${job.id}:delivery`] || ''} onChange={(event) => setCodeInput({ ...codeInput, [`${job.id}:delivery`]: event.target.value.replace(/\D/g, '').slice(0, 4) })} /><button className={styles.goldButton} type="button" onClick={() => void verifyCode(job, 'delivery')}>Confirm Delivery</button></div></div>}
                 {(isRequester || isDropoffParty) && job.status === 'delivered' && <div className={styles.actionBox}><button className={styles.goldButton} type="button" onClick={() => void finishDelivery(job)} disabled={busy === `complete:${job.id}`}>Delivery received · Complete</button><span className={styles.waiting}>This records the receiver side of closeout. Paid rewards remain protected until payout release succeeds.</span></div>}
 
-                {job.connection_id && job.status === 'completed' && (isRequester || isMatchedAspirer || isDropoffParty) && <div className={styles.actionBox}><strong>Delivery complete ✓</strong><div className={styles.actionRow}>{paid && isRequester && paymentStatus === 'secured' && <button className={styles.goldButton} type="button" onClick={() => void releaseReward(job)} disabled={busy === `release:${job.id}`}>{busy === `release:${job.id}` ? 'Releasing reward…' : 'Release protected reward'}</button>}{paid && isRequester && rewardReleased && <span className={styles.waiting}>Reward released ✓</span>}<a className={styles.goldButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}&tab=history`}>Review this delivery</a><a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>View connection</a>{paid && <a className={styles.outlineButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>Payment details</a>}</div><span className={styles.waiting}>{paid ? 'Completion is recorded. Reward release still respects payout readiness, disputes, refunds, and Resolution Center holds.' : 'Free delivery is closed with no Stripe payment. You can now leave a review.'}</span></div>}
+                {job.connection_id && job.status === 'completed' && (isRequester || isMatchedAspirer || isDropoffParty) && <div className={styles.actionBox}><strong>Delivery complete ✓</strong><div className={styles.actionRow}>{paid && isRequester && paymentStatus === 'secured' && <button className={styles.goldButton} type="button" onClick={() => void releaseReward(job)} disabled={busy === `release:${job.id}`}>{busy === `release:${job.id}` ? 'Releasing reward…' : 'Release protected reward'}</button>}{paid && isRequester && rewardReleased && <span className={styles.waiting}>Reward released ✓</span>}<a className={styles.goldButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}&tab=history`}>Review this delivery</a><a className={styles.outlineButton} href={`/connections?connection=${encodeURIComponent(job.connection_id)}`}>View connection</a>{paid && <a className={styles.outlineButton} href={`/transactions?connection=${encodeURIComponent(job.connection_id)}`}>Payment details</a>}</div><span className={styles.waiting}>{paid ? paymentStatus ? 'Completion is recorded. Reward release still respects payout readiness, disputes, refunds, and Resolution Center holds.' : 'Completion is recorded, but payment status could not be confirmed. Review payment details before any payout action.' : 'Free delivery is closed with no Stripe payment. You can now leave a review.'}</span></div>}
               </article>;
             })}
           </div>}
