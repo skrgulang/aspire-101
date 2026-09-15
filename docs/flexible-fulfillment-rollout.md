@@ -24,8 +24,12 @@ Critical Flexible Fulfillment sequence:
 14. `20260914223000_delivery_notification_dedupe.sql`
 15. `20260914224000_shipping_notifications.sql`
 16. `20260914225000_shipping_notification_transition_keys.sql`
+17. `20260914225200_shipping_state_transition_guard.sql`
+18. `20260914225500_delivery_open_cancel_integrity.sql`
 
-Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must not release money; shipping terms must lock after checkout starts; and the final negotiation functions must use delivery-job-first locking.
+Verify migration version uniqueness before running anything. The shipping notification transition and shipping state guard deliberately use different versions (`14225000` and `14225200`), and delivery cancellation integrity comes after them at `14225500`.
+
+Verify the final definitions, not just each intermediate migration: paid pickup confirmation must require a secured reward; delivery completion must not release money; shipping terms must lock after checkout starts; shipping lifecycle must not move backward; pre-match cancellation must not race through a newly matched request; and the final negotiation functions must use delivery-job-first locking.
 
 ## 2. Aspirer Delivery test matrix
 
@@ -33,12 +37,16 @@ Run each case with two distinct test users unless the case explicitly checks sel
 
 - Free delivery: create → offer at $0 → accept → pickup code → delivery code → complete. Confirm no Stripe payment is created.
 - Fixed paid delivery: create with fixed reward → accept exact amount → confirm helper cannot head to pickup before payment is secured → secure payment → pickup/deliver/complete → explicit payout release only after completion requirements.
-- Negotiable delivery: Aspirer offer → requester counter → Aspirer accepts (and the reverse actor sequence). Confirm agreed reward equals request/connection/payment terms exactly.
+- Negotiable delivery: Aspirer offer → requester counter → Aspirer accepts the requester counter from Delivery Manage. Also test requester accepting an Aspirer offer/update. Confirm agreed reward equals request/connection/payment terms exactly.
+- Counter ownership: only the opposite side from `last_actor_id` may accept the current negotiated amount; stale requester/Aspirer acceptance must fail.
 - Competing offers: accept one while another offer is withdrawn/countered concurrently. Confirm one match only, no deadlock, losing offers declined.
 - Pre-match cancellation: requester cancels an open job; active offers close and notifications are emitted once.
+- Cancel-vs-accept race: run requester cancellation while an offer is being accepted. Exactly one outcome may commit; if the match wins, cancellation must route to Resolution Center instead of unwinding it.
 - Post-match cancellation: direct Delivery cancellation must fail/reroute to the protected connection/Resolution Center path. A secured reward must not be automatically refunded or released.
 - Confirmation-code abuse: wrong codes increment attempts and stop at the configured limit; used codes cannot be reused.
 - Privacy: unmatched/public users never receive exact pickup/drop-off instructions.
+- Delivery Activity: overdue jobs show `OVERDUE`, jobs due within two hours show `TIME-SENSITIVE`, and already secured/released rewards do not continue to show a stale “Secure reward” action.
+- Delivery Board payment UI: secured rewards show payment details, released rewards do not offer a second release action, and payment-status lookup failure uses conservative review copy rather than claiming the reward is unpaid.
 
 ## 3. Carrier Shipping test matrix
 
@@ -54,6 +62,7 @@ Use Shippo test mode in preview.
 - Label purchase stuck for >=10 minutes: persist `exception`, create `shipping_label_reconciliation_required`, return `LABEL_RECONCILIATION_REQUIRED`, and never auto-buy a second label.
 - Webhook unknown status: acknowledge/ignore without changing shipping state.
 - Webhook out of order: delivered never regresses; in-transit/exception never regress to label-purchased; exception may recover to in-transit/delivered.
+- Database direct-write regression: attempt to move a shipment backward outside the webhook route and confirm the shipping state trigger blocks it.
 - Webhook tracking-number mismatch: ignore the event and do not advance order lifecycle.
 - Carrier movement can bridge a still-paid order to seller handoff, but must never overwrite disputed/refunded/cancelled/released lifecycle decisions.
 - Carrier exception/return creates an attention alert; a later recovery and a genuinely new later exception may each create a meaningful transition alert without retry spam.
@@ -67,10 +76,12 @@ Use Shippo test mode in preview.
 - Seller payout transfers provider net only; carrier shipping is not added to seller payout.
 - Open dispute/resolution/refund claims must serialize against payout release.
 - Delivery completion and marketplace receipt are lifecycle facts; neither may silently bypass the existing protected-money release endpoint.
+- A completed paid Aspirer delivery may remain `secured` while payout setup or a Resolution Center hold blocks transfer; do not move it back into the active delivery lifecycle solely because money has not released.
 
 ## 5. Notifications and audit behavior
 
 - Delivery offer/counter/match/status/cancellation alerts deep-link to the relevant delivery.
+- Accepted offer and matched-state transitions do not generate redundant duplicate notifications for the same user action.
 - Shipping alerts deep-link to the protected order/transaction.
 - Duplicate webhook retries or unchanged delivery state must not create duplicate user alerts.
 - Meaningful recurring shipping incidents (for example exception → recovered → exception) may create a new alert.
@@ -81,6 +92,7 @@ Use Shippo test mode in preview.
 Before PR #91 can leave Draft:
 
 - Latest PR head has a successful Vercel preview build.
+- Every Flexible Fulfillment migration version is unique and ordered as documented above.
 - All new migrations apply cleanly to a preview database from the current `main` schema state.
 - The test matrices above pass in preview/test mode.
 - Required preview environment variables are configured with test credentials (`SHIPPO_API_KEY`, webhook token, Stripe test configuration as applicable).
@@ -94,4 +106,5 @@ Before PR #91 can leave Draft:
 - Never retry an uncertain Shippo label purchase automatically.
 - Never auto-release a paid Aspirer reward solely because a delivery confirmation code succeeded.
 - Never unwind a matched/secured delivery through a direct client-side cancellation.
+- Never treat a missing client-side payment status lookup as proof that a reward is unpaid.
 - If financial, carrier, or lifecycle state is ambiguous, preserve payment/payout holds and route the case to Resolution Center rather than guessing.
