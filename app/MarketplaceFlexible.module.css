@@ -70,6 +70,79 @@
   background: #fff8df;
 }
 
+.filterBar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(3, minmax(150px, .75fr));
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  margin: 0 0 8px;
+  border: 1px solid #e4e8ed;
+  border-radius: 16px;
+  background: #fbfcfd;
+}
+
+.searchField,
+.filterField {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: #667085;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.searchField input,
+.filterField select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid #d9dee5;
+  border-radius: 11px;
+  padding: 10px 11px;
+  background: white;
+  color: #111827;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  outline: none;
+}
+
+.searchField input:focus,
+.filterField select:focus {
+  border-color: #d1a000;
+  box-shadow: 0 0 0 3px rgba(255,196,0,.12);
+}
+
+.resultBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+  margin: 0 2px 12px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.resultBar strong { color: #202938; }
+
+.resultBar button {
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: #8d6900;
+  font: inherit;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.resultBar button:hover { text-decoration: underline; }
+
 .remoteBadge {
   width: fit-content;
   display: inline-flex;
@@ -253,6 +326,10 @@
 .primary:disabled { opacity: .5; cursor: not-allowed; }
 .error { color: #a22d2d; background: #fff0f0; border-radius: 10px; padding: 9px 10px; font-size: 12px; font-weight: 750; }
 
+@media (max-width: 980px) {
+  .filterBar { grid-template-columns: 1fr 1fr; }
+}
+
 @media (max-width: 700px) {
   .scopeBar {
     display: flex;
@@ -270,6 +347,17 @@
   .scopeButton {
     flex: 0 0 min(78vw, 245px);
     scroll-snap-align: start;
+  }
+
+  .filterBar {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+
+  .resultBar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
   }
 }
 
