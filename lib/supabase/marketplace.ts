@@ -91,6 +91,12 @@ async function bearerHeaders() {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+function responseError(payload: any, fallback: string) {
+  const error = new Error(payload?.error || fallback) as Error & { code?: string };
+  error.code = payload?.code;
+  return error;
+}
+
 export async function fetchMarketOrders(connectionIds: string[]) {
   if (!connectionIds.length) return [] as MarketOrder[];
   const supabase = getSupabaseBrowserClient();
@@ -148,11 +154,7 @@ export async function requestMarketRefund(connectionId: string) {
     body: JSON.stringify({ connectionId })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(payload?.error || 'Could not refund this marketplace order.') as Error & { code?: string };
-    error.code = payload?.code;
-    throw error;
-  }
+  if (!response.ok) throw responseError(payload, 'Could not refund this marketplace order.');
   return payload as { status: 'refunded'; refundId: string };
 }
 
@@ -160,14 +162,22 @@ export async function getShippingRates(orderId: string, addressFrom: ShippingAdd
   const headers = await bearerHeaders();
   const response = await fetch('/api/shipping/rates', { method: 'POST', headers, body: JSON.stringify({ orderId, addressFrom, addressTo, parcel }) });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error || 'Could not calculate shipping rates.');
+  if (!response.ok) throw responseError(payload, 'Could not calculate shipping rates.');
   return payload as { shipmentId: string; rates: ShippingRate[] };
+}
+
+export async function selectShippingRate(orderId: string, rateId: string) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/shipping/select', { method: 'POST', headers, body: JSON.stringify({ orderId, rateId }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw responseError(payload, 'Could not choose that shipping rate.');
+  return payload as { rateId: string; amountCents: number; currency: string; carrier: string; service: string; status: string };
 }
 
 export async function purchaseShippingLabel(orderId: string, rateId: string) {
   const headers = await bearerHeaders();
   const response = await fetch('/api/shipping/label', { method: 'POST', headers, body: JSON.stringify({ orderId, rateId }) });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error || 'Could not purchase the shipping label.');
+  if (!response.ok) throw responseError(payload, 'Could not purchase the shipping label.');
   return payload as { status: string; transactionId: string | null; labelUrl: string; trackingNumber: string; trackingUrl: string | null; duplicate?: boolean };
 }
