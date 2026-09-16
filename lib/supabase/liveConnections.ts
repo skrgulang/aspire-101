@@ -20,6 +20,7 @@ export type LiveConnectionRequest = {
   id: string;
   title: string;
   category: string;
+  kind: string | null;
   campus: string | null;
 };
 
@@ -113,23 +114,33 @@ export async function fetchLiveConnections() {
     .order('updated_at', { ascending: false });
   if (connectionError) throw connectionError;
 
-  const connections = (connectionRows ?? []) as LiveConnection[];
+  const allConnections = (connectionRows ?? []) as LiveConnection[];
+  const allRequestIds = [...new Set(allConnections.map((connection) => connection.request_id))];
+
+  let allRequests: LiveConnectionRequest[] = [];
+  if (allRequestIds.length) {
+    const { data, error } = await supabase
+      .from('requests')
+      .select('id,title,category,kind,campus')
+      .in('id', allRequestIds);
+    if (error) throw error;
+    allRequests = (data ?? []) as LiveConnectionRequest[];
+  }
+
+  // Marketplace orders have their own purpose-built lifecycle in /transactions.
+  // Do not also render them as generic Aspire Live tasks with Start task / Arrived controls.
+  const marketplaceRequestIds = new Set(
+    allRequests.filter((request) => request.kind === 'buy_sell').map((request) => request.id)
+  );
+  const connections = allConnections.filter((connection) => !marketplaceRequestIds.has(connection.request_id));
   const requestIds = [...new Set(connections.map((connection) => connection.request_id))];
+  const requests = allRequests.filter((request) => requestIds.includes(request.id));
   const userIds = [...new Set(connections.flatMap((connection) => [connection.requester_id, connection.responder_id]))];
   const connectionIds = connections.map((connection) => connection.id);
 
-  let requests: LiveConnectionRequest[] = [];
   let profiles: LiveConnectionProfile[] = [];
   let locations: ConnectionLocationShare[] = [];
   let scheduleProposals: ConnectionScheduleProposal[] = [];
-
-  if (requestIds.length) {
-    const { data } = await supabase
-      .from('requests')
-      .select('id,title,category,campus')
-      .in('id', requestIds);
-    requests = (data ?? []) as LiveConnectionRequest[];
-  }
 
   if (userIds.length) {
     const { data } = await supabase

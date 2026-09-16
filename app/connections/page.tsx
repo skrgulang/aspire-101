@@ -1,7 +1,5 @@
 import ConnectionsHub from '../ConnectionsHub';
-import ConnectionCloseoutPanel from '../ConnectionCloseoutPanel';
 import ConnectionCopilotPanel from '../ConnectionCopilotPanel';
-import LiveConnectionStrip from '../LiveConnectionStrip';
 import AppDock from '../AppDock';
 import UiIcon from '../UiIcon';
 import PendingChoiceFlash from './PendingChoiceFlash';
@@ -16,10 +14,13 @@ export default function ConnectionsPage() {
       <div className={styles.workspace}>
         <section className={styles.primary}>
           <PendingChoiceFlash />
-          <LiveConnectionStrip />
-          <div id="connection-closeout" className={cleanup.closeoutAnchor}>
-            <ConnectionCloseoutPanel />
-          </div>
+
+          <header style={{ marginBottom: 24 }}>
+            <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 800, letterSpacing: '.12em', color: '#8f8778' }}>INBOX</p>
+            <h1 style={{ margin: 0, fontSize: 'clamp(34px,5vw,58px)', letterSpacing: '-.055em', lineHeight: 1 }}>Messages & connections</h1>
+            <p style={{ maxWidth: 680, margin: '12px 0 0', color: '#989083', lineHeight: 1.6 }}>Use Inbox for conversations and people. Marketplace purchases, payment, shipping, handoff, and payout now live in Orders &amp; delivery.</p>
+          </header>
+
           <div id="my-activity" className={cleanup.inboxAnchor}>
             <ConnectionsHub />
           </div>
@@ -27,49 +28,33 @@ export default function ConnectionsPage() {
 
         <aside className={styles.rail} aria-label="Inbox shortcuts">
           <section className={styles.railCard}>
-            <div className={styles.railHeading}>
-              <span>Quick Actions</span>
-            </div>
-            <a href="/post" className={styles.quickAction}>
-              <i className={styles.yellowIcon}><UiIcon name="plus" /></i>
-              <div><strong>Post a request</strong><span>Find help or offer something</span></div>
+            <div className={styles.railHeading}><span>Go to</span></div>
+            <a href="/transactions" className={styles.quickAction}>
+              <i className={styles.yellowIcon}><UiIcon name="wallet" /></i>
+              <div><strong>Orders &amp; delivery</strong><span>Marketplace payment, meetup, shipping, receipt and payout</span></div>
               <UiIcon name="chevron" />
             </a>
-            <a href="/discover" className={styles.quickAction}>
-              <i><UiIcon name="search" /></i>
-              <div><strong>Browse campus</strong><span>See what students need</span></div>
+            <a href="/delivery" className={styles.quickAction}>
+              <i><UiIcon name="mapPin" /></i>
+              <div><strong>Aspire Delivery</strong><span>Post a delivery or errand request</span></div>
               <UiIcon name="chevron" />
             </a>
             <a href="/activity" className={styles.quickAction}>
-              <i><UiIcon name="users" /></i>
-              <div><strong>View activity</strong><span>Your requests and connections</span></div>
+              <i><UiIcon name="activity" /></i>
+              <div><strong>My Activity</strong><span>Your posts and non-marketplace activity</span></div>
               <UiIcon name="chevron" />
             </a>
             <a href="/resolution" className={styles.quickAction}>
               <i><UiIcon name="shield" /></i>
-              <div><strong>Resolution Center</strong><span>No-show, cancellation, payment or safety help</span></div>
+              <div><strong>Resolution Center</strong><span>Cancellation, payment or safety help</span></div>
               <UiIcon name="chevron" />
             </a>
           </section>
 
-          <section className={styles.railCard}>
-            <div className={styles.railHeading}>
-              <span>Trust & Safety</span>
-            </div>
-            <div className={styles.trustLead}>
-              <i><UiIcon name="shield" /></i>
-              <div><strong>Verified campus community</strong><span>Chat and transact only after both sides agree.</span></div>
-            </div>
-            <div className={styles.trustRow}><UiIcon name="check" /><span>University email verification</span></div>
-            <div className={styles.trustRow}><UiIcon name="users" /><span>Mutual choice before private chat</span></div>
-            <div className={styles.trustRow}><UiIcon name="shield" /><span>Report, block, and safety support</span></div>
-            <a className={styles.learnLink} href="/safety">Safety center →</a>
-          </section>
-
           <section className={`${styles.railCard} ${styles.tipCard}`}>
-            <span>INBOX TIP</span>
-            <strong>Keep the important details in one thread.</strong>
-            <p>Confirm time, place, scope, and payment before meeting.</p>
+            <span>ONE PLACE FOR EACH JOB</span>
+            <strong>Inbox is for people. Orders is for transactions.</strong>
+            <p>This keeps marketplace controls from mixing with generic task status buttons.</p>
           </section>
         </aside>
       </div>

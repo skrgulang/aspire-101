@@ -1,0 +1,132 @@
+.section {
+  display: grid;
+  gap: 20px;
+  margin-bottom: 26px;
+}
+
+.heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.heading span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: #d5a900;
+}
+
+.heading h2 {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 42px);
+  letter-spacing: -.04em;
+}
+
+.heading p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--muted, #8f8b82);
+  line-height: 1.55;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  min-height: 230px;
+  padding: 20px;
+  border: 1px solid rgba(128, 128, 128, .2);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .035);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #ffd23f;
+  color: #111;
+  font-weight: 900;
+  font-size: 20px;
+}
+
+.titleRow {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titleRow h3 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -.025em;
+}
+
+.titleRow strong {
+  flex: 0 0 auto;
+  color: #d5a900;
+  font-size: 12px;
+}
+
+.copy p {
+  margin: 10px 0 0;
+  color: var(--muted, #8f8b82);
+  line-height: 1.55;
+}
+
+.card > a {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 15px;
+  border-top: 1px solid rgba(128, 128, 128, .18);
+  color: inherit;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.card > a:hover span {
+  transform: translateX(3px);
+}
+
+.card > a span {
+  transition: transform .15s ease;
+}
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border: 1px solid rgba(128, 128, 128, .16);
+  border-radius: 14px;
+  color: var(--muted, #8f8b82);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+
+.flow i {
+  font-style: normal;
+  color: #d5a900;
+}
+
+@media (max-width: 900px) {
+  .heading { align-items: start; flex-direction: column; }
+  .grid { grid-template-columns: 1fr; }
+  .card { min-height: 0; }
+}
