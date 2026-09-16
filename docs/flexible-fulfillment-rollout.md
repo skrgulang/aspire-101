@@ -90,7 +90,7 @@ Use Shippo test mode in preview.
 - [x] Seller cannot claim a label when protected payment is not secured at the database claim boundary.
 - [ ] Label purchase is idempotent once transaction/label evidence exists.
 - [ ] Paid selected rate expired/changed: fail closed and require reconciliation.
-- [ ] Label purchase stuck >=10 minutes: persist exception/reconciliation state and never auto-buy a second label.
+- [x] Label purchase stuck >=10 minutes or external purchase result becomes uncertain: persist `exception`/reconciliation state, write an audit event, and never auto-buy a second label.
 - [ ] Webhook unknown status: acknowledge/ignore without changing state.
 - [x] Webhook/database out-of-order state guard: delivered never regresses; exception may recover forward.
 - [ ] Webhook tracking-number mismatch: ignore without advancing lifecycle.
