@@ -49,15 +49,17 @@ Preview end-to-end Delivery checks include free, negotiable, fixed-paid, cancell
 
 A separate synthetic shipping order validated the database-facing handoff/receipt boundary: with a secured protected payment, changing a locked destination failed with `SHIPPING_TERMS_LOCKED_AFTER_CHECKOUT`; seller handoff before label evidence failed with `SHIPPING_LABEL_REQUIRED`; handoff succeeded after label transaction/URL/tracking evidence was present; buyer receipt before carrier delivery failed with `CARRIER_DELIVERY_NOT_CONFIRMED`; and after `shipping_status = delivered`, buyer receipt moved the order to `release_ready`. Test users were removed after the run.
 
+Static lock-order audit for the remaining concurrency gate confirms both `delivery_accept_offer()` and `delivery_cancel_open_request()` lock the `delivery_jobs` row first, so cancel-vs-accept and competing accepts serialize on the same job row before request/offer mutation. `claim_connection_payment_refund()` and `claim_market_shipping_label_purchase()` both lock the protected `connection_payments` row before the marketplace order row, preserving the shared payment-first lock order. A true simultaneous multi-session run is still kept as an explicit release gate rather than inferred from this audit.
+
 ## 2. Aspirer Delivery test matrix
 
 - [x] Free delivery: create → offer at $0 → accept → pickup code → delivery code → complete. Confirm no Stripe payment is created.
 - [x] Fixed paid delivery DB lifecycle: create with $5 fixed reward → accept exact amount → confirm pickup is blocked before secured payment → simulate preview secured payment → pickup/deliver/complete. Confirm payment remains secured and no transfer is created by delivery completion. Real Stripe checkout/release remains a separate external-service gate.
 - [x] Negotiable delivery: Aspirer offer → requester counter → Aspirer accepts requester counter. Confirm agreed reward equals request/connection terms exactly.
 - [x] Counter ownership: only the opposite side from `last_actor_id` may accept current negotiated terms.
-- [x] Competing offers (committed-order validation): accepting one offer commits one match only, automatically declines the losing active offer, and a later loser acceptance fails with `OFFER_NOT_ACTIVE`. A true simultaneous multi-session lock race remains part of the concurrency gate below.
+- [x] Competing offers (committed-order validation): accepting one offer commits one match only, automatically declines the losing active offer, and a later loser acceptance fails with `OFFER_NOT_ACTIVE`. Both competing accepts take the same job-row lock first; a true simultaneous multi-session lock race remains part of the gate below.
 - [x] Pre-match cancellation ordering: requester cancels an open job; active offers close and the affected Aspirer receives one stable cancellation notification.
-- [ ] True cancel-vs-accept / competing-offer simultaneous concurrency: exactly one outcome may commit under genuinely concurrent DB sessions; if match wins, cancellation must route to Resolution Center.
+- [ ] True cancel-vs-accept / competing-offer simultaneous concurrency: exactly one outcome may commit under genuinely concurrent DB sessions; if match wins, cancellation must route to Resolution Center. Lock ordering has been audited and both paths serialize on `delivery_jobs` first.
 - [x] Post-match cancellation: direct Delivery cancellation fails/reroutes to protected connection/Resolution Center (`MATCHED_DELIVERY_USE_RESOLUTION`).
 - [x] Confirmation-code abuse: wrong codes count down to zero, the next attempt returns `CODE_LOCKED`, and a successfully used code cannot be replayed (`CODE_ALREADY_USED`).
 - [x] Closeout proof integrity: a delivered job without Aspirer confirmation is rejected.
@@ -96,7 +98,7 @@ Use Shippo test mode in preview.
 - [x] Once label purchase begins or carrier transaction/label/tracking evidence exists, instant refund is blocked and routes to reconciliation.
 - [x] Refund API maps shipping-label serialization conflicts to controlled `409 SHIPPING_REFUND_REQUIRES_RESOLUTION`.
 - [x] Shipping label route calls `claim_market_shipping_label_purchase()` immediately before external Shippo purchase, using payment-first lock ordering.
-- [ ] True concurrent refund-vs-label external test.
+- [ ] True concurrent refund-vs-label external test. Both claims have been audited to lock payment first, then order.
 - [x] A surviving `refund_claimed_at` remains fail-closed for label purchase.
 - [x] Full marketplace refund code uses shipping-inclusive protected customer total.
 - [x] Seller payout code transfers provider net only; carrier shipping is not added to seller payout.
