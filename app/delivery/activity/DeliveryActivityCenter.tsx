@@ -134,7 +134,7 @@ function buildAlert(
   }
 
   if (isAspirer && job.status === 'matched') return {
-    id: `heading:${job.id}`, job, title: 'Ready to head to pickup', body: `${title} is matched to you. Open the delivery when you are ready to start moving toward pickup.`,
+    id: `heading:${job.id}`, job, title: 'Ready to head to pickup', body: `${title} is matched to you and the protected reward is secured. Open the delivery when you are ready to start moving toward pickup.`,
     tone: 'action', href: actionHref, actionLabel: 'Start pickup', unreadKey, urgency
   };
 
