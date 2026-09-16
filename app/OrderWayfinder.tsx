@@ -25,8 +25,8 @@ const methods = [
     title: 'Ask an Aspirer',
     price: 'Free · Paid · Negotiable',
     description: 'Post a delivery or errand request for another student to help. They can accept, help for free, or agree on a reward.',
-    action: 'Post a delivery request',
-    href: '/post?delivery=1'
+    action: 'Open Aspire Delivery',
+    href: '/delivery'
   }
 ];
 
