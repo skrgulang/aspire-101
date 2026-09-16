@@ -17,7 +17,7 @@ export default function TransactionsPage() {
           </div>
           <div className={styles.actions}>
             <a href="/marketplace">Shop Market</a>
-            <a href="/post?delivery=1">Post delivery help</a>
+            <a href="/delivery">Aspire Delivery</a>
             <a href="/resolution">Resolution Center</a>
           </div>
         </header>
