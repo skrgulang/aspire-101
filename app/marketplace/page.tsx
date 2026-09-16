@@ -1,6 +1,7 @@
 import '../marketplace-modal-theme.css';
-import Marketplace from '../Marketplace';
+import '../marketplace-checkout-v2.css';
+import MarketplaceCheckoutV2 from '../MarketplaceCheckoutV2';
 
 export default function MarketplacePage() {
-  return <Marketplace />;
+  return <MarketplaceCheckoutV2 />;
 }
