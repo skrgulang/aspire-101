@@ -1,0 +1,18 @@
+.marketModal.marketModalDark {
+  background: #1a1a18;
+  color: #eeeae2;
+  border-color: #36362f;
+}
+.marketModal.marketModalDark > p:not(.eyebrow) { color: #b7b1a6; }
+.marketModal.marketModalDark .eyebrow { color: #b8aa86; }
+.marketModal.marketModalDark button:not(.buttonGold) { color: #eeeae2; }
+.marketModal.marketModalDark input {
+  color: #eeeae2;
+  background: #10100f;
+  border: 1px solid #3a3933;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+.marketModal.marketModalDark input::placeholder { color: #777168; }
+.marketModal.marketModalDark input:focus { border-color: #ffc21c; }
