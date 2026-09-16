@@ -61,7 +61,7 @@ const emptyAddress: ShippingAddress = { name: '', street1: '', city: '', state: 
 function ShippingOrderTools({ order, isBuyer, isSeller, secured, onDone }: { order: MarketOrder; isBuyer: boolean; isSeller: boolean; secured: boolean; onDone: () => void }) {
   const [myAddress, setMyAddress] = useState<ShippingAddress>(emptyAddress);
   const [parcel, setParcel] = useState({ length: '12', width: '8', height: '4', weight: '2' });
-  const rateOptions = order.shipping_rate_options || [];
+  const rateOptions = useMemo(() => order.shipping_rate_options ?? [], [order.shipping_rate_options]);
   const [selectedRate, setSelectedRate] = useState(order.shipping_rate_id || rateOptions[0]?.id || '');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -70,6 +70,7 @@ function ShippingOrderTools({ order, isBuyer, isSeller, secured, onDone }: { ord
   const paymentLocked = secured || ['payment_processing','paid','handoff_confirmed','release_ready','released'].includes(order.status);
   const fromReady = Boolean(order.shipping_from_address_id);
   const toReady = Boolean(order.shipping_to_address_id);
+  const reconciliationRequired = shippingStatus === 'exception' && !order.shipping_transaction_id && !order.shipping_tracking_number && !order.shipping_label_url;
 
   useEffect(() => {
     if (order.shipping_rate_id) setSelectedRate(order.shipping_rate_id);
@@ -121,8 +122,16 @@ function ShippingOrderTools({ order, isBuyer, isSeller, secured, onDone }: { ord
     finally { setBusy(''); }
   }
 
+  if (shippingStatus === 'label_purchasing') {
+    return <div className="shippingTrackingBox"><span>CARRIER SHIPPING · LABEL PURCHASE IN PROGRESS</span><strong>Do not retry or refresh into a second purchase.</strong><small>Aspire has reserved this label purchase against refunds and payout release. If it remains in this state unusually long, the server will fail closed and require reconciliation instead of buying another label.</small><a href={`/transactions?connection=${encodeURIComponent(order.connection_id)}`}>Review payment + order status →</a></div>;
+  }
+
+  if (reconciliationRequired) {
+    return <div className="shippingTrackingBox"><span>CARRIER SHIPPING · RECONCILIATION REQUIRED</span><strong>Do not buy another label.</strong><small>The carrier transaction may have succeeded even though Aspire could not safely finalize the label record. Open the Resolution Center so the existing carrier transaction can be checked before any second purchase.</small><a href="/resolution">Open Resolution Center →</a><a href={`/transactions?connection=${encodeURIComponent(order.connection_id)}`}>Review protected transaction →</a></div>;
+  }
+
   if (shippingStatus === 'label_purchased' || shippingStatus === 'in_transit' || shippingStatus === 'delivered' || shippingStatus === 'exception') {
-    return <div className="shippingTrackingBox"><span>CARRIER SHIPPING · {shippingStatus.replaceAll('_', ' ')}</span><strong>{order.shipping_carrier || 'Carrier'}{order.shipping_service ? ` · ${order.shipping_service}` : ''}</strong>{order.shipping_tracking_number && <strong>Tracking {order.shipping_tracking_number}</strong>}{order.shipping_label_url && isSeller && <a href={order.shipping_label_url} target="_blank" rel="noreferrer">Open label ↗</a>}{order.shipping_tracking_url && <a href={order.shipping_tracking_url} target="_blank" rel="noreferrer">Track package ↗</a>}</div>;
+    return <div className="shippingTrackingBox"><span>CARRIER SHIPPING · {shippingStatus.replaceAll('_', ' ')}</span><strong>{order.shipping_carrier || 'Carrier'}{order.shipping_service ? ` · ${order.shipping_service}` : ''}</strong>{order.shipping_tracking_number && <strong>Tracking {order.shipping_tracking_number}</strong>}{shippingStatus === 'exception' && <small>The carrier reported an exception or return. Follow tracking and use the Resolution Center if the shipment cannot continue normally.</small>}{order.shipping_label_url && isSeller && <a href={order.shipping_label_url} target="_blank" rel="noreferrer">Open label ↗</a>}{order.shipping_tracking_url && <a href={order.shipping_tracking_url} target="_blank" rel="noreferrer">Track package ↗</a>}{shippingStatus === 'exception' && <a href="/resolution">Open Resolution Center →</a>}</div>;
   }
 
   return <details className="shippingTools" open={!rateLocked}>
@@ -134,6 +143,7 @@ function ShippingOrderTools({ order, isBuyer, isSeller, secured, onDone }: { ord
       </>}
       {rateOptions.length > 0 && !paymentLocked && <div className="shippingRateList">{rateOptions.map((rate) => <label key={rate.id} className={selectedRate === rate.id ? 'active' : ''}><input type="radio" name={`shipping-rate-${order.id}`} checked={selectedRate === rate.id} onChange={() => setSelectedRate(rate.id)} disabled={!isBuyer} /><span><b>{rate.carrier} · {rate.service}</b><small>{money(rate.amountCents, rate.currency)}{rate.estimatedDays ? ` · ${rate.estimatedDays} business days` : ''}</small></span></label>)}</div>}
       {rateLocked && <div className="shippingTrackingBox"><span>SELECTED RATE</span><strong>{order.shipping_carrier || 'Carrier'} · {order.shipping_service || 'Standard'}</strong><strong>{money(order.shipping_rate_cents, order.shipping_currency || order.currency)}</strong><small>The shipping charge is added to the buyer total but is not part of the seller payout.</small></div>}
+      {shippingStatus === 'label_failed' && secured && <div className="shippingTrackingBox"><span>LABEL PURCHASE NEEDS ATTENTION</span><strong>No completed carrier label is attached yet.</strong><small>Refresh the order before retrying. If Aspire reports an expired/changed paid rate or reconciliation requirement, do not purchase another label; use the Resolution Center instead.</small></div>}
       {error && <p className="shippingError">{error}</p>}
       <div className="shippingToolsActions">
         {isBuyer && !paymentLocked && rateOptions.length > 0 && <button type="button" className="button buttonGold" onClick={chooseRate} disabled={busy !== '' || !selectedRate}>{busy === 'select' ? 'Saving rate…' : rateLocked ? 'Update selected rate' : 'Use selected rate'}</button>}
