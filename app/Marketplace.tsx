@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchCampusFeedRequests, type DiscoverRequest } from '../lib/supabase/discovery';
 import { fetchActiveUniversities, type University } from '../lib/supabase/universities';
-import { buyMarketplaceListing } from '../lib/supabase/requests';
+import { buyMarketplaceListing, createRequest } from '../lib/supabase/requests';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import AppDock from './AppDock';
 import UiIcon from './UiIcon';
 
 type CartItem = { id: string; title: string; amountCents: number; image: string; campus: string; paymentMethod: 'aspire' };
 type DeliveryChoice = 'meet' | 'ship' | 'aspirer';
+type AspirerReward = 'free' | '5' | '10' | 'negotiable';
 const CART_KEY = 'aspire-market-cart';
 
 function money(cents: number | null | undefined) {
@@ -42,6 +43,9 @@ export default function Marketplace() {
   const [selected, setSelected] = useState<DiscoverRequest | null>(null);
   const [deliveryFor, setDeliveryFor] = useState<DiscoverRequest | null>(null);
   const [deliveryChoice, setDeliveryChoice] = useState<DeliveryChoice>('meet');
+  const [aspirerReward, setAspirerReward] = useState<AspirerReward>('negotiable');
+  const [pickupArea, setPickupArea] = useState('');
+  const [dropoffArea, setDropoffArea] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
@@ -81,15 +85,46 @@ export default function Marketplace() {
     setSelected(null);
     setDeliveryFor(item);
     setDeliveryChoice(item.fulfillment_method === 'shipping' ? 'ship' : 'meet');
+    setAspirerReward('negotiable');
+    setPickupArea('');
+    setDropoffArea('');
   }
 
   async function reserve(item: DiscoverRequest, choice: DeliveryChoice) {
+    if (choice === 'aspirer' && !dropoffArea.trim()) {
+      setNotice('Add a drop-off area before continuing with Aspirer delivery.');
+      return;
+    }
+
     setBusy(item.id); setNotice('');
     try {
       const connectionId = await buyMarketplaceListing(item.id);
+
       if (choice === 'aspirer') {
-        const params = new URLSearchParams({ order: connectionId, title: item.title });
-        router.push(`/delivery?${params.toString()}`);
+        let deliveryRequestId = '';
+        try {
+          if (!campus?.id) throw new Error('Campus is not available for this delivery request.');
+          const amountCents = aspirerReward === '5' ? 500 : aspirerReward === '10' ? 1000 : undefined;
+          const rewardLabel = aspirerReward === 'free' ? 'Free' : aspirerReward === '5' ? '$5' : aspirerReward === '10' ? '$10' : 'Negotiable';
+          const request = await createRequest({
+            kind: aspirerReward === 'free' ? 'community' : 'paid_help',
+            category: 'Pick this up',
+            title: `Deliver ${item.title}`,
+            details: `Marketplace delivery for “${item.title}”. Pickup area: ${pickupArea.trim() || 'coordinate with the seller privately'}. Drop-off area: ${dropoffArea.trim()}. Reward: ${rewardLabel}. Order reference: ${connectionId}. Keep exact pickup instructions private until you choose an Aspirer.`,
+            campusId: campus.id,
+            meeting_label: `${pickupArea.trim() || 'Seller pickup area'} → ${dropoffArea.trim()}`,
+            amount_cents: amountCents,
+            currency: 'USD'
+          });
+          deliveryRequestId = request.id;
+        } catch (deliveryError) {
+          const detail = deliveryError instanceof Error ? deliveryError.message : 'Could not post the delivery request.';
+          setNotice(`The item is reserved, but the delivery request still needs setup. ${detail}`);
+        }
+
+        const params = new URLSearchParams({ connection: connectionId, delivery: 'aspirer', reward: aspirerReward });
+        if (deliveryRequestId) params.set('deliveryRequest', deliveryRequestId);
+        router.push(`/transactions?${params.toString()}`);
       } else {
         router.push(`/transactions?connection=${encodeURIComponent(connectionId)}&delivery=${choice}`);
       }
@@ -125,21 +160,33 @@ export default function Marketplace() {
       {notice && <div className="marketplaceNotice" role="status">{notice}</div>}
       {loading ? <div className="marketplaceEmpty">Loading campus listings…</div> : !items.length ? <div className="marketplaceEmpty"><UiIcon name="tag" /><h2>No listings yet</h2><p>Be the first person to post something for sale.</p><a className="button buttonGold" href="/post">Post an item →</a></div> : <div className="marketGrid">{items.map((item) => <article className="marketProduct" key={item.id}>
         <button className="marketProductMedia" type="button" onClick={() => setSelected(item)}>{item.media?.[0]?.public_url || item.cover_image_url ? <img src={item.media?.[0]?.public_url || item.cover_image_url || ''} alt="" /> : <UiIcon name="tag" />}<span>Buy & sell</span></button>
-        <div className="marketProductBody"><button className="marketProductTitle" type="button" onClick={() => setSelected(item)}>{item.title}</button><strong>{money(item.amount_cents)}</strong><small>{item.item_condition?.replace('_', ' ') || 'Good condition'} · {item.fulfillment_method === 'shipping' ? 'Carrier shipping available' : 'Local handoff available'}</small><span className="marketProtectionBadge">Aspire Protected checkout</span><Countdown until={expiry(item)} /><div className="marketProductActions"><button type="button" className="marketAdd" onClick={() => addToCart(item)}>Add to cart</button><button type="button" className="button buttonGold" onClick={() => chooseDelivery(item)}>Choose delivery →</button></div></div>
+        <div className="marketProductBody"><button className="marketProductTitle" type="button" onClick={() => setSelected(item)}>{item.title}</button><strong>{money(item.amount_cents)}</strong><small>{item.item_condition?.replace('_', ' ') || 'Good condition'} · {item.fulfillment_method === 'shipping' ? 'Carrier shipping available' : 'Local handoff available'}</small><span className="marketProtectionBadge">Aspire Protected checkout</span><Countdown until={expiry(item)} /><div className="marketProductActions"><button type="button" className="marketAdd" onClick={() => addToCart(item)}>Add to cart</button><button type="button" className="button buttonGold" onClick={() => chooseDelivery(item)}>Buy now →</button></div></div>
       </article>)}</div>}
-      <section id="cart" className="marketCart"><div><p className="eyebrow">YOUR CART</p><h2>Ready when you are.</h2><p>Cart is for browsing. Nothing is reserved until you choose a delivery method and continue.</p></div>{cart.length ? <><div className="marketCartItems">{cart.map((item) => <div key={item.id}><span>{item.title}<small>Online · Aspire Protected</small></span><strong>{money(item.amountCents)}</strong><button type="button" onClick={() => persist(cart.filter((entry) => entry.id !== item.id))}>Remove</button></div>)}</div><div className="marketCartTotal"><span>Subtotal</span><strong>{money(total)}</strong><button className="button buttonGold" type="button" onClick={() => { const listing = items.find((item) => item.id === cart[0]?.id); if (listing) chooseDelivery(listing); else setNotice('Open the listing to buy it — availability is checked again at checkout.'); }}>Choose delivery for first item</button></div></> : <span className="marketCartEmpty">Your cart is empty.</span>}</section>
+      <section id="cart" className="marketCart"><div><p className="eyebrow">YOUR CART</p><h2>Ready when you are.</h2><p>Cart is for browsing. Nothing is reserved until you choose a delivery method and continue.</p></div>{cart.length ? <><div className="marketCartItems">{cart.map((item) => <div key={item.id}><span>{item.title}<small>Online · Aspire Protected</small></span><strong>{money(item.amountCents)}</strong><button type="button" onClick={() => persist(cart.filter((entry) => entry.id !== item.id))}>Remove</button></div>)}</div><div className="marketCartTotal"><span>Subtotal</span><strong>{money(total)}</strong><button className="button buttonGold" type="button" onClick={() => { const listing = items.find((item) => item.id === cart[0]?.id); if (listing) chooseDelivery(listing); else setNotice('Open the listing to buy it — availability is checked again at checkout.'); }}>Buy first item</button></div></> : <span className="marketCartEmpty">Your cart is empty.</span>}</section>
     </div>
 
-    {selected && <div className="marketModalBackdrop" role="dialog" aria-modal="true"><div className="marketModal"><button type="button" className="marketModalClose" onClick={() => setSelected(null)} aria-label="Close">×</button><p className="eyebrow">LISTING DETAILS</p><h2>{selected.title}</h2><strong className="marketModalPrice">{money(selected.amount_cents)}</strong><Countdown until={expiry(selected)} /><p>{selected.details || 'Seller has not added more details yet.'}</p><div className="marketModalFacts"><span>Condition <b>{selected.item_condition?.replace('_', ' ') || 'Good'}</b></span><span>Seller offers <b>{selected.fulfillment_method === 'shipping' ? 'Carrier shipping' : 'Local handoff'}</b></span><span>Payment <b>Online · Aspire Protected</b></span></div><div className="marketProductActions"><button className="marketAdd" type="button" onClick={() => addToCart(selected)}>Add to cart</button><button className="button buttonGold" type="button" onClick={() => chooseDelivery(selected)}>Choose delivery →</button></div></div></div>}
+    {selected && <div className="marketModalBackdrop" role="dialog" aria-modal="true"><div className="marketModal"><button type="button" className="marketModalClose" onClick={() => setSelected(null)} aria-label="Close">×</button><p className="eyebrow">LISTING DETAILS</p><h2>{selected.title}</h2><strong className="marketModalPrice">{money(selected.amount_cents)}</strong><Countdown until={expiry(selected)} /><p>{selected.details || 'Seller has not added more details yet.'}</p><div className="marketModalFacts"><span>Condition <b>{selected.item_condition?.replace('_', ' ') || 'Good'}</b></span><span>Seller offers <b>{selected.fulfillment_method === 'shipping' ? 'Carrier shipping' : 'Local handoff'}</b></span><span>Payment <b>Online · Aspire Protected</b></span></div><div className="marketProductActions"><button className="marketAdd" type="button" onClick={() => addToCart(selected)}>Add to cart</button><button className="button buttonGold" type="button" onClick={() => chooseDelivery(selected)}>Buy now →</button></div></div></div>}
 
-    {deliveryFor && <div className="marketModalBackdrop" role="dialog" aria-modal="true" aria-label="Choose delivery"><div className="marketModal" style={{ maxWidth: 620 }}><button type="button" className="marketModalClose" onClick={() => setDeliveryFor(null)} aria-label="Close">×</button><p className="eyebrow">STEP 2 · DELIVERY</p><h2>How do you want to receive it?</h2><p style={{ marginTop: 4 }}>{deliveryFor.title} · {money(deliveryFor.amount_cents)}</p>
+    {deliveryFor && <div className="marketModalBackdrop" role="dialog" aria-modal="true" aria-label="Choose delivery"><div className="marketModal" style={{ maxWidth: 660, maxHeight: '90vh', overflowY: 'auto' }}><button type="button" className="marketModalClose" onClick={() => setDeliveryFor(null)} aria-label="Close">×</button><p className="eyebrow">BUY NOW · DELIVERY</p><h2>How do you want to receive it?</h2><p style={{ marginTop: 4 }}>{deliveryFor.title} · {money(deliveryFor.amount_cents)}</p>
       <div style={{ display: 'grid', gap: 12, marginTop: 22 }}>
-        {choiceCard(deliveryFor, 'meet', 'Meet up', 'Free', 'Meet the seller locally. After purchase, coordinate a public place and confirm the handoff from Orders.', deliveryFor.fulfillment_method !== 'shipping')}
-        {choiceCard(deliveryFor, 'ship', 'Ship to me', 'Calculated', 'Use carrier shipping. Address, rates, label, tracking and receipt stay attached to the order.', deliveryFor.fulfillment_method === 'shipping')}
-        {choiceCard(deliveryFor, 'aspirer', 'Ask an Aspirer', 'Free · Paid · Flexible', 'Reserve the item, then create a community delivery request so another student can help with the local handoff.', deliveryFor.fulfillment_method !== 'shipping')}
+        {choiceCard(deliveryFor, 'meet', 'Meet up', 'Free', 'Meet the seller locally. Choose this when you want to pick the item up yourself.', deliveryFor.fulfillment_method !== 'shipping')}
+        {choiceCard(deliveryFor, 'ship', 'Ship to me', 'Calculated', 'Have the seller ship it to your address. Carrier rate and tracking stay with the order.', deliveryFor.fulfillment_method === 'shipping')}
+        {choiceCard(deliveryFor, 'aspirer', 'Ask an Aspirer to deliver', 'Free · Paid · Negotiable', 'Have another student pick the item up from the seller and bring it to you. Set the delivery request up right here before checkout.', deliveryFor.fulfillment_method !== 'shipping')}
       </div>
-      <div style={{ marginTop: 18, padding: 14, borderRadius: 14, background: 'rgba(127,127,127,.07)', lineHeight: 1.5 }}><strong>Seller fulfillment controls availability.</strong><p style={{ margin: '5px 0 0', opacity: .72 }}>This first UI pass keeps the existing backend rules intact. Sellers can currently list either local handoff or shipping; multi-option seller listings are the next backend/UI step.</p></div>
-      <button className="button buttonGold" type="button" style={{ width: '100%', marginTop: 18 }} onClick={() => void reserve(deliveryFor, deliveryChoice)} disabled={busy === deliveryFor.id}>{busy === deliveryFor.id ? 'Reserving…' : deliveryChoice === 'aspirer' ? 'Reserve item + set up Aspirer delivery →' : 'Continue to order →'}</button>
+
+      {deliveryChoice === 'aspirer' && <section style={{ marginTop: 16, padding: 16, border: '1px solid rgba(244,196,28,.28)', borderRadius: 18, background: 'rgba(244,196,28,.055)' }}>
+        <div><strong style={{ fontSize: 15 }}>Set up Aspirer delivery</strong><p style={{ margin: '5px 0 0', opacity: .72, lineHeight: 1.5 }}>Keep the purchase and delivery setup in one flow. Only the area is public; share exact pickup instructions privately after you choose a helper.</p></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
+          <label style={{ display: 'grid', gap: 6, fontSize: 11 }}><span>Pickup area <small style={{ opacity: .65 }}>(optional)</small></span><input value={pickupArea} onChange={(event) => setPickupArea(event.target.value)} placeholder="e.g. Hillenbrand Hall area" style={{ minWidth: 0, padding: '11px 12px', borderRadius: 11, border: '1px solid rgba(127,127,127,.3)', background: 'transparent', color: 'inherit' }} /></label>
+          <label style={{ display: 'grid', gap: 6, fontSize: 11 }}><span>Drop-off area</span><input value={dropoffArea} onChange={(event) => setDropoffArea(event.target.value)} placeholder="e.g. WALC area" style={{ minWidth: 0, padding: '11px 12px', borderRadius: 11, border: '1px solid rgba(127,127,127,.3)', background: 'transparent', color: 'inherit' }} /></label>
+        </div>
+        <div style={{ marginTop: 14 }}><span style={{ display: 'block', marginBottom: 8, fontSize: 11 }}>Reward for the Aspirer</span><div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {([['free', 'Free'], ['5', '$5'], ['10', '$10'], ['negotiable', 'Negotiable']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setAspirerReward(value)} style={{ padding: '9px 13px', borderRadius: 999, border: aspirerReward === value ? '1px solid #f4c41c' : '1px solid rgba(127,127,127,.28)', background: aspirerReward === value ? 'rgba(244,196,28,.12)' : 'transparent', color: 'inherit', fontWeight: 800, cursor: 'pointer' }}>{label}</button>)}
+        </div></div>
+      </section>}
+
+      <div style={{ marginTop: 16, padding: 13, borderRadius: 14, background: 'rgba(127,127,127,.07)', lineHeight: 1.5 }}><strong>One purchase flow.</strong><p style={{ margin: '5px 0 0', opacity: .72 }}>{deliveryChoice === 'aspirer' ? 'Aspire will reserve the item, post the delivery request, and take you to the order page. You do not need to leave checkout for the standalone Delivery page.' : deliveryChoice === 'ship' ? 'Shipping details stay attached to this marketplace order.' : 'Meetup coordination stays attached to this marketplace order.'}</p></div>
+      <button className="button buttonGold" type="button" style={{ width: '100%', marginTop: 18 }} onClick={() => void reserve(deliveryFor, deliveryChoice)} disabled={busy === deliveryFor.id}>{busy === deliveryFor.id ? 'Reserving…' : deliveryChoice === 'aspirer' ? 'Reserve item + post delivery request →' : 'Continue to order →'}</button>
     </div></div>}
   </main>;
 }
