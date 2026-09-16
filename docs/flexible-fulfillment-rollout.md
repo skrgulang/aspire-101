@@ -47,6 +47,8 @@ Database guard checks performed in preview include: shipping state cannot regres
 
 Preview end-to-end Delivery checks include free, negotiable, fixed-paid, cancellation-ordering, and competing-offer flows. A negotiable $7 Aspirer offer was countered by the requester to $6; stale requester acceptance was rejected with `WAITING_FOR_ASPIRER`; the Aspirer accepted the $6 counter; and resulting request/connection terms were exactly 600 cents. A separate free delivery completed the full pickup/delivery/receiver-closeout lifecycle with zero `connection_payments` rows. A fixed $5 delivery was then run with a simulated preview `secured` payment using the current fee quote ($5.00 base, $0.99 requester fee, $5.99 customer total, $4.60 provider net): pickup, delivery proof, and receiver completion succeeded, while the payment deliberately remained `secured` with no transfer after lifecycle completion. This confirms lifecycle completion does not silently release money. Two active competing offers were also created on one negotiable job; accepting the $7 offer matched exactly that Aspirer, set request/connection terms to 700 cents, automatically declined the losing $8 offer, and a later attempt to accept the losing offer failed with `OFFER_NOT_ACTIVE`. Temporary test users and requests were removed after validation.
 
+A separate synthetic shipping order validated the database-facing handoff/receipt boundary: with a secured protected payment, changing a locked destination failed with `SHIPPING_TERMS_LOCKED_AFTER_CHECKOUT`; seller handoff before label evidence failed with `SHIPPING_LABEL_REQUIRED`; handoff succeeded after label transaction/URL/tracking evidence was present; buyer receipt before carrier delivery failed with `CARRIER_DELIVERY_NOT_CONFIRMED`; and after `shipping_status = delivered`, buyer receipt moved the order to `release_ready`. Test users were removed after the run.
+
 ## 2. Aspirer Delivery test matrix
 
 - [x] Free delivery: create → offer at $0 → accept → pickup code → delivery code → complete. Confirm no Stripe payment is created.
@@ -63,7 +65,7 @@ Preview end-to-end Delivery checks include free, negotiable, fixed-paid, cancell
 - [x] Paid pickup guard: a matched paid delivery cannot move to `heading_to_pickup` before reward is secured.
 - [x] Delivery status regression: direct/service-role protected-state jumps or terminal reopen attempts fail.
 - [x] Privacy: pre-match private details are locked and a non-participant cannot read matched private handoff instructions.
-- [ ] Delivery Activity: overdue/time-sensitive and payment-aware actions need final UI pass.
+- [x] Delivery Activity: overdue/time-sensitive ordering is present, payment lookup fails closed, requester sees secure-payment actions, and Aspirers no longer receive a Start pickup action while a positive protected reward is unsecured or unknown.
 - [x] Delivery Board payment UI uses conservative copy when payment lookup is unknown, shows payment details for secured rewards, avoids a second release action after release, and now lets an Aspirer accept a requester counter inline.
 - [x] Reward minimum: fixed/custom/negotiated positive rewards are at least $5; $0 remains explicit Free / Volunteer help.
 
@@ -74,7 +76,7 @@ Use Shippo test mode in preview.
 - [ ] Seller saves only origin; buyer saves only destination. Confirm Aspire stores opaque Shippo IDs rather than exact counterparty addresses.
 - [ ] Seller creates rates only after both addresses are ready; buyer selects a rate; changing an address invalidates stale rate selection before payment.
 - [ ] Checkout total = item + Aspire fee + selected carrier shipping. Seller payout excludes shipping and Aspire fee revenue excludes shipping.
-- [ ] After checkout starts, attempts to alter address/shipment/rate/carrier/service/fulfillment terms must fail.
+- [x] After checkout/payment is secured, locked address/shipment/rate/carrier/service/fulfillment terms are guarded by `SHIPPING_TERMS_LOCKED_AFTER_CHECKOUT`; destination mutation was exercised directly in preview.
 - [x] Seller cannot claim a label when protected payment is not secured at the database claim boundary.
 - [ ] Label purchase is idempotent once transaction/label evidence exists.
 - [ ] Paid selected rate expired/changed: fail closed and require reconciliation.
@@ -84,7 +86,8 @@ Use Shippo test mode in preview.
 - [ ] Webhook tracking-number mismatch: ignore without advancing lifecycle.
 - [ ] Carrier movement must not overwrite disputed/refunded/cancelled/released decisions.
 - [x] Carrier exception/return and later recovery notification behavior is transition-aware and deduped for unchanged retries.
-- [ ] Buyer receipt for shipping cannot be confirmed before carrier delivery.
+- [x] Seller handoff requires attached label transaction/URL evidence and an allowed shipping status; seller handoff without label evidence returns `SHIPPING_LABEL_REQUIRED`.
+- [x] Buyer receipt for shipping cannot be confirmed before carrier delivery (`CARRIER_DELIVERY_NOT_CONFIRMED`); after `delivered`, receipt advances the order to `release_ready`.
 - [x] Reconciliation UI: `label_purchasing` explicitly warns against retrying; uncertain `exception` without attached carrier evidence routes to Resolution Center; normal carrier exceptions keep tracking/recovery guidance; `label_failed` displays fail-closed retry guidance.
 
 ## 4. Refund / dispute / payout integrity
@@ -122,7 +125,7 @@ Use Shippo test mode in preview.
 
 Before PR #91 can leave Draft:
 
-- [x] A recent audited PR head has a successful Vercel preview build; re-check after every new code commit.
+- [x] Current audited PR head has a successful Vercel preview build; re-check after every new code commit.
 - [x] Every Flexible Fulfillment migration version currently present is unique and ordered as documented above.
 - [x] All current PR migrations through `20260914228500` have applied cleanly to the Development Branch.
 - [ ] Remaining test matrices above pass in preview/test mode.
