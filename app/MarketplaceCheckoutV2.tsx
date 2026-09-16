@@ -240,7 +240,7 @@ export default function MarketplaceCheckoutV2() {
             p_requested_amount_cents: amountCents || null,
             p_pickup_area: pickupArea.trim() || 'Seller pickup area',
             p_dropoff_area: dropoffArea.trim()
-          }).catch(() => undefined);
+          });
         }
       }
 
