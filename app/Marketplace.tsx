@@ -12,7 +12,7 @@ import UiIcon from './UiIcon';
 type DeliveryChoice = 'meet' | 'ship' | 'aspirer';
 type AspirerReward = 'free' | '5' | '10' | 'negotiable';
 type FulfillmentMethod = 'campus_pickup' | 'shipping' | 'aspirer_delivery';
-type MarketplaceItem = DiscoverRequest & { fulfillment_methods?: FulfillmentMethod[] };
+type MarketplaceItem = Omit<DiscoverRequest, 'fulfillment_method'> & { fulfillment_method?: FulfillmentMethod | null; fulfillment_methods?: FulfillmentMethod[] };
 
 function money(cents: number | null | undefined) {
   return cents == null
