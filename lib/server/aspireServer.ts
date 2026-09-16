@@ -138,7 +138,7 @@ export async function stripeGet<T>(path: string) {
 /** Read recipient transfer readiness from the same Accounts v2 model used at onboarding. */
 export async function getStripePayoutState(accountId: string): Promise<StripePayoutState> {
   const account = await stripeRequest<StripeV2Account>(
-    `/v2/core/accounts/${encodeURIComponent(accountId)}?include[]=configuration.recipient&include[]=requirements`
+    `/v2/core/accounts/${encodeURIComponent(accountId)}?include[0]=configuration.recipient&include[1]=requirements`
   );
   const transferStatus = account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || '';
   const entries = account.requirements?.entries ?? [];
