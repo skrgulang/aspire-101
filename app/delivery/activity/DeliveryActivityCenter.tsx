@@ -108,6 +108,31 @@ function buildAlert(
     };
   }
 
+  if (
+    isAspirer
+    && job.connection_id
+    && Number(job.agreed_reward_cents || 0) > 0
+    && ['matched', 'heading_to_pickup'].includes(job.status)
+    && !['secured', 'released'].includes(paymentStatus || '')
+  ) {
+    const paymentKnown = Boolean(paymentStatus);
+    return {
+      id: `wait-secure:${job.id}`,
+      job,
+      title: paymentKnown ? 'Waiting for the protected reward' : 'Verify reward status before pickup',
+      body: paymentKnown
+        ? `${title} is matched to you, but the protected reward is not secured yet. Do not begin pickup until payment is secured.`
+        : `${title} is matched to you. Aspire could not confirm the protected reward status, so do not begin pickup until payment details show it is secured.`,
+      tone: 'action',
+      href: actionHref,
+      actionLabel: 'View delivery',
+      secondaryHref: `/transactions?connection=${encodeURIComponent(job.connection_id)}`,
+      secondaryLabel: 'Payment details',
+      unreadKey,
+      urgency
+    };
+  }
+
   if (isAspirer && job.status === 'matched') return {
     id: `heading:${job.id}`, job, title: 'Ready to head to pickup', body: `${title} is matched to you. Open the delivery when you are ready to start moving toward pickup.`,
     tone: 'action', href: actionHref, actionLabel: 'Start pickup', unreadKey, urgency
