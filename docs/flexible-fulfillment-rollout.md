@@ -45,7 +45,7 @@ A disposable Supabase Development Branch was repaired from the current `main` sc
 
 Database guard checks performed in preview include: shipping state cannot regress; a surviving refund claim blocks label purchase; a started label purchase blocks instant refund; delivery status cannot jump protected stages; delivery completion requires Aspirer proof; paid delivery cannot start pickup or complete while its reward is unsecured; positive delivery offers below $5 are rejected by the database; eight wrong confirmation-code attempts exhaust the retry budget; a later correct code returns `CODE_LOCKED`; and a successfully used code now returns `CODE_ALREADY_USED` on replay.
 
-Preview end-to-end Delivery checks include free, negotiable, and fixed-paid flows. A negotiable $7 Aspirer offer was countered by the requester to $6; stale requester acceptance was rejected with `WAITING_FOR_ASPIRER`; the Aspirer accepted the $6 counter; and resulting request/connection terms were exactly 600 cents. A separate free delivery completed the full pickup/delivery/receiver-closeout lifecycle with zero `connection_payments` rows. A fixed $5 delivery was then run with a simulated preview `secured` payment using the current fee quote ($5.00 base, $0.99 requester fee, $5.99 customer total, $4.60 provider net): pickup, delivery proof, and receiver completion succeeded, while the payment deliberately remained `secured` with no transfer after lifecycle completion. This confirms lifecycle completion does not silently release money. Temporary test users and requests were removed after validation.
+Preview end-to-end Delivery checks include free, negotiable, fixed-paid, cancellation-ordering, and competing-offer flows. A negotiable $7 Aspirer offer was countered by the requester to $6; stale requester acceptance was rejected with `WAITING_FOR_ASPIRER`; the Aspirer accepted the $6 counter; and resulting request/connection terms were exactly 600 cents. A separate free delivery completed the full pickup/delivery/receiver-closeout lifecycle with zero `connection_payments` rows. A fixed $5 delivery was then run with a simulated preview `secured` payment using the current fee quote ($5.00 base, $0.99 requester fee, $5.99 customer total, $4.60 provider net): pickup, delivery proof, and receiver completion succeeded, while the payment deliberately remained `secured` with no transfer after lifecycle completion. This confirms lifecycle completion does not silently release money. Two active competing offers were also created on one negotiable job; accepting the $7 offer matched exactly that Aspirer, set request/connection terms to 700 cents, automatically declined the losing $8 offer, and a later attempt to accept the losing offer failed with `OFFER_NOT_ACTIVE`. Temporary test users and requests were removed after validation.
 
 ## 2. Aspirer Delivery test matrix
 
@@ -53,10 +53,10 @@ Preview end-to-end Delivery checks include free, negotiable, and fixed-paid flow
 - [x] Fixed paid delivery DB lifecycle: create with $5 fixed reward → accept exact amount → confirm pickup is blocked before secured payment → simulate preview secured payment → pickup/deliver/complete. Confirm payment remains secured and no transfer is created by delivery completion. Real Stripe checkout/release remains a separate external-service gate.
 - [x] Negotiable delivery: Aspirer offer → requester counter → Aspirer accepts requester counter. Confirm agreed reward equals request/connection terms exactly.
 - [x] Counter ownership: only the opposite side from `last_actor_id` may accept current negotiated terms.
-- [ ] Competing offers: accept one while another offer is withdrawn/countered concurrently. Confirm one match only, no deadlock, losing offers declined.
-- [ ] Pre-match cancellation: requester cancels an open job; active offers close and notifications are emitted once.
-- [ ] True cancel-vs-accept concurrency: exactly one outcome may commit; if match wins, cancellation must route to Resolution Center.
-- [ ] Post-match cancellation: direct Delivery cancellation must fail/reroute to protected connection/Resolution Center.
+- [x] Competing offers (committed-order validation): accepting one offer commits one match only, automatically declines the losing active offer, and a later loser acceptance fails with `OFFER_NOT_ACTIVE`. A true simultaneous multi-session lock race remains part of the concurrency gate below.
+- [x] Pre-match cancellation ordering: requester cancels an open job; active offers close and the affected Aspirer receives one stable cancellation notification.
+- [ ] True cancel-vs-accept / competing-offer simultaneous concurrency: exactly one outcome may commit under genuinely concurrent DB sessions; if match wins, cancellation must route to Resolution Center.
+- [x] Post-match cancellation: direct Delivery cancellation fails/reroutes to protected connection/Resolution Center (`MATCHED_DELIVERY_USE_RESOLUTION`).
 - [x] Confirmation-code abuse: wrong codes count down to zero, the next attempt returns `CODE_LOCKED`, and a successfully used code cannot be replayed (`CODE_ALREADY_USED`).
 - [x] Closeout proof integrity: a delivered job without Aspirer confirmation is rejected.
 - [x] Paid closeout integrity: an unsecured paid reward cannot complete.
@@ -83,8 +83,9 @@ Use Shippo test mode in preview.
 - [x] Webhook/database out-of-order state guard: delivered never regresses; exception may recover forward.
 - [ ] Webhook tracking-number mismatch: ignore without advancing lifecycle.
 - [ ] Carrier movement must not overwrite disputed/refunded/cancelled/released decisions.
-- [ ] Carrier exception/return and later recovery notification behavior.
+- [x] Carrier exception/return and later recovery notification behavior is transition-aware and deduped for unchanged retries.
 - [ ] Buyer receipt for shipping cannot be confirmed before carrier delivery.
+- [x] Reconciliation UI: `label_purchasing` explicitly warns against retrying; uncertain `exception` without attached carrier evidence routes to Resolution Center; normal carrier exceptions keep tracking/recovery guidance; `label_failed` displays fail-closed retry guidance.
 
 ## 4. Refund / dispute / payout integrity
 
@@ -109,12 +110,13 @@ Use Shippo test mode in preview.
 
 ## 6. Notifications and audit behavior
 
-- [ ] Delivery offer/counter/match/status/cancellation alerts deep-link to relevant delivery.
-- [ ] Accepted offer and matched transitions do not generate redundant duplicate notifications.
-- [ ] Shipping alerts deep-link to protected order/transaction.
-- [ ] Duplicate webhook retries or unchanged state do not create duplicate alerts.
-- [ ] Meaningful recurring shipping incidents may create a new alert.
-- [ ] Event/audit rows capture ignored regressions, tracking mismatches, and reconciliation-required conditions without changing financial state.
+- [x] Delivery offer/counter/match/cancellation alerts persist with the relevant `delivery_job_id` and deep-link context.
+- [x] Accepted offer and matched transitions keep Delivery and normal Connection notifications semantically separate rather than duplicating the same alert.
+- [x] Shipping alerts carry the protected `connection_id` needed for transaction deep-linking.
+- [x] Duplicate notification retries using the same `(user_id,event_key)` create one stored row only; unchanged shipping state creates no extra alert.
+- [x] Meaningful recurring shipping incidents/recovery can create a new transition-keyed alert.
+- [x] Notification trigger helpers are not browser-executable; trigger/helper execution remains on the database-owner path.
+- [ ] Event/audit rows for every ignored webhook regression, tracking mismatch, and reconciliation-required external condition still need final Shippo test-mode E2E verification.
 
 ## 7. Deployment gates
 
