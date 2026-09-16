@@ -30,8 +30,13 @@ export default function ConnectionsPage() {
             <div className={styles.railHeading}>
               <span>Quick Actions</span>
             </div>
+            <a href="/transactions" className={styles.quickAction}>
+              <i className={styles.yellowIcon}><UiIcon name="wallet" /></i>
+              <div><strong>Orders & delivery</strong><span>Payments, meetup, shipping, delivery and payout</span></div>
+              <UiIcon name="chevron" />
+            </a>
             <a href="/post" className={styles.quickAction}>
-              <i className={styles.yellowIcon}><UiIcon name="plus" /></i>
+              <i><UiIcon name="plus" /></i>
               <div><strong>Post a request</strong><span>Find help or offer something</span></div>
               <UiIcon name="chevron" />
             </a>
