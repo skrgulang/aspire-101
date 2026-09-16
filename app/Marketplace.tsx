@@ -20,7 +20,7 @@ function money(cents: number | null | undefined) {
     : new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
 
-function expiry(item: DiscoverRequest) {
+function expiry(item: MarketplaceItem) {
   return item.listing_expires_at || new Date(new Date(item.created_at).getTime() + 7 * 86400000).toISOString();
 }
 
