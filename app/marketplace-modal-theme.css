@@ -1,0 +1,18 @@
+html[data-aspire-theme='dark'] .marketModal {
+  background: #1a1a18;
+  color: #eeeae2;
+  border-color: #36362f;
+}
+html[data-aspire-theme='dark'] .marketModal > p:not(.eyebrow) { color: #b7b1a6; }
+html[data-aspire-theme='dark'] .marketModal .eyebrow { color: #b8aa86; }
+html[data-aspire-theme='dark'] .marketModal button:not(.buttonGold) { color: #eeeae2; }
+html[data-aspire-theme='dark'] .marketModal input {
+  color: #eeeae2;
+  background: #10100f;
+  border: 1px solid #3a3933;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+html[data-aspire-theme='dark'] .marketModal input::placeholder { color: #777168; }
+html[data-aspire-theme='dark'] .marketModal input:focus { border-color: #ffc21c; }
