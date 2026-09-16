@@ -92,9 +92,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, ignored: true, reason: 'tracking_number_mismatch' });
     }
 
-    // A refunded/cancelled order is financially closed. Keep carrier noise from mutating
-    // fulfillment state or generating misleading post-close notifications.
-    if (['refunded', 'cancelled'].includes(order.status)) {
+    // Financially closed or disputed orders must not have carrier state mutated by late
+    // webhooks. Keep the event for support/audit, but freeze the order lifecycle.
+    if (['disputed', 'refunded', 'cancelled', 'released'].includes(order.status)) {
       await supabase.from('market_order_events').insert({
         market_order_id: order.id,
         actor_id: null,
