@@ -17,6 +17,7 @@ import './auth-school-detection.css';
 import './post.css';
 import './payment-fee-preview.css';
 import './marketplace.css';
+import './marketplace-empty-state-fix.css';
 import './campus-picker.css';
 import './campus-home.css';
 import './campus-circle-v2.css';
