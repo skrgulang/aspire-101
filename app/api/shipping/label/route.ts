@@ -80,9 +80,6 @@ export async function POST(request: Request) {
       if (ageMs >= staleLabelPurchaseMs) {
         const flaggedAt = new Date().toISOString();
         const { data: flagged, error: flagError } = await supabase.from('market_orders').update({
-          // A stale external purchase is not safe to retry. `exception` makes the state
-          // visible in the order UI and still permits a later authoritative carrier webhook
-          // to recover it to in_transit/delivered if Shippo did create the original label.
           shipping_status: 'exception',
           shipping_last_event_at: flaggedAt,
           updated_at: flaggedAt
@@ -116,10 +113,6 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    // Market-order state can lag a concurrent refund/dispute update by a few milliseconds.
-    // Re-read the protected payment before doing carrier-side validation for useful errors;
-    // the atomic claim RPC below is still the financial commit boundary immediately before
-    // the external Shippo purchase.
     const { data: payment, error: paymentError } = await supabase
       .from('connection_payments')
       .select('status,stripe_transfer_id,refund_claimed_at,release_claimed_at')
@@ -186,9 +179,6 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    // Serialize label purchase against refund/release by locking payment first and order second
-    // inside one DB function. Do not replace this with a direct market_orders update: that
-    // would restore the opposite order->payment lock order and reintroduce the money race.
     const { data: claimed, error: claimError } = await supabase.rpc('claim_market_shipping_label_purchase', {
       p_order_id: order.id,
       p_expected_rate_id: order.shipping_rate_id
@@ -218,8 +208,36 @@ export async function POST(request: Request) {
     try {
       transaction = await buyShippoLabel({ rateId: rate.object_id, metadata: JSON.stringify({ aspire_market_order_id: order.id, request_id: order.request_id }) });
     } catch (purchaseError) {
-      await supabase.from('market_orders').update({ shipping_status: 'label_failed', shipping_last_event_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
-      throw purchaseError;
+      // Once the external purchase request has been attempted, a thrown network/API error
+      // is ambiguous: Shippo may have created/charged a label even though Aspire did not
+      // receive the response. Never downgrade this to label_failed because that state is
+      // retryable. Freeze it as reconciliation-required instead.
+      const flaggedAt = new Date().toISOString();
+      const { data: flagged, error: flagError } = await supabase.from('market_orders').update({
+        shipping_status: 'exception',
+        shipping_last_event_at: flaggedAt,
+        updated_at: flaggedAt
+      })
+        .eq('id', order.id)
+        .eq('shipping_status', 'label_purchasing')
+        .select('id')
+        .maybeSingle();
+      if (flagError) throw flagError;
+      if (flagged) {
+        await supabase.from('market_order_events').insert({
+          market_order_id: order.id,
+          actor_id: user.id,
+          event_type: 'shipping_label_reconciliation_required',
+          payload: {
+            reason: 'label_purchase_outcome_uncertain',
+            selected_rate_id: order.shipping_rate_id
+          }
+        });
+      }
+      return NextResponse.json({
+        error: 'Aspire could not confirm whether the carrier created the label. Do not retry the purchase because a second label could be charged. Open the Resolution Center so the original Shippo attempt can be reconciled first.',
+        code: 'LABEL_RECONCILIATION_REQUIRED'
+      }, { status: 409 });
     }
     if (String(transaction.status).toUpperCase() !== 'SUCCESS' || !transaction.label_url || !transaction.tracking_number) {
       await supabase.from('market_orders').update({ shipping_status: 'label_failed', shipping_last_event_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
@@ -240,8 +258,6 @@ export async function POST(request: Request) {
     }).eq('id', order.id).eq('shipping_status', 'label_purchasing').select('id').maybeSingle();
     if (finalizeError) throw finalizeError;
     if (!finalized) {
-      // Shippo may already have charged for this label. Failing closed here prevents a
-      // second purchase if another state transition won the database race.
       return NextResponse.json({
         error: 'The carrier created a label, but Aspire could not safely attach it to the order because the order changed during purchase. Do not retry. Use the Resolution Center for reconciliation.',
         code: 'LABEL_RECONCILIATION_REQUIRED'
