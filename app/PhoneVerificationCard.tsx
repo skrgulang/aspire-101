@@ -1,9 +1,11 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 
 type Step = 'phone' | 'code' | 'verified';
+
+const resendCooldownSeconds = 60;
 
 function normalizePhone(value: string) {
   const trimmed = value.trim();
@@ -36,31 +38,51 @@ export default function PhoneVerificationCard({ initialPhone, initiallyVerified 
   const [step, setStep] = useState<Step>(initiallyVerified ? 'verified' : 'phone');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [resendSeconds, setResendSeconds] = useState(0);
 
   const normalizedPhone = useMemo(() => normalizePhone(phone), [phone]);
 
-  async function sendCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMessage('');
-    if (!normalizedPhone) {
-      setMessage('Enter a valid mobile number with country code.');
-      return;
-    }
+  useEffect(() => {
+    if (resendSeconds <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendSeconds]);
 
+  async function requestCode(targetPhone: string, resent = false) {
     setBusy(true);
+    setMessage('');
     try {
       const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.updateUser({ phone: normalizedPhone });
+      const { error } = await supabase.auth.updateUser({ phone: targetPhone });
       if (error) throw error;
-      setSubmittedPhone(normalizedPhone);
+      setSubmittedPhone(targetPhone);
       setStep('code');
-      setMessage('We sent a 6-digit verification code.');
+      setResendSeconds(resendCooldownSeconds);
+      setMessage(resent
+        ? 'A new 6-digit code was requested. It may take up to a minute to arrive.'
+        : 'We requested a 6-digit verification code. It may take up to a minute to arrive.');
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Could not send a verification code.';
       setMessage(friendlyPhoneError(detail));
     } finally {
       setBusy(false);
     }
+  }
+
+  async function sendCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!normalizedPhone) {
+      setMessage('Enter a valid mobile number with country code.');
+      return;
+    }
+    await requestCode(normalizedPhone);
+  }
+
+  async function resendCode() {
+    if (busy || resendSeconds > 0 || !submittedPhone) return;
+    await requestCode(submittedPhone, true);
   }
 
   async function verifyCode(event: FormEvent<HTMLFormElement>) {
@@ -122,6 +144,9 @@ export default function PhoneVerificationCard({ initialPhone, initiallyVerified 
             <input inputMode="numeric" pattern="[0-9]*" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="123456" autoComplete="one-time-code" aria-label="6-digit verification code" />
             <button className="button buttonGold" type="submit" disabled={busy}>{busy ? 'Checking…' : 'Verify'}</button>
             <button type="button" className="phoneVerifyBack" onClick={() => { setStep('phone'); setCode(''); setMessage(''); }} disabled={busy}>Change number</button>
+            <button type="button" className="phoneVerifyBack" onClick={resendCode} disabled={busy || resendSeconds > 0}>
+              {busy ? 'Sending…' : resendSeconds > 0 ? `Send again in ${resendSeconds}s` : 'Send again'}
+            </button>
           </form>
         )}
 
