@@ -1,0 +1,57 @@
+/* Marketplace checkout modal contrast, especially in dark mode. */
+html[data-aspire-theme='dark'] .marketModal {
+  background: #181816 !important;
+  color: #f4f1e8 !important;
+  border-color: #39372f !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.62) !important;
+}
+
+html[data-aspire-theme='dark'] .marketModal .eyebrow {
+  color: #d7ae3c !important;
+}
+
+html[data-aspire-theme='dark'] .marketModal h2,
+html[data-aspire-theme='dark'] .marketModal strong,
+html[data-aspire-theme='dark'] .marketModal b,
+html[data-aspire-theme='dark'] .marketModal label,
+html[data-aspire-theme='dark'] .marketModal span {
+  color: #f4f1e8;
+}
+
+html[data-aspire-theme='dark'] .marketModal > p:not(.eyebrow),
+html[data-aspire-theme='dark'] .marketModal button p,
+html[data-aspire-theme='dark'] .marketModal small {
+  color: #b8b2a7 !important;
+}
+
+html[data-aspire-theme='dark'] .marketModalClose {
+  color: #aaa49a !important;
+}
+
+html[data-aspire-theme='dark'] .marketModal input,
+html[data-aspire-theme='dark'] .marketModal textarea,
+html[data-aspire-theme='dark'] .marketModal select {
+  background: #0f0f0e !important;
+  color: #f4f1e8 !important;
+  border: 1px solid #3a3934 !important;
+}
+
+html[data-aspire-theme='dark'] .marketModal input::placeholder,
+html[data-aspire-theme='dark'] .marketModal textarea::placeholder {
+  color: #777269 !important;
+}
+
+html[data-aspire-theme='dark'] .marketModal .buttonGold {
+  color: #151109 !important;
+  background: linear-gradient(180deg, #ffd84f, #ffc21c) !important;
+  border-color: transparent !important;
+}
+
+html[data-aspire-theme='dark'] .marketModalFacts span {
+  background: #242421 !important;
+  color: #a8a298 !important;
+}
+
+html[data-aspire-theme='dark'] .marketModalFacts b {
+  color: #f4f1e8 !important;
+}
