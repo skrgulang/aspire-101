@@ -137,7 +137,7 @@ Use Shippo test mode in preview.
 
 Before PR #91 can leave Draft:
 
-- [x] A recent audited PR head has a successful Vercel preview build; re-check after every new code commit.
+- [ ] Latest PR head must have a successful Vercel preview build; re-check after every new code or checklist commit.
 - [x] Every Flexible Fulfillment migration version currently present is unique and ordered as documented above.
 - [x] All current PR migrations through `20260914228900` have applied cleanly to the Development Branch.
 - [ ] Remaining test matrices above pass in preview/test mode.
