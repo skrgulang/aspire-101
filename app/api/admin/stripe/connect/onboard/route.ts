@@ -25,6 +25,11 @@ async function requireAdmin(request: Request) {
   return { supabase };
 }
 
+async function requireSandboxAdmin(request: Request) {
+  if (stripeLivemode()) throw new Error('TEST_MODE_REQUIRED');
+  return requireAdmin(request);
+}
+
 function errorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : '';
   if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to continue.' }, { status: 401 });
@@ -37,10 +42,21 @@ function errorResponse(error: unknown) {
   return NextResponse.json({ error: 'Could not create the sandbox onboarding link.' }, { status: 500 });
 }
 
+export async function GET(request: Request) {
+  try {
+    await requireSandboxAdmin(request);
+    return NextResponse.json(
+      { ok: true, mode: 'sandbox' },
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    if (stripeLivemode()) throw new Error('TEST_MODE_REQUIRED');
-    const { supabase } = await requireAdmin(request);
+    const { supabase } = await requireSandboxAdmin(request);
     const body = await request.json().catch(() => ({})) as { userId?: string };
     const userId = String(body.userId || '').trim();
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
