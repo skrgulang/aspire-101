@@ -1,0 +1,32 @@
+/* Hotfix: Marketplace.tsx uses `marketplaceEmpty`; keep the empty-state icon constrained. */
+.marketplaceEmpty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 300px;
+  color: #777770;
+  text-align: center;
+}
+
+.marketplaceEmpty svg {
+  width: 36px;
+  height: 36px;
+  max-width: 36px;
+  max-height: 36px;
+  color: #b08a17;
+}
+
+.marketplaceEmpty h2 {
+  margin: 0;
+  color: #242420;
+}
+
+.marketplaceEmpty p {
+  margin: 0;
+  font-size: 12px;
+}
+
+html[data-aspire-theme='dark'] .marketplaceEmpty h2 {
+  color: #eeeae2;
+}
