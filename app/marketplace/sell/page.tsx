@@ -1,10 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppDock from '../../AppDock';
 import './seller-preview.css';
 
 type OptionKey = 'meet' | 'shipping' | 'seller' | 'aspirer';
+type SavedSellerDeliveryOptions = {
+  enabled: Record<OptionKey, boolean>;
+  shippingPayer: 'buyer' | 'seller' | 'either';
+  sellerDeliveryMode: 'free' | 'fixed' | 'negotiable';
+  sellerDeliveryPrice: string;
+  updatedAt: string;
+};
+
+const STORAGE_KEY = 'aspire:seller-delivery-options-preview-v1';
 
 export default function MarketplaceSellerPreview() {
   const [enabled, setEnabled] = useState<Record<OptionKey, boolean>>({
@@ -16,6 +25,35 @@ export default function MarketplaceSellerPreview() {
   const [shippingPayer, setShippingPayer] = useState<'buyer' | 'seller' | 'either'>('buyer');
   const [sellerDeliveryMode, setSellerDeliveryMode] = useState<'free' | 'fixed' | 'negotiable'>('negotiable');
   const [sellerDeliveryPrice, setSellerDeliveryPrice] = useState('5');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<SavedSellerDeliveryOptions>;
+      if (saved.enabled && typeof saved.enabled === 'object') {
+        setEnabled({
+          meet: Boolean(saved.enabled.meet),
+          shipping: Boolean(saved.enabled.shipping),
+          seller: Boolean(saved.enabled.seller),
+          aspirer: Boolean(saved.enabled.aspirer)
+        });
+      }
+      if (saved.shippingPayer === 'buyer' || saved.shippingPayer === 'seller' || saved.shippingPayer === 'either') {
+        setShippingPayer(saved.shippingPayer);
+      }
+      if (saved.sellerDeliveryMode === 'free' || saved.sellerDeliveryMode === 'fixed' || saved.sellerDeliveryMode === 'negotiable') {
+        setSellerDeliveryMode(saved.sellerDeliveryMode);
+      }
+      if (typeof saved.sellerDeliveryPrice === 'string') setSellerDeliveryPrice(saved.sellerDeliveryPrice);
+      setSaveStatus('saved');
+      setSaveMessage('Saved seller delivery draft loaded.');
+    } catch {
+      // A bad local draft should never block this preview page.
+    }
+  }, []);
 
   const buyerOptions = useMemo(() => {
     const result: string[] = [];
@@ -26,8 +64,43 @@ export default function MarketplaceSellerPreview() {
     return result;
   }, [enabled, shippingPayer, sellerDeliveryMode, sellerDeliveryPrice]);
 
+  function markDirty() {
+    setSaveStatus('idle');
+    setSaveMessage('');
+  }
+
   function toggle(key: OptionKey) {
+    markDirty();
     setEnabled((current) => ({ ...current, [key]: !current[key] }));
+  }
+
+  function saveOptions() {
+    if (!buyerOptions.length) {
+      setSaveStatus('error');
+      setSaveMessage('Choose at least one delivery option before saving.');
+      return;
+    }
+    if (enabled.seller && sellerDeliveryMode === 'fixed' && (!sellerDeliveryPrice || Number(sellerDeliveryPrice) <= 0)) {
+      setSaveStatus('error');
+      setSaveMessage('Add a seller delivery price greater than $0.');
+      return;
+    }
+
+    const payload: SavedSellerDeliveryOptions = {
+      enabled,
+      shippingPayer,
+      sellerDeliveryMode,
+      sellerDeliveryPrice,
+      updatedAt: new Date().toISOString()
+    };
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      setSaveStatus('saved');
+      setSaveMessage('Saved. Refresh this page and your choices will still be here.');
+    } catch {
+      setSaveStatus('error');
+      setSaveMessage('Could not save these options in this browser. Try again.');
+    }
   }
 
   return (
@@ -73,9 +146,9 @@ export default function MarketplaceSellerPreview() {
             {enabled.shipping && (
               <div className="sellerSubPanel">
                 <h3>Who can cover shipping?</h3>
-                <label><input type="radio" checked={shippingPayer === 'buyer'} onChange={() => setShippingPayer('buyer')} /> <span><b>Buyer pays shipping</b><small>Shipping is added to the buyer's checkout total.</small></span></label>
-                <label><input type="radio" checked={shippingPayer === 'seller'} onChange={() => setShippingPayer('seller')} /> <span><b>I'll cover shipping</b><small>Shipping is deducted from your seller proceeds.</small></span></label>
-                <label><input type="radio" checked={shippingPayer === 'either'} onChange={() => setShippingPayer('either')} /> <span><b>Either is okay</b><small>The final payer can be agreed before checkout.</small></span></label>
+                <label><input type="radio" checked={shippingPayer === 'buyer'} onChange={() => { markDirty(); setShippingPayer('buyer'); }} /> <span><b>Buyer pays shipping</b><small>Shipping is added to the buyer's checkout total.</small></span></label>
+                <label><input type="radio" checked={shippingPayer === 'seller'} onChange={() => { markDirty(); setShippingPayer('seller'); }} /> <span><b>I'll cover shipping</b><small>Shipping is deducted from your seller proceeds.</small></span></label>
+                <label><input type="radio" checked={shippingPayer === 'either'} onChange={() => { markDirty(); setShippingPayer('either'); }} /> <span><b>Either is okay</b><small>The final payer can be agreed before checkout.</small></span></label>
               </div>
             )}
 
@@ -88,9 +161,9 @@ export default function MarketplaceSellerPreview() {
               <div className="sellerSubPanel">
                 <h3>Your delivery terms</h3>
                 <div className="sellerPills">
-                  {(['free','fixed','negotiable'] as const).map((mode) => <button key={mode} className={sellerDeliveryMode === mode ? 'active' : ''} onClick={() => setSellerDeliveryMode(mode)}>{mode === 'free' ? 'Free' : mode === 'fixed' ? 'Fixed price' : 'Negotiable'}</button>)}
+                  {(['free','fixed','negotiable'] as const).map((mode) => <button key={mode} className={sellerDeliveryMode === mode ? 'active' : ''} onClick={() => { markDirty(); setSellerDeliveryMode(mode); }}>{mode === 'free' ? 'Free' : mode === 'fixed' ? 'Fixed price' : 'Negotiable'}</button>)}
                 </div>
-                {sellerDeliveryMode === 'fixed' && <label className="sellerPrice"><span>Delivery price</span><div>$ <input value={sellerDeliveryPrice} onChange={(event) => setSellerDeliveryPrice(event.target.value.replace(/[^0-9.]/g,''))} /></div></label>}
+                {sellerDeliveryMode === 'fixed' && <label className="sellerPrice"><span>Delivery price</span><div>$ <input value={sellerDeliveryPrice} onChange={(event) => { markDirty(); setSellerDeliveryPrice(event.target.value.replace(/[^0-9.]/g,'')); }} /></div></label>}
                 <p>Buyer sends a delivery request first. You can still accept or decline before the item is reserved.</p>
               </div>
             )}
@@ -101,7 +174,10 @@ export default function MarketplaceSellerPreview() {
               <em>Flexible</em>
             </button>
 
-            <button className="sellerPreviewPrimary" type="button">Save delivery options</button>
+            <button className="sellerPreviewPrimary" type="button" onClick={saveOptions}>
+              {saveStatus === 'saved' ? 'Saved ✓' : 'Save delivery options'}
+            </button>
+            {saveMessage && <div className={`sellerSaveMessage ${saveStatus === 'error' ? 'error' : 'saved'}`} role="status">{saveMessage}</div>}
           </section>
 
           <aside className="sellerBuyerPreview">
