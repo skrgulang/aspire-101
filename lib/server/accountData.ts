@@ -3,6 +3,8 @@ import { stripeLivemode } from './aspireServer';
 
 type ServiceClient = SupabaseClient;
 
+const ACCOUNT_REQUEST_EXPORT_SELECT = 'id,poster_id,kind,category,title,details,campus,campus_id,city,scheduled_start_at,scheduled_end_at,timezone,meeting_label,amount_cents,currency,payment_method,market_intent,item_condition,price_negotiable,fulfillment_method,fulfillment_methods,shipping_paid_by_preference,shipping_paid_by_default,seller_delivery_mode,seller_delivery_price_cents,seller_area,quantity,language_code,cover_image_url,cover_image_source,cover_image_asset_id,listing_expires_at,moderation_status,moderation_reason,post_review_status,language_review_status,market_review_status,layered_reviewed_at,status,created_at,updated_at' as const;
+
 export type AccountDeletionBlocker = {
   code: string;
   message: string;
@@ -24,7 +26,7 @@ export async function buildAccountExport(supabase: ServiceClient, user: User) {
     expectOk(supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(), 'preferences_export'),
     expectOk(supabase.from('school_verifications').select('*').eq('user_id', userId).maybeSingle(), 'school_export'),
     expectOk(supabase.from('identity_verifications').select('status,provider,verified_at,created_at,updated_at').eq('user_id', userId).maybeSingle(), 'identity_export'),
-    expectOk(supabase.from('requests').select('*').eq('poster_id', userId).order('created_at', { ascending: false }), 'requests_export'),
+    expectOk(supabase.from('requests').select(ACCOUNT_REQUEST_EXPORT_SELECT).eq('poster_id', userId).order('created_at', { ascending: false }), 'requests_export'),
     expectOk(supabase.from('request_responses').select('*').eq('responder_id', userId).order('created_at', { ascending: false }), 'responses_export'),
     expectOk(supabase.from('connections').select('*').or(`requester_id.eq.${userId},responder_id.eq.${userId}`).order('created_at', { ascending: false }), 'connections_export'),
     expectOk(supabase.from('connection_reviews').select('*').or(`reviewer_id.eq.${userId},reviewee_id.eq.${userId}`).order('created_at', { ascending: false }), 'reviews_export'),
