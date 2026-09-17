@@ -40,6 +40,11 @@ type BehaviorContext = {
   trustBand: string | null;
 };
 
+type ScanAccess = {
+  allowed: boolean;
+  staff: boolean;
+};
+
 function platformPolicyFlags(text: string, kind: string) {
   const flags = new Set<string>();
   if (/(telegram|whats\s?app|signal|wechat|snapchat|instagram|discord|dm me|text me|call me)/i.test(text) || /\b\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}\b/.test(text)) flags.add('off_platform_contact');
@@ -162,10 +167,11 @@ async function callOpenAiModeration(text: string, imageUrls: string[]) {
   return { payload, result };
 }
 
-async function canScanRequest(userId: string, posterId: string, supabase: ReturnType<typeof getSupabaseServiceClient>) {
-  if (userId === posterId) return true;
-  const { data } = await supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle();
-  return data?.role === 'moderator' || data?.role === 'admin';
+async function getScanAccess(userId: string, posterId: string, supabase: ReturnType<typeof getSupabaseServiceClient>): Promise<ScanAccess> {
+  const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  const staff = data?.role === 'moderator' || data?.role === 'admin';
+  return { allowed: userId === posterId || staff, staff };
 }
 
 function isCronAuthorized(request: Request) {
@@ -182,6 +188,7 @@ export async function POST(request: Request) {
   const supabase = getSupabaseServiceClient();
   let requestId = '';
   let behavior: BehaviorContext | null = null;
+  let staffCanViewInternals = false;
 
   try {
     const cronAuthorized = isCronAuthorized(request);
@@ -198,7 +205,13 @@ export async function POST(request: Request) {
     if (requestError) throw requestError;
     if (!requestRow) return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
     const aspireRequest = requestRow as RequestForScan;
-    if (!cronAuthorized && (!auth?.user || !await canScanRequest(auth.user.id, aspireRequest.poster_id, supabase))) return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
+
+    if (!cronAuthorized) {
+      if (!auth?.user) return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
+      const access = await getScanAccess(auth.user.id, aspireRequest.poster_id, supabase);
+      if (!access.allowed) return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
+      staffCanViewInternals = access.staff;
+    }
 
     behavior = await loadBehaviorContext(aspireRequest, supabase);
     const { error: scanStateError } = await supabase.from('requests').update({
@@ -276,7 +289,19 @@ export async function POST(request: Request) {
     }).eq('id', requestId);
     if (updateError) throw updateError;
 
-    return NextResponse.json({ ok: true, requestId, moderationStatus, riskLevel: assessment.riskLevel, riskScore: assessment.riskScore, recommendedAction: assessment.recommendedAction, flags: combinedFlags, behaviorFlags: behavior.flags, trustScore: behavior.trustScore, trustBand: behavior.trustBand, imageCount: imageUrls.length });
+    const publicResult = { ok: true, requestId, moderationStatus, imageCount: imageUrls.length };
+    if (!cronAuthorized && !staffCanViewInternals) return NextResponse.json(publicResult);
+
+    return NextResponse.json({
+      ...publicResult,
+      riskLevel: assessment.riskLevel,
+      riskScore: assessment.riskScore,
+      recommendedAction: assessment.recommendedAction,
+      flags: combinedFlags,
+      behaviorFlags: behavior.flags,
+      trustScore: behavior.trustScore,
+      trustBand: behavior.trustBand
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'UNKNOWN';
     if (requestId) {
