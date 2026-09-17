@@ -287,7 +287,7 @@ export async function createMarketplaceListing(input: MarketplaceListingInput) {
       cover_image_asset_id: null,
       listing_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
     })
-    .select('*')
+    .select('id,title,moderation_status')
     .single();
 
   if (error) throw friendlyError(error, 'Could not publish this item.');
