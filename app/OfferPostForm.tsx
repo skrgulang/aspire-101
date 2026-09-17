@@ -17,7 +17,7 @@ type OfferCategory = {
 };
 
 const categories: OfferCategory[] = [
-  { value: 'Ride', label: 'Ride / carpool', icon: '↗', prompt: 'Offer a ride you are already making.', example: 'Driving from Chicago to Purdue tonight — seats available' },
+  { value: 'Ride', label: 'Ride / carpool', icon: '↗', prompt: 'Offer a ride you are already making.', example: 'Driving back toward campus tonight — seats available' },
   { value: 'Pickup / errand', label: 'Pickup / errand', icon: '□', prompt: 'Offer to grab something while you are already out.', example: 'Heading to Target — can pick something up for someone' },
   { value: 'Moving / help', label: 'Practical help', icon: '+', prompt: 'Offer time, hands, tools, or practical help.', example: 'Free this afternoon to help move a desk or mini fridge' },
   { value: 'Study', label: 'Study / class', icon: '✎', prompt: 'Offer study help, notes, or a study session.', example: 'I can help with linear algebra tonight' },
@@ -29,10 +29,10 @@ const quickStarts = [
   {
     label: 'Ride back to campus',
     category: 'Ride',
-    title: 'Driving from Chicago to Purdue tonight — seats available',
-    details: 'I am heading back to campus and can take someone who needs a ride. Message me if the timing works for you.',
-    origin: 'Chicago, IL',
-    destination: 'West Lafayette, IN'
+    title: 'Driving back toward campus tonight — seats available',
+    details: 'I am heading back toward campus and can take someone who needs a ride. Message me if the timing works for you.',
+    origin: '',
+    destination: ''
   },
   {
     label: 'Picking something up',
@@ -69,11 +69,17 @@ function browseCategory(category: string) {
   return 'People / community';
 }
 
+function campusArea(campus: University | null) {
+  if (!campus) return '';
+  return [campus.city, campus.state].filter(Boolean).join(', ');
+}
+
 export default function OfferPostForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [universities, setUniversities] = useState<University[]>([]);
   const [campusId, setCampusId] = useState('');
+  const [homeCampusId, setHomeCampusId] = useState('');
   const [category, setCategory] = useState('Ride');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
@@ -103,13 +109,13 @@ export default function OfferPostForm() {
           fetchActiveUniversities()
         ]);
         if (!alive) return;
+        const homeId = typeof profile?.home_campus_id === 'string' ? profile.home_campus_id : '';
         const preferred = typeof profile?.current_campus_id === 'string' && profile.current_campus_id
           ? profile.current_campus_id
-          : typeof profile?.home_campus_id === 'string'
-            ? profile.home_campus_id
-            : '';
+          : homeId;
         const nextCampus = campusList.find((item) => item.id === preferred) || campusList[0] || null;
         setUniversities(campusList);
+        setHomeCampusId(homeId);
         setCampusId(nextCampus?.id || '');
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Could not load your campus.');
@@ -121,15 +127,28 @@ export default function OfferPostForm() {
   }, [router]);
 
   const selectedCampus = useMemo(() => universities.find((item) => item.id === campusId) || null, [universities, campusId]);
+  const homeCampus = useMemo(() => universities.find((item) => item.id === homeCampusId) || null, [universities, homeCampusId]);
   const selectedCategory = useMemo(() => categories.find((item) => item.value === category) || categories[0], [category]);
   const isRide = category === 'Ride';
+  const selectedArea = campusArea(selectedCampus);
+  const homeArea = campusArea(homeCampus);
 
   function applyQuickStart(item: (typeof quickStarts)[number]) {
     setCategory(item.category);
-    setTitle(item.title);
     setDetails(item.details);
-    setOrigin(item.origin);
-    setDestination(item.destination);
+    if (item.category === 'Ride') {
+      const visiting = Boolean(selectedCampus && homeCampus && selectedCampus.id !== homeCampus.id);
+      const nextOrigin = visiting ? selectedArea : '';
+      const nextDestination = homeArea || selectedArea;
+      const campusName = homeCampus?.short_name || homeCampus?.name || selectedCampus?.short_name || selectedCampus?.name || 'campus';
+      setTitle(`Driving to ${campusName} tonight — seats available`);
+      setOrigin(nextOrigin);
+      setDestination(nextDestination);
+    } else {
+      setTitle(item.title);
+      setOrigin(item.origin);
+      setDestination(item.destination);
+    }
     setError('');
     setPosted(null);
   }
@@ -218,12 +237,12 @@ export default function OfferPostForm() {
     <form className={styles.root} onSubmit={publish}>
       <div className={styles.hero}>
         <div><span>I CAN HELP</span><h2>Offer something useful.</h2><p>Post what you are already doing, where you are going, or what you can help with. Students who need it can reach out to you.</p></div>
-        <div className={styles.campus}><small>POSTING TO</small><strong>{selectedCampus?.short_name || selectedCampus?.name || 'Campus'}</strong><span>Verified campus feed</span></div>
+        <div className={styles.campus}><small>POSTING TO</small><strong>{selectedCampus?.short_name || selectedCampus?.name || 'Campus'}</strong><span>{selectedArea || 'Selected campus area'}</span></div>
       </div>
 
       <section className={styles.quickSection}>
         <div className={styles.sectionHeading}><div><span>QUICK START</span><h3>Start with a common offer.</h3></div><small>You can edit everything</small></div>
-        <div className={styles.quickGrid}>{quickStarts.map((item) => <button key={item.label} type="button" onClick={() => applyQuickStart(item)}><strong>{item.label}</strong><span>{item.title}</span></button>)}</div>
+        <div className={styles.quickGrid}>{quickStarts.map((item) => <button key={item.label} type="button" onClick={() => applyQuickStart(item)}><strong>{item.label}</strong><span>{item.category === 'Ride' ? `Ride toward ${homeCampus?.short_name || selectedCampus?.short_name || 'campus'}` : item.title}</span></button>)}</div>
       </section>
 
       <section className={styles.section}>
@@ -237,8 +256,14 @@ export default function OfferPostForm() {
           <label className={styles.wide}><span>Title</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} placeholder={selectedCategory.example} /></label>
           <label className={styles.wide}><span>Details <em>optional</em></span><textarea value={details} onChange={(event) => setDetails(event.target.value)} rows={4} placeholder="Add timing, limits, what you can carry, or anything people should know." /></label>
           {isRide && <>
-            <label><span>Leaving from</span><input value={origin} onChange={(event) => setOrigin(event.target.value)} placeholder="Chicago, IL" /></label>
-            <label><span>Going to</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder="West Lafayette, IN" /></label>
+            <div className={`${styles.routeAssist} ${styles.wide}`}>
+              <span>SMART ROUTE</span>
+              {selectedArea && <button type="button" onClick={() => setOrigin(selectedArea)}>Start near {selectedCampus?.short_name || 'current campus'}</button>}
+              {selectedArea && <button type="button" onClick={() => setDestination(selectedArea)}>Go to {selectedCampus?.short_name || 'current campus'}</button>}
+              {homeArea && homeCampus?.id !== selectedCampus?.id && <button type="button" onClick={() => setDestination(homeArea)}>Go home to {homeCampus?.short_name || homeCampus?.name}</button>}
+            </div>
+            <label><span>Leaving from</span><input value={origin} onChange={(event) => setOrigin(event.target.value)} placeholder={selectedArea || 'Chicago, IL'} /></label>
+            <label><span>Going to</span><input value={destination} onChange={(event) => setDestination(event.target.value)} placeholder={homeArea || selectedArea || 'West Lafayette, IN'} /></label>
             <label className={styles.seats}><span>Seats available</span><input type="number" min="1" max="8" value={seats} onChange={(event) => setSeats(event.target.value)} /></label>
           </>}
         </div>
@@ -257,7 +282,7 @@ export default function OfferPostForm() {
 
       <section className={styles.preview}>
         <div><span>HOW IT WILL WORK</span><strong>You offer → someone is interested → you choose whether to connect.</strong></div>
-        <p>This is not the same as browsing for requests to help with. You are creating your own public offer, like “I’m driving back from Chicago at 9 PM — anyone need a ride?”</p>
+        <p>Your campus context helps Aspire show the offer to the right community, but the route itself stays flexible. You can type any city, airport, neighborhood, or campus in From and To.</p>
       </section>
 
       {error && <div className={styles.error} role="alert">{error}</div>}
