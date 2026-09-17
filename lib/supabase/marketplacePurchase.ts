@@ -37,6 +37,7 @@ export async function purchaseMarketplaceListingWithOptions(input: {
     if (/LISTING_EXPIRED/i.test(detail)) throw new Error('This listing has expired.');
     if (/LISTING_UNAVAILABLE/i.test(detail)) throw new Error('This item was just reserved or is no longer available.');
     if (/FULFILLMENT_METHOD_NOT_OFFERED/i.test(detail)) throw new Error('That delivery method is not offered by this seller.');
+    if (/SHIPPING_PAYER_NOT_OFFERED/i.test(detail)) throw new Error('That shipping payment option is not offered by this seller. Reopen the item and use the seller’s shipping terms.');
     if (/PAYMENT_METHOD_NOT_ALLOWED/i.test(detail)) throw new Error('That payment option is not available for this delivery method.');
     if (/MARKETPLACE_REQUIRES_ASPIRE/i.test(detail)) throw new Error('This marketplace order must use Aspire Protected checkout.');
     throw new Error(error.message || 'Could not reserve this item.');
