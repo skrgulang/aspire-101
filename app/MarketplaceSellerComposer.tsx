@@ -37,10 +37,13 @@ export default function MarketplaceSellerComposer() {
   const [loading, setLoading] = useState(true);
   const [campusId, setCampusId] = useState('');
   const [campusName, setCampusName] = useState('');
+  const [campusCity, setCampusCity] = useState('');
+  const [campusState, setCampusState] = useState('');
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState<ItemCondition>('good');
   const [details, setDetails] = useState('');
+  const [sellerArea, setSellerArea] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState('');
   const [enabled, setEnabled] = useState<EnabledOptions>(DEFAULT_OPTIONS);
@@ -75,6 +78,8 @@ export default function MarketplaceSellerComposer() {
         if (campus) {
           setCampusId(campus.id);
           setCampusName(campus.short_name || campus.name);
+          setCampusCity(campus.city || '');
+          setCampusState(campus.state || '');
         }
         setDrafts(savedDrafts);
       } catch (cause) {
@@ -106,6 +111,8 @@ export default function MarketplaceSellerComposer() {
     return result;
   }, [enabled, shippingPayer, sellerDeliveryMode, sellerDeliveryPrice]);
 
+  const publicLocation = [sellerArea.trim(), campusCity, campusState].filter(Boolean).join(', ');
+
   function toggle(key: OptionKey) {
     setEnabled((current) => ({ ...current, [key]: !current[key] }));
     setError('');
@@ -133,6 +140,7 @@ export default function MarketplaceSellerComposer() {
     setPrice('');
     setCondition('good');
     setDetails('');
+    setSellerArea('');
     setPhoto(null);
     setPhotoUrl('');
     setEnabled(DEFAULT_OPTIONS);
@@ -151,6 +159,7 @@ export default function MarketplaceSellerComposer() {
     setPrice(draft.price_cents == null ? '' : (draft.price_cents / 100).toFixed(draft.price_cents % 100 === 0 ? 0 : 2));
     setCondition(draft.item_condition || 'good');
     setDetails(draft.details || '');
+    setSellerArea(draft.seller_area || '');
     setEnabled({
       meet: draft.fulfillment_methods.includes('campus_pickup'),
       shipping: draft.fulfillment_methods.includes('shipping'),
@@ -185,6 +194,7 @@ export default function MarketplaceSellerComposer() {
         priceCents: price && Number(price) > 0 ? Math.round(Number(price) * 100) : null,
         itemCondition: condition,
         details,
+        sellerArea,
         fulfillmentMethods: methods,
         shippingPaidBy: enabled.shipping ? shippingPayer : null,
         sellerDeliveryMode: enabled.seller ? sellerDeliveryMode : null,
@@ -218,6 +228,7 @@ export default function MarketplaceSellerComposer() {
     if (!campusId) return setError('Could not resolve your campus.');
     if (!title.trim()) return setError('Add an item title before publishing.');
     if (!price || Number(price) <= 0) return setError('Add a price greater than $0 before publishing.');
+    if (!sellerArea.trim()) return setError('Add an approximate seller area, like a campus area or neighborhood.');
     if (!photo) return setError('Add at least one real photo before publishing. Drafts can be saved without a photo.');
     if (!methods.length) return setError('Choose at least one delivery option.');
     if (enabled.seller && sellerDeliveryMode === 'fixed' && Number(sellerDeliveryPrice) <= 0) return setError('Add a seller delivery price greater than $0.');
@@ -231,6 +242,7 @@ export default function MarketplaceSellerComposer() {
         priceCents: Math.round(Number(price) * 100),
         itemCondition: condition,
         details,
+        sellerArea,
         fulfillmentMethods: methods,
         shippingPaidBy: enabled.shipping ? shippingPayer : null,
         sellerDeliveryMode: enabled.seller ? sellerDeliveryMode : null,
@@ -282,6 +294,10 @@ export default function MarketplaceSellerComposer() {
               <label><span>Condition</span><select value={condition} onChange={(event) => setCondition(event.target.value as ItemCondition)}>{conditions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             </div>
             <label><span>Description</span><textarea rows={4} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Model, size, defects, accessories, pickup notes…" /></label>
+            <div className={styles.twoCols}>
+              <label><span>Seller area *</span><input value={sellerArea} onChange={(event) => setSellerArea(event.target.value)} maxLength={120} placeholder="e.g. Chauncey Hill, Purdue campus, Hillenbrand area" /><small>No street address needed. Buyers only see this approximate area.</small></label>
+              <label><span>City / State</span><input value={[campusCity, campusState].filter(Boolean).join(', ')} readOnly aria-readonly="true" /><small>Fixed from your selected campus.</small></label>
+            </div>
           </div>
         </div>
 
@@ -297,7 +313,7 @@ export default function MarketplaceSellerComposer() {
 
         {enabled.seller && <div className={styles.subPanel}><h4>Your own delivery terms</h4><div className={styles.pills}>{(['free','fixed','negotiable'] as SellerDeliveryMode[]).map((mode) => <button type="button" key={mode} className={sellerDeliveryMode === mode ? styles.activePill : ''} onClick={() => setSellerDeliveryMode(mode)}>{mode === 'free' ? 'Free' : mode === 'fixed' ? 'Fixed price' : 'Negotiable'}</button>)}</div>{sellerDeliveryMode === 'fixed' && <label className={styles.deliveryPrice}><span>Delivery price</span><div className={styles.money}>$ <input value={sellerDeliveryPrice} inputMode="decimal" onChange={(event) => setSellerDeliveryPrice(event.target.value.replace(/[^0-9.]/g, ''))} /></div></label>}<p>The buyer asks first. You can accept or decline before checkout.</p></div>}
 
-        <section className={styles.buyerPreview}><div><span>BUYER PREVIEW</span><strong>What buyers will see at Buy Now</strong></div><div className={styles.previewTags}>{buyerOptions.map((option) => <span key={option}>✓ {option}</span>)}{!buyerOptions.length && <span>Choose at least one delivery option.</span>}</div></section>
+        <section className={styles.buyerPreview}><div><span>BUYER PREVIEW</span><strong>What buyers will see at Buy Now</strong><small>{publicLocation ? `Seller area: ${publicLocation}` : 'Add a seller area so buyers know roughly where the item is.'}</small></div><div className={styles.previewTags}>{buyerOptions.map((option) => <span key={option}>✓ {option}</span>)}{!buyerOptions.length && <span>Choose at least one delivery option.</span>}</div></section>
 
         {(error || notice) && <div id="marketplace-seller-status" className={error ? styles.error : styles.notice} role="status">{error || notice}</div>}
 
