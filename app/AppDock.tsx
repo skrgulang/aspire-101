@@ -1,16 +1,18 @@
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
 
-type AppDockTab = 'home' | 'discover' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'resolution' | 'profile' | 'settings';
+type AppDockTab = 'home' | 'discover' | 'market' | 'post' | 'connections' | 'activity' | 'saved' | 'transactions' | 'resolution' | 'profile' | 'settings';
 type DockItem = { key: AppDockTab; label: string; href: string; icon: UiIconName; mobile?: boolean };
 
 const discoverItems: DockItem[] = [
   { key: 'home', label: 'Home', href: '/campus', icon: 'home', mobile: true },
   { key: 'discover', label: 'Browse', href: '/discover', icon: 'search', mobile: true },
+  { key: 'market', label: 'Market', href: '/marketplace', icon: 'cart', mobile: true },
   { key: 'post', label: 'Post', href: '/post', icon: 'plus', mobile: true }
 ];
 
@@ -27,6 +29,9 @@ const accountItems: DockItem[] = [
 ];
 
 export default function AppDock({ active, preview = false }: { active: AppDockTab; preview?: boolean }) {
+  const pathname = usePathname();
+  const currentActive: AppDockTab = !preview && pathname.startsWith('/marketplace') ? 'market' : active;
+
   useEffect(() => {
     const stored = window.localStorage.getItem('aspire-theme');
     const next = stored === 'dark' || stored === 'light'
@@ -40,8 +45,8 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
       <a
         key={item.key}
         href={preview ? '/ui-preview' : item.href}
-        className={`${styles.navItem} ${!item.mobile ? styles.desktopExtra : ''} ${item.key === active ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
-        aria-current={item.key === active ? 'page' : undefined}
+        className={`${styles.navItem} ${!item.mobile ? styles.desktopExtra : ''} ${item.key === currentActive ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
+        aria-current={item.key === currentActive ? 'page' : undefined}
         title={item.label}
         onClick={preview ? (event) => event.preventDefault() : undefined}
       >
@@ -73,7 +78,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
         <UiIcon name="shield" />
         <span>Safety & Help</span>
       </a>
-      <a className={`${styles.utilityLink} ${styles.desktopExtra} ${active === 'settings' ? styles.active : ''}`} href={preview ? '/ui-preview' : '/settings'} title="Settings" aria-current={active === 'settings' ? 'page' : undefined} onClick={preview ? (event) => event.preventDefault() : undefined}>
+      <a className={`${styles.utilityLink} ${styles.desktopExtra} ${currentActive === 'settings' ? styles.active : ''}`} href={preview ? '/ui-preview' : '/settings'} title="Settings" aria-current={currentActive === 'settings' ? 'page' : undefined} onClick={preview ? (event) => event.preventDefault() : undefined}>
         <UiIcon name="settings" />
         <span>Settings</span>
       </a>
