@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { uploadRequestMedia, validateRequestImages } from '../lib/supabase/requestMedia';
 import { fetchActiveUniversities } from '../lib/supabase/universities';
-import type { ItemCondition } from '../lib/supabase/requests';
+import { requestLanguageLabel, type ItemCondition, type RequestLanguageCode } from '../lib/supabase/requests';
 import {
   createMarketplaceListing,
   deleteMarketplaceDraft,
@@ -36,6 +36,18 @@ const DEFAULT_OPTIONS: EnabledOptions = { meet: true, shipping: true, seller: fa
 
 function revokeLocalPhoto(url: string) {
   if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+}
+
+function detectListingLanguage(text: string, locale?: string | null): RequestLanguageCode {
+  if (/[\u3040-\u30ff]/.test(text)) return 'ja';
+  if (/[\uac00-\ud7af]/.test(text)) return 'ko';
+  if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
+  if (/[\u0600-\u06ff]/.test(text)) return 'ar';
+  if (/[\u0900-\u097f]/.test(text)) return 'hi';
+
+  const base = (locale || '').trim().toLowerCase().split('-')[0];
+  if (base === 'es' || base === 'fr' || base === 'vi') return base;
+  return 'en';
 }
 
 export default function MarketplaceSellerComposer() {
@@ -106,6 +118,11 @@ export default function MarketplaceSellerComposer() {
     if (enabled.aspirer) result.push('aspirer_delivery');
     return result;
   }, [enabled]);
+
+  const listingLanguage = useMemo(
+    () => detectListingLanguage(`${title}\n${details}`, typeof navigator === 'undefined' ? null : navigator.language),
+    [title, details]
+  );
 
   const buyerOptions = useMemo(() => {
     const result: string[] = [];
@@ -180,7 +197,7 @@ export default function MarketplaceSellerComposer() {
     setSavedPhotoPath(draft.photo_storage_path || null);
     setSavedPhotoMime(draft.photo_mime_type || null);
     setError('');
-    setNotice(draft.photo_storage_path ? 'Draft loaded. Its saved photo is ready to publish.' : 'Draft loaded. Add a photo before publishing.');
+    setNotice(draft.photo_storage_path ? 'Draft loaded. Its saved photo is ready to submit for review.' : 'Draft loaded. Add a photo before submitting for review.');
   }
 
   async function refreshDrafts() {
@@ -253,10 +270,10 @@ export default function MarketplaceSellerComposer() {
     setError('');
     setNotice('');
     if (!campusId) return setError('Could not resolve your campus.');
-    if (!title.trim()) return setError('Add an item title before publishing.');
-    if (!price || Number(price) <= 0) return setError('Add a price greater than $0 before publishing.');
+    if (!title.trim()) return setError('Add an item title before submitting for review.');
+    if (!price || Number(price) <= 0) return setError('Add a price greater than $0 before submitting for review.');
     if (!sellerArea.trim()) return setError('Add a public selling area, such as West Lafayette, IN.');
-    if (!photo && !savedPhotoPath) return setError('Add at least one real photo before publishing.');
+    if (!photo && !savedPhotoPath) return setError('Add at least one real photo before submitting for review.');
     if (!methods.length) return setError('Choose at least one delivery option.');
     if (enabled.seller && sellerDeliveryMode === 'fixed' && Number(sellerDeliveryPrice) <= 0) return setError('Add a seller delivery price greater than $0.');
 
@@ -277,16 +294,16 @@ export default function MarketplaceSellerComposer() {
         sellerDeliveryMode: enabled.seller ? sellerDeliveryMode : null,
         sellerDeliveryPriceCents: enabled.seller && sellerDeliveryMode === 'fixed' ? Math.round(Number(sellerDeliveryPrice) * 100) : null,
         sellerArea,
-        languageCode: 'en'
+        languageCode: listingLanguage
       });
       createdId = listing.id;
       await uploadRequestMedia(listing.id, [listingPhoto]);
       if (currentDraftId) await deleteMarketplaceDraft(currentDraftId).catch(() => undefined);
-      setNotice('Published. Moving this item from Drafts into Market…');
-      router.push(`/marketplace?item=${listing.id}&published=1`);
+      setNotice('Submitted for review. Opening My Activity…');
+      router.push(`/activity?submitted=1&review=${encodeURIComponent(listing.id)}`);
     } catch (cause) {
       if (createdId) await rollbackMarketplaceListing(createdId).catch(() => undefined);
-      setError(cause instanceof Error ? cause.message : 'Could not publish this item.');
+      setError(cause instanceof Error ? cause.message : 'Could not submit this item for review.');
     } finally {
       setPublishing(false);
     }
@@ -297,12 +314,12 @@ export default function MarketplaceSellerComposer() {
   return (
     <section className={styles.root}>
       <div className={styles.topline}>
-        <div><span>SELL ON ASPIRE MARKET · {campusName || 'CAMPUS'}</span><h2>List an item.</h2><p>Save it as a private draft, or publish it to Market when it is ready.</p></div>
+        <div><span>SELL ON ASPIRE MARKET · {campusName || 'CAMPUS'}</span><h2>List an item.</h2><p>Save it as a private draft, or submit it for review when it is ready. Approved listings appear in Market.</p></div>
         <button type="button" className={styles.newButton} onClick={resetComposer}>+ New item</button>
       </div>
 
       <section className={styles.drafts} aria-label="Draft items">
-        <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts stay private. Photos are saved privately too. Publishing removes the draft and creates the Market listing.</small></div>
+        <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts and photos stay private. Submitting removes the draft and creates a private listing for review; it appears in Market only after approval.</small></div>
         {drafts.length ? <div className={styles.draftRail}>{drafts.map((draft) => (
           <article key={draft.id} className={`${styles.draftCard} ${currentDraftId === draft.id ? styles.currentDraft : ''}`}>
             <button type="button" onClick={() => loadDraft(draft)}>
@@ -320,7 +337,7 @@ export default function MarketplaceSellerComposer() {
       <form className={styles.form} onSubmit={publish}>
         <div className={styles.basics}>
           <div className={styles.photoBox}>
-            {photoUrl ? <img src={photoUrl} alt="Item preview" /> : <div><b>ITEM PHOTO</b><span>Required to publish</span></div>}
+            {photoUrl ? <img src={photoUrl} alt="Item preview" /> : <div><b>ITEM PHOTO</b><span>Required to submit</span></div>}
             <label><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={choosePhoto} />{photoUrl ? 'Change photo' : 'Add photo'}</label>
           </div>
           <div className={styles.fields}>
@@ -329,7 +346,7 @@ export default function MarketplaceSellerComposer() {
               <label><span>Price</span><div className={styles.money}>$ <input type="number" min="0.01" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="25" /></div></label>
               <label><span>Condition</span><select value={condition} onChange={(event) => setCondition(event.target.value as ItemCondition)}>{conditions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             </div>
-            <label><span>Description</span><textarea rows={4} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Model, size, defects, accessories, pickup notes…" /></label>
+            <label><span>Description</span><textarea rows={4} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Model, size, defects, accessories, pickup notes…" /><small>Review language · {requestLanguageLabel(listingLanguage)}</small></label>
             <label className={styles.areaField}><span>Selling area <b>Public</b></span><input value={sellerArea} onChange={(event) => setSellerArea(event.target.value)} maxLength={120} placeholder="West Lafayette, IN" /><small>City + state only. Do not enter a street, dorm, room, or exact meetup spot.</small></label>
           </div>
         </div>
@@ -346,14 +363,14 @@ export default function MarketplaceSellerComposer() {
 
         {enabled.seller && <div className={styles.subPanel}><h4>Your own delivery terms</h4><div className={styles.pills}>{(['free','fixed','negotiable'] as SellerDeliveryMode[]).map((mode) => <button type="button" key={mode} className={sellerDeliveryMode === mode ? styles.activePill : ''} onClick={() => setSellerDeliveryMode(mode)}>{mode === 'free' ? 'Free' : mode === 'fixed' ? 'Fixed price' : 'Negotiable'}</button>)}</div>{sellerDeliveryMode === 'fixed' && <label className={styles.deliveryPrice}><span>Delivery price</span><div className={styles.money}>$ <input value={sellerDeliveryPrice} inputMode="decimal" onChange={(event) => setSellerDeliveryPrice(event.target.value.replace(/[^0-9.]/g, ''))} /></div></label>}<p>The buyer asks first. You can accept or decline before checkout.</p></div>}
 
-        <section className={styles.buyerPreview}><div><span>BUYER PREVIEW</span><strong>What buyers will see at Buy Now</strong></div><div className={styles.previewTags}>{buyerOptions.map((option) => <span key={option}>✓ {option}</span>)}{!buyerOptions.length && <span>Choose at least one delivery option.</span>}</div></section>
+        <section className={styles.buyerPreview}><div><span>BUYER PREVIEW</span><strong>What buyers will see after approval</strong></div><div className={styles.previewTags}>{buyerOptions.map((option) => <span key={option}>✓ {option}</span>)}{!buyerOptions.length && <span>Choose at least one delivery option.</span>}</div></section>
 
         {(error || notice) && <div id="marketplace-seller-status" className={error ? styles.error : styles.notice} role="status">{error || notice}</div>}
 
         <div className={styles.actions}>
-          <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>Save keeps the details and photo private. Publish sends it to Market and removes the saved draft.</span></div>
+          <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>Save keeps everything private. Submit sends the listing through Post, Language, and Market review before it can appear publicly.</span></div>
           <button type="button" className={styles.saveDraft} onClick={saveDraft} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : 'Save draft'}</button>
-          <button type="submit" className={styles.publish} disabled={publishing || savingDraft}>{publishing ? 'Publishing…' : 'Publish to Market →'}</button>
+          <button type="submit" className={styles.publish} disabled={publishing || savingDraft}>{publishing ? 'Submitting…' : 'Submit for review →'}</button>
         </div>
         {error && <div className={styles.bottomError} role="alert">{error}</div>}
       </form>
