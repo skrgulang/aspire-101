@@ -1,5 +1,6 @@
 import MarketOrdersPanel from '../MarketOrdersPanel';
 import ShippingOrderSetupPanel from '../ShippingOrderSetupPanel';
+import SellerDeliveryPanel from '../SellerDeliveryPanel';
 import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
 import OrderWayfinder from '../OrderWayfinder';
 import AppDock from '../AppDock';
@@ -14,7 +15,7 @@ export default function TransactionsPage() {
           <div className={styles.headerCopy}>
             <p className={styles.eyebrow}>YOUR ASPIRE · ORDERS</p>
             <h1 className={styles.title}>Orders & delivery</h1>
-            <p className={styles.lead}>Everything after Buy Now lives here: payment, meetup or shipping, receipt confirmation, refunds, disputes, and seller payout.</p>
+            <p className={styles.lead}>Everything after Buy Now lives here: payment, seller delivery, meetup or shipping, receipt confirmation, refunds, disputes, and seller payout.</p>
           </div>
           <div className={styles.actions}>
             <a href="/marketplace">Shop Market</a>
@@ -24,6 +25,7 @@ export default function TransactionsPage() {
         </header>
         <div className={styles.content}>
           <OrderWayfinder />
+          <SellerDeliveryPanel />
           <ShippingOrderSetupPanel />
           <MarketOrdersPanel />
           <ConnectionPaymentsPanel />
