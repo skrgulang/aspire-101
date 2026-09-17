@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { REQUEST_PUBLIC_SELECT } from './requestProjection';
 import type { AspireRequest, ItemCondition, RequestLanguageCode } from './requests';
 import type { RequestMedia } from './requestMedia';
 
@@ -24,6 +25,7 @@ export type ResubmitRequestInput = {
   shippingPaidBy: 'buyer' | 'seller' | 'either' | null;
   sellerDeliveryMode: 'free' | 'fixed' | 'negotiable' | null;
   sellerDeliveryPriceCents: number | null;
+  removeMediaIds?: string[];
 };
 
 function friendlyResubmitError(error: { message?: string; details?: string; hint?: string }) {
@@ -32,6 +34,7 @@ function friendlyResubmitError(error: { message?: string; details?: string; hint
   if (/REQUEST_NOT_EDITABLE/i.test(detail)) return new Error('This post is no longer editable because it is not open.');
   if (/REQUEST_NOT_READY_FOR_RESUBMIT/i.test(detail)) return new Error('This post is not waiting for edits. Refresh My Activity to see its current review status.');
   if (/REQUEST_HAS_CONNECTION/i.test(detail)) return new Error('This post already has protected activity, so its transaction details cannot be rewritten.');
+  if (/INVALID_MEDIA_SELECTION/i.test(detail)) return new Error('One or more selected photos can no longer be changed. Refresh the post and try again.');
   if (/INVALID_TITLE/i.test(detail)) return new Error('Add a clear title between 1 and 180 characters.');
   if (/DETAILS_TOO_LONG/i.test(detail)) return new Error('Keep the description under 5,000 characters.');
   if (/INVALID_LANGUAGE/i.test(detail)) return new Error('Choose a supported post language.');
@@ -54,7 +57,7 @@ export async function fetchEditableRequest(requestId: string) {
 
   const { data, error } = await supabase
     .from('requests')
-    .select('*')
+    .select(REQUEST_PUBLIC_SELECT)
     .eq('id', requestId)
     .eq('poster_id', auth.user.id)
     .maybeSingle();
@@ -63,7 +66,7 @@ export async function fetchEditableRequest(requestId: string) {
   return data as EditableRequest;
 }
 
-export async function removeRequestMediaAssets(assets: RequestMedia[]) {
+export async function removeRequestMediaStorageObjects(assets: RequestMedia[]) {
   if (!assets.length) return;
   const supabase = getSupabaseBrowserClient();
   const { data: auth, error: authError } = await supabase.auth.getUser();
@@ -73,13 +76,9 @@ export async function removeRequestMediaAssets(assets: RequestMedia[]) {
   const owned = assets.filter((asset) => asset.uploader_id === auth.user!.id);
   if (owned.length !== assets.length) throw new Error('One or more photos cannot be changed by this account.');
 
-  const { error } = await supabase
-    .from('request_media')
-    .delete()
-    .in('id', owned.map((asset) => asset.id))
-    .eq('uploader_id', auth.user.id);
-  if (error) throw error;
-
+  // The v2 resubmit RPC already removed the request_media rows transactionally.
+  // At this point the storage paths are intentionally unreferenced, so cleanup
+  // cannot alter a reviewed media record even if a storage call fails.
   await supabase.storage
     .from('request-media')
     .remove(owned.map((asset) => asset.storage_path))
@@ -88,7 +87,7 @@ export async function removeRequestMediaAssets(assets: RequestMedia[]) {
 
 export async function resubmitRequestForReview(input: ResubmitRequestInput) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc('resubmit_request_for_review', {
+  const { data, error } = await supabase.rpc('resubmit_request_for_review_v2', {
     p_request_id: input.requestId,
     p_title: input.title.trim(),
     p_details: input.details.trim(),
@@ -100,8 +99,9 @@ export async function resubmitRequestForReview(input: ResubmitRequestInput) {
     p_seller_area: input.sellerArea.trim(),
     p_shipping_paid_by: input.shippingPaidBy,
     p_seller_delivery_mode: input.sellerDeliveryMode,
-    p_seller_delivery_price_cents: input.sellerDeliveryPriceCents
+    p_seller_delivery_price_cents: input.sellerDeliveryPriceCents,
+    p_remove_media_ids: input.removeMediaIds ?? []
   });
   if (error) throw friendlyResubmitError(error);
-  return data as EditableRequest;
+  return String(data || input.requestId);
 }

@@ -4,7 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   fetchEditableRequest,
-  removeRequestMediaAssets,
+  removeRequestMediaStorageObjects,
   resubmitRequestForReview,
   type EditableRequest
 } from '../lib/supabase/requestEditing';
@@ -151,7 +151,6 @@ export default function PostResubmitEditor({ requestId }: { requestId: string })
     setError('');
     try {
       const removed = media.filter((asset) => removedMediaIds.includes(asset.id));
-      if (removed.length) await removeRequestMediaAssets(removed);
 
       await resubmitRequestForReview({
         requestId: request.id,
@@ -167,9 +166,11 @@ export default function PostResubmitEditor({ requestId }: { requestId: string })
         sellerDeliveryMode: isMarket && methods.includes('seller_delivery') ? sellerDeliveryMode : null,
         sellerDeliveryPriceCents: isMarket && methods.includes('seller_delivery') && sellerDeliveryMode === 'fixed'
           ? Math.round(Number(sellerDeliveryPrice) * 100)
-          : null
+          : null,
+        removeMediaIds: removed.map((asset) => asset.id)
       });
 
+      if (removed.length) await removeRequestMediaStorageObjects(removed);
       if (newPhotos.length) await uploadRequestMedia(request.id, newPhotos);
       else await runRequestAiSafety(request.id).catch(() => undefined);
 
