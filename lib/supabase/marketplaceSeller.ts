@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { validateRequestImages } from './requestMedia';
 import { runRequestAiSafety } from './trust';
 import type { ItemCondition, RequestLanguageCode } from './requests';
 
@@ -19,6 +20,9 @@ export type MarketplaceDraft = {
   seller_delivery_mode: SellerDeliveryMode | null;
   seller_delivery_price_cents: number | null;
   seller_area: string | null;
+  photo_storage_path: string | null;
+  photo_mime_type: string | null;
+  photo_url?: string;
   created_at: string;
   updated_at: string;
 };
@@ -40,6 +44,9 @@ export type MarketplaceDraftInput = {
 export type MarketplaceListingInput = Omit<MarketplaceDraftInput, 'id'> & {
   languageCode?: RequestLanguageCode;
 };
+
+const draftBucket = 'marketplace-drafts';
+const draftSignedUrlSeconds = 60 * 60;
 
 async function requireUser() {
   const supabase = getSupabaseBrowserClient();
@@ -66,6 +73,21 @@ function primaryFulfillment(methods: MarketplaceDeliveryMethod[]) {
   return null;
 }
 
+function extensionFor(file: File) {
+  const nameExt = file.name.split('.').pop()?.toLowerCase();
+  if (nameExt && /^[a-z0-9]{2,5}$/.test(nameExt)) return nameExt;
+  if (file.type === 'image/png') return 'png';
+  if (file.type === 'image/webp') return 'webp';
+  if (file.type === 'image/heic') return 'heic';
+  if (file.type === 'image/heif') return 'heif';
+  return 'jpg';
+}
+
+function extensionFromPath(path: string) {
+  const ext = path.split('.').pop()?.toLowerCase();
+  return ext && /^[a-z0-9]{2,5}$/.test(ext) ? ext : 'jpg';
+}
+
 function friendlyError(error: { message?: string; details?: string; hint?: string }, fallback: string) {
   const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little and try again.');
@@ -73,6 +95,26 @@ function friendlyError(error: { message?: string; details?: string; hint?: strin
   if (/ACCOUNT_RESTRICTED/i.test(detail)) return new Error('This Aspire account is temporarily restricted from new posts.');
   if (/row-level security|policy/i.test(detail)) return new Error('Your seller session could not publish this item. Refresh and sign in again.');
   return new Error(error.message || fallback);
+}
+
+async function attachDraftPhotoUrls(rows: MarketplaceDraft[]) {
+  const paths = rows.map((row) => row.photo_storage_path).filter((value): value is string => Boolean(value));
+  if (!paths.length) return rows;
+
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.storage.from(draftBucket).createSignedUrls(paths, draftSignedUrlSeconds);
+  if (error || !data) return rows;
+
+  const urlByPath = new Map<string, string>();
+  data.forEach((entry, index) => {
+    const url = entry?.signedUrl;
+    if (url) urlByPath.set(paths[index], url);
+  });
+
+  return rows.map((row) => ({
+    ...row,
+    photo_url: row.photo_storage_path ? urlByPath.get(row.photo_storage_path) : undefined
+  }));
 }
 
 export async function listMarketplaceDrafts() {
@@ -83,7 +125,7 @@ export async function listMarketplaceDrafts() {
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });
   if (error) throw friendlyError(error, 'Could not load draft items.');
-  return (data ?? []) as MarketplaceDraft[];
+  return attachDraftPhotoUrls((data ?? []) as MarketplaceDraft[]);
 }
 
 export async function saveMarketplaceDraft(input: MarketplaceDraftInput) {
@@ -129,8 +171,68 @@ export async function saveMarketplaceDraft(input: MarketplaceDraftInput) {
   return data as MarketplaceDraft;
 }
 
+export async function uploadMarketplaceDraftPhoto(draftId: string, file: File) {
+  validateRequestImages([file]);
+  const { supabase, user } = await requireUser();
+  const { data: draft, error: draftError } = await supabase
+    .from('marketplace_listing_drafts')
+    .select('id,photo_storage_path')
+    .eq('id', draftId)
+    .eq('user_id', user.id)
+    .single();
+  if (draftError) throw friendlyError(draftError, 'Could not find this draft.');
+
+  const previousPath = (draft?.photo_storage_path as string | null) || null;
+  const path = `${user.id}/${draftId}/${crypto.randomUUID()}.${extensionFor(file)}`;
+  const { error: uploadError } = await supabase.storage
+    .from(draftBucket)
+    .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+  if (uploadError) throw uploadError;
+
+  const { data: updated, error: updateError } = await supabase
+    .from('marketplace_listing_drafts')
+    .update({ photo_storage_path: path, photo_mime_type: file.type, updated_at: new Date().toISOString() })
+    .eq('id', draftId)
+    .eq('user_id', user.id)
+    .select('*')
+    .single();
+
+  if (updateError) {
+    await supabase.storage.from(draftBucket).remove([path]).catch(() => undefined);
+    throw friendlyError(updateError, 'Could not attach the photo to this draft.');
+  }
+
+  if (previousPath && previousPath !== path) {
+    await supabase.storage.from(draftBucket).remove([previousPath]).catch(() => undefined);
+  }
+
+  const { data: signed } = await supabase.storage.from(draftBucket).createSignedUrl(path, draftSignedUrlSeconds);
+  return { ...(updated as MarketplaceDraft), photo_url: signed?.signedUrl };
+}
+
+export async function downloadMarketplaceDraftPhoto(path: string, mimeType?: string | null) {
+  const { supabase, user } = await requireUser();
+  if (!path.startsWith(`${user.id}/`)) throw new Error('This draft photo does not belong to your account.');
+
+  const { data, error } = await supabase.storage.from(draftBucket).download(path);
+  if (error || !data) throw error || new Error('Could not restore this draft photo.');
+
+  const type = mimeType || data.type || 'image/jpeg';
+  return new File([data], `draft-photo.${extensionFromPath(path)}`, { type });
+}
+
 export async function deleteMarketplaceDraft(draftId: string) {
   const { supabase, user } = await requireUser();
+  const { data: draft } = await supabase
+    .from('marketplace_listing_drafts')
+    .select('photo_storage_path')
+    .eq('id', draftId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const photoPath = (draft?.photo_storage_path as string | null) || null;
+  if (photoPath) await supabase.storage.from(draftBucket).remove([photoPath]).catch(() => undefined);
+
   const { error } = await supabase
     .from('marketplace_listing_drafts')
     .delete()
