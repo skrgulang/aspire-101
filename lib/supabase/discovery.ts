@@ -88,6 +88,16 @@ function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: D
   return `${item.title} ${item.details || ''} ${item.category || ''}`.toLowerCase().includes(needle);
 }
 
+function applySurfaceRules(items: DiscoverRequest[]) {
+  if (typeof window === 'undefined') return items;
+  // Browse is for requests, wanted posts, help, and community activity.
+  // Formal sale listings have their own first-class Market surface.
+  if (window.location.pathname.startsWith('/discover')) {
+    return items.filter((item) => !(item.kind === 'buy_sell' && item.market_intent === 'sell'));
+  }
+  return items;
+}
+
 export async function fetchDiscoverRequests(input: {
   campusId: string;
   query?: string;
@@ -126,7 +136,7 @@ export async function fetchCampusFeedRequests(input: {
     fetchDiscoverRequests({ ...input, language })
   ]);
 
-  if (!authData.user) return publicItems;
+  if (!authData.user) return applySurfaceRules(publicItems).slice(0, limit);
 
   let ownRows: Omit<DiscoverRequest, 'latitude' | 'longitude' | 'media'>[] = [];
   try {
@@ -151,7 +161,7 @@ export async function fetchCampusFeedRequests(input: {
   publicItems.forEach((item) => merged.set(item.id, item));
   ownItems.forEach((item) => merged.set(item.id, item));
 
-  return Array.from(merged.values())
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  return applySurfaceRules(Array.from(merged.values())
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
     .slice(0, limit);
 }
