@@ -17,11 +17,17 @@ import AppDock from './AppDock';
 import UiIcon from './UiIcon';
 
 type DeliveryChoice = 'meet' | 'ship' | 'seller' | 'aspirer';
-type AspirerReward = 'free' | '5' | '10' | 'negotiable';
+type AspirerReward = 'free' | '5' | '10' | 'custom' | 'negotiable';
 type FulfillmentMethod = 'campus_pickup' | 'shipping' | 'aspirer_delivery';
+type ListingDeliveryMethod = FulfillmentMethod | 'seller_delivery';
+type ShippingPolicy = 'buyer' | 'seller' | 'either';
+type SellerDeliveryMode = 'free' | 'fixed' | 'negotiable';
 type MarketplaceItem = Omit<DiscoverRequest, 'fulfillment_method'> & {
   fulfillment_method?: FulfillmentMethod | null;
-  fulfillment_methods?: FulfillmentMethod[];
+  fulfillment_methods?: ListingDeliveryMethod[];
+  shipping_paid_by_preference?: ShippingPolicy | null;
+  seller_delivery_mode?: SellerDeliveryMode | null;
+  seller_delivery_price_cents?: number | null;
 };
 type FeePolicy = {
   campus_id: string | null;
@@ -50,7 +56,7 @@ function money(cents: number | null | undefined) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
 
-function methodsFor(item: MarketplaceItem): FulfillmentMethod[] {
+function methodsFor(item: MarketplaceItem): ListingDeliveryMethod[] {
   if (Array.isArray(item.fulfillment_methods) && item.fulfillment_methods.length) return item.fulfillment_methods;
   if (item.fulfillment_method === 'shipping') return ['shipping'];
   if (item.fulfillment_method === 'aspirer_delivery') return ['aspirer_delivery'];
@@ -61,15 +67,15 @@ function supports(item: MarketplaceItem, choice: DeliveryChoice) {
   const methods = methodsFor(item);
   if (choice === 'meet') return methods.includes('campus_pickup');
   if (choice === 'ship') return methods.includes('shipping');
-  if (choice === 'aspirer') return methods.includes('aspirer_delivery');
-  return true;
+  if (choice === 'seller') return methods.includes('seller_delivery');
+  return methods.includes('aspirer_delivery');
 }
 
 function methodSummary(item: MarketplaceItem) {
   const result: string[] = [];
   if (supports(item, 'meet')) result.push('Meet up');
   if (supports(item, 'ship')) result.push('Shipping');
-  result.push('Ask seller');
+  if (supports(item, 'seller')) result.push('Seller delivery');
   if (supports(item, 'aspirer')) result.push('Aspirer delivery');
   return result.join(' · ');
 }
@@ -77,8 +83,27 @@ function methodSummary(item: MarketplaceItem) {
 function defaultChoice(item: MarketplaceItem): DeliveryChoice {
   if (supports(item, 'meet')) return 'meet';
   if (supports(item, 'ship')) return 'ship';
+  if (supports(item, 'seller')) return 'seller';
   if (supports(item, 'aspirer')) return 'aspirer';
-  return 'seller';
+  return 'meet';
+}
+
+function shippingPolicyFor(item: MarketplaceItem): ShippingPolicy {
+  return item.shipping_paid_by_preference === 'seller' || item.shipping_paid_by_preference === 'either'
+    ? item.shipping_paid_by_preference
+    : 'buyer';
+}
+
+function initialShippingPayer(item: MarketplaceItem): ShippingPaidBy {
+  return shippingPolicyFor(item) === 'seller' ? 'seller' : 'buyer';
+}
+
+function sellerDeliveryPrice(item: MarketplaceItem) {
+  if (item.seller_delivery_mode === 'free') return 'Free';
+  if (item.seller_delivery_mode === 'fixed' && Number(item.seller_delivery_price_cents || 0) > 0) {
+    return money(item.seller_delivery_price_cents);
+  }
+  return 'Negotiable';
 }
 
 function buyerFee(amount: number, policy: FeePolicy | null) {
@@ -100,13 +125,10 @@ function addressComplete(address: AddressState) {
   );
 }
 
-function formatAddress(address: AddressState) {
-  return [
-    address.street1.trim(),
-    address.street2?.trim(),
-    `${address.city.trim()}, ${address.state.trim()} ${address.zip.trim()}`,
-    address.country.trim()
-  ].filter(Boolean).join(', ');
+function customRewardCents(value: string) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  return Math.round(amount * 100);
 }
 
 export default function MarketplaceCheckoutV3() {
@@ -118,8 +140,10 @@ export default function MarketplaceCheckoutV3() {
   const [meetPayment, setMeetPayment] = useState<MarketplacePaymentMethod>('aspire');
   const [shippingPaidBy, setShippingPaidBy] = useState<ShippingPaidBy>('buyer');
   const [aspirerReward, setAspirerReward] = useState<AspirerReward>('negotiable');
+  const [customRewardDollars, setCustomRewardDollars] = useState('');
   const [pickupArea, setPickupArea] = useState('');
   const [publicDropoffArea, setPublicDropoffArea] = useState('');
+  const [sellerDeliveryArea, setSellerDeliveryArea] = useState('');
   const [address, setAddress] = useState<AddressState>(EMPTY_ADDRESS);
   const [feePolicy, setFeePolicy] = useState<FeePolicy | null>(null);
   const [loading, setLoading] = useState(true);
@@ -184,17 +208,21 @@ export default function MarketplaceCheckoutV3() {
     setDeliveryFor(item);
     setDeliveryChoice(defaultChoice(item));
     setMeetPayment('aspire');
-    setShippingPaidBy('buyer');
+    setShippingPaidBy(initialShippingPayer(item));
     setAspirerReward('negotiable');
+    setCustomRewardDollars('');
     setPickupArea('');
     setPublicDropoffArea('');
+    setSellerDeliveryArea('');
     setAddress(EMPTY_ADDRESS);
     setModalError('');
     setNotice('');
   }
 
   function chooseDelivery(choice: DeliveryChoice) {
+    if (deliveryFor && !supports(deliveryFor, choice)) return;
     setDeliveryChoice(choice);
+    if (choice === 'ship' && deliveryFor) setShippingPaidBy(initialShippingPayer(deliveryFor));
     setModalError('');
   }
 
@@ -206,17 +234,31 @@ export default function MarketplaceCheckoutV3() {
   }
 
   async function askSeller(item: MarketplaceItem) {
-    if (!requireAddress()) return;
+    if (!supports(item, 'seller')) {
+      setModalError('Seller delivery is not offered for this item.');
+      return;
+    }
+    const area = sellerDeliveryArea.trim().replace(/\s+/g, ' ');
+    if (!area) {
+      setModalError('Add a general delivery area before asking the seller.');
+      window.setTimeout(() => document.getElementById('market-seller-delivery-area')?.focus(), 0);
+      return;
+    }
+
     setBusy(`seller-${item.id}`);
     setModalError('');
     try {
-      const instructions = address.instructions.trim() ? ` Delivery notes: ${address.instructions.trim()}.` : '';
+      const terms = item.seller_delivery_mode === 'free'
+        ? 'Your listing says seller delivery is free.'
+        : item.seller_delivery_mode === 'fixed' && Number(item.seller_delivery_price_cents || 0) > 0
+          ? `Your listing shows a ${money(item.seller_delivery_price_cents)} seller-delivery price.`
+          : 'Please tell me what delivery price you would want.';
       await respondToRequest(
         item.id,
-        `Would you be willing to deliver “${item.title}” directly? Delivery address: ${formatAddress(address)}.${instructions} Please reply with whether delivery is free or what delivery price you would want. I can pay through Aspire after we agree.`
+        `Would you be willing to deliver “${item.title}” to the ${area} area? ${terms} I will share the exact address privately after we agree.`
       );
       setDeliveryFor(null);
-      setNotice('Delivery request sent to the seller. The item is not reserved yet; buy after the seller agrees on delivery and price.');
+      setNotice('Delivery request sent. Only the general area was shared; your exact address was not sent to the seller.');
     } catch (error) {
       setModalError(error instanceof Error ? error.message : 'Could not ask the seller about delivery.');
     } finally {
@@ -234,6 +276,12 @@ export default function MarketplaceCheckoutV3() {
       return;
     }
     if ((deliveryChoice === 'ship' || deliveryChoice === 'aspirer') && !requireAddress()) return;
+
+    const customCents = aspirerReward === 'custom' ? customRewardCents(customRewardDollars) : 0;
+    if (deliveryChoice === 'aspirer' && aspirerReward === 'custom' && customCents <= 0) {
+      setModalError('Enter a custom delivery reward greater than $0 before reserving the item.');
+      return;
+    }
 
     const fulfillmentMethod: FulfillmentMethod = deliveryChoice === 'meet'
       ? 'campus_pickup'
@@ -274,8 +322,16 @@ export default function MarketplaceCheckoutV3() {
         if (orderError) throw orderError;
         if (!order?.id) throw new Error('The order was reserved, but Aspire could not attach the delivery request. Open Orders to continue.');
 
-        const amountCents = aspirerReward === '5' ? 500 : aspirerReward === '10' ? 1000 : undefined;
-        const rewardLabel = aspirerReward === 'free' ? 'Free' : aspirerReward === '5' ? '$5' : aspirerReward === '10' ? '$10' : 'Negotiable';
+        const amountCents = aspirerReward === '5' ? 500 : aspirerReward === '10' ? 1000 : aspirerReward === 'custom' ? customCents : undefined;
+        const rewardLabel = aspirerReward === 'free'
+          ? 'Free'
+          : aspirerReward === '5'
+            ? '$5'
+            : aspirerReward === '10'
+              ? '$10'
+              : aspirerReward === 'custom'
+                ? money(customCents)
+                : 'Negotiable';
         const safeDropoff = publicDropoffArea.trim() || `${address.city.trim()}, ${address.state.trim()}`;
         const request = await createRequest({
           kind: aspirerReward === 'free' ? 'community' : 'paid_help',
@@ -317,14 +373,16 @@ export default function MarketplaceCheckoutV3() {
   const protectedPayment = deliveryChoice !== 'meet' || meetPayment === 'aspire';
   const itemServiceFee = protectedPayment ? buyerFee(itemAmount, feePolicy) : 0;
   const itemCheckoutTotal = itemAmount + itemServiceFee;
-  const fixedAspirerReward = aspirerReward === '5' ? 500 : aspirerReward === '10' ? 1000 : 0;
+  const customCents = customRewardCents(customRewardDollars);
+  const fixedAspirerReward = aspirerReward === '5' ? 500 : aspirerReward === '10' ? 1000 : aspirerReward === 'custom' ? customCents : 0;
   const deliveryPaymentFee = deliveryChoice === 'aspirer' && fixedAspirerReward > 0
     ? buyerFee(fixedAspirerReward, feePolicy)
     : 0;
   const estimatedAspirerTotal = itemCheckoutTotal + fixedAspirerReward + deliveryPaymentFee;
 
-  const needsAddress = deliveryChoice === 'ship' || deliveryChoice === 'seller' || deliveryChoice === 'aspirer';
-  const addressTitle = deliveryChoice === 'ship' ? 'Shipping address' : deliveryChoice === 'seller' ? 'Delivery address for seller' : 'Delivery address (private)';
+  const needsAddress = deliveryChoice === 'ship' || deliveryChoice === 'aspirer';
+  const addressTitle = deliveryChoice === 'ship' ? 'Shipping address' : 'Delivery address (private)';
+  const shippingPolicy = deliveryFor ? shippingPolicyFor(deliveryFor) : 'buyer';
 
   return (
     <main className="marketV2Page">
@@ -380,12 +438,12 @@ export default function MarketplaceCheckoutV3() {
                 <div><b>Ship to me</b><em>+ carrier rate</em></div>
                 <span>Enter your address, then choose a shipping rate.</span>
               </button>
-              <button className={deliveryChoice === 'seller' ? 'active' : ''} onClick={() => chooseDelivery('seller')}>
-                <div><b>Ask seller to deliver</b><em>Free / quote</em></div>
-                <span>Enter where you need it delivered, then ask the seller.</span>
+              <button className={deliveryChoice === 'seller' ? 'active' : ''} disabled={!supports(deliveryFor, 'seller')} onClick={() => chooseDelivery('seller')}>
+                <div><b>Ask seller to deliver</b><em>{supports(deliveryFor, 'seller') ? sellerDeliveryPrice(deliveryFor) : 'Not offered'}</em></div>
+                <span>{supports(deliveryFor, 'seller') ? 'Share only a general delivery area first.' : 'This seller did not enable direct delivery.'}</span>
               </button>
               <button className={deliveryChoice === 'aspirer' ? 'active' : ''} disabled={!supports(deliveryFor, 'aspirer')} onClick={() => chooseDelivery('aspirer')}>
-                <div><b>Ask an Aspirer</b><em>Free · $5 · $10 · negotiate</em></div>
+                <div><b>Ask an Aspirer</b><em>Free · $5 · $10 · custom</em></div>
                 <span>Another student picks it up and brings it to your address.</span>
               </button>
             </div>
@@ -401,8 +459,9 @@ export default function MarketplaceCheckoutV3() {
             {deliveryChoice === 'ship' && (
               <div className="marketV2Config">
                 <h3>Who covers shipping?</h3>
-                <label><input type="radio" name="shipping-payer" checked={shippingPaidBy === 'buyer'} onChange={() => setShippingPaidBy('buyer')} /><span><b>Buyer pays shipping</b><small>The selected carrier rate is added to the protected checkout.</small></span></label>
-                <label><input type="radio" name="shipping-payer" checked={shippingPaidBy === 'seller'} onChange={() => setShippingPaidBy('seller')} /><span><b>Seller covers shipping</b><small>The buyer does not pay the carrier rate; it comes from seller proceeds.</small></span></label>
+                {(shippingPolicy === 'buyer' || shippingPolicy === 'either') && <label><input type="radio" name="shipping-payer" checked={shippingPaidBy === 'buyer'} onChange={() => setShippingPaidBy('buyer')} /><span><b>Buyer pays shipping</b><small>The selected live carrier rate is added to the protected checkout.</small></span></label>}
+                {(shippingPolicy === 'seller' || shippingPolicy === 'either') && <label><input type="radio" name="shipping-payer" checked={shippingPaidBy === 'seller'} onChange={() => setShippingPaidBy('seller')} /><span><b>Seller covers shipping</b><small>The buyer does not pay the carrier rate; it comes from seller proceeds.</small></span></label>}
+                {shippingPolicy !== 'either' && <p className="marketV2Fine">This is the shipping-payment option enabled by the seller for this listing.</p>}
               </div>
             )}
 
@@ -410,7 +469,7 @@ export default function MarketplaceCheckoutV3() {
               <div className="marketV2Config marketV2AddressBlock">
                 <div className="marketV2AddressHeading">
                   <h3>{addressTitle}</h3>
-                  <span>{deliveryChoice === 'aspirer' ? 'Exact address is kept private from the public delivery post.' : 'Required before continuing.'}</span>
+                  <span>{deliveryChoice === 'aspirer' ? 'Exact address is kept private from the public delivery post.' : 'Stored privately on the order for carrier shipping.'}</span>
                 </div>
                 <div className="marketV2AddressGrid">
                   <label className="marketV2Wide"><span>Recipient name *</span><input id="market-delivery-name" value={address.name || ''} onChange={(e) => setAddress((v) => ({ ...v, name: e.target.value }))} placeholder="Full name" /></label>
@@ -428,7 +487,9 @@ export default function MarketplaceCheckoutV3() {
             {deliveryChoice === 'seller' && (
               <div className="marketV2Config marketV2SellerAsk">
                 <h3>Ask before you buy</h3>
-                <p>This does not reserve the item yet. The seller can say yes, offer free delivery, or quote a delivery price. Then you return to checkout.</p>
+                <label className="marketV2Wide"><span>General delivery area *</span><input id="market-seller-delivery-area" value={sellerDeliveryArea} onChange={(event) => setSellerDeliveryArea(event.target.value)} placeholder="e.g. Chauncey, WALC area, Purdue West" /></label>
+                <p>Only this general area is sent with your request. Your exact street, dorm, room, or apartment address stays private until you and the seller agree.</p>
+                <p>Seller delivery terms: <strong>{sellerDeliveryPrice(deliveryFor)}</strong>. Asking does not reserve the item yet.</p>
               </div>
             )}
 
@@ -440,12 +501,13 @@ export default function MarketplaceCheckoutV3() {
                   <label><span>Drop-off area shown publicly</span><input value={publicDropoffArea} onChange={(event) => setPublicDropoffArea(event.target.value)} placeholder="e.g. WALC area" /></label>
                 </div>
                 <div className="marketV2RewardRow">
-                  {(['free','5','10','negotiable'] as AspirerReward[]).map((reward) => (
-                    <button type="button" key={reward} className={aspirerReward === reward ? 'active' : ''} onClick={() => setAspirerReward(reward)}>
-                      {reward === 'free' ? 'Free' : reward === '5' ? '$5' : reward === '10' ? '$10' : 'Negotiable'}
+                  {(['free','5','10','custom','negotiable'] as AspirerReward[]).map((reward) => (
+                    <button type="button" key={reward} className={aspirerReward === reward ? 'active' : ''} onClick={() => { setAspirerReward(reward); setModalError(''); }}>
+                      {reward === 'free' ? 'Free' : reward === '5' ? '$5' : reward === '10' ? '$10' : reward === 'custom' ? 'Custom' : 'Negotiable'}
                     </button>
                   ))}
                 </div>
+                {aspirerReward === 'custom' && <label className="marketV2Wide"><span>Custom reward ($)</span><input inputMode="decimal" value={customRewardDollars} onChange={(event) => setCustomRewardDollars(event.target.value.replace(/[^0-9.]/g, ''))} placeholder="7.50" /></label>}
                 <p className="marketV2Fine">Only the general area is public. The exact delivery address is stored privately on the order.</p>
               </div>
             )}
@@ -454,9 +516,9 @@ export default function MarketplaceCheckoutV3() {
               <div className="marketV2MoneyHead"><span>YOUR COST</span><b>{deliveryChoice === 'seller' ? 'Before seller reply' : protectedPayment ? 'Aspire Protected' : 'Pay in person'}</b></div>
               <div><span>Item</span><strong>{money(itemAmount)}</strong></div>
               {deliveryChoice === 'meet' && <div><span>Meetup delivery</span><strong>$0.00</strong></div>}
-              {deliveryChoice === 'ship' && <div><span>Shipping</span><strong>{shippingPaidBy === 'buyer' ? 'Carrier rate added next' : 'Seller covers'}</strong></div>}
-              {deliveryChoice === 'seller' && <div><span>Seller delivery</span><strong>Free or seller quote</strong></div>}
-              {deliveryChoice === 'aspirer' && <div><span>Aspirer delivery reward</span><strong>{aspirerReward === 'free' ? '$0.00' : aspirerReward === 'negotiable' ? 'Negotiable' : money(fixedAspirerReward)}</strong></div>}
+              {deliveryChoice === 'ship' && <div><span>Shipping</span><strong>{shippingPaidBy === 'buyer' ? 'Live carrier rate selected next' : 'Seller covers'}</strong></div>}
+              {deliveryChoice === 'seller' && <div><span>Seller delivery</span><strong>{sellerDeliveryPrice(deliveryFor)}</strong></div>}
+              {deliveryChoice === 'aspirer' && <div><span>Aspirer delivery reward</span><strong>{aspirerReward === 'free' ? '$0.00' : aspirerReward === 'negotiable' ? 'Negotiable' : aspirerReward === 'custom' && fixedAspirerReward <= 0 ? 'Enter amount' : money(fixedAspirerReward)}</strong></div>}
               {protectedPayment && deliveryChoice !== 'seller' && <div><span>Aspire service fee on item</span><strong>{money(itemServiceFee)}</strong></div>}
               {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 && <div><span>Estimated Aspire fee on delivery payment</span><strong>{money(deliveryPaymentFee)}</strong></div>}
 
@@ -464,22 +526,24 @@ export default function MarketplaceCheckoutV3() {
                 <div className="marketV2Total"><span>Estimated all-in total</span><strong>{money(estimatedAspirerTotal)}</strong></div>
               ) : deliveryChoice === 'aspirer' && aspirerReward === 'negotiable' ? (
                 <div className="marketV2Total"><span>Item checkout now</span><strong>{money(itemCheckoutTotal)} + agreed delivery</strong></div>
+              ) : deliveryChoice === 'aspirer' && aspirerReward === 'custom' ? (
+                <div className="marketV2Total"><span>Item checkout now</span><strong>{money(itemCheckoutTotal)} + custom delivery reward</strong></div>
               ) : deliveryChoice === 'ship' && shippingPaidBy === 'buyer' ? (
-                <div className="marketV2Total"><span>Estimated total</span><strong>{money(itemCheckoutTotal)} + shipping</strong></div>
+                <div className="marketV2Total"><span>Estimated total</span><strong>{money(itemCheckoutTotal)} + live shipping</strong></div>
               ) : deliveryChoice === 'seller' ? (
-                <div className="marketV2Total"><span>Item price</span><strong>{money(itemAmount)} + seller quote</strong></div>
+                <div className="marketV2Total"><span>Item price</span><strong>{money(itemAmount)} + seller delivery terms</strong></div>
               ) : (
                 <div className="marketV2Total"><span>You pay</span><strong>{money(itemCheckoutTotal)}</strong></div>
               )}
 
               {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 && <small>Item checkout is {money(itemCheckoutTotal)} now. The {money(fixedAspirerReward)} helper reward and its estimated fee are a separate payment after a helper is chosen.</small>}
-              {deliveryChoice === 'ship' && shippingPaidBy === 'seller' && <small>The carrier rate will reduce seller proceeds after a shipping rate is selected.</small>}
+              {deliveryChoice === 'ship' && shippingPaidBy === 'seller' && <small>The selected live carrier rate will reduce seller proceeds instead of being charged to you.</small>}
             </div>
 
             {modalError && <div className="marketV2ModalError" role="alert">{modalError}</div>}
 
             <button className="marketV2Primary marketV2Continue" type="button" disabled={busy !== ''} onClick={() => void reserve(deliveryFor)}>
-              {busy ? 'Working…' : deliveryChoice === 'seller' ? 'Ask seller about delivery →' : deliveryChoice === 'ship' ? 'Continue to shipping setup →' : deliveryChoice === 'aspirer' ? 'Reserve item + post delivery request →' : meetPayment === 'in_person' ? 'Reserve for meetup →' : 'Continue to protected checkout →'}
+              {busy ? 'Working…' : deliveryChoice === 'seller' ? 'Ask seller about delivery →' : deliveryChoice === 'ship' ? 'Continue to live shipping rates →' : deliveryChoice === 'aspirer' ? 'Reserve item + post delivery request →' : meetPayment === 'in_person' ? 'Reserve for meetup →' : 'Continue to protected checkout →'}
             </button>
           </section>
         </div>
