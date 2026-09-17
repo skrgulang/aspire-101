@@ -9,9 +9,11 @@ import type { ItemCondition } from '../lib/supabase/requests';
 import {
   createMarketplaceListing,
   deleteMarketplaceDraft,
+  downloadMarketplaceDraftPhoto,
   listMarketplaceDrafts,
   rollbackMarketplaceListing,
   saveMarketplaceDraft,
+  uploadMarketplaceDraftPhoto,
   type MarketplaceDeliveryMethod,
   type MarketplaceDraft,
   type SellerDeliveryMode,
@@ -32,6 +34,10 @@ type EnabledOptions = Record<OptionKey, boolean>;
 
 const DEFAULT_OPTIONS: EnabledOptions = { meet: true, shipping: true, seller: false, aspirer: true };
 
+function revokeLocalPhoto(url: string) {
+  if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+}
+
 export default function MarketplaceSellerComposer() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -44,6 +50,8 @@ export default function MarketplaceSellerComposer() {
   const [details, setDetails] = useState('');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState('');
+  const [savedPhotoPath, setSavedPhotoPath] = useState<string | null>(null);
+  const [savedPhotoMime, setSavedPhotoMime] = useState<string | null>(null);
   const [enabled, setEnabled] = useState<EnabledOptions>(DEFAULT_OPTIONS);
   const [shippingPayer, setShippingPayer] = useState<ShippingPayer>('buyer');
   const [sellerDeliveryMode, setSellerDeliveryMode] = useState<SellerDeliveryMode>('negotiable');
@@ -88,7 +96,7 @@ export default function MarketplaceSellerComposer() {
     return () => { active = false; };
   }, [router]);
 
-  useEffect(() => () => { if (photoUrl) URL.revokeObjectURL(photoUrl); }, [photoUrl]);
+  useEffect(() => () => { revokeLocalPhoto(photoUrl); }, [photoUrl]);
 
   const methods = useMemo<MarketplaceDeliveryMethod[]>(() => {
     const result: MarketplaceDeliveryMethod[] = [];
@@ -121,23 +129,26 @@ export default function MarketplaceSellerComposer() {
     if (!next) return;
     try {
       validateRequestImages([next]);
-      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      revokeLocalPhoto(photoUrl);
       setPhoto(next);
       setPhotoUrl(URL.createObjectURL(next));
       setError('');
+      setNotice(savedPhotoPath ? 'New photo selected. Save the draft to replace the stored photo.' : 'Photo ready. Save the draft to keep it for later.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not use that photo.');
     }
   }
 
   function resetComposer() {
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    revokeLocalPhoto(photoUrl);
     setTitle('');
     setPrice('');
     setCondition('good');
     setDetails('');
     setPhoto(null);
     setPhotoUrl('');
+    setSavedPhotoPath(null);
+    setSavedPhotoMime(null);
     setEnabled(DEFAULT_OPTIONS);
     setShippingPayer('buyer');
     setSellerDeliveryMode('negotiable');
@@ -148,7 +159,7 @@ export default function MarketplaceSellerComposer() {
   }
 
   function loadDraft(draft: MarketplaceDraft) {
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    revokeLocalPhoto(photoUrl);
     setCurrentDraftId(draft.id);
     setTitle(draft.title || '');
     setPrice(draft.price_cents == null ? '' : (draft.price_cents / 100).toFixed(draft.price_cents % 100 === 0 ? 0 : 2));
@@ -165,9 +176,11 @@ export default function MarketplaceSellerComposer() {
     setSellerDeliveryMode(draft.seller_delivery_mode || 'negotiable');
     setSellerDeliveryPrice(draft.seller_delivery_price_cents == null ? '5' : String(draft.seller_delivery_price_cents / 100));
     setPhoto(null);
-    setPhotoUrl('');
+    setPhotoUrl(draft.photo_url || '');
+    setSavedPhotoPath(draft.photo_storage_path || null);
+    setSavedPhotoMime(draft.photo_mime_type || null);
     setError('');
-    setNotice('Draft loaded. Add or reattach the item photo before publishing.');
+    setNotice(draft.photo_storage_path ? 'Draft loaded. Its saved photo is ready to publish.' : 'Draft loaded. Add a photo before publishing.');
   }
 
   async function refreshDrafts() {
@@ -196,8 +209,27 @@ export default function MarketplaceSellerComposer() {
         sellerArea
       });
       setCurrentDraftId(saved.id);
+
+      let finalDraft = saved;
+      if (photo) {
+        try {
+          finalDraft = await uploadMarketplaceDraftPhoto(saved.id, photo);
+          revokeLocalPhoto(photoUrl);
+          setPhoto(null);
+          setPhotoUrl(finalDraft.photo_url || '');
+        } catch (photoCause) {
+          await refreshDrafts();
+          const detail = photoCause instanceof Error ? photoCause.message : 'Photo upload failed.';
+          throw new Error(`Draft details were saved, but the photo was not. ${detail}`);
+        }
+      }
+
+      setSavedPhotoPath(finalDraft.photo_storage_path || null);
+      setSavedPhotoMime(finalDraft.photo_mime_type || null);
       await refreshDrafts();
-      setNotice('Draft saved privately. It is not visible in Market yet.');
+      setNotice(finalDraft.photo_storage_path
+        ? 'Draft saved privately, including the item photo. You can close this page and come back later.'
+        : 'Draft saved privately. It is not visible in Market yet.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not save this draft.');
     } finally {
@@ -224,13 +256,16 @@ export default function MarketplaceSellerComposer() {
     if (!title.trim()) return setError('Add an item title before publishing.');
     if (!price || Number(price) <= 0) return setError('Add a price greater than $0 before publishing.');
     if (!sellerArea.trim()) return setError('Add a public selling area, such as West Lafayette, IN.');
-    if (!photo) return setError('Add at least one real photo before publishing. Drafts can be saved without a photo.');
+    if (!photo && !savedPhotoPath) return setError('Add at least one real photo before publishing.');
     if (!methods.length) return setError('Choose at least one delivery option.');
     if (enabled.seller && sellerDeliveryMode === 'fixed' && Number(sellerDeliveryPrice) <= 0) return setError('Add a seller delivery price greater than $0.');
 
     setPublishing(true);
     let createdId = '';
     try {
+      const listingPhoto = photo || (savedPhotoPath ? await downloadMarketplaceDraftPhoto(savedPhotoPath, savedPhotoMime) : null);
+      if (!listingPhoto) throw new Error('Could not restore the saved draft photo. Add the photo again and retry.');
+
       const listing = await createMarketplaceListing({
         campusId,
         title,
@@ -245,7 +280,7 @@ export default function MarketplaceSellerComposer() {
         languageCode: 'en'
       });
       createdId = listing.id;
-      await uploadRequestMedia(listing.id, [photo]);
+      await uploadRequestMedia(listing.id, [listingPhoto]);
       if (currentDraftId) await deleteMarketplaceDraft(currentDraftId).catch(() => undefined);
       setNotice('Published. Moving this item from Drafts into Market…');
       router.push(`/marketplace?item=${listing.id}&published=1`);
@@ -267,10 +302,16 @@ export default function MarketplaceSellerComposer() {
       </div>
 
       <section className={styles.drafts} aria-label="Draft items">
-        <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts stay private. Publishing removes the draft and creates the Market listing.</small></div>
+        <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts stay private. Photos are saved privately too. Publishing removes the draft and creates the Market listing.</small></div>
         {drafts.length ? <div className={styles.draftRail}>{drafts.map((draft) => (
           <article key={draft.id} className={`${styles.draftCard} ${currentDraftId === draft.id ? styles.currentDraft : ''}`}>
-            <button type="button" onClick={() => loadDraft(draft)}><small>{draft.price_cents == null ? 'PRICE NOT SET' : `$${(draft.price_cents / 100).toFixed(2)}`}</small><strong>{draft.title || 'Untitled item'}</strong><span>{draft.seller_area || 'Selling area not set'}</span><span>{new Date(draft.updated_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span></button>
+            <button type="button" onClick={() => loadDraft(draft)}>
+              {draft.photo_url ? <img className={styles.draftThumb} src={draft.photo_url} alt="" /> : <div className={styles.draftThumbEmpty}>NO PHOTO</div>}
+              <small>{draft.price_cents == null ? 'PRICE NOT SET' : `$${(draft.price_cents / 100).toFixed(2)}`}</small>
+              <strong>{draft.title || 'Untitled item'}</strong>
+              <span>{draft.seller_area || 'Selling area not set'}</span>
+              <span>{new Date(draft.updated_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+            </button>
             <button type="button" className={styles.deleteDraft} onClick={() => removeDraft(draft.id)} aria-label={`Delete ${draft.title || 'draft'}`}>×</button>
           </article>
         ))}</div> : <div className={styles.emptyDraft}>No draft items yet. Start below and press <b>Save draft</b> whenever you want to finish later.</div>}
@@ -280,7 +321,7 @@ export default function MarketplaceSellerComposer() {
         <div className={styles.basics}>
           <div className={styles.photoBox}>
             {photoUrl ? <img src={photoUrl} alt="Item preview" /> : <div><b>ITEM PHOTO</b><span>Required to publish</span></div>}
-            <label><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={choosePhoto} />{photo ? 'Change photo' : 'Add photo'}</label>
+            <label><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={choosePhoto} />{photoUrl ? 'Change photo' : 'Add photo'}</label>
           </div>
           <div className={styles.fields}>
             <label><span>Item title</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} placeholder="e.g. Calculus textbook" /></label>
@@ -310,7 +351,7 @@ export default function MarketplaceSellerComposer() {
         {(error || notice) && <div id="marketplace-seller-status" className={error ? styles.error : styles.notice} role="status">{error || notice}</div>}
 
         <div className={styles.actions}>
-          <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>Save keeps it private. Publish sends it to Market and removes the saved draft.</span></div>
+          <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>Save keeps the details and photo private. Publish sends it to Market and removes the saved draft.</span></div>
           <button type="button" className={styles.saveDraft} onClick={saveDraft} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : 'Save draft'}</button>
           <button type="submit" className={styles.publish} disabled={publishing || savingDraft}>{publishing ? 'Publishing…' : 'Publish to Market →'}</button>
         </div>
