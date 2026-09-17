@@ -2,6 +2,7 @@ import DiscoverRequestsV2 from '../DiscoverRequestsV2';
 import DiscoverLanguageFilter from '../DiscoverLanguageFilter';
 import AspireMatchStrip from '../AspireMatchStrip';
 import AspireAgentLauncher from '../AspireAgentLauncher';
+import SmartCampusContextBar from '../SmartCampusContextBar';
 import AppDock from '../AppDock';
 
 export default function DiscoverPage() {
@@ -9,6 +10,7 @@ export default function DiscoverPage() {
     <main className="postPage discoverPage">
       <div className="postPageGlow" aria-hidden="true" />
       <div className="discoverShell shell">
+        <SmartCampusContextBar label="BROWSING NEAR" />
         <AspireMatchStrip />
         <DiscoverLanguageFilter />
         <DiscoverRequestsV2 />
