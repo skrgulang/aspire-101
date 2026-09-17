@@ -1,4 +1,5 @@
 import MarketOrdersPanel from '../MarketOrdersPanel';
+import ShippingOrderSetupPanel from '../ShippingOrderSetupPanel';
 import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
 import OrderWayfinder from '../OrderWayfinder';
 import AppDock from '../AppDock';
@@ -23,6 +24,7 @@ export default function TransactionsPage() {
         </header>
         <div className={styles.content}>
           <OrderWayfinder />
+          <ShippingOrderSetupPanel />
           <MarketOrdersPanel />
           <ConnectionPaymentsPanel />
         </div>
