@@ -20,7 +20,7 @@ export type MarketOrder = {
   seller_id: string;
   payment_id: string | null;
   listing_intent: 'sell' | 'wanted';
-  fulfillment_method: 'campus_pickup' | 'shipping';
+  fulfillment_method: 'campus_pickup' | 'shipping' | 'aspirer_delivery';
   currency: string;
   agreed_amount_cents: number;
   status: MarketOrderStatus;
@@ -45,6 +45,11 @@ export type MarketOrder = {
   shipping_tracking_url?: string | null;
   shipping_status?: 'not_started' | 'rates_ready' | 'label_purchasing' | 'label_failed' | 'label_purchased' | 'in_transit' | 'delivered' | 'exception' | 'cancelled' | null;
   shipping_last_event_at?: string | null;
+  shipping_paid_by?: 'buyer' | 'seller' | null;
+  payment_choice?: 'aspire' | 'in_person' | null;
+  aspirer_delivery_status?: string | null;
+  aspirer_delivery_reward_mode?: string | null;
+  aspirer_delivery_reward_cents?: number | null;
 };
 
 export type ShippingAddress = {
@@ -156,17 +161,37 @@ export async function requestMarketRefund(connectionId: string) {
   return payload as { status: 'refunded'; refundId: string };
 }
 
-export async function getShippingRates(orderId: string, addressFrom: ShippingAddress, addressTo: ShippingAddress, parcel: ShippingParcel) {
+export async function getShippingRates(orderId: string, addressFrom: ShippingAddress, _addressTo: ShippingAddress | null, parcel: ShippingParcel) {
   const headers = await bearerHeaders();
-  const response = await fetch('/api/shipping/rates', { method: 'POST', headers, body: JSON.stringify({ orderId, addressFrom, addressTo, parcel }) });
+  const response = await fetch('/api/shipping/rates', { method: 'POST', headers, body: JSON.stringify({ orderId, addressFrom, parcel }) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload?.error || 'Could not calculate shipping rates.');
-  return payload as { shipmentId: string; rates: ShippingRate[] };
+  return payload as { shipmentId: string; rates: ShippingRate[]; selectedRateId: string | null };
 }
 
-export async function purchaseShippingLabel(orderId: string, rateId: string) {
+export async function fetchShippingRates(orderId: string) {
   const headers = await bearerHeaders();
-  const response = await fetch('/api/shipping/label', { method: 'POST', headers, body: JSON.stringify({ orderId, rateId }) });
+  const response = await fetch(`/api/shipping/rates?orderId=${encodeURIComponent(orderId)}`, { headers, cache: 'no-store' });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'Could not load carrier rates.');
+  return payload as { shipmentId: string | null; rates: ShippingRate[]; selectedRateId: string | null };
+}
+
+export async function selectShippingRate(orderId: string, rateId: string) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/shipping/rate', { method: 'POST', headers, body: JSON.stringify({ orderId, rateId }) });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload?.error || 'Could not select that carrier rate.') as Error & { code?: string };
+    error.code = payload?.code;
+    throw error;
+  }
+  return payload as { orderId: string; rate: ShippingRate; shippingPaidBy: 'buyer' | 'seller' };
+}
+
+export async function purchaseShippingLabel(orderId: string, rateId?: string | null) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/shipping/label', { method: 'POST', headers, body: JSON.stringify({ orderId, rateId: rateId || null }) });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload?.error || 'Could not purchase the shipping label.');
   return payload as { status: string; transactionId: string | null; labelUrl: string; trackingNumber: string; trackingUrl: string | null; duplicate?: boolean };
