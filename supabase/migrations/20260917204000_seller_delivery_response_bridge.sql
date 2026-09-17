@@ -12,7 +12,6 @@ as $function$
 declare
   r public.requests%rowtype;
   v_area text;
-  v_note text;
 begin
   if new.message is null or new.status <> 'pending' then return new; end if;
   if new.message not ilike 'Would you be willing to deliver%I’ll share the exact address privately after we agree.%'
@@ -30,22 +29,22 @@ begin
     return new;
   end if;
 
-  -- Current UI emits: "... to the City, ST area? ... Notes: ..."
+  -- Current UI emits: "... to the City, ST area? ...". Only that general area
+  -- is copied. The free-form message is intentionally not promoted into the
+  -- structured quote because it could accidentally contain private details.
   v_area := nullif(btrim(substring(new.message from ' to the ([^?]+) area\?')), '');
   if v_area is null then return new; end if;
-
-  v_note := nullif(btrim(substring(new.message from ' Notes: (.*?)\. I[’'']ll share')), '');
 
   insert into public.market_seller_delivery_quotes (
     request_id,buyer_id,seller_id,buyer_area,buyer_note,status,
     delivery_cents,seller_note,quoted_at,accepted_at,declined_at
   ) values (
-    new.request_id,new.responder_id,r.poster_id,left(v_area,180),left(v_note,500),'requested',
+    new.request_id,new.responder_id,r.poster_id,left(v_area,180),null,'requested',
     null,null,null,null,null
   )
   on conflict (request_id,buyer_id) do update set
     buyer_area=excluded.buyer_area,
-    buyer_note=excluded.buyer_note,
+    buyer_note=null,
     status=case when public.market_seller_delivery_quotes.status='accepted' then 'accepted' else 'requested' end,
     delivery_cents=case when public.market_seller_delivery_quotes.status='accepted' then public.market_seller_delivery_quotes.delivery_cents else null end,
     seller_note=case when public.market_seller_delivery_quotes.status='accepted' then public.market_seller_delivery_quotes.seller_note else null end,
