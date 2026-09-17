@@ -298,9 +298,9 @@ export default function MyActivityManager() {
         <div className={styles.empty}>Loading your posts…</div>
       ) : !visible.length ? (
         <div className={styles.empty}>
-          <strong>No posts here yet.</strong>
-          <span>Create a post and it will show up here for you to manage.</span>
-          <a href="/post">Post something →</a>
+          <strong>{filter === 'action' ? 'Nothing needs your attention.' : filter === 'review' ? 'No posts are under review.' : filter === 'closed' ? 'No closed posts yet.' : 'No posts here yet.'}</strong>
+          <span>{filter === 'action' ? 'Blocked or rejected posts will appear here when you need to edit and resubmit them.' : filter === 'review' ? 'Posts waiting on automated or human review will appear here.' : filter === 'closed' ? 'Posts you close or finish will stay here as history.' : 'Create a post and it will show up here for you to manage.'}</span>
+          {(filter === 'all' || filter === 'open') && <a href="/post">Post something →</a>}
         </div>
       ) : (
         <div className={styles.list}>
