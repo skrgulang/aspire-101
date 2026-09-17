@@ -40,6 +40,9 @@ export type SellerDeliveryQuote = {
   } | null;
 };
 
+type ListingSummary = NonNullable<SellerDeliveryQuote['listing']>;
+type OrderSummary = NonNullable<SellerDeliveryQuote['order']>;
+
 function readableError(error: { message?: string; details?: string }, fallback: string) {
   const detail = `${error.message || ''} ${error.details || ''}`;
   if (/GENERAL_AREA_REQUIRED/i.test(detail)) return new Error('Add a general area such as Chauncey, WALC, or Purdue West.');
@@ -98,8 +101,10 @@ export async function fetchMySellerDeliveryQuotes(): Promise<{ userId: string; q
       : Promise.resolve({ data: [], error: null } as any)
   ]);
 
-  const requestMap = new Map((requestsResult.data || []).map((row: any) => [row.id, row]));
-  const orderMap = new Map((ordersResult.data || []).map((row: any) => [row.id, row]));
+  const requestMap = new Map<string, ListingSummary>();
+  for (const row of (requestsResult.data || []) as ListingSummary[]) requestMap.set(row.id, row);
+  const orderMap = new Map<string, OrderSummary>();
+  for (const row of (ordersResult.data || []) as OrderSummary[]) orderMap.set(row.id, row);
 
   return {
     userId: user.id,
