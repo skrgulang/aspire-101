@@ -13,7 +13,7 @@ import {
   reviewRequestModeration,
   reviewSafetyReport,
   reviewSchoolVerification,
-  runRequestAiSafety,
+  runModeratorRequestAiSafety,
   SafetyReportForModeration,
   SchoolVerification,
   setModeratorByEmail,
@@ -143,7 +143,7 @@ export default function ModeratorConsole() {
   async function scanRequest(request: AspireRequest) {
     setBusy(`ai-${request.id}`);
     try {
-      const result = await runRequestAiSafety(request.id);
+      const result = await runModeratorRequestAiSafety(request.id);
       const trust = result.trustBand ? ` · trust ${result.trustBand} ${result.trustScore ?? '—'}/100` : '';
       setNotice(`Safety Intelligence: ${result.riskLevel.toUpperCase()} risk · ${result.riskScore}/100 · ${result.recommendedAction}${trust}.`);
       await reload();
