@@ -4,6 +4,8 @@ export type ResolutionReason = 'no_show' | 'cancellation' | 'incomplete' | 'not_
 export type RequestedResolution = 'refund' | 'provider_compensation' | 'partial' | 'review' | 'safety_review';
 export type ResolutionStatus = 'submitted' | 'under_review' | 'resolved_refund' | 'resolved_release' | 'resolved_partial' | 'dismissed';
 
+export const RESOLUTION_CASE_PUBLIC_SELECT = 'id,connection_id,request_id,opened_by,against_user_id,reason,requested_resolution,details,status,payment_status_snapshot,payment_total_cents_snapshot,currency_snapshot,scheduled_start_snapshot,meeting_label_snapshot,coordination_status_snapshot,resolution_note,refund_cents,provider_release_cents,reviewed_at,created_at,updated_at' as const;
+
 export type ConnectionResolutionCase = {
   id: string;
   connection_id: string;
@@ -20,14 +22,17 @@ export type ConnectionResolutionCase = {
   scheduled_start_snapshot: string | null;
   meeting_label_snapshot: string | null;
   coordination_status_snapshot: string | null;
-  evidence_snapshot: Record<string, unknown>;
   resolution_note: string | null;
   refund_cents: number | null;
   provider_release_cents: number | null;
-  reviewed_by: string | null;
   reviewed_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type ModeratorResolutionCase = ConnectionResolutionCase & {
+  evidence_snapshot: Record<string, unknown>;
+  reviewed_by: string | null;
 };
 
 export type ConnectionResolutionResponse = {
@@ -67,7 +72,7 @@ export async function fetchResolutionCases(connectionIds: string[]) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('connection_resolution_cases')
-    .select('*')
+    .select(RESOLUTION_CASE_PUBLIC_SELECT)
     .in('connection_id', connectionIds)
     .order('created_at', { ascending: false });
   if (error) {
@@ -85,7 +90,7 @@ export async function fetchMyResolutionHistory(): Promise<ParticipantResolutionH
 
   const { data, error } = await supabase
     .from('connection_resolution_cases')
-    .select('*')
+    .select(RESOLUTION_CASE_PUBLIC_SELECT)
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) {
@@ -143,16 +148,14 @@ export async function fetchNoShowIncidents(userIds: string[]) {
 
 export async function fetchResolutionCasesForModeration(limit = 100) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('connection_resolution_cases')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  const { data, error } = await supabase.rpc('moderator_fetch_resolution_cases', {
+    p_limit: Math.max(1, Math.min(200, Math.trunc(limit)))
+  });
   if (error) {
-    if (missingPreviewRelation(error)) return [] as ConnectionResolutionCase[];
+    if (missingPreviewRelation(error)) return [] as ModeratorResolutionCase[];
     throw error;
   }
-  return (data ?? []) as ConnectionResolutionCase[];
+  return (data ?? []) as ModeratorResolutionCase[];
 }
 
 export async function openResolutionCase(input: {
