@@ -202,7 +202,7 @@
     height: 70px;
     padding: 7px 8px;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 4px;
     overflow: visible;
     border: 1px solid rgba(17,17,17,.10);
@@ -226,6 +226,17 @@
   }
   .post { background: #ffc72c; color: #18130a; }
   .post:hover, .post.active { background: #ffc72c; color: #18130a; }
+}
+
+@media (max-width: 430px) {
+  .dock,
+  .dock:hover,
+  .dock:focus-within { inset: auto 6px 6px 6px; height: 66px; padding: 6px; gap: 2px; border-radius: 20px; }
+  .navItem { min-height: 52px; padding-inline: 0; border-radius: 14px; }
+  .navItem svg { width: 18px; height: 18px; }
+  .navItem span,
+  .dock:hover .navItem span,
+  .dock:focus-within .navItem span { font-size: 8px; letter-spacing: -.01em; }
 }
 
 @media (prefers-reduced-motion: reduce) {
