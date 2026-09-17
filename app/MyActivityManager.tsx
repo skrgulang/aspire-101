@@ -105,7 +105,7 @@ function userReviewState(request: ActivityRequest): UserReviewState {
     return { key: 'approved', label: 'Live', title: 'Approved', description: 'This post passed review and can appear to other students.' };
   }
   if (request.moderation_status === 'rejected') {
-    return { key: 'rejected', label: 'Rejected', title: 'Not approved', description: request.moderation_reason || 'A moderator did not approve this post. You can update the content and submit a new post.' };
+    return { key: 'rejected', label: 'Rejected', title: 'Not approved', description: request.moderation_reason || 'A moderator did not approve this version. Edit the same post and resubmit it for a fresh review.' };
   }
   if (request.moderation_status === 'blocked') {
     return { key: 'changes', label: 'Needs changes', title: 'Changes needed', description: 'One or more safety or Marketplace checks found something that must be changed before this can go live.' };
@@ -330,7 +330,7 @@ export default function MyActivityManager() {
                         })}
                       </div>
                       {request.moderation_status === 'pending' && <small className={styles.autoRefresh}>Status refreshes automatically while this post is under review.</small>}
-                      {(review.key === 'changes' || review.key === 'rejected') && <div className={styles.reviewActions}><a href="/post">Create a corrected post →</a>{request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}</div>}
+                      {(review.key === 'changes' || review.key === 'rejected') && <div className={styles.reviewActions}><a href={`/post?edit=${encodeURIComponent(request.id)}`}>Edit &amp; resubmit →</a>{request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}</div>}
                     </section>
                   )}
                 </div>
