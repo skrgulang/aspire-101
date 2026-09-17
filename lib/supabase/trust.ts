@@ -31,10 +31,7 @@ export type UserEnforcementState = {
   user_id: string;
   state: EnforcementState;
   reason: string | null;
-  set_by: string | null;
-  set_at: string;
   expires_at: string | null;
-  updated_at: string;
 };
 
 export type SafetyReportForModeration = {
@@ -153,7 +150,10 @@ export async function fetchRequestsForModeration(limit = 80) {
 export async function fetchEnforcementStates(userIds: string[]) {
   if (!userIds.length) return [] as UserEnforcementState[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.from('user_enforcement_states').select('*').in('user_id', [...new Set(userIds)]);
+  const { data, error } = await supabase
+    .from('user_enforcement_states')
+    .select('user_id,state,reason,expires_at')
+    .in('user_id', [...new Set(userIds)]);
   if (error) throw error;
   return (data ?? []) as UserEnforcementState[];
 }
