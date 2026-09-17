@@ -59,9 +59,10 @@ function normalizeSellerArea(value?: string | null) {
 }
 
 function primaryFulfillment(methods: MarketplaceDeliveryMethod[]) {
+  // This legacy column only allows pickup, shipping, or null. Newer methods
+  // stay in fulfillment_methods so Aspirer-only / seller-only listings publish.
   if (methods.includes('campus_pickup')) return 'campus_pickup';
   if (methods.includes('shipping')) return 'shipping';
-  if (methods.includes('aspirer_delivery')) return 'aspirer_delivery';
   return null;
 }
 
@@ -150,6 +151,7 @@ export async function createMarketplaceListing(input: MarketplaceListingInput) {
   if (accessError) throw accessError;
   if (!allowed) throw new Error('Verify your campus identity before publishing an item.');
 
+  const shippingPolicy = methods.includes('shipping') ? input.shippingPaidBy || 'buyer' : null;
   const { data, error } = await supabase
     .from('requests')
     .insert({
@@ -170,7 +172,8 @@ export async function createMarketplaceListing(input: MarketplaceListingInput) {
       price_negotiable: false,
       fulfillment_method: primaryFulfillment(methods),
       fulfillment_methods: methods,
-      shipping_paid_by_default: methods.includes('shipping') ? input.shippingPaidBy || 'buyer' : null,
+      shipping_paid_by_default: shippingPolicy,
+      shipping_paid_by_preference: shippingPolicy,
       seller_delivery_mode: methods.includes('seller_delivery') ? input.sellerDeliveryMode || 'negotiable' : null,
       seller_delivery_price_cents: methods.includes('seller_delivery') && input.sellerDeliveryMode === 'fixed'
         ? input.sellerDeliveryPriceCents ?? null
