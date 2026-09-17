@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { fetchMySchoolVerification } from '../lib/supabase/trust';
 import type { SchoolVerification } from '../lib/supabase/trust';
 import PostRequestForm from './PostRequestForm';
+import PostCoverPicker from './PostCoverPicker';
 import MarketplaceSellerComposer from './MarketplaceSellerComposer';
 import styles from './PostComposerModeSwitch.module.css';
 
@@ -79,6 +80,6 @@ export default function PostAccessGate() {
       <a className={!sellerMode ? styles.active : ''} href="/post"><span>POST</span><strong>Request / community</strong><small>Ask for help, rides, study, collaboration, or anything useful.</small></a>
       <a className={sellerMode ? styles.active : ''} href="/post?mode=sell"><span>SELL</span><strong>List an item</strong><small>Draft a marketplace item, choose delivery options, then publish to Market.</small></a>
     </nav>
-    {sellerMode ? <MarketplaceSellerComposer /> : <PostRequestForm />}
+    {sellerMode ? <MarketplaceSellerComposer /> : <><PostCoverPicker /><PostRequestForm /></>}
   </>;
 }
