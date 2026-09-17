@@ -175,5 +175,5 @@ export async function releaseAspirePayment(connectionId: string) {
     error.code = payload?.code;
     throw error;
   }
-  return payload as { status: 'released'; transferId: string; providerNetCents: number; feePolicyVersion: string };
+  return payload as { status: 'released'; providerNetCents: number; feePolicyVersion: string; duplicate?: boolean; transactionType?: 'marketplace' | 'connection' };
 }
