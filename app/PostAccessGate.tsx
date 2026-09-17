@@ -1,16 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { fetchMySchoolVerification } from '../lib/supabase/trust';
 import type { SchoolVerification } from '../lib/supabase/trust';
 import PostRequestForm from './PostRequestForm';
+import MarketplaceSellerComposer from './MarketplaceSellerComposer';
+import styles from './PostComposerModeSwitch.module.css';
 
 export default function PostAccessGate() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [verification, setVerification] = useState<SchoolVerification | null>(null);
+  const sellerMode = searchParams.get('mode') === 'sell';
 
   useEffect(() => {
     let alive = true;
@@ -19,7 +23,7 @@ export default function PostAccessGate() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!alive) return;
       if (!data.user) {
-        router.replace('/login?next=%2Fpost');
+        router.replace(`/login?next=${encodeURIComponent(sellerMode ? '/post?mode=sell' : '/post')}`);
         return;
       }
       try {
@@ -31,7 +35,7 @@ export default function PostAccessGate() {
     });
 
     return () => { alive = false; };
-  }, [router]);
+  }, [router, sellerMode]);
 
   if (loading) {
     return (
@@ -70,5 +74,11 @@ export default function PostAccessGate() {
     );
   }
 
-  return <PostRequestForm />;
+  return <>
+    <nav className={styles.modeSwitch} aria-label="Choose post type">
+      <a className={!sellerMode ? styles.active : ''} href="/post"><span>POST</span><strong>Request / community</strong><small>Ask for help, rides, study, collaboration, or anything useful.</small></a>
+      <a className={sellerMode ? styles.active : ''} href="/post?mode=sell"><span>SELL</span><strong>List an item</strong><small>Draft a marketplace item, choose delivery options, then publish to Market.</small></a>
+    </nav>
+    {sellerMode ? <MarketplaceSellerComposer /> : <PostRequestForm />}
+  </>;
 }
