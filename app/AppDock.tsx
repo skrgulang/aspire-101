@@ -10,7 +10,7 @@ type DockItem = { key: AppDockTab; label: string; href: string; icon: UiIconName
 
 const discoverItems: DockItem[] = [
   { key: 'home', label: 'Home', href: '/campus', icon: 'home', mobile: true },
-  { key: 'discover', label: 'Market', href: '/marketplace', icon: 'search', mobile: true },
+  { key: 'discover', label: 'Browse', href: '/discover', icon: 'search', mobile: true },
   { key: 'post', label: 'Post', href: '/post', icon: 'plus', mobile: true }
 ];
 
