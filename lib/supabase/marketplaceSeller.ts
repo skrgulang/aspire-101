@@ -18,6 +18,7 @@ export type MarketplaceDraft = {
   shipping_paid_by: ShippingPayer | null;
   seller_delivery_mode: SellerDeliveryMode | null;
   seller_delivery_price_cents: number | null;
+  seller_area: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -33,6 +34,7 @@ export type MarketplaceDraftInput = {
   shippingPaidBy?: ShippingPayer | null;
   sellerDeliveryMode?: SellerDeliveryMode | null;
   sellerDeliveryPriceCents?: number | null;
+  sellerArea?: string | null;
 };
 
 export type MarketplaceListingInput = Omit<MarketplaceDraftInput, 'id'> & {
@@ -49,6 +51,11 @@ async function requireUser() {
 
 function normalizeMethods(methods: MarketplaceDeliveryMethod[]) {
   return Array.from(new Set(methods)).slice(0, 4);
+}
+
+function normalizeSellerArea(value?: string | null) {
+  const clean = value?.trim().replace(/\s+/g, ' ') || '';
+  return clean ? clean.slice(0, 120) : null;
 }
 
 function primaryFulfillment(methods: MarketplaceDeliveryMethod[]) {
@@ -96,6 +103,7 @@ export async function saveMarketplaceDraft(input: MarketplaceDraftInput) {
     seller_delivery_price_cents: methods.includes('seller_delivery') && input.sellerDeliveryMode === 'fixed'
       ? input.sellerDeliveryPriceCents ?? null
       : null,
+    seller_area: normalizeSellerArea(input.sellerArea),
     updated_at: new Date().toISOString()
   };
 
@@ -136,6 +144,7 @@ export async function createMarketplaceListing(input: MarketplaceListingInput) {
   if (!methods.length) throw new Error('Choose at least one delivery option.');
   if (!input.title.trim()) throw new Error('Add an item title.');
   if (!input.priceCents || input.priceCents <= 0) throw new Error('Add a price greater than $0.');
+  if (!normalizeSellerArea(input.sellerArea)) throw new Error('Add a public selling area such as West Lafayette, IN.');
 
   const { data: allowed, error: accessError } = await supabase.rpc('can_post_request');
   if (accessError) throw accessError;
@@ -152,6 +161,7 @@ export async function createMarketplaceListing(input: MarketplaceListingInput) {
       campus_id: input.campusId,
       latitude: null,
       longitude: null,
+      seller_area: normalizeSellerArea(input.sellerArea),
       amount_cents: input.priceCents,
       currency: 'USD',
       payment_method: 'aspire',

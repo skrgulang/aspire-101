@@ -37,6 +37,7 @@ export default function MarketplaceSellerComposer() {
   const [loading, setLoading] = useState(true);
   const [campusId, setCampusId] = useState('');
   const [campusName, setCampusName] = useState('');
+  const [sellerArea, setSellerArea] = useState('');
   const [title, setTitle] = useState('');
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState<ItemCondition>('good');
@@ -75,6 +76,7 @@ export default function MarketplaceSellerComposer() {
         if (campus) {
           setCampusId(campus.id);
           setCampusName(campus.short_name || campus.name);
+          setSellerArea((current) => current || [campus.city, campus.state].filter(Boolean).join(', '));
         }
         setDrafts(savedDrafts);
       } catch (cause) {
@@ -99,12 +101,13 @@ export default function MarketplaceSellerComposer() {
 
   const buyerOptions = useMemo(() => {
     const result: string[] = [];
+    if (sellerArea.trim()) result.push(`Seller area · ${sellerArea.trim()}`);
     if (enabled.meet) result.push('Meet up · Free');
     if (enabled.shipping) result.push(`Ship to me · ${shippingPayer === 'buyer' ? 'Buyer pays shipping' : shippingPayer === 'seller' ? 'Seller covers shipping' : 'Buyer or seller can cover'}`);
     if (enabled.seller) result.push(`Ask seller to deliver · ${sellerDeliveryMode === 'free' ? 'Free' : sellerDeliveryMode === 'fixed' ? `$${sellerDeliveryPrice || '0'}` : 'Negotiable'}`);
     if (enabled.aspirer) result.push('Ask an Aspirer · Free / Paid / Negotiable');
     return result;
-  }, [enabled, shippingPayer, sellerDeliveryMode, sellerDeliveryPrice]);
+  }, [enabled, shippingPayer, sellerDeliveryMode, sellerDeliveryPrice, sellerArea]);
 
   function toggle(key: OptionKey) {
     setEnabled((current) => ({ ...current, [key]: !current[key] }));
@@ -151,6 +154,7 @@ export default function MarketplaceSellerComposer() {
     setPrice(draft.price_cents == null ? '' : (draft.price_cents / 100).toFixed(draft.price_cents % 100 === 0 ? 0 : 2));
     setCondition(draft.item_condition || 'good');
     setDetails(draft.details || '');
+    if (draft.seller_area) setSellerArea(draft.seller_area);
     setEnabled({
       meet: draft.fulfillment_methods.includes('campus_pickup'),
       shipping: draft.fulfillment_methods.includes('shipping'),
@@ -188,7 +192,8 @@ export default function MarketplaceSellerComposer() {
         fulfillmentMethods: methods,
         shippingPaidBy: enabled.shipping ? shippingPayer : null,
         sellerDeliveryMode: enabled.seller ? sellerDeliveryMode : null,
-        sellerDeliveryPriceCents: enabled.seller && sellerDeliveryMode === 'fixed' ? Math.round(Number(sellerDeliveryPrice) * 100) : null
+        sellerDeliveryPriceCents: enabled.seller && sellerDeliveryMode === 'fixed' ? Math.round(Number(sellerDeliveryPrice) * 100) : null,
+        sellerArea
       });
       setCurrentDraftId(saved.id);
       await refreshDrafts();
@@ -218,6 +223,7 @@ export default function MarketplaceSellerComposer() {
     if (!campusId) return setError('Could not resolve your campus.');
     if (!title.trim()) return setError('Add an item title before publishing.');
     if (!price || Number(price) <= 0) return setError('Add a price greater than $0 before publishing.');
+    if (!sellerArea.trim()) return setError('Add a public selling area, such as West Lafayette, IN.');
     if (!photo) return setError('Add at least one real photo before publishing. Drafts can be saved without a photo.');
     if (!methods.length) return setError('Choose at least one delivery option.');
     if (enabled.seller && sellerDeliveryMode === 'fixed' && Number(sellerDeliveryPrice) <= 0) return setError('Add a seller delivery price greater than $0.');
@@ -235,6 +241,7 @@ export default function MarketplaceSellerComposer() {
         shippingPaidBy: enabled.shipping ? shippingPayer : null,
         sellerDeliveryMode: enabled.seller ? sellerDeliveryMode : null,
         sellerDeliveryPriceCents: enabled.seller && sellerDeliveryMode === 'fixed' ? Math.round(Number(sellerDeliveryPrice) * 100) : null,
+        sellerArea,
         languageCode: 'en'
       });
       createdId = listing.id;
@@ -263,7 +270,7 @@ export default function MarketplaceSellerComposer() {
         <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts stay private. Publishing removes the draft and creates the Market listing.</small></div>
         {drafts.length ? <div className={styles.draftRail}>{drafts.map((draft) => (
           <article key={draft.id} className={`${styles.draftCard} ${currentDraftId === draft.id ? styles.currentDraft : ''}`}>
-            <button type="button" onClick={() => loadDraft(draft)}><small>{draft.price_cents == null ? 'PRICE NOT SET' : `$${(draft.price_cents / 100).toFixed(2)}`}</small><strong>{draft.title || 'Untitled item'}</strong><span>{new Date(draft.updated_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span></button>
+            <button type="button" onClick={() => loadDraft(draft)}><small>{draft.price_cents == null ? 'PRICE NOT SET' : `$${(draft.price_cents / 100).toFixed(2)}`}</small><strong>{draft.title || 'Untitled item'}</strong><span>{draft.seller_area || 'Selling area not set'}</span><span>{new Date(draft.updated_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span></button>
             <button type="button" className={styles.deleteDraft} onClick={() => removeDraft(draft.id)} aria-label={`Delete ${draft.title || 'draft'}`}>×</button>
           </article>
         ))}</div> : <div className={styles.emptyDraft}>No draft items yet. Start below and press <b>Save draft</b> whenever you want to finish later.</div>}
@@ -282,6 +289,7 @@ export default function MarketplaceSellerComposer() {
               <label><span>Condition</span><select value={condition} onChange={(event) => setCondition(event.target.value as ItemCondition)}>{conditions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             </div>
             <label><span>Description</span><textarea rows={4} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Model, size, defects, accessories, pickup notes…" /></label>
+            <label className={styles.areaField}><span>Selling area <b>Public</b></span><input value={sellerArea} onChange={(event) => setSellerArea(event.target.value)} maxLength={120} placeholder="West Lafayette, IN" /><small>City + state only. Do not enter a street, dorm, room, or exact meetup spot.</small></label>
           </div>
         </div>
 
