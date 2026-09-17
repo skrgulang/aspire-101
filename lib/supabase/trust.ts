@@ -39,8 +39,9 @@ export type SafetyReportForModeration = {
   status: 'submitted' | 'reviewing' | 'resolved' | 'dismissed';
   created_at: string;
   reviewed_at: string | null;
-  reviewed_by: string | null;
 };
+
+const safetyReportSelect = 'id,reporter_id,target_user_id,request_id,connection_id,reason,details,status,created_at,reviewed_at' as const;
 
 export type RequestAiSafetyResult = {
   ok: boolean;
@@ -125,7 +126,10 @@ export async function reviewSchoolVerification(userId: string, decision: 'verifi
 
 export async function fetchSafetyReportsForModeration() {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.from('safety_reports').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase
+    .from('safety_reports')
+    .select(safetyReportSelect)
+    .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []) as SafetyReportForModeration[];
 }
