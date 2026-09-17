@@ -15,6 +15,7 @@ type CheckoutSession = {
   url: string | null;
   status?: 'open' | 'complete' | 'expired' | null;
   payment_status?: 'paid' | 'unpaid' | 'no_payment_required' | null;
+  amount_total?: number | null;
 };
 
 type PaymentRow = {
@@ -23,24 +24,6 @@ type PaymentRow = {
   transfer_group: string;
   checkout_attempt: number;
   stripe_checkout_session_id: string | null;
-  payer_id?: string;
-  payee_id?: string;
-  base_amount_cents: number | null;
-  requester_fee_cents: number | null;
-  provider_fee_cents: number | null;
-  tip_amount_cents: number;
-  tip_fee_cents: number;
-  customer_total_cents: number | null;
-  provider_net_cents: number | null;
-  fee_policy_version: string | null;
-  requester_fee_percent_bps: number | null;
-  requester_fee_fixed_cents: number | null;
-  requester_fee_min_cents: number | null;
-  requester_fee_max_cents: number | null;
-  provider_fee_percent_bps: number | null;
-  tip_fee_percent_bps: number | null;
-  minimum_paid_order_cents: number | null;
-  fee_snapshot: Record<string, unknown>;
 };
 
 type FeeQuote = {
@@ -62,37 +45,6 @@ type FeeQuote = {
   minimum_paid_order_cents: number;
   standard_payout_cadence: string;
 };
-
-function quoteFromPayment(payment: PaymentRow): FeeQuote | null {
-  if (
-    payment.base_amount_cents == null ||
-    payment.requester_fee_cents == null ||
-    payment.provider_fee_cents == null ||
-    payment.customer_total_cents == null ||
-    payment.provider_net_cents == null ||
-    !payment.fee_policy_version
-  ) return null;
-
-  return {
-    fee_policy_version: payment.fee_policy_version,
-    base_amount_cents: payment.base_amount_cents,
-    requester_fee_cents: payment.requester_fee_cents,
-    provider_fee_cents: payment.provider_fee_cents,
-    tip_amount_cents: Number(payment.tip_amount_cents || 0),
-    tip_fee_cents: Number(payment.tip_fee_cents || 0),
-    customer_total_cents: payment.customer_total_cents,
-    provider_net_cents: payment.provider_net_cents,
-    platform_fee_revenue_cents: Number(payment.requester_fee_cents || 0) + Number(payment.provider_fee_cents || 0) + Number(payment.tip_fee_cents || 0),
-    requester_fee_percent_bps: Number(payment.requester_fee_percent_bps || 0),
-    requester_fee_fixed_cents: Number(payment.requester_fee_fixed_cents || 0),
-    requester_fee_min_cents: Number(payment.requester_fee_min_cents || 0),
-    requester_fee_max_cents: Number(payment.requester_fee_max_cents || 0),
-    provider_fee_percent_bps: Number(payment.provider_fee_percent_bps || 0),
-    tip_fee_percent_bps: Number(payment.tip_fee_percent_bps || 0),
-    minimum_paid_order_cents: Number(payment.minimum_paid_order_cents || 0),
-    standard_payout_cadence: String(payment.fee_snapshot?.standard_payout_cadence || 'weekly')
-  };
-}
 
 export async function POST(request: Request) {
   try {
@@ -117,7 +69,11 @@ export async function POST(request: Request) {
     const [{ data: aspireRequest }, { data: existingPayment }, { data: marketOrder }] = await Promise.all([
       supabase.from('requests').select('id,title,kind,amount_cents,currency,campus_id,market_intent').eq('id', connection.request_id).maybeSingle(),
       supabase.from('connection_payments').select('*').eq('connection_id', connection.id).maybeSingle(),
-      supabase.from('market_orders').select('id,buyer_id,seller_id,status').eq('connection_id', connection.id).maybeSingle()
+      supabase
+        .from('market_orders')
+        .select('id,buyer_id,seller_id,status,fulfillment_method,shipping_rate_id,shipping_rate_cents,shipping_currency,shipping_paid_by,shipping_carrier,shipping_service')
+        .eq('connection_id', connection.id)
+        .maybeSingle()
     ]);
 
     if (!aspireRequest) return NextResponse.json({ error: 'Request not found.' }, { status: 404 });
@@ -165,16 +121,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This connection does not have a valid agreed amount yet.' }, { status: 409 });
     }
 
-    let quote = existingPayment ? quoteFromPayment(existingPayment as PaymentRow) : null;
-    if (!quote) {
-      const { data: quoteRows, error: quoteError } = await supabase.rpc('quote_aspire_fees', {
-        p_base_amount_cents: baseAmount,
-        p_campus_id: aspireRequest.campus_id || null,
-        p_tip_amount_cents: 0
-      });
-      if (quoteError) throw quoteError;
-      quote = (quoteRows?.[0] || null) as FeeQuote | null;
-    }
+    const { data: quoteRows, error: quoteError } = await supabase.rpc('quote_aspire_fees', {
+      p_base_amount_cents: baseAmount,
+      p_campus_id: aspireRequest.campus_id || null,
+      p_tip_amount_cents: 0
+    });
+    if (quoteError) throw quoteError;
+    const quote = (quoteRows?.[0] || null) as FeeQuote | null;
 
     if (!quote) return NextResponse.json({ error: 'Aspire fee policy is unavailable.' }, { status: 503 });
     if (baseAmount < quote.minimum_paid_order_cents) {
@@ -185,6 +138,35 @@ export async function POST(request: Request) {
     }
 
     const currency = String(aspireRequest.currency || 'USD').toUpperCase();
+    const shippingOrder = Boolean(isMarket && marketOrder?.fulfillment_method === 'shipping');
+    const shippingRateCents = shippingOrder ? Number(marketOrder?.shipping_rate_cents ?? 0) : 0;
+    const shippingPaidBy = shippingOrder ? String(marketOrder?.shipping_paid_by || '') : null;
+    const shippingCurrency = shippingOrder ? String(marketOrder?.shipping_currency || currency).toUpperCase() : null;
+
+    if (shippingOrder) {
+      if (!marketOrder?.shipping_rate_id || !Number.isInteger(shippingRateCents) || shippingRateCents < 0) {
+        return NextResponse.json({ error: 'Choose a live carrier rate before payment.', code: 'SHIPPING_RATE_REQUIRED' }, { status: 409 });
+      }
+      if (shippingPaidBy !== 'buyer' && shippingPaidBy !== 'seller') {
+        return NextResponse.json({ error: 'Choose who pays for carrier shipping before payment.', code: 'SHIPPING_PAYER_REQUIRED' }, { status: 409 });
+      }
+      if (shippingCurrency !== currency) {
+        return NextResponse.json({ error: 'The selected shipping rate currency does not match this order.', code: 'SHIPPING_CURRENCY_MISMATCH' }, { status: 409 });
+      }
+    }
+
+    const shippingChargedToBuyer = shippingOrder && shippingPaidBy === 'buyer' ? shippingRateCents : 0;
+    const shippingChargedToSeller = shippingOrder && shippingPaidBy === 'seller' ? shippingRateCents : 0;
+    const customerTotalCents = quote.customer_total_cents + shippingChargedToBuyer;
+    const providerNetCents = quote.provider_net_cents - shippingChargedToSeller;
+
+    if (!Number.isInteger(customerTotalCents) || customerTotalCents <= 0) {
+      return NextResponse.json({ error: 'The checkout total is invalid. Refresh the order and try again.', code: 'INVALID_CHECKOUT_TOTAL' }, { status: 409 });
+    }
+    if (!Number.isInteger(providerNetCents) || providerNetCents <= 0) {
+      return NextResponse.json({ error: 'This shipping rate leaves no seller proceeds. Choose another rate or have the buyer cover shipping.', code: 'SHIPPING_EXCEEDS_SELLER_PROCEEDS' }, { status: 409 });
+    }
+
     const transferGroup = existingPayment?.transfer_group || `aspire_${connection.id.replace(/-/g, '')}`;
     const feeSnapshot = {
       version: quote.fee_policy_version,
@@ -196,7 +178,13 @@ export async function POST(request: Request) {
       tip_fee_percent_bps: quote.tip_fee_percent_bps,
       minimum_paid_order_cents: quote.minimum_paid_order_cents,
       standard_payout_cadence: quote.standard_payout_cadence,
-      transaction_type: isMarket ? 'marketplace_physical_goods' : 'connection_service'
+      transaction_type: isMarket ? 'marketplace_physical_goods' : 'connection_service',
+      shipping_rate_cents: shippingOrder ? shippingRateCents : 0,
+      shipping_paid_by: shippingPaidBy,
+      shipping_carrier: shippingOrder ? marketOrder?.shipping_carrier || null : null,
+      shipping_service: shippingOrder ? marketOrder?.shipping_service || null : null,
+      customer_total_cents: customerTotalCents,
+      provider_net_cents: providerNetCents
     };
 
     let payment = existingPayment as PaymentRow | null;
@@ -209,8 +197,8 @@ export async function POST(request: Request) {
       provider_fee_cents: quote.provider_fee_cents,
       tip_amount_cents: quote.tip_amount_cents,
       tip_fee_cents: quote.tip_fee_cents,
-      customer_total_cents: quote.customer_total_cents,
-      provider_net_cents: quote.provider_net_cents,
+      customer_total_cents: customerTotalCents,
+      provider_net_cents: providerNetCents,
       fee_policy_version: quote.fee_policy_version,
       requester_fee_percent_bps: quote.requester_fee_percent_bps,
       requester_fee_fixed_cents: quote.requester_fee_fixed_cents,
@@ -220,9 +208,9 @@ export async function POST(request: Request) {
       tip_fee_percent_bps: quote.tip_fee_percent_bps,
       minimum_paid_order_cents: quote.minimum_paid_order_cents,
       fee_snapshot: feeSnapshot,
-      gross_amount_cents: quote.customer_total_cents,
+      gross_amount_cents: customerTotalCents,
       platform_fee_cents: quote.platform_fee_revenue_cents,
-      provider_amount_cents: quote.provider_net_cents
+      provider_amount_cents: providerNetCents
     };
 
     if (!payment) {
@@ -280,22 +268,34 @@ export async function POST(request: Request) {
 
       if (previousSession.status === 'open') {
         if (!previousSession.url) throw new Error('STRIPE:Existing checkout is still open but has no redirect URL.');
-        return NextResponse.json({
-          url: previousSession.url,
-          paymentId: payment.id,
-          status: 'checkout_created',
-          transactionType: isMarket ? 'marketplace' : 'connection',
-          payerId,
-          payeeId,
-          feePolicyVersion: quote.fee_policy_version,
-          baseAmountCents: quote.base_amount_cents,
-          requesterFeeCents: quote.requester_fee_cents,
-          customerTotalCents: quote.customer_total_cents,
-          providerFeeCents: quote.provider_fee_cents,
-          providerNetCents: quote.provider_net_cents,
-          tipAmountCents: quote.tip_amount_cents,
-          reusedCheckout: true
-        });
+        if (Number(previousSession.amount_total ?? 0) === customerTotalCents) {
+          return NextResponse.json({
+            url: previousSession.url,
+            paymentId: payment.id,
+            status: 'checkout_created',
+            transactionType: isMarket ? 'marketplace' : 'connection',
+            payerId,
+            payeeId,
+            feePolicyVersion: quote.fee_policy_version,
+            baseAmountCents: quote.base_amount_cents,
+            requesterFeeCents: quote.requester_fee_cents,
+            customerTotalCents,
+            providerFeeCents: quote.provider_fee_cents,
+            providerNetCents,
+            tipAmountCents: quote.tip_amount_cents,
+            shippingRateCents,
+            shippingPaidBy,
+            reusedCheckout: true
+          });
+        }
+
+        // Older open sessions may have been created before a live carrier rate was
+        // attached. Expire an amount-mismatched session instead of letting Stripe
+        // collect a total that the webhook will correctly reject later.
+        await stripeFormRequest<CheckoutSession>(
+          `/v1/checkout/sessions/${encodeURIComponent(payment.stripe_checkout_session_id)}/expire`,
+          {}
+        );
       }
 
       // A completed Checkout Session should not be replaced while the webhook is still
@@ -348,19 +348,42 @@ export async function POST(request: Request) {
       'payment_intent_data[metadata][payee_id]': payeeId,
       'payment_intent_data[metadata][transaction_type]': isMarket ? 'marketplace' : 'connection',
       'payment_intent_data[metadata][fee_policy_version]': quote.fee_policy_version,
+      'payment_intent_data[metadata][shipping_rate_cents]': shippingOrder ? shippingRateCents : 0,
+      'payment_intent_data[metadata][shipping_paid_by]': shippingPaidBy || '',
       'metadata[aspire_payment_id]': payment.id,
       'metadata[connection_id]': connection.id,
       'metadata[transaction_type]': isMarket ? 'marketplace' : 'connection',
       'metadata[fee_policy_version]': quote.fee_policy_version,
-      success_url: `${origin}/connections?payment=success&connection=${encodeURIComponent(connection.id)}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/connections?payment=cancelled&connection=${encodeURIComponent(connection.id)}`
+      'metadata[shipping_rate_cents]': shippingOrder ? shippingRateCents : 0,
+      'metadata[shipping_paid_by]': shippingPaidBy || '',
+      success_url: isMarket
+        ? `${origin}/transactions?payment=success&connection=${encodeURIComponent(connection.id)}${shippingOrder ? '&delivery=ship' : ''}&session_id={CHECKOUT_SESSION_ID}`
+        : `${origin}/connections?payment=success&connection=${encodeURIComponent(connection.id)}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: isMarket
+        ? `${origin}/transactions?payment=cancelled&connection=${encodeURIComponent(connection.id)}${shippingOrder ? '&delivery=ship' : ''}`
+        : `${origin}/connections?payment=cancelled&connection=${encodeURIComponent(connection.id)}`
     };
 
+    let nextLineItemIndex = 2;
+    if (shippingChargedToBuyer > 0) {
+      checkoutParams[`line_items[${nextLineItemIndex}][price_data][currency]`] = currency.toLowerCase();
+      checkoutParams[`line_items[${nextLineItemIndex}][price_data][product_data][name]`] = 'Carrier shipping';
+      checkoutParams[`line_items[${nextLineItemIndex}][price_data][product_data][description]`] = [marketOrder?.shipping_carrier, marketOrder?.shipping_service].filter(Boolean).join(' · ') || 'Live Shippo carrier rate';
+      checkoutParams[`line_items[${nextLineItemIndex}][price_data][unit_amount]`] = shippingChargedToBuyer;
+      checkoutParams[`line_items[${nextLineItemIndex}][quantity]`] = 1;
+      nextLineItemIndex += 1;
+    }
+
     if (quote.tip_amount_cents > 0) {
-      checkoutParams['line_items[2][price_data][currency]'] = currency.toLowerCase();
-      checkoutParams['line_items[2][price_data][product_data][name]'] = 'Tip';
-      checkoutParams['line_items[2][price_data][unit_amount]'] = quote.tip_amount_cents;
-      checkoutParams['line_items[2][quantity]'] = 1;
+      checkoutParams[`line_items[${nextLineItemIndex}][price_data][currency]`] = currency.toLowerCase();
+      checkoutParams[`line_items[${nextLineItemIndex}][price_data][product_data][name]`] = 'Tip';
+      checkoutParams[`line_items[${nextLineItemIndex}][price_data][unit_amount]`] = quote.tip_amount_cents;
+      checkoutParams[`line_items[${nextLineItemIndex}][quantity]`] = 1;
+    }
+
+    const stripeLineItemTotal = quote.base_amount_cents + quote.requester_fee_cents + quote.tip_amount_cents + shippingChargedToBuyer;
+    if (stripeLineItemTotal !== customerTotalCents) {
+      throw new Error('STRIPE:Checkout line items do not match the Aspire payment snapshot.');
     }
 
     const session = await stripeFormRequest<CheckoutSession>('/v1/checkout/sessions', checkoutParams, {
@@ -408,10 +431,12 @@ export async function POST(request: Request) {
       feePolicyVersion: quote.fee_policy_version,
       baseAmountCents: quote.base_amount_cents,
       requesterFeeCents: quote.requester_fee_cents,
-      customerTotalCents: quote.customer_total_cents,
+      customerTotalCents,
       providerFeeCents: quote.provider_fee_cents,
-      providerNetCents: quote.provider_net_cents,
+      providerNetCents,
       tipAmountCents: quote.tip_amount_cents,
+      shippingRateCents,
+      shippingPaidBy,
       reusedCheckout: false
     });
   } catch (error) {
