@@ -6,6 +6,7 @@ import {
   readPostCoverPreference,
   type RequestCoverSource
 } from './coverImages';
+import { REQUEST_PUBLIC_SELECT } from './requestProjection';
 import { runRequestAiSafety } from './trust';
 
 export type RequestKind =
@@ -151,13 +152,13 @@ export async function fetchOpenRequests(limit = 24) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('requests')
-    .select('*')
+    .select(REQUEST_PUBLIC_SELECT)
     .eq('status', 'open')
     .eq('moderation_status', 'approved')
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as AspireRequest[];
+  return (data ?? []).map((row) => ({ ...row, latitude: null, longitude: null })) as unknown as AspireRequest[];
 }
 
 export async function createRequest(input: CreateRequestInput) {
@@ -245,14 +246,14 @@ export async function createRequest(input: CreateRequestInput) {
         ? input.listing_expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         : null
     })
-    .select('*')
+    .select(REQUEST_PUBLIC_SELECT)
     .single();
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
   clearPostCoverPreference();
   notifyCampusFeedChanged();
   await runRequestAiSafety(data.id).catch(() => undefined);
-  return data as AspireRequest;
+  return { ...data, latitude: null, longitude: null } as unknown as AspireRequest;
 }
 
 export async function respondToRequest(requestId: string, message?: string) {
