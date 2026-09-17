@@ -12,6 +12,7 @@ export type RequestMedia = {
   public_url?: string;
 };
 
+const requestMediaSelect = 'id,request_id,uploader_id,storage_path,mime_type,sort_order,created_at';
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
 const maxFileSize = 8 * 1024 * 1024;
 const maxFiles = 5;
@@ -52,6 +53,18 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
   const user = authData.user;
   if (!user) throw new Error('Sign in again before uploading photos.');
 
+  // Append new images after any photos that survived an edit/resubmit instead of
+  // reusing sort_order=0 and creating unstable photo ordering.
+  const { data: lastMedia, error: lastMediaError } = await supabase
+    .from('request_media')
+    .select('sort_order')
+    .eq('request_id', requestId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lastMediaError) throw lastMediaError;
+  const startingSortOrder = typeof lastMedia?.sort_order === 'number' ? lastMedia.sort_order + 1 : 0;
+
   const created: RequestMedia[] = [];
 
   for (let index = 0; index < files.length; index += 1) {
@@ -69,9 +82,9 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
         uploader_id: user.id,
         storage_path: path,
         mime_type: file.type,
-        sort_order: index
+        sort_order: startingSortOrder + index
       })
-      .select('*')
+      .select(requestMediaSelect)
       .single();
 
     if (rowError) {
@@ -83,17 +96,10 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
     created.push({ ...(row as RequestMedia), public_url: signed?.signedUrl });
   }
 
-  // User photos always win. Keep the actual media in request_media (signed URLs
-  // are generated when the feed loads) and clear any temporary system cover.
-  try {
-    await supabase
-      .from('requests')
-      .update({ cover_image_source: 'user', cover_image_url: null, cover_image_asset_id: null })
-      .eq('id', requestId)
-      .eq('poster_id', user.id);
-  } catch {
-    // Media upload succeeded; a presentation metadata update must not undo it.
-  }
+  // request_media is the source of truth for photo-cover presentation metadata.
+  // A database trigger marks the request cover as user-owned on INSERT and
+  // clears that marker after the final DELETE. Browser clients intentionally do
+  // not have UPDATE access to cover_image_* request columns.
 
   // Text is scanned when the request is created. Run again now so the final
   // assessment includes every uploaded image before a moderator approves it.
@@ -107,7 +113,7 @@ export async function fetchRequestMedia(requestIds: string[]) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('request_media')
-    .select('*')
+    .select(requestMediaSelect)
     .in('request_id', requestIds)
     .order('sort_order');
   if (error) throw error;
