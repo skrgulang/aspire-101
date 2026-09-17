@@ -18,13 +18,19 @@ import UiIcon from './UiIcon';
 
 type DeliveryChoice = 'meet' | 'ship' | 'seller' | 'aspirer';
 type AspirerReward = 'free' | '5' | '10' | 'negotiable';
-type FulfillmentMethod = 'campus_pickup' | 'shipping' | 'aspirer_delivery';
-type MarketFilter = 'all' | 'meet' | 'ship' | 'aspirer';
+type FulfillmentMethod = 'campus_pickup' | 'shipping' | 'seller_delivery' | 'aspirer_delivery';
+type MarketFilter = 'all' | 'meet' | 'ship' | 'seller' | 'aspirer';
 type MarketSort = 'newest' | 'price_asc' | 'price_desc';
+type SellerDeliveryMode = 'free' | 'fixed' | 'negotiable';
+type ShippingPolicy = 'buyer' | 'seller' | 'either';
 type MarketplaceItem = Omit<DiscoverRequest, 'fulfillment_method'> & {
-  fulfillment_method?: FulfillmentMethod | null;
+  fulfillment_method?: 'campus_pickup' | 'shipping' | null;
   fulfillment_methods?: FulfillmentMethod[];
   seller_area?: string | null;
+  shipping_paid_by_default?: ShippingPolicy | null;
+  shipping_paid_by_preference?: ShippingPolicy | null;
+  seller_delivery_mode?: SellerDeliveryMode | null;
+  seller_delivery_price_cents?: number | null;
 };
 type FeePolicy = {
   campus_id: string | null;
@@ -48,7 +54,6 @@ function money(cents: number | null | undefined) {
 function methodsFor(item: MarketplaceItem): FulfillmentMethod[] {
   if (Array.isArray(item.fulfillment_methods) && item.fulfillment_methods.length) return item.fulfillment_methods;
   if (item.fulfillment_method === 'shipping') return ['shipping'];
-  if (item.fulfillment_method === 'aspirer_delivery') return ['aspirer_delivery'];
   return ['campus_pickup'];
 }
 
@@ -56,15 +61,26 @@ function supports(item: MarketplaceItem, choice: DeliveryChoice) {
   const methods = methodsFor(item);
   if (choice === 'meet') return methods.includes('campus_pickup');
   if (choice === 'ship') return methods.includes('shipping');
-  if (choice === 'aspirer') return methods.includes('aspirer_delivery');
-  return true;
+  if (choice === 'seller') return methods.includes('seller_delivery');
+  return methods.includes('aspirer_delivery');
 }
 
 function defaultChoice(item: MarketplaceItem): DeliveryChoice {
   if (supports(item, 'meet')) return 'meet';
   if (supports(item, 'ship')) return 'ship';
-  if (supports(item, 'aspirer')) return 'aspirer';
-  return 'seller';
+  if (supports(item, 'seller')) return 'seller';
+  return 'aspirer';
+}
+
+function shippingPolicyFor(item: MarketplaceItem): ShippingPolicy {
+  const policy = item.shipping_paid_by_default || item.shipping_paid_by_preference;
+  return policy === 'seller' || policy === 'either' ? policy : 'buyer';
+}
+
+function sellerDeliverySummary(item: MarketplaceItem) {
+  if (item.seller_delivery_mode === 'free') return 'Free';
+  if (item.seller_delivery_mode === 'fixed' && item.seller_delivery_price_cents != null) return money(item.seller_delivery_price_cents);
+  return 'Negotiable';
 }
 
 function buyerFee(amount: number, policy: FeePolicy | null) {
@@ -79,8 +95,8 @@ function addressComplete(address: AddressState) {
   return Boolean(address.name?.trim() && address.street1.trim() && address.city.trim() && address.state.trim() && address.zip.trim() && address.country.trim());
 }
 
-function formatAddress(address: AddressState) {
-  return [address.street1.trim(), address.street2?.trim(), `${address.city.trim()}, ${address.state.trim()} ${address.zip.trim()}`, address.country.trim()].filter(Boolean).join(', ');
+function sellerAreaComplete(address: AddressState) {
+  return Boolean(address.city.trim() && address.state.trim());
 }
 
 function conditionLabel(value?: string | null) {
@@ -91,6 +107,7 @@ function conditionLabel(value?: string | null) {
 function deliveryLabel(method: FulfillmentMethod) {
   if (method === 'campus_pickup') return 'Meet up';
   if (method === 'shipping') return 'Shipping';
+  if (method === 'seller_delivery') return 'Seller delivery';
   return 'Aspirer delivery';
 }
 
@@ -153,14 +170,16 @@ export default function MarketplaceCheckoutV5() {
         );
 
         const ids = rows.map((item) => item.id);
-        let sellerAreas = new Map<string, string | null>();
+        let listingMeta = new Map<string, Partial<MarketplaceItem>>();
         if (ids.length) {
-          const { data: areaRows } = await supabase.from('requests').select('id,seller_area').in('id', ids);
-          sellerAreas = new Map((areaRows || []).map((row) => [row.id as string, (row.seller_area as string | null) || null]));
+          const { data: metaRows } = await supabase.from('requests')
+            .select('id,seller_area,fulfillment_method,fulfillment_methods,shipping_paid_by_default,shipping_paid_by_preference,seller_delivery_mode,seller_delivery_price_cents')
+            .in('id', ids);
+          listingMeta = new Map((metaRows || []).map((row) => [row.id as string, row as Partial<MarketplaceItem>]));
         }
 
         const visible = (rows as MarketplaceItem[])
-          .map((item) => ({ ...item, seller_area: sellerAreas.get(item.id) || item.seller_area || null }))
+          .map((item) => ({ ...item, ...(listingMeta.get(item.id) || {}) }))
           .filter((item) =>
             item.kind === 'buy_sell' &&
             item.market_intent === 'sell' &&
@@ -202,6 +221,7 @@ export default function MarketplaceCheckoutV5() {
       if (needle && !`${item.title} ${item.details || ''} ${item.category || ''} ${item.seller_area || ''}`.toLowerCase().includes(needle)) return false;
       if (filter === 'meet' && !supports(item, 'meet')) return false;
       if (filter === 'ship' && !supports(item, 'ship')) return false;
+      if (filter === 'seller' && !supports(item, 'seller')) return false;
       if (filter === 'aspirer' && !supports(item, 'aspirer')) return false;
       return true;
     });
@@ -216,7 +236,7 @@ export default function MarketplaceCheckoutV5() {
     setDeliveryFor(item);
     setDeliveryChoice(defaultChoice(item));
     setMeetPayment('aspire');
-    setShippingPaidBy('buyer');
+    setShippingPaidBy(shippingPolicyFor(item) === 'seller' ? 'seller' : 'buyer');
     setAspirerReward('negotiable');
     setPickupArea(item.seller_area || '');
     setPublicDropoffArea('');
@@ -226,6 +246,7 @@ export default function MarketplaceCheckoutV5() {
   }
 
   function chooseDelivery(choice: DeliveryChoice) {
+    if (deliveryFor && !supports(deliveryFor, choice)) return;
     setDeliveryChoice(choice);
     setModalError('');
   }
@@ -237,18 +258,34 @@ export default function MarketplaceCheckoutV5() {
     return false;
   }
 
+  function requireSellerArea() {
+    if (sellerAreaComplete(address)) return true;
+    setModalError('Add the city and state where you want seller delivery.');
+    window.setTimeout(() => document.getElementById('market-seller-city')?.focus(), 0);
+    return false;
+  }
+
   async function askSeller(item: MarketplaceItem) {
-    if (!requireAddress()) return;
+    if (!supports(item, 'seller')) {
+      setModalError('Seller delivery is not offered on this listing.');
+      return;
+    }
+    if (!requireSellerArea()) return;
     setBusy(`seller-${item.id}`);
     setModalError('');
     try {
-      const instructions = address.instructions.trim() ? ` Delivery notes: ${address.instructions.trim()}.` : '';
+      const instructions = address.instructions.trim() ? ` Notes: ${address.instructions.trim()}.` : '';
+      const deliveryTerm = item.seller_delivery_mode === 'free'
+        ? 'Your listing says seller delivery is free.'
+        : item.seller_delivery_mode === 'fixed' && item.seller_delivery_price_cents != null
+          ? `Your listing shows a delivery price of ${money(item.seller_delivery_price_cents)}.`
+          : 'Please confirm the delivery price.';
       await respondToRequest(
         item.id,
-        `Would you be willing to deliver “${item.title}” directly? Delivery address: ${formatAddress(address)}.${instructions} Please reply with whether delivery is free or what delivery price you would want. I can pay through Aspire after we agree.`
+        `Would you be willing to deliver “${item.title}” to the ${address.city.trim()}, ${address.state.trim().toUpperCase()} area? ${deliveryTerm}${instructions} I’ll share the exact address privately after we agree.`
       );
       setDeliveryFor(null);
-      setNotice('Delivery request sent. The item is not reserved yet; return to checkout after the seller replies.');
+      setNotice('Delivery request sent. The exact address was not shared. The item is not reserved until you and the seller agree.');
     } catch (error) {
       setModalError(error instanceof Error ? error.message : 'Could not ask the seller about delivery.');
     } finally {
@@ -257,17 +294,17 @@ export default function MarketplaceCheckoutV5() {
   }
 
   async function reserve(item: MarketplaceItem) {
-    if (deliveryChoice === 'seller') {
-      await askSeller(item);
-      return;
-    }
     if (!supports(item, deliveryChoice)) {
       setModalError('That delivery method is not offered by this seller.');
       return;
     }
+    if (deliveryChoice === 'seller') {
+      await askSeller(item);
+      return;
+    }
     if ((deliveryChoice === 'ship' || deliveryChoice === 'aspirer') && !requireAddress()) return;
 
-    const fulfillmentMethod: FulfillmentMethod = deliveryChoice === 'meet'
+    const fulfillmentMethod = deliveryChoice === 'meet'
       ? 'campus_pickup'
       : deliveryChoice === 'ship'
         ? 'shipping'
@@ -353,8 +390,9 @@ export default function MarketplaceCheckoutV5() {
   const fixedAspirerReward = aspirerReward === '5' ? 500 : aspirerReward === '10' ? 1000 : 0;
   const deliveryPaymentFee = deliveryChoice === 'aspirer' && fixedAspirerReward > 0 ? buyerFee(fixedAspirerReward, feePolicy) : 0;
   const estimatedAspirerTotal = itemCheckoutTotal + fixedAspirerReward + deliveryPaymentFee;
-  const needsAddress = deliveryChoice === 'ship' || deliveryChoice === 'seller' || deliveryChoice === 'aspirer';
-  const addressTitle = deliveryChoice === 'ship' ? 'Shipping address' : deliveryChoice === 'seller' ? 'Delivery address for seller' : 'Delivery address (private)';
+  const needsAddress = deliveryChoice === 'ship' || deliveryChoice === 'aspirer';
+  const addressTitle = deliveryChoice === 'ship' ? 'Shipping address' : 'Delivery address (private)';
+  const activeShippingPolicy = deliveryFor ? shippingPolicyFor(deliveryFor) : 'buyer';
 
   return (
     <main className="marketV4Page">
@@ -364,7 +402,7 @@ export default function MarketplaceCheckoutV5() {
           <div className="marketV4HeroCopy">
             <p>ASPIRE MARKET · {campus?.short_name || 'CAMPUS'}</p>
             <h1>Campus stuff, without the messy handoff.</h1>
-            <span>Buy from students, choose meetup, shipping, seller delivery, or another Aspirer, and see the cost before you commit.</span>
+            <span>Buy from students and use only the handoff methods each seller actually offers.</span>
           </div>
           <div className="marketV4HeroActions">
             <a className="marketV4GhostAction" href="/transactions"><UiIcon name="wallet" />Orders</a>
@@ -382,7 +420,7 @@ export default function MarketplaceCheckoutV5() {
           </label>
           <div className="marketV4Filters" aria-label="Delivery filters">
             {([
-              ['all', 'All'], ['meet', 'Meet up'], ['ship', 'Shipping'], ['aspirer', 'Aspirer delivery']
+              ['all', 'All'], ['meet', 'Meet up'], ['ship', 'Shipping'], ['seller', 'Seller delivery'], ['aspirer', 'Aspirer delivery']
             ] as Array<[MarketFilter, string]>).map(([value, label]) => (
               <button key={value} type="button" className={filter === value ? 'active' : ''} onClick={() => setFilter(value)} aria-pressed={filter === value}>{label}</button>
             ))}
@@ -422,8 +460,7 @@ export default function MarketplaceCheckoutV5() {
                     <div className="marketV4Badges">
                       {item.seller_area && <span>📍 {item.seller_area}</span>}
                       <span>{conditionLabel(item.item_condition)}</span>
-                      {methods.map((method) => <span key={method}>{deliveryLabel(method)}</span>)}
-                      <span>Ask seller</span>
+                      {methods.map((method) => <span key={method}>{deliveryLabel(method)}{method === 'seller_delivery' ? ` · ${sellerDeliverySummary(item)}` : ''}</span>)}
                     </div>
                     <button className="marketV4Buy" type="button" onClick={() => openDelivery(item)}>Buy now <span>→</span></button>
                   </div>
@@ -455,19 +492,19 @@ export default function MarketplaceCheckoutV5() {
             </div>
 
             <div className="marketV4Choices">
-              <button type="button" className={deliveryChoice === 'meet' ? 'active' : ''} disabled={!supports(deliveryFor, 'meet')} onClick={() => chooseDelivery('meet')}><div><b>Meet up</b><em>Delivery $0</em></div><span>{deliveryFor.seller_area ? `Meet in the ${deliveryFor.seller_area} area.` : 'Meet the seller on campus or nearby.'}</span></button>
-              <button type="button" className={deliveryChoice === 'ship' ? 'active' : ''} disabled={!supports(deliveryFor, 'ship')} onClick={() => chooseDelivery('ship')}><div><b>Ship to me</b><em>+ carrier rate</em></div><span>Use a carrier and add a delivery address.</span></button>
-              <button type="button" className={deliveryChoice === 'seller' ? 'active' : ''} onClick={() => chooseDelivery('seller')}><div><b>Ask seller to deliver</b><em>Free / quote</em></div><span>Ask the seller for a direct-delivery price first.</span></button>
-              <button type="button" className={deliveryChoice === 'aspirer' ? 'active' : ''} disabled={!supports(deliveryFor, 'aspirer')} onClick={() => chooseDelivery('aspirer')}><div><b>Ask an Aspirer</b><em>Flexible reward</em></div><span>Another student picks it up and brings it to you.</span></button>
+              {supports(deliveryFor, 'meet') && <button type="button" className={deliveryChoice === 'meet' ? 'active' : ''} onClick={() => chooseDelivery('meet')}><div><b>Meet up</b><em>Delivery $0</em></div><span>{deliveryFor.seller_area ? `Meet in the ${deliveryFor.seller_area} area.` : 'Meet the seller on campus or nearby.'}</span></button>}
+              {supports(deliveryFor, 'ship') && <button type="button" className={deliveryChoice === 'ship' ? 'active' : ''} onClick={() => chooseDelivery('ship')}><div><b>Ship to me</b><em>+ carrier rate</em></div><span>{activeShippingPolicy === 'seller' ? 'Seller covers the carrier rate.' : activeShippingPolicy === 'either' ? 'Buyer or seller can cover shipping.' : 'Buyer covers the carrier rate.'}</span></button>}
+              {supports(deliveryFor, 'seller') && <button type="button" className={deliveryChoice === 'seller' ? 'active' : ''} onClick={() => chooseDelivery('seller')}><div><b>Ask seller to deliver</b><em>{sellerDeliverySummary(deliveryFor)}</em></div><span>Share only your city/state first. Exact address stays private until you agree.</span></button>}
+              {supports(deliveryFor, 'aspirer') && <button type="button" className={deliveryChoice === 'aspirer' ? 'active' : ''} onClick={() => chooseDelivery('aspirer')}><div><b>Ask an Aspirer</b><em>Flexible reward</em></div><span>Another student picks it up and brings it to you.</span></button>}
             </div>
 
             {deliveryChoice === 'meet' && <div className="marketV4Config"><h3>How do you want to pay?</h3><label><input type="radio" name="meet-pay" checked={meetPayment === 'aspire'} onChange={() => setMeetPayment('aspire')} /><span><b>Aspire Protected</b><small>Pay online with a payment trail, refund/dispute tools, and seller payout in Aspire.</small></span></label><label><input type="radio" name="meet-pay" checked={meetPayment === 'in_person'} onChange={() => setMeetPayment('in_person')} /><span><b>Pay in person</b><small>Pay when you meet. No Aspire payment protection or Stripe checkout.</small></span></label></div>}
 
-            {deliveryChoice === 'ship' && <div className="marketV4Config"><h3>Who covers shipping?</h3><label><input type="radio" name="shipping-payer" checked={shippingPaidBy === 'buyer'} onChange={() => setShippingPaidBy('buyer')} /><span><b>Buyer pays shipping</b><small>The selected carrier rate is added to protected checkout.</small></span></label><label><input type="radio" name="shipping-payer" checked={shippingPaidBy === 'seller'} onChange={() => setShippingPaidBy('seller')} /><span><b>Seller covers shipping</b><small>The carrier rate comes out of seller proceeds.</small></span></label></div>}
+            {deliveryChoice === 'ship' && <div className="marketV4Config"><h3>Who covers shipping?</h3>{activeShippingPolicy !== 'seller' && <label><input type="radio" name="shipping-payer" checked={shippingPaidBy === 'buyer'} onChange={() => setShippingPaidBy('buyer')} /><span><b>Buyer pays shipping</b><small>The selected carrier rate is added to protected checkout.</small></span></label>}{activeShippingPolicy !== 'buyer' && <label><input type="radio" name="shipping-payer" checked={shippingPaidBy === 'seller'} onChange={() => setShippingPaidBy('seller')} /><span><b>Seller covers shipping</b><small>The carrier rate comes out of seller proceeds.</small></span></label>}</div>}
 
             {needsAddress && <div className="marketV4Config marketV4AddressBlock"><div className="marketV4AddressHeading"><h3>{addressTitle}</h3><span>{deliveryChoice === 'aspirer' ? 'Exact address stays private from the public delivery post.' : 'Required before continuing.'}</span></div><div className="marketV4AddressGrid"><label className="wide"><span>Recipient name *</span><input id="market-delivery-name" value={address.name || ''} onChange={(event) => setAddress((value) => ({ ...value, name: event.target.value }))} placeholder="Full name" /></label><label className="wide"><span>Street address *</span><input value={address.street1} onChange={(event) => setAddress((value) => ({ ...value, street1: event.target.value }))} placeholder="123 Main St" /></label><label className="wide"><span>Apt / dorm / room</span><input value={address.street2 || ''} onChange={(event) => setAddress((value) => ({ ...value, street2: event.target.value }))} placeholder="Optional" /></label><label><span>City *</span><input value={address.city} onChange={(event) => setAddress((value) => ({ ...value, city: event.target.value }))} placeholder="City" /></label><label><span>State *</span><input value={address.state} onChange={(event) => setAddress((value) => ({ ...value, state: event.target.value.toUpperCase() }))} placeholder="IN" maxLength={2} /></label><label><span>ZIP *</span><input value={address.zip} onChange={(event) => setAddress((value) => ({ ...value, zip: event.target.value }))} placeholder="ZIP" /></label><label><span>Country *</span><input value={address.country} onChange={(event) => setAddress((value) => ({ ...value, country: event.target.value.toUpperCase() }))} placeholder="US" maxLength={2} /></label><label className="wide"><span>Delivery instructions</span><input value={address.instructions} onChange={(event) => setAddress((value) => ({ ...value, instructions: event.target.value }))} placeholder="Front desk, call on arrival, etc." /></label></div></div>}
 
-            {deliveryChoice === 'seller' && <div className="marketV4Config marketV4SellerAsk"><h3>Ask before you buy</h3><p>This does not reserve the item yet. The seller can say yes, offer free delivery, or quote a delivery price. Then you return to checkout.</p></div>}
+            {deliveryChoice === 'seller' && <div className="marketV4Config marketV4SellerAsk"><h3>Ask before you buy</h3><p>Only give the seller a general delivery area first. This does not reserve the item and your exact address is not shared.</p><div className="marketV4TwoCols"><label><span>Delivery city *</span><input id="market-seller-city" value={address.city} onChange={(event) => setAddress((value) => ({ ...value, city: event.target.value }))} placeholder="West Lafayette" /></label><label><span>State *</span><input value={address.state} onChange={(event) => setAddress((value) => ({ ...value, state: event.target.value.toUpperCase() }))} placeholder="IN" maxLength={2} /></label></div><label><span>Optional note</span><input value={address.instructions} onChange={(event) => setAddress((value) => ({ ...value, instructions: event.target.value }))} placeholder="Near campus, evening preferred, etc." /></label></div>}
 
             {deliveryChoice === 'aspirer' && <div className="marketV4Config"><h3>Set up the public delivery request</h3>{deliveryFor.seller_area && <p className="marketV4Fine">Seller area: <b>{deliveryFor.seller_area}</b>. This is intentionally only city/state; exact pickup is coordinated privately.</p>}<div className="marketV4TwoCols"><label><span>Pickup area (public)</span><input value={pickupArea} onChange={(event) => setPickupArea(event.target.value)} placeholder={deliveryFor.seller_area || 'Seller / campus area'} /></label><label><span>Drop-off area shown publicly</span><input value={publicDropoffArea} onChange={(event) => setPublicDropoffArea(event.target.value)} placeholder="e.g. library area" /></label></div><div className="marketV4RewardRow">{(['free','5','10','negotiable'] as AspirerReward[]).map((reward) => <button type="button" key={reward} className={aspirerReward === reward ? 'active' : ''} onClick={() => setAspirerReward(reward)}>{reward === 'free' ? 'Free' : reward === '5' ? '$5' : reward === '10' ? '$10' : 'Negotiable'}</button>)}</div><p className="marketV4Fine">Only general areas are public. The buyer’s exact delivery address stays private on the order.</p></div>}
 
@@ -476,11 +513,11 @@ export default function MarketplaceCheckoutV5() {
               <div><span>Item</span><strong>{money(itemAmount)}</strong></div>
               {deliveryChoice === 'meet' && <div><span>Meetup delivery</span><strong>$0.00</strong></div>}
               {deliveryChoice === 'ship' && <div><span>Shipping</span><strong>{shippingPaidBy === 'buyer' ? 'Carrier rate added next' : 'Seller covers'}</strong></div>}
-              {deliveryChoice === 'seller' && <div><span>Seller delivery</span><strong>Free or seller quote</strong></div>}
+              {deliveryChoice === 'seller' && <div><span>Seller delivery</span><strong>{sellerDeliverySummary(deliveryFor)}</strong></div>}
               {deliveryChoice === 'aspirer' && <div><span>Aspirer delivery reward</span><strong>{aspirerReward === 'free' ? '$0.00' : aspirerReward === 'negotiable' ? 'Negotiable' : money(fixedAspirerReward)}</strong></div>}
               {protectedPayment && deliveryChoice !== 'seller' && <div><span>Aspire service fee on item</span><strong>{money(itemServiceFee)}</strong></div>}
               {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 && <div><span>Estimated Aspire fee on delivery payment</span><strong>{money(deliveryPaymentFee)}</strong></div>}
-              {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 ? <div className="marketV4Total"><span>Estimated all-in total</span><strong>{money(estimatedAspirerTotal)}</strong></div> : deliveryChoice === 'aspirer' && aspirerReward === 'negotiable' ? <div className="marketV4Total"><span>Item checkout now</span><strong>{money(itemCheckoutTotal)} + agreed delivery</strong></div> : deliveryChoice === 'ship' && shippingPaidBy === 'buyer' ? <div className="marketV4Total"><span>Estimated total</span><strong>{money(itemCheckoutTotal)} + shipping</strong></div> : deliveryChoice === 'seller' ? <div className="marketV4Total"><span>Item price</span><strong>{money(itemAmount)} + seller quote</strong></div> : <div className="marketV4Total"><span>You pay</span><strong>{money(itemCheckoutTotal)}</strong></div>}
+              {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 ? <div className="marketV4Total"><span>Estimated all-in total</span><strong>{money(estimatedAspirerTotal)}</strong></div> : deliveryChoice === 'aspirer' && aspirerReward === 'negotiable' ? <div className="marketV4Total"><span>Item checkout now</span><strong>{money(itemCheckoutTotal)} + agreed delivery</strong></div> : deliveryChoice === 'ship' && shippingPaidBy === 'buyer' ? <div className="marketV4Total"><span>Estimated total</span><strong>{money(itemCheckoutTotal)} + shipping</strong></div> : deliveryChoice === 'seller' ? <div className="marketV4Total"><span>Item price</span><strong>{money(itemAmount)}{deliveryFor.seller_delivery_mode === 'fixed' && deliveryFor.seller_delivery_price_cents ? ` + ${money(deliveryFor.seller_delivery_price_cents)} delivery` : deliveryFor.seller_delivery_mode === 'free' ? ' + free delivery' : ' + agreed delivery'}</strong></div> : <div className="marketV4Total"><span>You pay</span><strong>{money(itemCheckoutTotal)}</strong></div>}
               {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 && <small>Item checkout is {money(itemCheckoutTotal)} now. The helper reward is a separate payment after a helper is chosen.</small>}
               {deliveryChoice === 'ship' && shippingPaidBy === 'seller' && <small>The carrier rate will reduce seller proceeds after a shipping rate is selected.</small>}
             </div>
