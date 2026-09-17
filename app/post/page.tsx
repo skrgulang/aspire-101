@@ -61,8 +61,8 @@ export default function PostPage() {
               <div className="postPreviewTitle"><UiIcon name="search" /><h2>Where it goes</h2></div>
               <article className="postPreviewCard">
                 <div className="postPreviewMeta"><span>POST WORKSPACE</span><small>One place</small></div>
-                <strong>Needs and offers go to Browse. Published items go to Market.</strong>
-                <p>“I can help” creates your own offer instead of sending you away to search other people’s requests.</p>
+                <strong>Needs and offers go to Browse after review. Approved items go to Market.</strong>
+                <p>Submitted posts stay private while Aspire finishes the required safety and content checks.</p>
                 <div className="postPreviewFooter"><UiIcon name="mapPin" /><span>Selected campus community</span></div>
               </article>
             </section>
