@@ -5,6 +5,19 @@ type ServiceClient = SupabaseClient;
 
 const ACCOUNT_REQUEST_EXPORT_SELECT = 'id,poster_id,kind,category,title,details,campus,campus_id,city,scheduled_start_at,scheduled_end_at,timezone,meeting_label,amount_cents,currency,payment_method,market_intent,item_condition,price_negotiable,fulfillment_method,fulfillment_methods,shipping_paid_by_preference,shipping_paid_by_default,seller_delivery_mode,seller_delivery_price_cents,seller_area,quantity,language_code,cover_image_url,cover_image_source,cover_image_asset_id,listing_expires_at,moderation_status,moderation_reason,post_review_status,language_review_status,market_review_status,layered_reviewed_at,status,created_at,updated_at' as const;
 
+const ACCOUNT_PROFILE_EXPORT_SELECT = 'id,display_name,school,city,image_url,location,created_at,updated_at,name,phone,email,email_type,avatar_url,username,username_norm,bio,role,full_name,is_moderator,home_campus_id,current_campus_id,campus_last_selected_at,major,graduation_year,interests' as const;
+const ACCOUNT_SCHOOL_VERIFICATION_EXPORT_SELECT = 'user_id,school,student_id,status,submitted_at,updated_at,reviewed_at,review_note,university_id,verification_method,school_email,verified_at' as const;
+const ACCOUNT_RESPONSE_EXPORT_SELECT = 'id,request_id,responder_id,message,status,created_at' as const;
+const ACCOUNT_CONNECTION_EXPORT_SELECT = 'id,request_id,requester_id,responder_id,requester_confirmed,responder_confirmed,status,agreed_amount_cents,agreed_terms,payment_method,scheduled_start_at,scheduled_end_at,timezone,meeting_label,coordination_status,last_coordination_at,created_at,updated_at' as const;
+const ACCOUNT_REVIEW_EXPORT_SELECT = 'id,connection_id,reviewer_id,reviewee_id,would_connect_again,tags,note,created_at,updated_at' as const;
+const ACCOUNT_PAYMENT_EXPORT_SELECT = 'id,connection_id,request_id,payer_id,payee_id,currency,gross_amount_cents,platform_fee_cents,provider_amount_cents,status,base_amount_cents,requester_fee_cents,provider_fee_cents,tip_amount_cents,tip_fee_cents,customer_total_cents,provider_net_cents,paid_at,released_at,refunded_at,disputed_at,created_at,updated_at' as const;
+const ACCOUNT_RESOLUTION_CASE_EXPORT_SELECT = 'id,connection_id,request_id,opened_by,against_user_id,reason,requested_resolution,details,status,payment_status_snapshot,payment_total_cents_snapshot,currency_snapshot,scheduled_start_snapshot,meeting_label_snapshot,coordination_status_snapshot,resolution_note,refund_cents,provider_release_cents,reviewed_at,created_at,updated_at' as const;
+const ACCOUNT_RESOLUTION_RESPONSE_EXPORT_SELECT = 'id,case_id,connection_id,author_id,body,created_at' as const;
+const ACCOUNT_NOTIFICATION_EXPORT_SELECT = 'id,user_id,kind,actor_id,request_id,response_id,connection_id,message_id,title,body,read_at,created_at' as const;
+const ACCOUNT_CIRCLE_EXPORT_SELECT = 'connection_id,user_id,keep_in_circle,created_at,updated_at' as const;
+const ACCOUNT_COMPLETION_EXPORT_SELECT = 'connection_id,user_id,confirmed_at' as const;
+const ACCOUNT_MESSAGE_EXPORT_SELECT = 'id,connection_id,sender_id,body,created_at' as const;
+
 export type AccountDeletionBlocker = {
   code: string;
   message: string;
@@ -22,31 +35,31 @@ export async function buildAccountExport(supabase: ServiceClient, user: User) {
   const livemode = stripeLivemode();
 
   const [profile, preferences, schoolVerification, identityVerification, requests, responses, connections, reviews, payments, resolutionCases, resolutionResponses, notifications, circleChoices, completionConfirmations, paymentAccount, requestMedia] = await Promise.all([
-    expectOk(supabase.from('profiles').select('*').eq('id', userId).maybeSingle(), 'profile_export'),
+    expectOk(supabase.from('profiles').select(ACCOUNT_PROFILE_EXPORT_SELECT).eq('id', userId).maybeSingle(), 'profile_export'),
     expectOk(supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(), 'preferences_export'),
-    expectOk(supabase.from('school_verifications').select('*').eq('user_id', userId).maybeSingle(), 'school_export'),
+    expectOk(supabase.from('school_verifications').select(ACCOUNT_SCHOOL_VERIFICATION_EXPORT_SELECT).eq('user_id', userId).maybeSingle(), 'school_export'),
     expectOk(supabase.from('identity_verifications').select('status,provider,verified_at,created_at,updated_at').eq('user_id', userId).maybeSingle(), 'identity_export'),
     expectOk(supabase.from('requests').select(ACCOUNT_REQUEST_EXPORT_SELECT).eq('poster_id', userId).order('created_at', { ascending: false }), 'requests_export'),
-    expectOk(supabase.from('request_responses').select('*').eq('responder_id', userId).order('created_at', { ascending: false }), 'responses_export'),
-    expectOk(supabase.from('connections').select('*').or(`requester_id.eq.${userId},responder_id.eq.${userId}`).order('created_at', { ascending: false }), 'connections_export'),
-    expectOk(supabase.from('connection_reviews').select('*').or(`reviewer_id.eq.${userId},reviewee_id.eq.${userId}`).order('created_at', { ascending: false }), 'reviews_export'),
-    expectOk(supabase.from('connection_payments').select('*').or(`payer_id.eq.${userId},payee_id.eq.${userId}`).order('created_at', { ascending: false }), 'payments_export'),
-    expectOk(supabase.from('connection_resolution_cases').select('*').or(`opened_by.eq.${userId},against_user_id.eq.${userId}`).order('created_at', { ascending: false }), 'resolution_cases_export'),
-    expectOk(supabase.from('connection_resolution_responses').select('*').eq('author_id', userId).order('created_at', { ascending: false }), 'resolution_responses_export'),
-    expectOk(supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }), 'notifications_export'),
-    expectOk(supabase.from('connection_circle_choices').select('*').eq('user_id', userId).order('created_at', { ascending: false }), 'circle_export'),
-    expectOk(supabase.from('connection_completion_confirmations').select('*').eq('user_id', userId).order('confirmed_at', { ascending: false }), 'completion_export'),
+    expectOk(supabase.from('request_responses').select(ACCOUNT_RESPONSE_EXPORT_SELECT).eq('responder_id', userId).order('created_at', { ascending: false }), 'responses_export'),
+    expectOk(supabase.from('connections').select(ACCOUNT_CONNECTION_EXPORT_SELECT).or(`requester_id.eq.${userId},responder_id.eq.${userId}`).order('created_at', { ascending: false }), 'connections_export'),
+    expectOk(supabase.from('connection_reviews').select(ACCOUNT_REVIEW_EXPORT_SELECT).or(`reviewer_id.eq.${userId},reviewee_id.eq.${userId}`).order('created_at', { ascending: false }), 'reviews_export'),
+    expectOk(supabase.from('connection_payments').select(ACCOUNT_PAYMENT_EXPORT_SELECT).or(`payer_id.eq.${userId},payee_id.eq.${userId}`).order('created_at', { ascending: false }), 'payments_export'),
+    expectOk(supabase.from('connection_resolution_cases').select(ACCOUNT_RESOLUTION_CASE_EXPORT_SELECT).or(`opened_by.eq.${userId},against_user_id.eq.${userId}`).order('created_at', { ascending: false }), 'resolution_cases_export'),
+    expectOk(supabase.from('connection_resolution_responses').select(ACCOUNT_RESOLUTION_RESPONSE_EXPORT_SELECT).eq('author_id', userId).order('created_at', { ascending: false }), 'resolution_responses_export'),
+    expectOk(supabase.from('notifications').select(ACCOUNT_NOTIFICATION_EXPORT_SELECT).eq('user_id', userId).order('created_at', { ascending: false }), 'notifications_export'),
+    expectOk(supabase.from('connection_circle_choices').select(ACCOUNT_CIRCLE_EXPORT_SELECT).eq('user_id', userId).order('created_at', { ascending: false }), 'circle_export'),
+    expectOk(supabase.from('connection_completion_confirmations').select(ACCOUNT_COMPLETION_EXPORT_SELECT).eq('user_id', userId).order('confirmed_at', { ascending: false }), 'completion_export'),
     expectOk(supabase.from('payment_accounts').select('provider,livemode,status,transfers_enabled,requirements_due,created_at,updated_at').eq('user_id', userId).eq('livemode', livemode).maybeSingle(), 'payment_account_export'),
-    expectOk(supabase.from('request_media').select('id,request_id,uploader_id,storage_path,mime_type,sort_order,created_at').eq('uploader_id', userId).order('created_at', { ascending: false }), 'request_media_export')
+    expectOk(supabase.from('request_media').select('id,request_id,uploader_id,mime_type,sort_order,created_at').eq('uploader_id', userId).order('created_at', { ascending: false }), 'request_media_export')
   ]);
 
   const connectionIds = ((connections || []) as Array<{ id: string }>).map((connection) => connection.id);
   const messages = connectionIds.length
-    ? await expectOk(supabase.from('connection_messages').select('*').in('connection_id', connectionIds).order('created_at', { ascending: true }), 'messages_export')
+    ? await expectOk(supabase.from('connection_messages').select(ACCOUNT_MESSAGE_EXPORT_SELECT).in('connection_id', connectionIds).order('created_at', { ascending: true }), 'messages_export')
     : [];
 
   return {
-    export_version: 1,
+    export_version: 2,
     generated_at: new Date().toISOString(),
     account: {
       id: user.id,
