@@ -59,12 +59,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This connection does not have a valid agreed amount yet.' }, { status: 409 });
     }
 
+    const currency = String(aspireRequest.currency || 'USD').toUpperCase();
     const isMarket = aspireRequest.kind === 'buy_sell';
-    const shippingOrder = isMarket && marketOrder?.fulfillment_method === 'shipping';
+    const shippingOrder = Boolean(isMarket && marketOrder?.fulfillment_method === 'shipping');
     const shippingRateCents = shippingOrder ? Number(marketOrder?.shipping_rate_cents ?? 0) : 0;
-    const shippingPaidBy = shippingOrder ? String(marketOrder?.shipping_paid_by || 'buyer') : null;
-    if (shippingOrder && (!marketOrder?.shipping_rate_id || !Number.isInteger(shippingRateCents) || shippingRateCents < 0)) {
-      return NextResponse.json({ error: 'Choose a live carrier rate before payment.', code: 'SHIPPING_RATE_REQUIRED' }, { status: 409 });
+    const shippingPaidBy = shippingOrder ? String(marketOrder?.shipping_paid_by || '') : null;
+    const shippingCurrency = shippingOrder ? String(marketOrder?.shipping_currency || currency).toUpperCase() : null;
+
+    if (shippingOrder) {
+      if (!marketOrder?.shipping_rate_id || !Number.isInteger(shippingRateCents) || shippingRateCents < 0) {
+        return NextResponse.json({ error: 'Choose a live carrier rate before payment.', code: 'SHIPPING_RATE_REQUIRED' }, { status: 409 });
+      }
+      if (shippingPaidBy !== 'buyer' && shippingPaidBy !== 'seller') {
+        return NextResponse.json({ error: 'Choose who pays for carrier shipping before payment.', code: 'SHIPPING_PAYER_REQUIRED' }, { status: 409 });
+      }
+      if (shippingCurrency !== currency) {
+        return NextResponse.json({ error: 'The selected shipping rate currency does not match this order.', code: 'SHIPPING_CURRENCY_MISMATCH' }, { status: 409 });
+      }
     }
 
     const { data: quoteRows, error: quoteError } = await supabase.rpc('quote_aspire_fees', {
@@ -80,15 +91,15 @@ export async function POST(request: Request) {
     const shippingChargedToSeller = shippingOrder && shippingPaidBy === 'seller' ? shippingRateCents : 0;
     const customerTotalCents = quote.customer_total_cents + shippingChargedToBuyer;
     const providerNetCents = quote.provider_net_cents - shippingChargedToSeller;
-    if (providerNetCents < 0) {
-      return NextResponse.json({ error: 'This shipping rate is greater than the seller proceeds. Choose another rate or have the buyer cover shipping.', code: 'SHIPPING_EXCEEDS_SELLER_PROCEEDS' }, { status: 409 });
+    if (providerNetCents <= 0) {
+      return NextResponse.json({ error: 'This shipping rate leaves no seller proceeds. Choose another rate or have the buyer cover shipping.', code: 'SHIPPING_EXCEEDS_SELLER_PROCEEDS' }, { status: 409 });
     }
 
     return NextResponse.json({
       connectionId,
       requestId: aspireRequest.id,
       title: aspireRequest.title,
-      currency: String(aspireRequest.currency || 'USD').toUpperCase(),
+      currency,
       paymentMethod: connection.payment_method,
       feePolicyVersion: quote.fee_policy_version,
       baseAmountCents: quote.base_amount_cents,
