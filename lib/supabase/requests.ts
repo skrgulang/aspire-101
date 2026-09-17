@@ -17,7 +17,9 @@ export type RequestKind =
 
 export type MarketIntent = 'sell' | 'wanted';
 export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair' | 'for_parts';
-export type FulfillmentMethod = 'campus_pickup' | 'shipping';
+export type FulfillmentMethod = 'campus_pickup' | 'shipping' | 'aspirer_delivery' | 'seller_delivery';
+export type ShippingPayerPreference = 'buyer' | 'seller' | 'either';
+export type SellerDeliveryMode = 'free' | 'fixed' | 'negotiable';
 export type RequestModerationStatus = 'pending' | 'approved' | 'rejected' | 'blocked';
 export type AiModerationStatus = 'not_scanned' | 'scanning' | 'complete' | 'error';
 export type AiRiskLevel = 'unknown' | 'low' | 'medium' | 'high' | 'critical';
@@ -78,6 +80,10 @@ export type AspireRequest = {
   item_condition?: ItemCondition | null;
   price_negotiable?: boolean;
   fulfillment_method?: FulfillmentMethod | null;
+  fulfillment_methods?: FulfillmentMethod[];
+  shipping_paid_by_preference?: ShippingPayerPreference | null;
+  seller_delivery_mode?: SellerDeliveryMode | null;
+  seller_delivery_price_cents?: number | null;
   quantity?: number;
   language_code?: RequestLanguageCode;
   cover_image_url?: string | null;
@@ -120,6 +126,10 @@ export type CreateRequestInput = Pick<AspireRequest, 'kind' | 'category' | 'titl
   item_condition?: ItemCondition;
   price_negotiable?: boolean;
   fulfillment_method?: FulfillmentMethod;
+  fulfillment_methods?: FulfillmentMethod[];
+  shipping_paid_by_preference?: ShippingPayerPreference | null;
+  seller_delivery_mode?: SellerDeliveryMode | null;
+  seller_delivery_price_cents?: number | null;
   quantity?: number;
   language_code?: RequestLanguageCode;
   cover_image_url?: string | null;
@@ -209,10 +219,23 @@ export async function createRequest(input: CreateRequestInput) {
 
   const isMarket = input.kind === 'buy_sell';
   const moneyInvolved = input.kind === 'paid_help' || input.kind === 'split_cost' || isMarket;
-  // Monetary requests always use the protected on-platform flow. Free community
-  // and collaboration posts deliberately carry no payment method or amount.
   const paymentMethod = moneyInvolved ? 'aspire' : 'none';
   const scheduled = Boolean(input.scheduled_start_at);
+  const requestedMethods = isMarket
+    ? Array.from(new Set(input.fulfillment_methods?.length ? input.fulfillment_methods : [input.fulfillment_method || 'campus_pickup']))
+    : [];
+  const fulfillmentMethods = requestedMethods.length ? requestedMethods : ['campus_pickup'] as FulfillmentMethod[];
+  const singularFulfillment = isMarket
+    ? (input.fulfillment_method && input.fulfillment_method !== 'seller_delivery'
+        ? input.fulfillment_method
+        : fulfillmentMethods.find((method) => method !== 'seller_delivery') || 'campus_pickup')
+    : null;
+  const sellerDeliveryEnabled = fulfillmentMethods.includes('seller_delivery');
+  const sellerDeliveryMode = sellerDeliveryEnabled ? input.seller_delivery_mode || 'negotiable' : null;
+  const sellerDeliveryPrice = sellerDeliveryEnabled && sellerDeliveryMode === 'fixed'
+    ? Math.max(0, input.seller_delivery_price_cents || 0)
+    : null;
+
   const { data, error } = await supabase
     .from('requests')
     .insert({
@@ -234,7 +257,11 @@ export async function createRequest(input: CreateRequestInput) {
       market_intent: isMarket ? input.market_intent || 'sell' : null,
       item_condition: isMarket && input.market_intent !== 'wanted' ? input.item_condition || 'good' : null,
       price_negotiable: isMarket ? Boolean(input.price_negotiable) : false,
-      fulfillment_method: isMarket ? input.fulfillment_method || 'campus_pickup' : null,
+      fulfillment_method: singularFulfillment,
+      fulfillment_methods: isMarket ? fulfillmentMethods : ['campus_pickup'],
+      shipping_paid_by_preference: isMarket && fulfillmentMethods.includes('shipping') ? input.shipping_paid_by_preference || 'buyer' : null,
+      seller_delivery_mode: sellerDeliveryMode,
+      seller_delivery_price_cents: sellerDeliveryPrice,
       quantity: isMarket ? Math.max(1, Math.min(99, input.quantity || 1)) : 1,
       language_code: input.language_code || readPreferredPostLanguage(),
       cover_image_url: coverImageUrl,
