@@ -14,6 +14,7 @@ export type MarketplaceDraft = {
   price_cents: number | null;
   item_condition: ItemCondition;
   details: string;
+  seller_area: string | null;
   fulfillment_methods: MarketplaceDeliveryMethod[];
   shipping_paid_by: ShippingPayer | null;
   seller_delivery_mode: SellerDeliveryMode | null;
@@ -29,6 +30,7 @@ export type MarketplaceDraftInput = {
   priceCents?: number | null;
   itemCondition: ItemCondition;
   details?: string;
+  sellerArea?: string | null;
   fulfillmentMethods: MarketplaceDeliveryMethod[];
   shippingPaidBy?: ShippingPayer | null;
   sellerDeliveryMode?: SellerDeliveryMode | null;
@@ -63,7 +65,7 @@ function friendlyError(error: { message?: string; details?: string; hint?: strin
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little and try again.');
   if (/ACCOUNT_SUSPENDED/i.test(detail)) return new Error('This Aspire account is suspended from new posts.');
   if (/ACCOUNT_RESTRICTED/i.test(detail)) return new Error('This Aspire account is temporarily restricted from new posts.');
-  if (/row-level security|policy/i.test(detail)) return new Error('Your seller session could not publish this item. Refresh and sign in again.');
+  if (/row-level security|policy|permission denied/i.test(detail)) return new Error('Your seller session could not publish this item. Refresh and sign in again.');
   return new Error(error.message || fallback);
 }
 
@@ -90,6 +92,7 @@ export async function saveMarketplaceDraft(input: MarketplaceDraftInput) {
     price_cents: input.priceCents ?? null,
     item_condition: input.itemCondition,
     details: input.details?.trim() || '',
+    seller_area: input.sellerArea?.trim().slice(0, 120) || null,
     fulfillment_methods: methods,
     shipping_paid_by: methods.includes('shipping') ? input.shippingPaidBy || 'buyer' : null,
     seller_delivery_mode: methods.includes('seller_delivery') ? input.sellerDeliveryMode || 'negotiable' : null,
@@ -149,6 +152,7 @@ export async function createMarketplaceListing(input: MarketplaceListingInput) {
       category: 'Buy & sell',
       title: input.title.trim().slice(0, 180),
       details: input.details?.trim() || null,
+      seller_area: input.sellerArea?.trim().slice(0, 120) || null,
       campus_id: input.campusId,
       latitude: null,
       longitude: null,
