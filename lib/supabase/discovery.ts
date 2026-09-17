@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from './client';
 import type { AspireRequest, RequestLanguageCode } from './requests';
+import { REQUEST_PUBLIC_SELECT } from './requestProjection';
 import { fetchRequestMedia, RequestMedia } from './requestMedia';
 
 export type DiscoverCategory =
@@ -142,14 +143,14 @@ export async function fetchCampusFeedRequests(input: {
   try {
     const { data, error } = await supabase
       .from('requests')
-      .select('*')
+      .select(REQUEST_PUBLIC_SELECT)
       .eq('poster_id', authData.user.id)
       .eq('campus_id', input.campusId)
       .eq('status', 'open')
       .order('created_at', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    ownRows = ((data ?? []) as AspireRequest[])
+    ownRows = ((data ?? []) as unknown as AspireRequest[])
       .filter((item) => item.moderation_status !== 'rejected' && item.moderation_status !== 'blocked')
       .map((item) => ({ ...item, campus_id: input.campusId } as Omit<DiscoverRequest, 'latitude' | 'longitude' | 'media'>));
   } catch {

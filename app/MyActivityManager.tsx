@@ -46,19 +46,14 @@ const flagHelp: Record<string, string> = {
   missing_condition: 'Choose the item condition.',
   missing_fulfillment_method: 'Choose at least one delivery or pickup option.',
   regulated_or_prohibited_item: 'This item may be restricted under Aspire Marketplace rules.',
+  regulated_item_needs_review: 'This item needs a Marketplace policy review before it can go live.',
   marketplace_prohibited_listing: 'This listing type is not allowed in Aspire Market.',
   prohibited_listing_type: 'This listing type is not allowed in Aspire Market.',
   credential_trade: 'Account credentials and account sales are not allowed.',
   sensitive_personal_data: 'Remove sensitive personal information from the post.',
   off_platform_payment_or_evasion: 'Keep payment and checkout inside Aspire.',
   price_anomaly: 'The price needs an additional Marketplace review.',
-  duplicate_listing: 'A similar recent listing needs additional review.',
-  ai_high_risk: 'Aspire Safety needs a closer look at this post.',
-  ai_critical_risk: 'Aspire Safety found a serious concern that must be resolved.',
-  high_behavior_risk: 'This post needs an additional account-safety review.',
-  elevated_behavior_risk: 'This post needs an additional account-safety review.',
-  platform_risk_signal: 'This post needs an additional platform-safety review.',
-  hard_language_policy: 'The wording needs to be changed before the post can be published.'
+  duplicate_listing: 'A similar recent listing needs additional review.'
 };
 
 function money(request: AspireRequest) {
@@ -146,11 +141,7 @@ export default function MyActivityManager() {
       }
 
       const [requestResult, profileResult] = await Promise.all([
-        supabase
-          .from('requests')
-          .select('*')
-          .eq('poster_id', auth.user.id)
-          .order('created_at', { ascending: false }),
+        supabase.rpc('get_my_activity_requests'),
         supabase.from('profiles').select('school').eq('id', auth.user.id).maybeSingle()
       ]);
       if (requestResult.error) throw requestResult.error;

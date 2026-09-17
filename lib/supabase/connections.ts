@@ -1,5 +1,6 @@
 import { getSupabaseBrowserClient } from './client';
 import type { AspireRequest } from './requests';
+import { REQUEST_PUBLIC_SELECT } from './requestProjection';
 
 export type RequestResponse = {
   id: string;
@@ -84,12 +85,12 @@ export async function fetchMyRequestInbox() {
 
   const { data: requests, error: requestError } = await supabase
     .from('requests')
-    .select('*')
+    .select(REQUEST_PUBLIC_SELECT)
     .eq('poster_id', authData.user.id)
     .order('created_at', { ascending: false });
   if (requestError) throw requestError;
 
-  const typedRequests = (requests ?? []) as AspireRequest[];
+  const typedRequests = (requests ?? []) as unknown as AspireRequest[];
   const requestIds = typedRequests.map((request) => request.id);
   if (!requestIds.length) return { requests: typedRequests, responses: [] as RequestResponse[], profiles: [] as PublicProfile[] };
 
@@ -134,8 +135,8 @@ export async function fetchMyConnections() {
   let requests: AspireRequest[] = [];
   let profiles: PublicProfile[] = [];
   if (requestIds.length) {
-    const { data: requestData } = await supabase.from('requests').select('*').in('id', requestIds);
-    requests = (requestData ?? []) as AspireRequest[];
+    const { data: requestData } = await supabase.from('requests').select(REQUEST_PUBLIC_SELECT).in('id', requestIds);
+    requests = (requestData ?? []) as unknown as AspireRequest[];
   }
   if (userIds.length) {
     const { data: profileData } = await supabase.from('profiles').select('id, display_name, full_name, name, school, avatar_url').in('id', userIds);
