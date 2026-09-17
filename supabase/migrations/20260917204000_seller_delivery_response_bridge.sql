@@ -1,7 +1,7 @@
 -- Compatibility bridge for the current Marketplace checkout UI.
--- It still records the first seller-delivery inquiry as a request_response.
--- Mirror that very specific message into the structured quote workflow so the
--- seller can Accept & quote from /transactions without exposing an address.
+-- The current checkout still submits its first Seller Delivery inquiry through
+-- request_responses. Intercept that exact flow before storage, keep only the
+-- general area, and mirror it into the structured quote workflow.
 
 create or replace function public.bridge_marketplace_seller_delivery_response()
 returns trigger
@@ -29,17 +29,25 @@ begin
     return new;
   end if;
 
-  -- Current UI emits: "... to the City, ST area? ...". Only that general area
-  -- is copied. The free-form message is intentionally not promoted into the
-  -- structured quote because it could accidentally contain private details.
+  -- Current UI emits: "... to the City, ST area? ...". Extract only that
+  -- general area. Any optional free-form note is deliberately discarded so a
+  -- buyer cannot accidentally leak a street, dorm, room, or other exact detail
+  -- through the legacy response channel.
   v_area := nullif(btrim(substring(new.message from ' to the ([^?]+) area\?')), '');
   if v_area is null then return new; end if;
+  v_area := left(v_area,180);
+
+  -- Because this is a BEFORE trigger, the stored response itself is scrubbed.
+  new.message := format(
+    'Seller Delivery request for general area: %s. Exact address stays private until protected payment is secured.',
+    v_area
+  );
 
   insert into public.market_seller_delivery_quotes (
     request_id,buyer_id,seller_id,buyer_area,buyer_note,status,
     delivery_cents,seller_note,quoted_at,accepted_at,declined_at
   ) values (
-    new.request_id,new.responder_id,r.poster_id,left(v_area,180),null,'requested',
+    new.request_id,new.responder_id,r.poster_id,v_area,null,'requested',
     null,null,null,null,null
   )
   on conflict (request_id,buyer_id) do update set
@@ -58,5 +66,5 @@ $function$;
 
 drop trigger if exists trg_bridge_marketplace_seller_delivery_response on public.request_responses;
 create trigger trg_bridge_marketplace_seller_delivery_response
-after insert or update of message,status on public.request_responses
+before insert or update of message,status on public.request_responses
 for each row execute function public.bridge_marketplace_seller_delivery_response();
