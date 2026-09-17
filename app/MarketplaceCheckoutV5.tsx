@@ -331,7 +331,11 @@ export default function MarketplaceCheckoutV5() {
     } catch (error) {
       if (deliveryChoice === 'aspirer' && reservedConnectionId) {
         const supabase = getSupabaseBrowserClient();
-        await supabase.rpc('cancel_unpaid_marketplace_reservation', { p_connection_id: reservedConnectionId }).catch(() => undefined);
+        try {
+          await supabase.rpc('cancel_unpaid_marketplace_reservation', { p_connection_id: reservedConnectionId });
+        } catch {
+          // Best-effort cleanup only. The original error is more useful to the buyer.
+        }
       }
       const raw = error instanceof Error ? error.message : '';
       setModalError(/permission denied|row-level security|MONEY_AMOUNT_REQUIRED|POST_NOT_ALLOWED/i.test(raw)
