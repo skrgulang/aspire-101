@@ -43,9 +43,14 @@ export type SafetyReportForModeration = {
 
 const safetyReportSelect = 'id,reporter_id,target_user_id,request_id,connection_id,reason,details,status,created_at,reviewed_at' as const;
 
-export type RequestAiSafetyResult = {
+export type RequestAiSafetyPublicResult = {
   ok: boolean;
   requestId: string;
+  imageCount: number;
+  moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked';
+};
+
+export type RequestAiSafetyModeratorResult = RequestAiSafetyPublicResult & {
   riskLevel: 'low' | 'medium' | 'high' | 'critical';
   riskScore: number;
   recommendedAction: 'approve' | 'review' | 'block';
@@ -53,9 +58,17 @@ export type RequestAiSafetyResult = {
   behaviorFlags: string[];
   trustScore: number | null;
   trustBand: TrustBand | null;
-  imageCount: number;
-  moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked';
 };
+
+type RequestAiSafetyWireResult = RequestAiSafetyPublicResult | RequestAiSafetyModeratorResult;
+
+function hasRequestAiSafetyDetails(result: RequestAiSafetyWireResult): result is RequestAiSafetyModeratorResult {
+  return 'riskLevel' in result
+    && 'riskScore' in result
+    && 'recommendedAction' in result
+    && 'flags' in result
+    && 'behaviorFlags' in result;
+}
 
 export async function fetchMySchoolVerification() {
   const supabase = getSupabaseBrowserClient();
@@ -169,7 +182,7 @@ export async function setUserEnforcement(userId: string, state: EnforcementState
   if (error) throw error;
 }
 
-export async function runRequestAiSafety(requestId: string) {
+async function requestAiSafety(requestId: string): Promise<RequestAiSafetyWireResult> {
   const supabase = getSupabaseBrowserClient();
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) throw sessionError;
@@ -180,9 +193,27 @@ export async function runRequestAiSafety(requestId: string) {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ requestId })
   });
-  const payload = await response.json().catch(() => ({})) as RequestAiSafetyResult & { error?: string; code?: string };
+  const payload = await response.json().catch(() => ({})) as RequestAiSafetyWireResult & { error?: string; code?: string };
   if (!response.ok) throw new Error(payload.error || 'Aspire Safety Intelligence could not finish the scan.');
-  return payload as RequestAiSafetyResult;
+  return payload;
+}
+
+export async function runRequestAiSafety(requestId: string): Promise<RequestAiSafetyPublicResult> {
+  const payload = await requestAiSafety(requestId);
+  return {
+    ok: payload.ok,
+    requestId: payload.requestId,
+    moderationStatus: payload.moderationStatus,
+    imageCount: payload.imageCount
+  };
+}
+
+export async function runModeratorRequestAiSafety(requestId: string): Promise<RequestAiSafetyModeratorResult> {
+  const payload = await requestAiSafety(requestId);
+  if (!hasRequestAiSafetyDetails(payload)) {
+    throw new Error('Moderator safety details were not returned. Check your staff access and try again.');
+  }
+  return payload;
 }
 
 export async function reviewRequestModeration(requestId: string, decision: 'approved' | 'rejected', note?: string) {
