@@ -69,7 +69,6 @@ export async function POST(request: Request) {
       return NextResponse.json({
         status: 'released',
         transactionType: marketOrder ? 'marketplace' : 'connection',
-        transferId: payment.stripe_transfer_id,
         providerNetCents: providerNet,
         feePolicyVersion: payment.fee_policy_version || 'legacy_v0',
         duplicate: true
@@ -247,7 +246,6 @@ export async function POST(request: Request) {
     return NextResponse.json({
       status: 'released',
       transactionType: marketOrder ? 'marketplace' : 'connection',
-      transferId: transfer.id,
       providerNetCents: providerNet,
       feePolicyVersion: payment.fee_policy_version || 'legacy_v0',
       duplicate: Boolean(finalized?.duplicate)
