@@ -145,7 +145,7 @@ export async function reviewSafetyReport(reportId: string, status: 'reviewing' |
 
 export async function fetchRequestsForModeration(limit = 80) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.from('requests').select('*').in('status', ['open', 'matched', 'in_progress']).order('created_at', { ascending: false }).limit(limit);
+  const { data, error } = await supabase.rpc('moderator_fetch_requests', { p_limit: limit });
   if (error) throw error;
   return (data ?? []) as AspireRequest[];
 }
