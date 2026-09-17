@@ -8,6 +8,7 @@ import type { SchoolVerification } from '../lib/supabase/trust';
 import PostRequestForm from './PostRequestForm';
 import PostCoverPicker from './PostCoverPicker';
 import MarketplaceSellerComposer from './MarketplaceSellerComposer';
+import OfferPostForm from './OfferPostForm';
 import styles from './PostComposerModeSwitch.module.css';
 
 export default function PostAccessGate() {
@@ -15,7 +16,10 @@ export default function PostAccessGate() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [verification, setVerification] = useState<SchoolVerification | null>(null);
-  const sellerMode = searchParams.get('mode') === 'sell';
+  const mode = searchParams.get('mode');
+  const sellerMode = mode === 'sell';
+  const offerMode = mode === 'offer';
+  const requestMode = !sellerMode && !offerMode;
 
   useEffect(() => {
     let alive = true;
@@ -24,7 +28,8 @@ export default function PostAccessGate() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!alive) return;
       if (!data.user) {
-        router.replace(`/login?next=${encodeURIComponent(sellerMode ? '/post?mode=sell' : '/post')}`);
+        const next = sellerMode ? '/post?mode=sell' : offerMode ? '/post?mode=offer' : '/post';
+        router.replace(`/login?next=${encodeURIComponent(next)}`);
         return;
       }
       try {
@@ -36,7 +41,7 @@ export default function PostAccessGate() {
     });
 
     return () => { alive = false; };
-  }, [router, sellerMode]);
+  }, [router, sellerMode, offerMode]);
 
   if (loading) {
     return (
@@ -77,9 +82,14 @@ export default function PostAccessGate() {
 
   return <>
     <nav className={styles.modeSwitch} aria-label="Choose post type">
-      <a className={!sellerMode ? styles.active : ''} href="/post"><span>POST</span><strong>Request / community</strong><small>Ask for help, rides, study, collaboration, or anything useful.</small></a>
+      <a className={requestMode ? styles.active : ''} href="/post"><span>NEED</span><strong>I need something</strong><small>Ask campus for a ride, help, study partner, collaboration, or something useful.</small></a>
+      <a className={offerMode ? styles.active : ''} href="/post?mode=offer"><span>OFFER</span><strong>I can help</strong><small>Post something you can offer, like a ride back to campus or help you already have time for.</small></a>
       <a className={sellerMode ? styles.active : ''} href="/post?mode=sell"><span>SELL</span><strong>List an item</strong><small>Draft a marketplace item, choose delivery options, then publish to Market.</small></a>
     </nav>
-    {sellerMode ? <MarketplaceSellerComposer /> : <><PostCoverPicker /><PostRequestForm /></>}
+    {sellerMode
+      ? <MarketplaceSellerComposer />
+      : offerMode
+        ? <OfferPostForm />
+        : <div className={styles.requestComposer}><PostCoverPicker /><PostRequestForm /></div>}
   </>;
 }
