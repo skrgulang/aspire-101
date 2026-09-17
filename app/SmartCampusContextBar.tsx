@@ -11,8 +11,25 @@ type Props = {
   reloadOnChange?: boolean;
 };
 
+const ACTIVE_CAMPUS_KEY = 'aspire-active-campus-id';
+
 function campusArea(campus: Pick<University, 'city' | 'state'>) {
   return [campus.city, campus.state].filter(Boolean).join(', ');
+}
+
+function readStoredCampusId(validIds: Set<string>) {
+  if (typeof window === 'undefined') return '';
+  const shared = window.localStorage.getItem(ACTIVE_CAMPUS_KEY);
+  if (shared && validIds.has(shared)) return shared;
+  const session = window.sessionStorage.getItem(ACTIVE_CAMPUS_KEY);
+  if (session && validIds.has(session)) return session;
+  return '';
+}
+
+function writeStoredCampusId(campusId: string) {
+  if (typeof window === 'undefined' || !campusId) return;
+  window.sessionStorage.setItem(ACTIVE_CAMPUS_KEY, campusId);
+  window.localStorage.setItem(ACTIVE_CAMPUS_KEY, campusId);
 }
 
 export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reloadOnChange = true }: Props) {
@@ -36,22 +53,34 @@ export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reload
       ]);
       if (!alive) return;
       const validIds = new Set(campusList.map((campus) => campus.id));
-      const stored = window.sessionStorage.getItem('aspire-active-campus-id');
+      const stored = readStoredCampusId(validIds);
       const homeId = typeof profile?.home_campus_id === 'string' ? profile.home_campus_id : '';
       const currentId = typeof profile?.current_campus_id === 'string' ? profile.current_campus_id : '';
-      const activeId = stored && validIds.has(stored)
-        ? stored
-        : currentId && validIds.has(currentId)
-          ? currentId
-          : homeId && validIds.has(homeId)
-            ? homeId
-            : campusList[0]?.id || '';
+      const activeId = stored
+        || (currentId && validIds.has(currentId) ? currentId : '')
+        || (homeId && validIds.has(homeId) ? homeId : '')
+        || campusList[0]?.id
+        || '';
+      if (activeId) writeStoredCampusId(activeId);
       setUniversities(campusList);
       setHomeCampusId(homeId);
       setActiveCampusId(activeId);
     }).catch(() => undefined);
     return () => { alive = false; };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== ACTIVE_CAMPUS_KEY || !event.newValue || event.newValue === activeCampusId) return;
+      window.sessionStorage.setItem(ACTIVE_CAMPUS_KEY, event.newValue);
+      setActiveCampusId(event.newValue);
+      window.dispatchEvent(new Event('aspire-campus-context-change'));
+      if (reloadOnChange) window.location.reload();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [activeCampusId, reloadOnChange]);
 
   useEffect(() => {
     if (!universities.length || started.current || typeof navigator === 'undefined') return;
@@ -101,7 +130,7 @@ export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reload
     const supabase = getSupabaseBrowserClient();
     setActiveCampusId(nextId);
     setDismissed(true);
-    window.sessionStorage.setItem('aspire-active-campus-id', nextId);
+    writeStoredCampusId(nextId);
     window.dispatchEvent(new Event('aspire-campus-context-change'));
     try {
       const { data } = await supabase.auth.getUser();
@@ -112,7 +141,7 @@ export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reload
         }).eq('id', data.user.id);
       }
     } catch {
-      // Session campus still works even when profile persistence is temporarily unavailable.
+      // Shared browser campus still works even when profile persistence is temporarily unavailable.
     }
     if (reloadOnChange) window.location.reload();
   }
@@ -159,7 +188,7 @@ export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reload
         {!locating && !suggestion && !ambiguousNearby.length && !locationUnavailable && nearby[0]?.id === activeCampus.id && <span className={styles.confirmed}>✓ You’re near {activeCampus.short_name || activeCampus.name}</span>}
       </div>
 
-      <p className={styles.privacy}>Your verified school stays the same. Device coordinates are used only to suggest nearby campuses and are not saved here.</p>
+      <p className={styles.privacy}>Your verified school stays the same. Current campus stays synced across Post, Browse, and Market. Device coordinates are used only to suggest nearby campuses and are not saved here.</p>
     </section>
   );
 }
