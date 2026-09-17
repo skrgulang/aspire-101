@@ -376,8 +376,9 @@ create trigger requests_layered_moderation_audit_tg
 after update of ai_moderation_status,ai_last_scanned_at on public.requests
 for each row execute function public.audit_request_moderation_layers();
 
--- Backfill current rows using their already-stored AI/rule signals. This does
--- not make a network call and does not expose anything new.
+-- Backfill only rows that already completed an AI scan. Existing approved
+-- legacy rows that were never scanned remain unchanged and can be rescanned
+-- from the moderator console when needed.
 update public.requests
 set ai_moderation_status=ai_moderation_status
-where true;
+where ai_moderation_status='complete';
