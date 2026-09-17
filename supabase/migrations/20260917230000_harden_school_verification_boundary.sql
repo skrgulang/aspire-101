@@ -103,7 +103,7 @@ begin
     null,
     'pending_manual_review'
   )
-  on conflict (user_id) do update set
+  on conflict on constraint school_verifications_pkey do update set
     school = excluded.school,
     student_id = excluded.student_id,
     status = 'pending',
