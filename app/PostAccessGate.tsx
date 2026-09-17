@@ -9,6 +9,7 @@ import PostRequestForm from './PostRequestForm';
 import PostCoverPicker from './PostCoverPicker';
 import MarketplaceSellerComposer from './MarketplaceSellerComposer';
 import OfferPostForm from './OfferPostForm';
+import SmartCampusContextBar from './SmartCampusContextBar';
 import styles from './PostComposerModeSwitch.module.css';
 
 export default function PostAccessGate() {
@@ -81,6 +82,7 @@ export default function PostAccessGate() {
   }
 
   return <>
+    <SmartCampusContextBar label={sellerMode ? 'SELLING NEAR' : offerMode ? 'OFFERING NEAR' : 'POSTING TO'} />
     <nav className={styles.modeSwitch} aria-label="Choose post type">
       <a className={requestMode ? styles.active : ''} href="/post"><span>NEED</span><strong>I need something</strong><small>Ask campus for a ride, help, study partner, collaboration, or something useful.</small></a>
       <a className={offerMode ? styles.active : ''} href="/post?mode=offer"><span>OFFER</span><strong>I can help</strong><small>Post something you can offer, like a ride back to campus or help you already have time for.</small></a>
