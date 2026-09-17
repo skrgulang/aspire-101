@@ -1,7 +1,42 @@
 -- Safe owner edits for blocked/rejected posts, followed by a fresh moderation pass.
 
--- Content edits must invalidate prior AI results so a previous scan can never be
--- reused to approve newly edited text.
+-- Keep the legacy single-value fulfillment column compatible with the newer
+-- multi-method marketplace model. Seller/Aspirer delivery live only in the array.
+create or replace function public.guard_request_fulfillment_methods()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_methods text[];
+  v_method text;
+begin
+  if new.kind = 'buy_sell' then
+    v_methods := coalesce(new.fulfillment_methods, array[coalesce(new.fulfillment_method, 'campus_pickup')]);
+    if array_length(v_methods, 1) is null then v_methods := array['campus_pickup']; end if;
+
+    foreach v_method in array v_methods loop
+      if v_method not in ('campus_pickup','shipping','aspirer_delivery','seller_delivery') then
+        raise exception 'INVALID_FULFILLMENT_METHOD';
+      end if;
+    end loop;
+
+    new.fulfillment_methods := v_methods;
+    if 'campus_pickup' = any(v_methods) then new.fulfillment_method := 'campus_pickup';
+    elsif 'shipping' = any(v_methods) then new.fulfillment_method := 'shipping';
+    else new.fulfillment_method := null;
+    end if;
+  else
+    new.fulfillment_method := null;
+    new.fulfillment_methods := array['campus_pickup'];
+  end if;
+
+  return new;
+end;
+$$;
+
+-- Any review-sensitive edit invalidates prior AI results so an old scan can
+-- never be reused to approve newly edited text, language, price, or delivery data.
 create or replace function public.guard_request_content()
 returns trigger
 language plpgsql
@@ -10,13 +45,24 @@ set search_path = public
 as $$
 declare
   flags text[];
-  content_changed boolean := tg_op = 'INSERT';
+  review_sensitive_changed boolean := tg_op = 'INSERT';
 begin
   if tg_op = 'UPDATE' then
-    content_changed := new.title is distinct from old.title
+    review_sensitive_changed := new.title is distinct from old.title
       or new.details is distinct from old.details
       or new.category is distinct from old.category
-      or new.kind is distinct from old.kind;
+      or new.kind is distinct from old.kind
+      or new.language_code is distinct from old.language_code
+      or new.amount_cents is distinct from old.amount_cents
+      or new.item_condition is distinct from old.item_condition
+      or new.price_negotiable is distinct from old.price_negotiable
+      or new.fulfillment_method is distinct from old.fulfillment_method
+      or new.fulfillment_methods is distinct from old.fulfillment_methods
+      or new.seller_area is distinct from old.seller_area
+      or new.shipping_paid_by_default is distinct from old.shipping_paid_by_default
+      or new.shipping_paid_by_preference is distinct from old.shipping_paid_by_preference
+      or new.seller_delivery_mode is distinct from old.seller_delivery_mode
+      or new.seller_delivery_price_cents is distinct from old.seller_delivery_price_cents;
   end if;
 
   flags := public.aspire_content_flags(concat_ws(' ', new.title, new.details, new.category));
@@ -27,7 +73,7 @@ begin
     raise exception 'CONTENT_POLICY_BLOCKED';
   end if;
 
-  if content_changed then
+  if review_sensitive_changed then
     new.moderation_status := 'pending';
     new.moderated_by := null;
     new.moderated_at := null;
@@ -49,10 +95,19 @@ begin
 end;
 $$;
 
--- Browser users may edit their own post content, but they must never be able to
--- directly write moderation-owned columns. This trigger is deliberately named
--- with an `a_` prefix so it runs before the existing content/layer triggers,
--- which are allowed to change these fields as a consequence of a legitimate edit.
+drop trigger if exists requests_content_moderation_tg on public.requests;
+create trigger requests_content_moderation_tg
+before insert or update of
+  title, details, category, kind, language_code, amount_cents, item_condition,
+  price_negotiable, fulfillment_method, fulfillment_methods, seller_area,
+  shipping_paid_by_default, shipping_paid_by_preference,
+  seller_delivery_mode, seller_delivery_price_cents
+on public.requests
+for each row execute function public.guard_request_content();
+
+-- Browser users may edit their own post content, but must never directly write
+-- moderation-owned state. Alphabetic trigger ordering makes this guard run before
+-- trusted content/layer triggers that derive moderation state from legitimate edits.
 create or replace function public.guard_authenticated_request_moderation_fields()
 returns trigger
 language plpgsql
@@ -102,6 +157,61 @@ drop trigger if exists a_guard_authenticated_request_moderation_fields_tg on pub
 create trigger a_guard_authenticated_request_moderation_fields_tg
 before update on public.requests
 for each row execute function public.guard_authenticated_request_moderation_fields();
+
+-- Photo changes also invalidate approval. This prevents an approved marketplace
+-- listing from deleting/replacing its reviewed image while remaining public.
+create or replace function public.invalidate_request_moderation_for_media()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_request_id uuid;
+begin
+  v_request_id := case when tg_op = 'DELETE' then old.request_id else new.request_id end;
+
+  update public.requests
+  set
+    moderation_status = 'pending',
+    moderated_by = null,
+    moderated_at = null,
+    moderation_reason = null,
+    ai_moderation_status = 'not_scanned',
+    ai_risk_level = 'unknown',
+    ai_risk_score = null,
+    ai_recommended_action = 'review',
+    ai_policy_flags = '{}'::text[],
+    ai_summary = null,
+    ai_last_scanned_at = null,
+    behavior_risk_score = null,
+    behavior_flags = '{}'::text[],
+    trust_score_snapshot = null,
+    trust_band_snapshot = null,
+    post_review_status = 'pending',
+    post_review_flags = '{}'::text[],
+    post_review_summary = 'Waiting for a fresh review after a photo change.',
+    language_review_status = 'pending',
+    language_review_flags = '{}'::text[],
+    language_review_summary = 'Waiting for a fresh review after a photo change.',
+    market_review_status = case when kind = 'buy_sell' then 'pending' else 'not_applicable' end,
+    market_review_flags = '{}'::text[],
+    market_review_summary = case when kind = 'buy_sell' then 'Waiting for a fresh marketplace review after a photo change.' else 'Not a marketplace listing.' end,
+    layered_reviewed_at = null,
+    updated_at = now()
+  where id = v_request_id and status = 'open';
+
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.invalidate_request_moderation_for_media() from public;
+
+drop trigger if exists request_media_invalidate_review_tg on public.request_media;
+create trigger request_media_invalidate_review_tg
+after insert or delete on public.request_media
+for each row execute function public.invalidate_request_moderation_for_media();
 
 create or replace function public.resubmit_request_for_review(
   p_request_id uuid,
@@ -196,8 +306,6 @@ begin
       v_seller_price := null;
     end if;
 
-    -- Keep the legacy single-value field limited to the two legacy modes. The
-    -- complete seller choice always lives in fulfillment_methods.
     if 'campus_pickup' = any(v_methods) then v_legacy_fulfillment := 'campus_pickup';
     elsif 'shipping' = any(v_methods) then v_legacy_fulfillment := 'shipping';
     else v_legacy_fulfillment := null;
