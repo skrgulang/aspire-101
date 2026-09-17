@@ -1,8 +1,6 @@
-import '../marketplace-modal-theme.css';
-import '../marketplace-checkout-v2.css';
-import '../marketplace-checkout-v3.css';
-import MarketplaceCheckoutV3 from '../MarketplaceCheckoutV3';
+import '../marketplace-v4.css';
+import MarketplaceCheckoutV4 from '../MarketplaceCheckoutV4';
 
 export default function MarketplacePage() {
-  return <MarketplaceCheckoutV3 />;
+  return <MarketplaceCheckoutV4 />;
 }
