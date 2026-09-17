@@ -1,1 +1,0 @@
-Campus context is synchronized across Aspire surfaces via browser storage and profile persistence.
