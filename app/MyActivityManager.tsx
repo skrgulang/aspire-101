@@ -8,7 +8,7 @@ import { buildDemoAspireRequests, isDemoPreviewPostId, isPreviewDemoEnabled, set
 import styles from './MyActivityManager.module.css';
 
 type ConnectionRow = { request_id: string; status: string };
-type Filter = 'all' | 'open' | 'review' | 'closed';
+type Filter = 'all' | 'open' | 'review' | 'action' | 'closed';
 type LaneStatus = 'pending' | 'pass' | 'review' | 'block' | 'not_applicable';
 type ActivityRequest = AspireRequest & {
   post_review_status?: LaneStatus;
@@ -114,8 +114,12 @@ function userReviewState(request: ActivityRequest): UserReviewState {
   return { key: 'reviewing', label: 'Reviewing', title: 'Review in progress', description: 'Your post stays private while Aspire finishes the required review lanes.' };
 }
 
-function needsReview(request: ActivityRequest) {
-  return request.moderation_status !== 'approved' && request.status === 'open';
+function isInReview(request: ActivityRequest) {
+  return request.moderation_status === 'pending' && request.status === 'open';
+}
+
+function needsAction(request: ActivityRequest) {
+  return (request.moderation_status === 'blocked' || request.moderation_status === 'rejected') && request.status === 'open';
 }
 
 export default function MyActivityManager() {
@@ -182,7 +186,8 @@ export default function MyActivityManager() {
 
   const visible = useMemo(() => requests.filter((request) => {
     if (filter === 'open') return request.status === 'open';
-    if (filter === 'review') return needsReview(request);
+    if (filter === 'review') return isInReview(request);
+    if (filter === 'action') return needsAction(request);
     if (filter === 'closed') return request.status !== 'open';
     return true;
   }), [filter, requests]);
@@ -190,7 +195,8 @@ export default function MyActivityManager() {
   const counts = useMemo(() => ({
     all: requests.length,
     open: requests.filter((request) => request.status === 'open').length,
-    review: requests.filter(needsReview).length,
+    review: requests.filter(isInReview).length,
+    action: requests.filter(needsAction).length,
     closed: requests.filter((request) => request.status !== 'open').length
   }), [requests]);
 
@@ -265,6 +271,7 @@ export default function MyActivityManager() {
         <article><strong>{counts.all}</strong><span>Total posts</span></article>
         <article><strong>{counts.open}</strong><span>Open</span></article>
         <article><strong>{counts.review}</strong><span>In review</span></article>
+        <article className={counts.action ? styles.attentionStat : ''}><strong>{counts.action}</strong><span>Needs action</span></article>
         <article><strong>{counts.closed}</strong><span>Closed</span></article>
       </div>
 
@@ -272,13 +279,20 @@ export default function MyActivityManager() {
         <div className={styles.tabs}>
           <button className={filter === 'all' ? styles.active : ''} onClick={() => setFilter('all')}>All <b>{counts.all}</b></button>
           <button className={filter === 'open' ? styles.active : ''} onClick={() => setFilter('open')}>Open <b>{counts.open}</b></button>
-          <button className={filter === 'review' ? styles.active : ''} onClick={() => setFilter('review')}>Review <b>{counts.review}</b></button>
+          <button className={filter === 'review' ? styles.active : ''} onClick={() => setFilter('review')}>In review <b>{counts.review}</b></button>
+          <button className={`${filter === 'action' ? styles.active : ''} ${counts.action ? styles.actionTab : ''}`.trim()} onClick={() => setFilter('action')}>Needs action <b>{counts.action}</b></button>
           <button className={filter === 'closed' ? styles.active : ''} onClick={() => setFilter('closed')}>Closed <b>{counts.closed}</b></button>
         </div>
         <div className={styles.toolbarLinks}><button type="button" onClick={() => void load(true)}>Refresh review status</button><a href="/connections">Responses & messages →</a></div>
       </div>
 
       {notice && <div className={styles.notice} role="status">{notice}</div>}
+      {!loading && counts.action > 0 && filter !== 'action' && (
+        <button type="button" className={styles.actionNotice} onClick={() => setFilter('action')}>
+          <span><strong>{counts.action} {counts.action === 1 ? 'post needs' : 'posts need'} your attention.</strong> Edit the flagged version and resubmit it for review.</span>
+          <b>Review now →</b>
+        </button>
+      )}
 
       {loading ? (
         <div className={styles.empty}>Loading your posts…</div>
@@ -321,7 +335,7 @@ export default function MyActivityManager() {
                         })}
                       </div>
                       {request.moderation_status === 'pending' && <small className={styles.autoRefresh}>Status refreshes automatically while this post is under review.</small>}
-                      {(review.key === 'changes' || review.key === 'rejected') && <div className={styles.reviewActions}><a href={`/post?edit=${encodeURIComponent(request.id)}`}>Edit &amp; resubmit →</a>{request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}</div>}
+                      {(review.key === 'changes' || review.key === 'rejected') && <div className={styles.reviewActions}><a className={styles.primaryReviewAction} href={`/post?edit=${encodeURIComponent(request.id)}`}>Edit &amp; resubmit →</a>{request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}</div>}
                     </section>
                   )}
                 </div>
