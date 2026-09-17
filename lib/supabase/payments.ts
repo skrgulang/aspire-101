@@ -54,6 +54,10 @@ export type AspireFeeQuote = {
   platformFeeRevenueCents: number;
   minimumPaidOrderCents: number;
   standardPayoutCadence: string;
+  shippingRateCents?: number;
+  shippingPaidBy?: 'buyer' | 'seller' | null;
+  shippingCarrier?: string | null;
+  shippingService?: string | null;
   requester: { percentBps: number; fixedCents: number; minCents: number; maxCents: number };
   provider: { percentBps: number };
   tips: { platformPercentBps: number };
@@ -105,7 +109,11 @@ export async function fetchAspireFeeQuote(connectionId: string) {
     cache: 'no-store'
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error || 'Could not calculate Aspire fees.');
+  if (!response.ok) {
+    const error = new Error(payload?.error || 'Could not calculate Aspire fees.') as Error & { code?: string };
+    error.code = payload?.code;
+    throw error;
+  }
   return payload as AspireFeeQuote;
 }
 
@@ -134,7 +142,11 @@ export async function createAspireCheckout(connectionId: string) {
     body: JSON.stringify({ connectionId })
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload?.error || 'Could not start Aspire payment.');
+  if (!response.ok) {
+    const error = new Error(payload?.error || 'Could not start Aspire payment.') as Error & { code?: string };
+    error.code = payload?.code;
+    throw error;
+  }
   return payload as {
     url: string;
     status: string;
@@ -145,6 +157,8 @@ export async function createAspireCheckout(connectionId: string) {
     providerFeeCents: number;
     providerNetCents: number;
     tipAmountCents: number;
+    shippingRateCents?: number;
+    shippingPaidBy?: 'buyer' | 'seller' | null;
   };
 }
 
