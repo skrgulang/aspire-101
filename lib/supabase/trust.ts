@@ -3,7 +3,6 @@ import type { AspireRequest, TrustBand } from './requests';
 
 export type SchoolVerificationStatus = 'pending' | 'verified' | 'rejected';
 export type SchoolVerificationMethod = 'manual_id' | 'school_email';
-export type VerificationProvider = 'aspire' | 'school_email' | 'sheerid' | 'persona';
 
 export type SchoolVerification = {
   user_id: string;
@@ -11,18 +10,13 @@ export type SchoolVerification = {
   student_id: string | null;
   status: SchoolVerificationStatus;
   submitted_at: string;
-  updated_at: string;
-  reviewed_at: string | null;
-  reviewed_by: string | null;
   review_note: string | null;
-  university_id: string | null;
   verification_method: SchoolVerificationMethod;
   school_email: string | null;
   verified_at: string | null;
-  verification_provider: VerificationProvider;
-  provider_verification_id: string | null;
-  provider_status: string | null;
 };
+
+const schoolVerificationSelect = 'user_id,school,student_id,status,submitted_at,review_note,verification_method,school_email,verified_at' as const;
 
 export type AppRole = 'member' | 'moderator' | 'admin';
 export type EnforcementState = 'active' | 'restricted' | 'suspended';
@@ -67,34 +61,33 @@ export async function fetchMySchoolVerification() {
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in.');
-  const { data, error } = await supabase.from('school_verifications').select('*').eq('user_id', authData.user.id).maybeSingle();
+  const { data, error } = await supabase
+    .from('school_verifications')
+    .select(schoolVerificationSelect)
+    .eq('user_id', authData.user.id)
+    .maybeSingle();
   if (error) throw error;
   return (data ?? null) as SchoolVerification | null;
 }
 
 export async function submitSchoolVerification(school: string, studentId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) throw new Error('You must be signed in.');
   const cleanSchool = school.trim();
   const cleanId = studentId.trim();
+  if (cleanSchool.length < 2) throw new Error('Enter your school.');
   if (cleanId.length < 3) throw new Error('Enter your school ID.');
-  const { data, error } = await supabase.from('school_verifications').upsert({
-    user_id: authData.user.id,
-    school: cleanSchool,
-    student_id: cleanId,
-    status: 'pending',
-    verification_method: 'manual_id',
-    verification_provider: 'aspire',
-    provider_verification_id: null,
-    provider_status: 'pending_manual_review'
-  }, { onConflict: 'user_id' }).select('*').single();
+  const { data, error } = await supabase.rpc('submit_school_verification', {
+    p_school: cleanSchool,
+    p_student_id: cleanId
+  });
   if (error) {
     if (error.code === '23505') throw new Error('That school ID is already connected to another Aspire account.');
+    if (/ALREADY_VERIFIED/i.test(error.message || '')) throw new Error('Your school verification is already approved.');
     throw error;
   }
-  return data as SchoolVerification;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Could not load the submitted verification.');
+  return row as SchoolVerification;
 }
 
 export async function canCurrentUserPost() {
@@ -116,7 +109,10 @@ export async function fetchMyRole(): Promise<AppRole> {
 
 export async function fetchVerificationQueue() {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.from('school_verifications').select('*').order('submitted_at', { ascending: true });
+  const { data, error } = await supabase
+    .from('school_verifications')
+    .select(schoolVerificationSelect)
+    .order('submitted_at', { ascending: true });
   if (error) throw error;
   return (data ?? []) as SchoolVerification[];
 }
