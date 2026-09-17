@@ -5,6 +5,7 @@ import { fetchMyRole, AppRole } from '../lib/supabase/trust';
 import {
   ConnectionNoShowIncident,
   ConnectionResolutionCase,
+  ModeratorResolutionCase,
   ConnectionResolutionResponse,
   fetchNoShowIncidents,
   fetchResolutionCaseResponses,
@@ -48,7 +49,7 @@ function when(value: string) {
   return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-function evidenceEvents(item: ConnectionResolutionCase) {
+function evidenceEvents(item: ModeratorResolutionCase) {
   const raw = item.evidence_snapshot?.events;
   if (!Array.isArray(raw)) return [] as EvidenceEvent[];
   return raw.filter((entry): entry is EvidenceEvent => Boolean(entry && typeof entry === 'object')).slice(-8).reverse();
@@ -72,7 +73,7 @@ function eventLabel(type?: string) {
 
 export default function ResolutionCaseConsole() {
   const [role, setRole] = useState<AppRole>('member');
-  const [cases, setCases] = useState<ConnectionResolutionCase[]>([]);
+  const [cases, setCases] = useState<ModeratorResolutionCase[]>([]);
   const [responses, setResponses] = useState<ConnectionResolutionResponse[]>([]);
   const [incidents, setIncidents] = useState<ConnectionNoShowIncident[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +124,7 @@ export default function ResolutionCaseConsole() {
     return map;
   }, [incidents]);
 
-  async function markReviewing(item: ConnectionResolutionCase) {
+  async function markReviewing(item: ModeratorResolutionCase) {
     setBusy(`review-${item.id}`);
     setNotice('');
     try {
@@ -135,7 +136,7 @@ export default function ResolutionCaseConsole() {
     } finally { setBusy(''); }
   }
 
-  async function dismiss(item: ConnectionResolutionCase) {
+  async function dismiss(item: ModeratorResolutionCase) {
     const note = window.prompt('Why should this case be closed?', 'Evidence did not support the claim.') ?? '';
     if (!note.trim()) return;
     if (!window.confirm('Close this case? If the payment otherwise qualifies, payout will no longer be blocked by this case.')) return;
@@ -150,7 +151,7 @@ export default function ResolutionCaseConsole() {
     } finally { setBusy(''); }
   }
 
-  async function fullRefund(item: ConnectionResolutionCase) {
+  async function fullRefund(item: ModeratorResolutionCase) {
     const note = window.prompt('Resolution note for the audit trail:', item.reason === 'no_show' ? 'Confirmed provider no-show. Full protected payment refund approved.' : 'Full protected payment refund approved.') ?? '';
     if (!note.trim()) return;
     if (!window.confirm(`Issue a full refund of ${money(item.payment_total_cents_snapshot, item.currency_snapshot)}? This sends a real Stripe refund in the current environment and closes the connection.`)) return;
