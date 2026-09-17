@@ -1,5 +1,4 @@
 import PostAccessGate from '../PostAccessGate';
-import PostCoverPicker from '../PostCoverPicker';
 import AspireAgentLauncher from '../AspireAgentLauncher';
 import AppDock from '../AppDock';
 import UiIcon from '../UiIcon';
@@ -12,12 +11,12 @@ export default function PostPage() {
       <section className="postWorkspace">
         <header className="postWorkspaceHeader">
           <div>
-            <h1>Create a post</h1>
-            <p>Share what you need with students on your campus.</p>
+            <h1>Create a post or listing</h1>
+            <p>Ask campus for something, or list an item for sale from the same Post workspace.</p>
           </div>
 
           <ol className="postProgress" aria-label="Post creation steps">
-            <li className="active"><b>1</b><span>Category</span></li>
+            <li className="active"><b>1</b><span>Type</span></li>
             <li><b>2</b><span>Details</span></li>
             <li><b>3</b><span>Photos</span></li>
             <li><b>4</b><span>Review</span></li>
@@ -27,7 +26,6 @@ export default function PostPage() {
         <div className="postWorkspaceGrid">
           <div className="postMainColumn">
             <div className="postPanel">
-              <PostCoverPicker />
               <PostAccessGate />
             </div>
           </div>
@@ -35,17 +33,17 @@ export default function PostPage() {
           <aside className="postRightRail" aria-label="Posting help">
             <section className="postVerifiedCard">
               <div className="postVerifiedIcon"><UiIcon name="check" /></div>
-              <div><strong>Campus verified</strong><span>Your post stays inside the selected campus community.</span></div>
+              <div><strong>Campus verified</strong><span>Your post or listing stays attached to your verified campus identity.</span></div>
             </section>
 
             <section className="postRailCard">
               <div className="postRailHeading"><UiIcon name="bell" /><h2>Posting tips</h2></div>
               <ul className="postTipList">
-                <li><i><UiIcon name="check" /></i><span>Be specific and include the details someone needs to respond.</span></li>
                 <li><i><UiIcon name="check" /></i><span>Use a clear title that can be understood at a glance.</span></li>
-                <li><i><UiIcon name="check" /></i><span>Add real photos when they make the post easier to trust.</span></li>
-                <li><i><UiIcon name="check" /></i><span>Keep personal information private until you connect.</span></li>
-                <li><i><UiIcon name="check" /></i><span>You can manage your request later from Inbox.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Add real photos for marketplace items.</span></li>
+                <li><i><UiIcon name="check" /></i><span>For a sale, choose every delivery method you are actually willing to offer.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Save an item as a draft if it is not ready for Market yet.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Keep exact private addresses inside the matched order or connection.</span></li>
               </ul>
             </section>
 
@@ -60,11 +58,11 @@ export default function PostPage() {
             </section>
 
             <section className="postPreviewPanel">
-              <div className="postPreviewTitle"><UiIcon name="search" /><h2>Live preview</h2></div>
+              <div className="postPreviewTitle"><UiIcon name="search" /><h2>Where it goes</h2></div>
               <article className="postPreviewCard">
-                <div className="postPreviewMeta"><span>POST PREVIEW</span><small>Just now</small></div>
-                <strong>Your post will appear here.</strong>
-                <p>As you add a title, campus, photos, and details, this card shows the visual style students will see in Browse.</p>
+                <div className="postPreviewMeta"><span>POST WORKSPACE</span><small>One place</small></div>
+                <strong>Requests go to Browse. Published items go to Market.</strong>
+                <p>Marketplace drafts stay private until you press Publish to Market.</p>
                 <div className="postPreviewFooter"><UiIcon name="mapPin" /><span>Selected campus community</span></div>
               </article>
             </section>
