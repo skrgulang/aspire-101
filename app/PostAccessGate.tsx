@@ -9,6 +9,7 @@ import PostRequestForm from './PostRequestForm';
 import PostCoverPicker from './PostCoverPicker';
 import MarketplaceSellerComposer from './MarketplaceSellerComposer';
 import OfferPostForm from './OfferPostForm';
+import PostResubmitEditor from './PostResubmitEditor';
 import SmartCampusContextBar from './SmartCampusContextBar';
 import styles from './PostComposerModeSwitch.module.css';
 
@@ -18,6 +19,7 @@ export default function PostAccessGate() {
   const [loading, setLoading] = useState(true);
   const [verification, setVerification] = useState<SchoolVerification | null>(null);
   const mode = searchParams.get('mode');
+  const editRequestId = searchParams.get('edit')?.trim() || '';
   const sellerMode = mode === 'sell';
   const offerMode = mode === 'offer';
   const requestMode = !sellerMode && !offerMode;
@@ -29,7 +31,13 @@ export default function PostAccessGate() {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!alive) return;
       if (!data.user) {
-        const next = sellerMode ? '/post?mode=sell' : offerMode ? '/post?mode=offer' : '/post';
+        const next = editRequestId
+          ? `/post?edit=${encodeURIComponent(editRequestId)}`
+          : sellerMode
+            ? '/post?mode=sell'
+            : offerMode
+              ? '/post?mode=offer'
+              : '/post';
         router.replace(`/login?next=${encodeURIComponent(next)}`);
         return;
       }
@@ -42,7 +50,7 @@ export default function PostAccessGate() {
     });
 
     return () => { alive = false; };
-  }, [router, sellerMode, offerMode]);
+  }, [router, sellerMode, offerMode, editRequestId]);
 
   if (loading) {
     return (
@@ -79,6 +87,13 @@ export default function PostAccessGate() {
         </div>
       </section>
     );
+  }
+
+  if (editRequestId) {
+    return <>
+      <SmartCampusContextBar label="EDITING PRIVATE POST" />
+      <PostResubmitEditor requestId={editRequestId} />
+    </>;
   }
 
   return <>
