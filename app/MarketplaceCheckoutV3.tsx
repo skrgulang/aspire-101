@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchCampusFeedRequests, type DiscoverRequest } from '../lib/supabase/discovery';
 import { fetchActiveUniversities, type University } from '../lib/supabase/universities';
-import { createRequest, respondToRequest } from '../lib/supabase/requests';
+import { respondToRequest } from '../lib/supabase/requests';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { runRequestAiSafety } from '../lib/supabase/trust';
 import {
+  cancelUnpaidMarketplaceReservation,
   purchaseMarketplaceListingWithOptions,
+  purchaseMarketplaceWithAspirerDelivery,
   setMarketplaceDeliveryAddress,
   type MarketplaceDeliveryAddress,
   type MarketplacePaymentMethod,
@@ -292,15 +295,43 @@ export default function MarketplaceCheckoutV3() {
 
     setBusy(item.id);
     setModalError('');
+    let reservedConnectionId = '';
     try {
+      if (deliveryChoice === 'aspirer') {
+        const amountCents = aspirerReward === '5' ? 500 : aspirerReward === '10' ? 1000 : aspirerReward === 'custom' ? customCents : null;
+        const compensationMode = aspirerReward === 'free' ? 'free' : aspirerReward === 'negotiable' ? 'discuss' : 'fixed';
+        const safeDropoff = publicDropoffArea.trim() || `${address.city.trim()}, ${address.state.trim()}`;
+        const linked = await purchaseMarketplaceWithAspirerDelivery({
+          requestId: item.id,
+          address: {
+            name: address.name,
+            street1: address.street1,
+            street2: address.street2,
+            city: address.city,
+            state: address.state,
+            zip: address.zip,
+            country: address.country
+          },
+          instructions: address.instructions,
+          compensationMode,
+          requestedAmountCents: amountCents,
+          pickupArea: pickupArea.trim() || 'Seller pickup area',
+          dropoffArea: safeDropoff
+        });
+        void runRequestAiSafety(linked.deliveryRequestId).catch(() => undefined);
+        router.push(`/transactions?connection=${encodeURIComponent(linked.connectionId)}&delivery=aspirer`);
+        return;
+      }
+
       const connectionId = await purchaseMarketplaceListingWithOptions({
         requestId: item.id,
         fulfillmentMethod,
         paymentMethod,
         shippingPaidBy: deliveryChoice === 'ship' ? shippingPaidBy : null
       });
+      reservedConnectionId = connectionId;
 
-      if (deliveryChoice === 'ship' || deliveryChoice === 'aspirer') {
+      if (deliveryChoice === 'ship') {
         await setMarketplaceDeliveryAddress({
           connectionId,
           address: {
@@ -316,53 +347,14 @@ export default function MarketplaceCheckoutV3() {
         });
       }
 
-      if (deliveryChoice === 'aspirer') {
-        const supabase = getSupabaseBrowserClient();
-        const { data: order, error: orderError } = await supabase.from('market_orders').select('id').eq('connection_id', connectionId).maybeSingle();
-        if (orderError) throw orderError;
-        if (!order?.id) throw new Error('The order was reserved, but Aspire could not attach the delivery request. Open Orders to continue.');
-
-        const amountCents = aspirerReward === '5' ? 500 : aspirerReward === '10' ? 1000 : aspirerReward === 'custom' ? customCents : undefined;
-        const rewardLabel = aspirerReward === 'free'
-          ? 'Free'
-          : aspirerReward === '5'
-            ? '$5'
-            : aspirerReward === '10'
-              ? '$10'
-              : aspirerReward === 'custom'
-                ? money(customCents)
-                : 'Negotiable';
-        const safeDropoff = publicDropoffArea.trim() || `${address.city.trim()}, ${address.state.trim()}`;
-        const request = await createRequest({
-          kind: aspirerReward === 'free' ? 'community' : 'paid_help',
-          category: 'Pickup / errand',
-          title: `Deliver ${item.title}`,
-          details: `Linked marketplace delivery for “${item.title}”. Pickup area: ${pickupArea.trim() || 'coordinate privately with the seller'}. Drop-off area: ${safeDropoff}. Reward: ${rewardLabel}. Exact delivery address stays private until a helper is chosen.`,
-          campusId: campus!.id,
-          meeting_label: `${pickupArea.trim() || 'Seller area'} → ${safeDropoff}`,
-          amount_cents: amountCents,
-          currency: 'USD'
-        });
-
-        const compensationMode = aspirerReward === 'free' ? 'free' : aspirerReward === 'negotiable' ? 'discuss' : 'fixed';
-        const protectionMode = compensationMode === 'fixed' ? 'aspire' : 'none';
-        const { error: linkError } = await supabase.rpc('link_market_delivery_request', {
-          p_market_order_id: order.id,
-          p_delivery_request_id: request.id,
-          p_compensation_mode: compensationMode,
-          p_protection_mode: protectionMode,
-          p_requested_amount_cents: amountCents || null,
-          p_pickup_area: pickupArea.trim() || 'Seller pickup area',
-          p_dropoff_area: safeDropoff
-        });
-        if (linkError) throw linkError;
-      }
-
       const params = new URLSearchParams({ connection: connectionId, delivery: deliveryChoice });
       if (deliveryChoice === 'ship') params.set('shippingPayer', shippingPaidBy);
       if (deliveryChoice === 'meet') params.set('paymentMethod', meetPayment);
       router.push(`/transactions?${params.toString()}`);
     } catch (error) {
+      if (reservedConnectionId) {
+        await cancelUnpaidMarketplaceReservation(reservedConnectionId).catch(() => false);
+      }
       setModalError(error instanceof Error ? error.message : 'Could not continue with this item.');
     } finally {
       setBusy('');
