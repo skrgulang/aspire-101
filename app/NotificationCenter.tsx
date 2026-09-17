@@ -26,6 +26,8 @@ function iconFor(kind: AspireNotification['kind']) {
   if (kind === 'request_response') return '◌';
   if (kind === 'circle_mutual') return '♧';
   if (kind === 'connection_cancelled') return '×';
+  if (kind === 'post_review') return '◇';
+  if (kind === 'resolution_case') return '§';
   return '✓';
 }
 
@@ -72,6 +74,10 @@ export default function NotificationCenter({
     }
 
     setOpen(false);
+    if (item.kind === 'post_review') {
+      window.location.assign('/activity');
+      return;
+    }
     if (item.kind === 'request_response') {
       onShowRequests();
       return;
@@ -103,7 +109,7 @@ export default function NotificationCenter({
 
             <div className="notificationList">
               {loading && !items.length && <p className="notificationEmpty">Loading activity…</p>}
-              {!loading && !items.length && <div className="notificationEmpty"><strong>All quiet for now.</strong><p>Responses, connection updates, messages, and Circle activity will appear here.</p></div>}
+              {!loading && !items.length && <div className="notificationEmpty"><strong>All quiet for now.</strong><p>Post review updates, responses, connection changes, messages, and Circle activity will appear here.</p></div>}
               {items.map((item) => (
                 <button type="button" className={`notificationItem ${item.read_at ? '' : 'unread'}`} key={item.id} onClick={() => read(item)}>
                   <i>{iconFor(item.kind)}</i>
