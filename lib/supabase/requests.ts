@@ -256,6 +256,8 @@ export async function createRequest(input: CreateRequestInput) {
   return { ...data, latitude: null, longitude: null } as unknown as AspireRequest;
 }
 
+const requestResponseSelect = 'id,request_id,responder_id,message,status,created_at' as const;
+
 export async function respondToRequest(requestId: string, message?: string) {
   const supabase = getSupabaseBrowserClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -266,7 +268,7 @@ export async function respondToRequest(requestId: string, message?: string) {
   const cleanMessage = message?.trim() || null;
   const { data: existing, error: existingError } = await supabase
     .from('request_responses')
-    .select('*')
+    .select(requestResponseSelect)
     .eq('request_id', requestId)
     .eq('responder_id', responderId)
     .maybeSingle();
@@ -278,7 +280,7 @@ export async function respondToRequest(requestId: string, message?: string) {
         .from('request_responses')
         .update({ status: 'pending', message: cleanMessage })
         .eq('id', existing.id)
-        .select('*')
+        .select(requestResponseSelect)
         .single();
       if (restoreError) throw friendlyPolicyError(restoreError, 'Could not restore your interest.');
       return restored;
@@ -289,14 +291,14 @@ export async function respondToRequest(requestId: string, message?: string) {
   const { data, error } = await supabase
     .from('request_responses')
     .insert({ request_id: requestId, responder_id: responderId, message: cleanMessage })
-    .select('*')
+    .select(requestResponseSelect)
     .single();
   if (error) {
     const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
     if (error.code === '23505' || /request_responses_request_id_responder_id_key|duplicate key/i.test(detail)) {
       const { data: raced } = await supabase
         .from('request_responses')
-        .select('*')
+        .select(requestResponseSelect)
         .eq('request_id', requestId)
         .eq('responder_id', responderId)
         .maybeSingle();
