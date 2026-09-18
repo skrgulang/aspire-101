@@ -58,6 +58,12 @@ export async function POST(request: Request) {
     const openResolutionCase = resolutionCaseResult.data;
 
     if (!payment) throw new Error('PAYMENT_NOT_SECURED');
+    if (payment.stripe_livemode !== livemode) {
+      return NextResponse.json({
+        error: 'This payment belongs to a different Stripe environment and cannot be released here.',
+        code: 'PAYMENT_MODE_MISMATCH'
+      }, { status: 409 });
+    }
 
     const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
     if (payment.status === 'released' && payment.stripe_transfer_id) {

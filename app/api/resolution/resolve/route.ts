@@ -3,7 +3,8 @@ import {
   apiError,
   getAuthenticatedUser,
   getSupabaseServiceClient,
-  stripeFormRequest
+  stripeFormRequest,
+  stripeLivemode
 } from '../../../../lib/server/aspireServer';
 
 type StripeRefund = { id: string; status?: string | null; amount?: number | null };
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseServiceClient();
+    const livemode = stripeLivemode();
     const { data: roleRow, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
@@ -89,11 +91,17 @@ export async function POST(request: Request) {
 
     const { data: payment, error: paymentError } = await supabase
       .from('connection_payments')
-      .select('id,payer_id,payee_id,status,currency,gross_amount_cents,customer_total_cents,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,stripe_refund_id')
+      .select('id,payer_id,payee_id,status,currency,gross_amount_cents,customer_total_cents,stripe_payment_intent_id,stripe_charge_id,stripe_transfer_id,stripe_refund_id,stripe_livemode')
       .eq('connection_id', resolutionCase.connection_id)
       .maybeSingle();
     if (paymentError) throw paymentError;
     if (!payment) return NextResponse.json({ error: 'No Aspire payment exists for this connection.' }, { status: 409 });
+    if (payment.stripe_livemode !== livemode) {
+      return NextResponse.json({
+        error: 'This payment belongs to a different Stripe environment and cannot be resolved financially here.',
+        code: 'PAYMENT_MODE_MISMATCH'
+      }, { status: 409 });
+    }
 
     if (payment.status === 'refunded') {
       if (!payment.stripe_refund_id) {

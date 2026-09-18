@@ -35,6 +35,7 @@ export async function GET(request: Request) {
       supabase
         .from('connection_payments')
         .select('id,connection_id,request_id,payer_id,payee_id,currency,status,base_amount_cents,requester_fee_cents,provider_fee_cents,customer_total_cents,provider_net_cents,gross_amount_cents,provider_amount_cents,stripe_transfer_id,paid_at,released_at,refunded_at,disputed_at,created_at,updated_at')
+        .eq('stripe_livemode', livemode)
         .or(`payer_id.eq.${user.id},payee_id.eq.${user.id}`)
         .order('updated_at', { ascending: false })
         .limit(100),
