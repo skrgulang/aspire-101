@@ -134,11 +134,10 @@ export async function fetchNoShowIncidents(userIds: string[]) {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (!ids.length) return [] as ConnectionNoShowIncident[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('connection_no_show_incidents')
-    .select('id,case_id,connection_id,user_id,confirmed_by,note,created_at')
-    .in('user_id', ids)
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.rpc('moderator_fetch_no_show_incidents', {
+    p_user_ids: ids,
+    p_limit: 200
+  });
   if (error) {
     if (missingPreviewRelation(error)) return [] as ConnectionNoShowIncident[];
     throw error;
