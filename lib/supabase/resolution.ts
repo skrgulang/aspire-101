@@ -4,8 +4,6 @@ export type ResolutionReason = 'no_show' | 'cancellation' | 'incomplete' | 'not_
 export type RequestedResolution = 'refund' | 'provider_compensation' | 'partial' | 'review' | 'safety_review';
 export type ResolutionStatus = 'submitted' | 'under_review' | 'resolved_refund' | 'resolved_release' | 'resolved_partial' | 'dismissed';
 
-export const RESOLUTION_CASE_PUBLIC_SELECT = 'id,connection_id,request_id,opened_by,against_user_id,reason,requested_resolution,details,status,payment_status_snapshot,payment_total_cents_snapshot,currency_snapshot,scheduled_start_snapshot,meeting_label_snapshot,coordination_status_snapshot,resolution_note,refund_cents,provider_release_cents,reviewed_at,created_at,updated_at' as const;
-
 export type ConnectionResolutionCase = {
   id: string;
   connection_id: string;
@@ -74,15 +72,14 @@ function missingPreviewFunction(error: { code?: string; message?: string } | nul
 }
 
 export async function fetchResolutionCases(connectionIds: string[]) {
-  if (!connectionIds.length) return [] as ConnectionResolutionCase[];
+  const ids = [...new Set(connectionIds.filter(Boolean))].slice(0, 200);
+  if (!ids.length) return [] as ConnectionResolutionCase[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('connection_resolution_cases')
-    .select(RESOLUTION_CASE_PUBLIC_SELECT)
-    .in('connection_id', connectionIds)
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_resolution_cases_for_my_connections', {
+    p_connection_ids: ids
+  });
   if (error) {
-    if (missingPreviewRelation(error)) return [] as ConnectionResolutionCase[];
+    if (missingPreviewRelation(error) || missingPreviewFunction(error)) return [] as ConnectionResolutionCase[];
     throw error;
   }
   return (data ?? []) as ConnectionResolutionCase[];
@@ -94,13 +91,11 @@ export async function fetchMyResolutionHistory(): Promise<ParticipantResolutionH
   if (authError) throw authError;
   if (!authData.user) throw new Error('AUTH_REQUIRED');
 
-  const { data, error } = await supabase
-    .from('connection_resolution_cases')
-    .select(RESOLUTION_CASE_PUBLIC_SELECT)
-    .order('created_at', { ascending: false })
-    .limit(100);
+  const { data, error } = await supabase.rpc('get_my_resolution_cases', {
+    p_limit: 100
+  });
   if (error) {
-    if (missingPreviewRelation(error)) return { userId: authData.user.id, cases: [], requests: [] };
+    if (missingPreviewRelation(error) || missingPreviewFunction(error)) return { userId: authData.user.id, cases: [], requests: [] };
     throw error;
   }
 
@@ -181,14 +176,12 @@ export async function openResolutionCase(input: {
     const text = `${error.message || ''} ${error.details || ''}`;
     if (/NO_SHOW_GRACE_PERIOD/i.test(text)) throw new Error('No-show reports unlock 10 minutes after the agreed start time. Use chat or “Running late” before then.');
     if (/issue is already open|case is already open|duplicate key.*connection_resolution_one_open_case/i.test(text)) {
-      const { data: existing, error: existingError } = await supabase
-        .from('connection_resolution_cases')
-        .select('id')
-        .eq('connection_id', input.connectionId)
-        .in('status', ['submitted', 'under_review'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: existingRows, error: existingError } = await supabase.rpc('get_resolution_cases_for_my_connections', {
+        p_connection_ids: [input.connectionId]
+      });
+      const existing = (existingRows ?? []).find((item: { id?: string; status?: string }) =>
+        item.status === 'submitted' || item.status === 'under_review'
+      );
       if (!existingError && existing?.id) return String(existing.id);
     }
     if (/function .*open_connection_resolution_case.*does not exist|could not find the function/i.test(text)) throw new Error('Resolution Center is not enabled in this preview database yet.');
