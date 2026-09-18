@@ -1,13 +1,21 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
 import { normalizeShippingStatus } from '../../../../lib/server/shippo';
+
+function safeTokenEqual(received: string | null, expected: string) {
+  if (!received) return false;
+  const receivedBytes = Buffer.from(received);
+  const expectedBytes = Buffer.from(expected);
+  return receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes);
+}
 
 function webhookAuthorized(request: Request) {
   const token = process.env.SHIPPO_WEBHOOK_TOKEN;
   if (!token) return false;
   const header = request.headers.get('x-shippo-webhook-token') || request.headers.get('x-webhook-token');
   const urlToken = new URL(request.url).searchParams.get('token');
-  return header === token || urlToken === token;
+  return safeTokenEqual(header, token) || safeTokenEqual(urlToken, token);
 }
 
 function metadataOrderId(value: unknown) {
@@ -30,12 +38,23 @@ export async function POST(request: Request) {
     if (!orderId && !trackingNumber) return NextResponse.json({ received: true, ignored: true });
 
     const supabase = getSupabaseServiceClient();
-    let query = supabase.from('market_orders').select('id,shipping_status').limit(1);
+    let query = supabase.from('market_orders').select('id,shipping_status,shipping_tracking_number').limit(1);
     if (orderId) query = query.eq('id', orderId);
     else query = query.eq('shipping_tracking_number', trackingNumber);
     const { data: order, error } = await query.maybeSingle();
     if (error) throw error;
     if (!order) return NextResponse.json({ received: true, ignored: true });
+
+    // Metadata and tracking number must agree when Shippo sends both. This prevents
+    // a stale/malformed event from moving the wrong Aspire order.
+    if (
+      orderId
+      && trackingNumber
+      && order.shipping_tracking_number
+      && order.shipping_tracking_number !== trackingNumber
+    ) {
+      return NextResponse.json({ received: true, ignored: true, reason: 'tracking_mismatch' });
+    }
 
     const nextStatus = normalizeShippingStatus(statusValue);
     const now = new Date().toISOString();
