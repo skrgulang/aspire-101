@@ -20,10 +20,7 @@ export type AspireConnection = {
   responder_confirmed: boolean;
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   agreed_amount_cents: number | null;
-  agreed_terms: Record<string, unknown>;
   payment_method: 'none' | 'in_person' | 'aspire';
-  created_at: string;
-  updated_at: string;
 };
 
 export type ConnectionMessage = {
@@ -77,6 +74,10 @@ export type PublicProfile = {
   avatar_url: string | null;
 };
 
+const requestResponseSelect = 'id,request_id,responder_id,message,status,created_at' as const;
+const connectionSelect = 'id,request_id,requester_id,responder_id,requester_confirmed,responder_confirmed,status,agreed_amount_cents,payment_method' as const;
+const connectionMessageSelect = 'id,connection_id,sender_id,body,created_at' as const;
+
 export async function fetchMyRequestInbox() {
   const supabase = getSupabaseBrowserClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
@@ -96,7 +97,7 @@ export async function fetchMyRequestInbox() {
 
   const { data: responses, error: responseError } = await supabase
     .from('request_responses')
-    .select('*')
+    .select(requestResponseSelect)
     .in('request_id', requestIds)
     .order('created_at', { ascending: true });
   if (responseError) throw responseError;
@@ -123,7 +124,7 @@ export async function fetchMyConnections() {
 
   const { data, error } = await supabase
     .from('connections')
-    .select('*')
+    .select(connectionSelect)
     .or(`requester_id.eq.${authData.user.id},responder_id.eq.${authData.user.id}`)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -196,7 +197,7 @@ export async function fetchConnectionMessages(connectionId: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('connection_messages')
-    .select('*')
+    .select(connectionMessageSelect)
     .eq('connection_id', connectionId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -216,7 +217,7 @@ export async function sendConnectionMessage(connectionId: string, body: string) 
   const { data, error } = await supabase
     .from('connection_messages')
     .insert({ connection_id: connectionId, sender_id: authData.user.id, body: trimmed })
-    .select('*')
+    .select(connectionMessageSelect)
     .single();
   if (error) {
     const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;

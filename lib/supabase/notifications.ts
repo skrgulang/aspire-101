@@ -2,7 +2,6 @@ import { getSupabaseBrowserClient } from './client';
 
 export type AspireNotification = {
   id: number;
-  user_id: string;
   kind:
     | 'request_response'
     | 'connection_chosen'
@@ -15,27 +14,36 @@ export type AspireNotification = {
     | 'connection_coordination'
     | 'resolution_case'
     | 'post_review';
-  actor_id: string | null;
-  request_id: string | null;
-  response_id: string | null;
   connection_id: string | null;
-  message_id: number | null;
-  event_key: string;
   title: string;
   body: string | null;
   read_at: string | null;
   created_at: string;
 };
 
+const notificationSelect = 'id,kind,connection_id,title,body,read_at,created_at' as const;
+
+function toAspireNotification(row: Record<string, unknown>): AspireNotification {
+  return {
+    id: Number(row.id),
+    kind: row.kind as AspireNotification['kind'],
+    connection_id: row.connection_id ? String(row.connection_id) : null,
+    title: String(row.title || ''),
+    body: row.body == null ? null : String(row.body),
+    read_at: row.read_at == null ? null : String(row.read_at),
+    created_at: String(row.created_at || new Date().toISOString())
+  };
+}
+
 export async function fetchNotifications(limit = 40) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase
     .from('notifications')
-    .select('*')
+    .select(notificationSelect)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []) as AspireNotification[];
+  return ((data ?? []) as Array<Record<string, unknown>>).map(toAspireNotification);
 }
 
 export async function markNotificationRead(notificationId: number) {
@@ -61,7 +69,7 @@ export function subscribeToNotifications(userId: string, onNotification: (notifi
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-      (payload) => onNotification(payload.new as AspireNotification)
+      (payload) => onNotification(toAspireNotification(payload.new as Record<string, unknown>))
     )
     .subscribe();
 
