@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiError, getAuthenticatedUser, getSupabaseServiceClient, publicOrigin, stripeFormRequest, stripeGet } from '../../../../../lib/server/aspireServer';
+import { apiError, getAuthenticatedUser, getSupabaseServiceClient, publicOrigin, stripeFormRequest, stripeGet, stripeLivemode } from '../../../../../lib/server/aspireServer';
 
 type StripeIdentitySession = {
   id: string;
@@ -12,17 +12,18 @@ export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
     const supabase = getSupabaseServiceClient();
+    const livemode = stripeLivemode();
     const { data: existing } = await supabase
       .from('identity_verifications')
-      .select('status,provider_session_id')
+      .select('status,provider_session_id,stripe_livemode')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (existing?.status === 'verified') {
+    if (existing?.status === 'verified' && existing.stripe_livemode === livemode) {
       return NextResponse.json({ status: 'verified' });
     }
 
-    if (existing?.provider_session_id && existing.status === 'pending') {
+    if (existing?.provider_session_id && existing.status === 'pending' && existing.stripe_livemode === livemode) {
       const current = await stripeGet<StripeIdentitySession>(`/v1/identity/verification_sessions/${encodeURIComponent(existing.provider_session_id)}`);
       if (current.status === 'verified') {
         await supabase.from('identity_verifications').upsert({
@@ -30,6 +31,7 @@ export async function POST(request: Request) {
           status: 'verified',
           provider: 'stripe_identity',
           provider_session_id: current.id,
+          stripe_livemode: livemode,
           verified_at: new Date().toISOString(),
           last_error: null,
           updated_at: new Date().toISOString()
@@ -58,6 +60,7 @@ export async function POST(request: Request) {
       status: session.status === 'verified' ? 'verified' : 'pending',
       provider: 'stripe_identity',
       provider_session_id: session.id,
+      stripe_livemode: livemode,
       verified_at: session.status === 'verified' ? new Date().toISOString() : null,
       last_error: null,
       updated_at: new Date().toISOString()
