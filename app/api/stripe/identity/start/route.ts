@@ -23,26 +23,26 @@ export async function POST(request: Request) {
     }
 
     if (existing?.provider_session_id && existing.status === 'pending') {
-      try {
-        const current = await stripeGet<StripeIdentitySession>(`/v1/identity/verification_sessions/${encodeURIComponent(existing.provider_session_id)}`);
-        if (current.status === 'verified') {
-          await supabase.from('identity_verifications').upsert({
-            user_id: user.id,
-            status: 'verified',
-            provider: 'stripe_identity',
-            provider_session_id: current.id,
-            verified_at: new Date().toISOString(),
-            last_error: null,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
-          return NextResponse.json({ status: 'verified' });
-        }
-        if (current.url && current.status === 'requires_input') {
-          return NextResponse.json({ status: 'pending', url: current.url });
-        }
-      } catch {
-        // If an old session cannot be reused, start a fresh hosted verification session.
+      const current = await stripeGet<StripeIdentitySession>(`/v1/identity/verification_sessions/${encodeURIComponent(existing.provider_session_id)}`);
+      if (current.status === 'verified') {
+        await supabase.from('identity_verifications').upsert({
+          user_id: user.id,
+          status: 'verified',
+          provider: 'stripe_identity',
+          provider_session_id: current.id,
+          verified_at: new Date().toISOString(),
+          last_error: null,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+        return NextResponse.json({ status: 'verified' });
       }
+      if (current.status === 'requires_input') {
+        return NextResponse.json({ status: 'pending', url: current.url ?? null });
+      }
+      if (current.status === 'processing') {
+        return NextResponse.json({ status: 'pending', url: null });
+      }
+      // Only a terminal canceled session falls through to create a fresh session.
     }
 
     const session = await stripeFormRequest<StripeIdentitySession>('/v1/identity/verification_sessions', {
