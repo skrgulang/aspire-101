@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '../../../lib/server/aspireServer';
+import { getSupabaseServiceClient, requireEnv } from '../../../lib/server/aspireServer';
 
 const allowedInterests = new Set(['desktop', 'mobile', 'campus-launches', 'product-updates']);
 
@@ -10,7 +10,7 @@ function clientIp(request: Request) {
 }
 
 function ipHash(ip: string) {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || 'aspire-updates';
+  const secret = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
   return createHmac('sha256', secret).update(ip).digest('hex');
 }
 
