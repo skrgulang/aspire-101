@@ -3,7 +3,8 @@ import {
   apiError,
   getAuthenticatedUser,
   getSupabaseServiceClient,
-  stripeFormRequest
+  stripeFormRequest,
+  stripeLivemode
 } from '../../../../../lib/server/aspireServer';
 
 type StripeRefund = { id: string; status?: string | null };
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
     if (!connectionId) return NextResponse.json({ error: 'Missing marketplace connection.' }, { status: 400 });
 
     const supabase = getSupabaseServiceClient();
+    const livemode = stripeLivemode();
     const { data: order, error: orderError } = await supabase
       .from('market_orders')
       .select('*')
@@ -50,6 +52,12 @@ export async function POST(request: Request) {
 
     if (!payment || payment.status !== 'secured' || !payment.stripe_payment_intent_id) {
       return NextResponse.json({ error: 'There is no secured Aspire payment to refund.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
+    }
+    if (payment.stripe_livemode !== livemode) {
+      return NextResponse.json({
+        error: 'This payment belongs to a different Stripe environment and cannot be refunded here.',
+        code: 'PAYMENT_MODE_MISMATCH'
+      }, { status: 409 });
     }
     if (payment.stripe_transfer_id || payment.status === 'released') {
       return NextResponse.json({ error: 'Seller payout has already been released. This requires a reviewed dispute.', code: 'PAYOUT_ALREADY_RELEASED' }, { status: 409 });
