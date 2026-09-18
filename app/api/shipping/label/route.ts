@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { apiError, getAuthenticatedUser, getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
-import { buyShippoLabel, getShippoShipment, normalizeShippingStatus } from '../../../../lib/server/shippo';
+import { buyShippoLabel, getShippoShipment, normalizeShippingStatus, shippoShipmentMatchesOrder } from '../../../../lib/server/shippo';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -25,8 +25,7 @@ export async function POST(request: Request) {
     }
 
     const shipment = await getShippoShipment(order.shipping_shipment_id);
-    const shipmentMetadata = String(shipment.metadata || '');
-    if (!shipmentMetadata.includes(order.id)) return NextResponse.json({ error: 'This shipping quote does not belong to this order.', code: 'SHIPPING_QUOTE_MISMATCH' }, { status: 409 });
+    if (!shippoShipmentMatchesOrder(shipment.metadata, order.id)) return NextResponse.json({ error: 'This shipping quote does not belong to this order.', code: 'SHIPPING_QUOTE_MISMATCH' }, { status: 409 });
     const rate = (shipment.rates || []).find((candidate) => candidate.object_id === rateId);
     if (!rate || String(rate.object_status || '').toUpperCase() !== 'VALID') return NextResponse.json({ error: 'That shipping rate expired. Request a fresh quote.', code: 'SHIPPING_RATE_EXPIRED' }, { status: 409 });
 
