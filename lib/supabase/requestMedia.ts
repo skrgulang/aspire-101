@@ -70,47 +70,79 @@ export async function uploadRequestMedia(requestId: string, files: File[]) {
   if (lastMediaError) throw lastMediaError;
   const startingSortOrder = typeof lastMedia?.sort_order === 'number' ? lastMedia.sort_order + 1 : 0;
 
-  const created: RequestMedia[] = [];
+  const staged: Array<{ path: string; file: File; sortOrder: number }> = [];
 
-  for (let index = 0; index < files.length; index += 1) {
-    const file = files[index];
-    const path = `${user.id}/${requestId}/${crypto.randomUUID()}.${extensionFor(file)}`;
-    const { error: uploadError } = await supabase.storage
-      .from('request-media')
-      .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
-    if (uploadError) throw uploadError;
-
-    const { data: row, error: rowError } = await supabase
-      .from('request_media')
-      .insert({
-        request_id: requestId,
-        uploader_id: user.id,
-        storage_path: path,
-        mime_type: file.type,
-        sort_order: startingSortOrder + index
-      })
-      .select(requestMediaSelect)
-      .single();
-
-    if (rowError) {
-      await supabase.storage.from('request-media').remove([path]).catch(() => undefined);
-      throw friendlyRequestMediaError(rowError);
+  try {
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      const path = `${user.id}/${requestId}/${crypto.randomUUID()}.${extensionFor(file)}`;
+      const { error: uploadError } = await supabase.storage
+        .from('request-media')
+        .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+      staged.push({ path, file, sortOrder: startingSortOrder + index });
     }
 
-    const { data: signed } = await supabase.storage.from('request-media').createSignedUrl(path, signedUrlSeconds);
-    created.push({ ...(row as RequestMedia), public_url: signed?.signedUrl });
+    // Insert all media rows in one statement. If the database rejects any one
+    // image, none of the new request_media rows are committed.
+    const { data: rows, error: rowError } = await supabase
+      .from('request_media')
+      .insert(staged.map((item) => ({
+        request_id: requestId,
+        uploader_id: user.id,
+        storage_path: item.path,
+        mime_type: item.file.type,
+        sort_order: item.sortOrder
+      })))
+      .select(requestMediaSelect);
+    if (rowError) throw friendlyRequestMediaError(rowError);
+
+    const created = (rows ?? []) as RequestMedia[];
+    const { data: signed, error: signedError } = await supabase.storage
+      .from('request-media')
+      .createSignedUrls(created.map((row) => row.storage_path), signedUrlSeconds);
+    if (signedError) throw signedError;
+
+    // Text is scanned when the request is created. Run again now so the final
+    // assessment includes every uploaded image before a moderator approves it.
+    await runRequestAiSafety(requestId).catch(() => undefined);
+    notifyCampusFeedChanged();
+
+    return created.map((row, index) => ({
+      ...row,
+      public_url: signed?.[index]?.signedUrl
+    }));
+  } catch (error) {
+    if (staged.length) {
+      // If rows were inserted but a later step failed, remove those rows first
+      // while the request is still open. Only remove storage objects after the
+      // database no longer references them.
+      const { data: attachedRows } = await supabase
+        .from('request_media')
+        .select('id,storage_path')
+        .eq('request_id', requestId)
+        .in('storage_path', staged.map((item) => item.path));
+
+      if (attachedRows?.length) {
+        const { error: deleteError } = await supabase
+          .from('request_media')
+          .delete()
+          .in('id', attachedRows.map((row) => row.id));
+        if (!deleteError) {
+          await supabase.storage
+            .from('request-media')
+            .remove(staged.map((item) => item.path))
+            .catch(() => undefined);
+        }
+      } else {
+        await supabase.storage
+          .from('request-media')
+          .remove(staged.map((item) => item.path))
+          .catch(() => undefined);
+      }
+    }
+    throw friendlyRequestMediaError(error instanceof Error ? error : { message: 'Could not upload these photos.' });
   }
-
-  // request_media is the source of truth for photo-cover presentation metadata.
-  // A database trigger marks the request cover as user-owned on INSERT and
-  // clears that marker after the final DELETE. Browser clients intentionally do
-  // not have UPDATE access to cover_image_* request columns.
-
-  // Text is scanned when the request is created. Run again now so the final
-  // assessment includes every uploaded image before a moderator approves it.
-  await runRequestAiSafety(requestId).catch(() => undefined);
-  notifyCampusFeedChanged();
-  return created;
 }
 
 export async function fetchRequestMedia(requestIds: string[]) {
