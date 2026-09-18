@@ -35,6 +35,8 @@ export type MarketOrder = {
   shipping_tracking_url?: string | null;
   shipping_status?: 'not_started' | 'rates_ready' | 'label_purchasing' | 'label_failed' | 'label_purchased' | 'in_transit' | 'delivered' | 'exception' | 'cancelled' | null;
   shipping_paid_by?: 'buyer' | 'seller' | null;
+  seller_delivery_fee_cents?: number | null;
+  seller_delivery_status?: 'not_started' | 'awaiting_payment' | 'ready' | 'out_for_delivery' | 'delivered' | 'completed' | 'cancelled' | null;
 };
 
 export type ShippingAddress = {
@@ -84,7 +86,7 @@ async function bearerHeaders() {
 export async function fetchMarketOrders(connectionIds: string[]) {
   if (!connectionIds.length) return [] as MarketOrder[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc('get_my_market_orders', {
+  const { data, error } = await supabase.rpc('get_my_market_orders_v2', {
     p_connection_ids: connectionIds
   });
   if (error) throw error;
