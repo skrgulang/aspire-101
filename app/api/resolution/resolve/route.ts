@@ -3,6 +3,7 @@ import {
   apiError,
   getAuthenticatedUser,
   getSupabaseServiceClient,
+  requireAal2,
   stripeFormRequest,
   stripeLivemode
 } from '../../../../lib/server/aspireServer';
@@ -31,7 +32,7 @@ function claimFailure(message: string) {
 
 export async function POST(request: Request) {
   try {
-    const { user } = await getAuthenticatedUser(request);
+    const { user, accessToken } = await getAuthenticatedUser(request);
     const body = await request.json().catch(() => ({}));
     const caseId = typeof body?.caseId === 'string' ? body.caseId : '';
     const action = body?.action as ResolutionAction;
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     if (!['moderator', 'admin'].includes(role)) {
       return NextResponse.json({ error: 'Trust & Safety access required.' }, { status: 403 });
     }
+    await requireAal2(accessToken);
     if (action === 'refund_full' && role !== 'admin') {
       return NextResponse.json({ error: 'Only an Aspire admin can issue a financial refund.' }, { status: 403 });
     }
