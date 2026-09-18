@@ -170,11 +170,8 @@ export async function createRequest(input: CreateRequestInput) {
   const { data: allowed, error: accessError } = await supabase.rpc('can_post_request');
   if (accessError) throw accessError;
   if (!allowed) {
-    const { data: enforcement } = await supabase
-      .from('user_enforcement_states')
-      .select('state,reason,expires_at')
-      .eq('user_id', authData.user.id)
-      .maybeSingle();
+    const { data: enforcementRows } = await supabase.rpc('get_my_enforcement_state');
+    const enforcement = Array.isArray(enforcementRows) ? enforcementRows[0] : null;
     const stillApplies = enforcement && (!enforcement.expires_at || new Date(enforcement.expires_at).getTime() > Date.now());
     if (stillApplies && enforcement.state === 'suspended') throw new Error(`Your Aspire account is suspended from new interactions.${enforcement.reason ? ` ${enforcement.reason}` : ''}`);
     if (stillApplies && enforcement.state === 'restricted') throw new Error(`Your Aspire account is temporarily restricted from creating new posts.${enforcement.reason ? ` ${enforcement.reason}` : ''}`);
