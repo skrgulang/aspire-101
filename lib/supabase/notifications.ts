@@ -37,11 +37,9 @@ function toAspireNotification(row: Record<string, unknown>): AspireNotification 
 
 export async function fetchNotifications(limit = 40) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('notifications')
-    .select(notificationSelect)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  const { data, error } = await supabase.rpc('get_my_notifications', {
+    p_limit: Math.max(1, Math.min(100, limit))
+  });
   if (error) throw error;
   return ((data ?? []) as Array<Record<string, unknown>>).map(toAspireNotification);
 }
@@ -62,18 +60,38 @@ export async function markAllNotificationsRead() {
   return Number(data || 0);
 }
 
-export function subscribeToNotifications(userId: string, onNotification: (notification: AspireNotification) => void) {
-  const supabase = getSupabaseBrowserClient();
-  const channel = supabase
-    .channel(`aspire-notifications-${userId}`)
-    .on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-      (payload) => onNotification(toAspireNotification(payload.new as Record<string, unknown>))
-    )
-    .subscribe();
+export function subscribeToNotifications(
+  userId: string,
+  onNotifications: (notifications: AspireNotification[]) => void,
+  onError?: () => void
+) {
+  if (!userId) return () => undefined;
+
+  let active = true;
+  let timer: ReturnType<typeof setInterval> | null = null;
+
+  const refresh = async () => {
+    try {
+      const next = await fetchNotifications();
+      if (active) onNotifications(next);
+    } catch {
+      if (active) onError?.();
+    }
+  };
+
+  void refresh();
+  timer = setInterval(() => { void refresh(); }, notificationPollMs);
+
+  const onVisibility = () => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      void refresh();
+    }
+  };
+  if (typeof document !== 'undefined') document.addEventListener('visibilitychange', onVisibility);
 
   return () => {
-    void supabase.removeChannel(channel);
+    active = false;
+    if (timer) clearInterval(timer);
+    if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibility);
   };
 }
