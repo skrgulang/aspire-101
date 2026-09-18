@@ -16,8 +16,6 @@ export type SchoolVerification = {
   verified_at: string | null;
 };
 
-const schoolVerificationSelect = 'user_id,school,student_id,status,submitted_at,review_note,verification_method,school_email,verified_at' as const;
-
 export type AppRole = 'member' | 'moderator' | 'admin';
 export type EnforcementState = 'active' | 'restricted' | 'suspended';
 
@@ -72,16 +70,9 @@ function hasRequestAiSafetyDetails(result: RequestAiSafetyWireResult): result is
 
 export async function fetchMySchoolVerification() {
   const supabase = getSupabaseBrowserClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) throw new Error('You must be signed in.');
-  const { data, error } = await supabase
-    .from('school_verifications')
-    .select(schoolVerificationSelect)
-    .eq('user_id', authData.user.id)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('get_my_school_verification');
   if (error) throw error;
-  return (data ?? null) as SchoolVerification | null;
+  return (((data ?? [])[0] ?? null) as SchoolVerification | null);
 }
 
 export async function submitSchoolVerification(school: string, studentId: string) {
@@ -120,10 +111,9 @@ export async function fetchMyRole(): Promise<AppRole> {
 
 export async function fetchVerificationQueue() {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('school_verifications')
-    .select(schoolVerificationSelect)
-    .order('submitted_at', { ascending: true });
+  const { data, error } = await supabase.rpc('moderator_fetch_school_verifications', {
+    p_limit: 200
+  });
   if (error) throw error;
   return (data ?? []) as SchoolVerification[];
 }
