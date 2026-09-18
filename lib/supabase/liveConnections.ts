@@ -83,6 +83,8 @@ export type ConnectionEvent = {
   created_at: string;
 };
 
+const connectionEventRealtimeSelect = ['id', 'connection_id', 'actor_id', 'event_type', 'body', 'metadata', 'created_at'] as const;
+
 function missingPreviewRelation(error: { code?: string; message?: string } | null) {
   if (!error) return false;
   return error.code === '42P01'
@@ -188,9 +190,18 @@ export function subscribeToConnectionEvents(onEvent: (event: ConnectionEvent) =>
   const supabase = getSupabaseBrowserClient();
   const channel = supabase
     .channel(`aspire-connection-events-${Math.random().toString(36).slice(2)}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'connection_events' }, (payload) => {
-      onEvent(payload.new as ConnectionEvent);
-    })
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'connection_events',
+        select: [...connectionEventRealtimeSelect]
+      },
+      (payload) => {
+        onEvent(payload.new as ConnectionEvent);
+      }
+    )
     .subscribe();
 
   return () => {
