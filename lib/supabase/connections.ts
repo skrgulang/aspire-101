@@ -95,11 +95,9 @@ export async function fetchMyRequestInbox() {
   const requestIds = typedRequests.map((request) => request.id);
   if (!requestIds.length) return { requests: typedRequests, responses: [] as RequestResponse[], profiles: [] as PublicProfile[] };
 
-  const { data: responses, error: responseError } = await supabase
-    .from('request_responses')
-    .select(requestResponseSelect)
-    .in('request_id', requestIds)
-    .order('created_at', { ascending: true });
+  const { data: responses, error: responseError } = await supabase.rpc('get_responses_for_my_requests', {
+    p_request_ids: requestIds.slice(0, 200)
+  });
   if (responseError) throw responseError;
 
   const typedResponses = (responses ?? []) as RequestResponse[];
