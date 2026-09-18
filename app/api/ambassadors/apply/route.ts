@@ -1,6 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
+import { getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
 import { sendAmbassadorEmail } from '../../../../lib/server/ambassadorEmail';
 
 const allowedAvailability = new Set(['1–3 hrs/week', '3–5 hrs/week', '5–10 hrs/week', '10+ hrs/week']);
@@ -156,7 +156,7 @@ function clientIp(request: Request) {
 }
 
 function ipHash(ip: string) {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || 'aspire-ambassadors';
+  const secret = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
   return createHmac('sha256', secret).update(ip).digest('hex');
 }
 
