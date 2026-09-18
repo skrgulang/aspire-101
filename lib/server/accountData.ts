@@ -43,7 +43,9 @@ export async function buildAccountExport(supabase: ServiceClient, user: User) {
     expectOk(supabase.from('requests').select(ACCOUNT_REQUEST_EXPORT_SELECT).eq('poster_id', userId).order('created_at', { ascending: false }), 'requests_export'),
     expectOk(supabase.from('request_responses').select(ACCOUNT_RESPONSE_EXPORT_SELECT).eq('responder_id', userId).order('created_at', { ascending: false }), 'responses_export'),
     expectOk(supabase.from('connections').select(ACCOUNT_CONNECTION_EXPORT_SELECT).or(`requester_id.eq.${userId},responder_id.eq.${userId}`).order('created_at', { ascending: false }), 'connections_export'),
-    expectOk(supabase.from('connection_reviews').select(ACCOUNT_REVIEW_EXPORT_SELECT).or(`reviewer_id.eq.${userId},reviewee_id.eq.${userId}`).order('created_at', { ascending: false }), 'reviews_export'),
+    // Review notes/tags are private to the reviewer under the product RLS policy.
+    // A service-role export must not bypass that boundary just because the user is the reviewee.
+    expectOk(supabase.from('connection_reviews').select(ACCOUNT_REVIEW_EXPORT_SELECT).eq('reviewer_id', userId).order('created_at', { ascending: false }), 'reviews_export'),
     expectOk(supabase.from('connection_payments').select(ACCOUNT_PAYMENT_EXPORT_SELECT).or(`payer_id.eq.${userId},payee_id.eq.${userId}`).order('created_at', { ascending: false }), 'payments_export'),
     expectOk(supabase.from('connection_resolution_cases').select(ACCOUNT_RESOLUTION_CASE_EXPORT_SELECT).or(`opened_by.eq.${userId},against_user_id.eq.${userId}`).order('created_at', { ascending: false }), 'resolution_cases_export'),
     expectOk(supabase.from('connection_resolution_responses').select(ACCOUNT_RESOLUTION_RESPONSE_EXPORT_SELECT).eq('author_id', userId).order('created_at', { ascending: false }), 'resolution_responses_export'),
