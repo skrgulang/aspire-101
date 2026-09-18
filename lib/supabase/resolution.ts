@@ -116,15 +116,14 @@ export async function fetchMyResolutionHistory(): Promise<ParticipantResolutionH
 }
 
 export async function fetchResolutionCaseResponses(caseIds: string[]) {
-  if (!caseIds.length) return [] as ConnectionResolutionResponse[];
+  const ids = [...new Set(caseIds.filter(Boolean))].slice(0, 200);
+  if (!ids.length) return [] as ConnectionResolutionResponse[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('connection_resolution_responses')
-    .select('id,case_id,connection_id,author_id,body,created_at')
-    .in('case_id', caseIds)
-    .order('created_at', { ascending: true });
+  const { data, error } = await supabase.rpc('get_my_resolution_responses', {
+    p_case_ids: ids
+  });
   if (error) {
-    if (missingPreviewRelation(error)) return [] as ConnectionResolutionResponse[];
+    if (missingPreviewRelation(error) || missingPreviewFunction(error)) return [] as ConnectionResolutionResponse[];
     throw error;
   }
   return (data ?? []) as ConnectionResolutionResponse[];
