@@ -325,7 +325,7 @@
       const m = String(e?.message || e || '');
       if (missingCfg) return 'Project URL / anon key missing or placeholders not replaced.';
       if (/Failed to fetch|NetworkError|TypeError/i.test(m)) return 'Network blocked — check CSP, ad-block/VPN, or project URL.';
-      if (/permission denied|RLS/i.test(m))                 return 'RLS policy missing: allow support submission / safe ideas feed access.';
+      if (/permission denied|RLS/i.test(m))                 return 'Support submission is temporarily unavailable.';
       if (/relation .* does not exist|table .* does not exist/i.test(m)) return 'Missing table: public.support_feedback.';
       return m;
     }
@@ -406,7 +406,16 @@
       }
 
       try{
-        const { error } = await sb.from('support_feedback').insert(row);
+        const { error } = await sb.rpc('submit_support_feedback', {
+          p_type: row.type,
+          p_subject: row.subject,
+          p_details: row.details || null,
+          p_email: row.email || null,
+          p_page_url: row.page_url || null,
+          p_company: row.company || null,
+          p_contact: row.contact || null,
+          p_website: row.website || null
+        });
         if (error) throw error;
 
         flash(isCollab()
