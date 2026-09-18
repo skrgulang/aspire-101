@@ -67,6 +67,25 @@ export function getSupabaseServiceClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
+export async function enforceAiRateLimit(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  userId: string,
+  surface: 'agent' | 'pulse' | 'connection' | 'moderation',
+  limit: number,
+  windowSeconds = 3600
+) {
+  const { error } = await supabase.rpc('consume_ai_rate_limit', {
+    p_user_id: userId,
+    p_surface: surface,
+    p_limit: limit,
+    p_window_seconds: windowSeconds
+  });
+  if (!error) return;
+  const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+  if (/AI_RATE_LIMIT/i.test(detail)) throw new Error('AI_RATE_LIMIT');
+  throw error;
+}
+
 /** JSON helper for Stripe Accounts v2 preview endpoints. */
 export async function stripeRequest<T>(path: string, init: RequestInit = {}) {
   const secret = requireEnv('STRIPE_SECRET_KEY');

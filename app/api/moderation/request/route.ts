@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
-import { getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
+import { enforceAiRateLimit, getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
 
 export const runtime = 'nodejs';
 
@@ -211,6 +211,7 @@ export async function POST(request: Request) {
       const access = await getScanAccess(auth.user.id, aspireRequest.poster_id, supabase);
       if (!access.allowed) return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
       staffCanViewInternals = access.staff;
+      await enforceAiRateLimit(supabase, auth.user.id, 'moderation', 20);
     }
 
     behavior = await loadBehaviorContext(aspireRequest, supabase);
@@ -304,7 +305,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'UNKNOWN';
-    if (requestId) {
+    if (requestId && message !== 'AI_RATE_LIMIT') {
       try {
         await supabase.from('requests').update({
           ai_moderation_status: 'error',
@@ -319,6 +320,7 @@ export async function POST(request: Request) {
       }
     }
     if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to continue.' }, { status: 401 });
+    if (message === 'AI_RATE_LIMIT') return NextResponse.json({ error: 'Safety rescans are being requested too quickly. Try again later.', code: 'AI_RATE_LIMIT' }, { status: 429 });
     if (message.startsWith('MISSING_ENV:OPENAI_API_KEY')) return NextResponse.json({ error: 'Aspire Safety Intelligence is not connected to an API key yet. Behavioral scam checks still ran and the post remains pending.', code: 'AI_NOT_CONFIGURED' }, { status: 503 });
     if (message.startsWith('OPENAI_MODERATION:')) return NextResponse.json({ error: 'The AI content scan could not complete. Behavioral scam checks still ran and the post remains pending.', code: 'AI_SCAN_FAILED' }, { status: 502 });
     return NextResponse.json({ error: 'Could not complete the safety scan. The post remains pending for human review.' }, { status: 500 });
