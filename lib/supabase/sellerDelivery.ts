@@ -42,6 +42,7 @@ export type SellerDeliveryQuote = {
 
 type ListingSummary = NonNullable<SellerDeliveryQuote['listing']>;
 type OrderSummary = NonNullable<SellerDeliveryQuote['order']>;
+const sellerDeliveryQuoteSelect = 'id,request_id,buyer_id,seller_id,buyer_area,buyer_note,status,delivery_cents,seller_note,connection_id,market_order_id,created_at,updated_at,quoted_at,accepted_at,declined_at' as const;
 
 function readableError(error: { message?: string; details?: string }, fallback: string) {
   const detail = `${error.message || ''} ${error.details || ''}`;
@@ -84,20 +85,20 @@ export async function fetchMySellerDeliveryQuotes(): Promise<{ userId: string; q
   const { supabase, user } = await requireUser();
   const { data, error } = await supabase
     .from('market_seller_delivery_quotes')
-    .select('*')
+    .select(sellerDeliveryQuoteSelect)
     .order('updated_at', { ascending: false });
   if (error) throw readableError(error, 'Could not load Seller Delivery requests.');
 
   const quotes = (data || []) as SellerDeliveryQuote[];
   const requestIds = [...new Set(quotes.map((q) => q.request_id))];
-  const orderIds = [...new Set(quotes.map((q) => q.market_order_id).filter(Boolean))] as string[];
+  const connectionIds = [...new Set(quotes.map((q) => q.connection_id).filter(Boolean))] as string[];
 
   const [requestsResult, ordersResult] = await Promise.all([
     requestIds.length
       ? supabase.from('requests').select('id,title,amount_cents,currency,seller_delivery_mode,seller_delivery_price_cents,status').in('id', requestIds)
       : Promise.resolve({ data: [], error: null } as any),
-    orderIds.length
-      ? supabase.from('market_orders').select('id,status,agreed_amount_cents,currency,seller_delivery_fee_cents,seller_delivery_status').in('id', orderIds)
+    connectionIds.length
+      ? supabase.rpc('get_my_market_orders_v2', { p_connection_ids: connectionIds })
       : Promise.resolve({ data: [], error: null } as any)
   ]);
 
