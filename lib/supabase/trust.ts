@@ -139,10 +139,7 @@ export async function reviewSchoolVerification(userId: string, decision: 'verifi
 
 export async function fetchSafetyReportsForModeration() {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('safety_reports')
-    .select(safetyReportSelect)
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.rpc('moderator_fetch_safety_reports', { p_limit: 200 });
   if (error) throw error;
   return (data ?? []) as SafetyReportForModeration[];
 }
