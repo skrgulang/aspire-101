@@ -63,6 +63,7 @@ export async function POST(request: Request) {
     }
 
     const object = event.data.object;
+    const eventLivemode = Boolean(event.livemode);
 
     if (event.type.startsWith('identity.verification_session.')) {
       const aspireUserId = typeof object.metadata?.aspire_user_id === 'string' ? object.metadata.aspire_user_id : null;
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
         status: identityStatus,
         provider: 'stripe_identity',
         provider_session_id: sessionId,
+        stripe_livemode: eventLivemode,
         verified_at: identityStatus === 'verified' ? new Date().toISOString() : null,
         last_error: identityStatus === 'requires_input' || identityStatus === 'failed'
           ? String(object.last_error?.reason || object.last_error?.code || 'Verification needs attention.').slice(0, 300)
@@ -86,10 +88,28 @@ export async function POST(request: Request) {
       };
 
       if (aspireUserId) {
-        const { error } = await supabase.from('identity_verifications').upsert({ user_id: aspireUserId, ...identityPatch }, { onConflict: 'user_id' });
-        requireDatabaseWrite(error);
+        const { data: existingIdentity, error: identityLookupError } = await supabase
+          .from('identity_verifications')
+          .select('stripe_livemode,provider_session_id')
+          .eq('user_id', aspireUserId)
+          .maybeSingle();
+        requireDatabaseWrite(identityLookupError);
+
+        const staleMode = existingIdentity && existingIdentity.stripe_livemode !== eventLivemode;
+        const staleSession = existingIdentity?.provider_session_id && sessionId && existingIdentity.provider_session_id !== sessionId;
+        if (!staleMode && !staleSession) {
+          const query = existingIdentity
+            ? supabase.from('identity_verifications').update(identityPatch).eq('user_id', aspireUserId).eq('stripe_livemode', eventLivemode)
+            : supabase.from('identity_verifications').insert({ user_id: aspireUserId, ...identityPatch });
+          const { error } = await query;
+          requireDatabaseWrite(error);
+        }
       } else if (sessionId) {
-        const { error } = await supabase.from('identity_verifications').update(identityPatch).eq('provider_session_id', sessionId);
+        const { error } = await supabase
+          .from('identity_verifications')
+          .update(identityPatch)
+          .eq('provider_session_id', sessionId)
+          .eq('stripe_livemode', eventLivemode);
         requireDatabaseWrite(error);
       }
     }
@@ -102,7 +122,7 @@ export async function POST(request: Request) {
           stripe_checkout_session_id: object.id || null,
           stripe_payment_intent_id: objectId(object.payment_intent),
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
+        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
         requireDatabaseWrite(error);
       }
     }
@@ -114,7 +134,7 @@ export async function POST(request: Request) {
           status: 'failed',
           failure_reason: 'Stripe reported that the asynchronous payment failed.',
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).in('status', ['checkout_created', 'processing']);
+        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['checkout_created', 'processing']);
         requireDatabaseWrite(error);
       }
     }
@@ -124,12 +144,16 @@ export async function POST(request: Request) {
       if (paymentId) {
         const { data: payment, error: paymentError } = await supabase
           .from('connection_payments')
-          .select('id,status,customer_total_cents,gross_amount_cents,currency')
+          .select('id,status,customer_total_cents,gross_amount_cents,currency,stripe_livemode')
           .eq('id', paymentId)
           .maybeSingle();
         requireDatabaseWrite(paymentError);
 
         if (!payment) throw new Error('STRIPE:Aspire payment record was not found for the completed PaymentIntent.');
+        if (payment.stripe_livemode !== eventLivemode) {
+          // Valid event from the other Stripe environment. Keep the current-mode payment untouched.
+          return NextResponse.json({ received: true, ignored: true, reason: 'stripe_mode_mismatch' });
+        }
         const expectedAmount = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
         const receivedAmount = Number(object.amount_received ?? object.amount ?? 0);
         const expectedCurrency = String(payment.currency || 'USD').toLowerCase();
@@ -145,7 +169,7 @@ export async function POST(request: Request) {
           failure_reason: null,
           paid_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'processing', 'failed', 'secured']);
+        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['not_started', 'checkout_created', 'processing', 'failed', 'secured']);
         requireDatabaseWrite(error);
       }
     }
@@ -158,7 +182,7 @@ export async function POST(request: Request) {
           stripe_payment_intent_id: object.id || null,
           failure_reason: object.last_payment_error?.message || 'Stripe reported that the payment failed.',
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).in('status', ['not_started', 'checkout_created', 'processing', 'failed']);
+        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['not_started', 'checkout_created', 'processing', 'failed']);
         requireDatabaseWrite(error);
       }
     }
@@ -173,7 +197,7 @@ export async function POST(request: Request) {
             ? 'Stripe Radar issued an early fraud warning. Payout is paused for review.'
             : 'Stripe opened a payment dispute. Payout is paused for review.',
           updated_at: new Date().toISOString()
-        }).eq('stripe_charge_id', chargeId).neq('status', 'refunded');
+        }).eq('stripe_charge_id', chargeId).eq('stripe_livemode', eventLivemode).neq('status', 'refunded');
         requireDatabaseWrite(error);
       }
     }
@@ -181,8 +205,9 @@ export async function POST(request: Request) {
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {
       const { data: payment, error: paymentError } = await supabase
         .from('connection_payments')
-        .select('id,status,stripe_refund_id')
+        .select('id,status,stripe_refund_id,stripe_livemode')
         .eq('stripe_charge_id', object.id)
+        .eq('stripe_livemode', eventLivemode)
         .maybeSingle();
       requireDatabaseWrite(paymentError);
 
