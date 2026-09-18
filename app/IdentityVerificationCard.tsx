@@ -12,13 +12,11 @@ export default function IdentityVerificationCard() {
 
   async function refreshStatus() {
     const supabase = getSupabaseBrowserClient();
-    const { data, error } = await supabase
-      .from('identity_verifications')
-      .select('status,last_error,verified_at')
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('get_my_identity_verification');
     if (error) throw error;
-    if (data?.status) setStatus(data.status as VerificationStatus);
-    if (data?.last_error && data.status !== 'verified') setMessage(data.last_error);
+    const row = (data ?? [])[0];
+    if (row?.status) setStatus(row.status as VerificationStatus);
+    if (row?.last_error && row.status !== 'verified') setMessage(row.last_error);
   }
 
   useEffect(() => {
