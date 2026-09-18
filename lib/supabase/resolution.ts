@@ -67,6 +67,12 @@ function missingPreviewRelation(error: { code?: string; message?: string } | nul
     || /could not find the table|relation .* does not exist/i.test(error.message || '');
 }
 
+function missingPreviewFunction(error: { code?: string; message?: string } | null) {
+  if (!error) return false;
+  return error.code === 'PGRST202'
+    || /could not find the function|function .* does not exist/i.test(error.message || '');
+}
+
 export async function fetchResolutionCases(connectionIds: string[]) {
   if (!connectionIds.length) return [] as ConnectionResolutionCase[];
   const supabase = getSupabaseBrowserClient();
