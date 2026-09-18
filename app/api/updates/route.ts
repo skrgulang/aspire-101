@@ -65,6 +65,12 @@ export async function POST(request: Request) {
 
     if (existingError) throw existingError;
 
+    // This endpoint is public, so knowing an email address is not proof of ownership.
+    // Do not let a duplicate anonymous submission rewrite an existing signup.
+    if (existing) {
+      return NextResponse.json({ ok: true });
+    }
+
     const payload = {
       email,
       school,
@@ -75,11 +81,7 @@ export async function POST(request: Request) {
       updated_at: new Date().toISOString()
     };
 
-    const query = existing
-      ? supabase.from('product_update_waitlist').update(payload).eq('id', existing.id)
-      : supabase.from('product_update_waitlist').insert(payload);
-
-    const { error } = await query;
+    const { error } = await supabase.from('product_update_waitlist').insert(payload);
     if (error) throw error;
 
     return NextResponse.json({ ok: true });
