@@ -153,11 +153,9 @@ export async function fetchLiveConnections() {
 
   if (connectionIds.length) {
     const [{ data: locationRows }, { data: proposalRows, error: proposalError }] = await Promise.all([
-      supabase
-        .from('connection_live_locations')
-        .select('connection_id,user_id,latitude,longitude,accuracy_meters,expires_at,updated_at')
-        .in('connection_id', connectionIds)
-        .gt('expires_at', new Date().toISOString()),
+      supabase.rpc('get_my_active_connection_locations', {
+        p_connection_ids: connectionIds
+      }),
       supabase
         .from('connection_schedule_proposals')
         .select('id,connection_id,proposed_by,start_at,end_at,timezone,meeting_label,status,responded_by,responded_at,created_at,updated_at')
