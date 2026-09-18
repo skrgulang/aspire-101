@@ -22,6 +22,15 @@ function emailDomain(value: string) {
   return value.trim().toLowerCase().split('@')[1] ?? '';
 }
 
+function newPasswordError(value: string) {
+  if (value.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[a-z]/.test(value)) return 'Password needs at least one lowercase letter.';
+  if (!/[A-Z]/.test(value)) return 'Password needs at least one uppercase letter.';
+  if (!/[0-9]/.test(value)) return 'Password needs at least one number.';
+  if (!/[!@#$%^&*()_+\-=\[\]{};'\\:"|<>?,./`~]/.test(value)) return 'Password needs at least one symbol.';
+  return '';
+}
+
 export default function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const signup = mode === 'signup';
@@ -155,6 +164,9 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       const cleanEmail = email.trim().toLowerCase();
 
       if (signup) {
+        const passwordError = newPasswordError(password);
+        if (passwordError) throw new Error(passwordError);
+
         const campus = await resolveUniversityByEmail(cleanEmail);
         if (!campus) {
           const domain = emailDomain(cleanEmail);
@@ -336,7 +348,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
               </div>
             )}
 
-            <label><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} autoComplete={signup ? 'new-password' : 'current-password'} required /></label>
+            <label><span>Password</span><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={signup ? '8+ chars · upper/lower · number · symbol' : 'Your password'} minLength={signup ? 8 : 1} autoComplete={signup ? 'new-password' : 'current-password'} required /></label>
             {!signup && <div className="authUtilityRow"><span>Two-step verification runs automatically if enabled.</span><a href={recoveryHref}>Forgot password?</a></div>}
 
             <button className="button buttonGold authSubmit" type="submit" disabled={busy || (signup && checkingSchool)}>{busy ? (signup ? 'Creating account…' : 'Signing in…') : signup ? 'Create school account →' : 'Continue securely →'}</button>
