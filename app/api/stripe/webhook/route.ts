@@ -45,24 +45,22 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseServiceClient();
-    const { data: existing, error: existingError } = await supabase
-      .from('stripe_webhook_events')
-      .select('status')
-      .eq('event_id', event.id)
-      .maybeSingle();
-    requireDatabaseWrite(existingError);
+    const { data: claimStatus, error: claimError } = await supabase.rpc('claim_stripe_webhook_event', {
+      p_event_id: event.id,
+      p_event_type: event.type,
+      p_livemode: Boolean(event.livemode)
+    });
+    requireDatabaseWrite(claimError);
 
-    if (existing?.status === 'processed') return NextResponse.json({ received: true, duplicate: true });
-
-    const { error: receivedError } = await supabase.from('stripe_webhook_events').upsert({
-      event_id: event.id,
-      event_type: event.type,
-      livemode: Boolean(event.livemode),
-      status: 'received',
-      received_at: new Date().toISOString(),
-      processing_error: null
-    }, { onConflict: 'event_id' });
-    requireDatabaseWrite(receivedError);
+    if (claimStatus === 'processed') {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    if (claimStatus === 'busy') {
+      return NextResponse.json({ received: true, duplicate: true, processing: true });
+    }
+    if (claimStatus !== 'claimed') {
+      throw new Error('STRIPE:Webhook event could not be claimed.');
+    }
 
     const object = event.data.object;
 
@@ -219,13 +217,10 @@ export async function POST(request: Request) {
     if (verified && parsedEvent?.id) {
       try {
         const supabase = getSupabaseServiceClient();
-        await supabase.from('stripe_webhook_events').upsert({
-          event_id: parsedEvent.id,
-          event_type: parsedEvent.type || 'unknown',
-          livemode: Boolean(parsedEvent.livemode),
+        await supabase.from('stripe_webhook_events').update({
           status: 'failed',
           processing_error: error instanceof Error ? error.message.slice(0, 500) : 'Unknown webhook error'
-        }, { onConflict: 'event_id' });
+        }).eq('event_id', parsedEvent.id).eq('status', 'received');
       } catch {
         // Avoid masking the original processing error.
       }
