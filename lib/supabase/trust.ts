@@ -113,12 +113,9 @@ export async function canCurrentUserPost() {
 
 export async function fetchMyRole(): Promise<AppRole> {
   const supabase = getSupabaseBrowserClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) return 'member';
-  const { data, error } = await supabase.from('user_roles').select('role').eq('user_id', authData.user.id).maybeSingle();
+  const { data, error } = await supabase.rpc('get_my_role');
   if (error) throw error;
-  return ((data?.role as AppRole | undefined) ?? 'member');
+  return ((data as AppRole | null) ?? 'member');
 }
 
 export async function fetchVerificationQueue() {
