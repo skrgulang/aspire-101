@@ -136,6 +136,9 @@ export function clearAspireAgentMatches() {
 export async function markAspireAgentOutcome(sessionId: string | null | undefined, outcome: AspireAgentOutcome) {
   if (!sessionId) return;
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.from('aspire_ai_sessions').update({ outcome }).eq('id', sessionId);
+  const { error } = await supabase.rpc('mark_my_aspire_ai_session_outcome', {
+    p_session_id: sessionId,
+    p_outcome: outcome
+  });
   if (error) throw error;
 }
