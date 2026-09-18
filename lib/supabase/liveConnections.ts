@@ -104,9 +104,8 @@ export async function fetchLiveConnections() {
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in.');
 
-  // Location is intentionally temporary. The database also hides expired rows with RLS,
-  // but this keeps old coordinates from lingering when a user returns to Aspire Live.
-  await supabase.rpc('cleanup_expired_connection_locations');
+  // Expired location rows are hidden by RLS and deleted by the trusted reminder cron.
+  // Browser sessions do not need global cleanup privileges.
 
   const { data: connectionRows, error: connectionError } = await supabase
     .from('connections')
