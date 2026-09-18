@@ -18,38 +18,23 @@ export type MarketOrder = {
   request_id: string;
   buyer_id: string;
   seller_id: string;
-  payment_id: string | null;
   listing_intent: 'sell' | 'wanted';
-  fulfillment_method: 'campus_pickup' | 'shipping' | 'aspirer_delivery';
+  fulfillment_method: 'campus_pickup' | 'shipping' | 'aspirer_delivery' | 'seller_delivery';
   currency: string;
   agreed_amount_cents: number;
   status: MarketOrderStatus;
   seller_handed_off_at: string | null;
   buyer_received_at: string | null;
-  dispute_opened_at: string | null;
-  released_at: string | null;
-  refunded_at: string | null;
-  cancelled_at: string | null;
-  created_at: string;
-  updated_at: string;
-  shipping_provider?: 'shippo' | null;
   shipping_carrier?: string | null;
   shipping_service?: string | null;
-  shipping_shipment_id?: string | null;
   shipping_rate_id?: string | null;
   shipping_rate_cents?: number | null;
   shipping_currency?: string | null;
-  shipping_transaction_id?: string | null;
   shipping_label_url?: string | null;
   shipping_tracking_number?: string | null;
   shipping_tracking_url?: string | null;
   shipping_status?: 'not_started' | 'rates_ready' | 'label_purchasing' | 'label_failed' | 'label_purchased' | 'in_transit' | 'delivered' | 'exception' | 'cancelled' | null;
-  shipping_last_event_at?: string | null;
   shipping_paid_by?: 'buyer' | 'seller' | null;
-  payment_choice?: 'aspire' | 'in_person' | null;
-  aspirer_delivery_status?: string | null;
-  aspirer_delivery_reward_mode?: string | null;
-  aspirer_delivery_reward_cents?: number | null;
 };
 
 export type ShippingAddress = {
@@ -99,11 +84,9 @@ async function bearerHeaders() {
 export async function fetchMarketOrders(connectionIds: string[]) {
   if (!connectionIds.length) return [] as MarketOrder[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('market_orders')
-    .select('*')
-    .in('connection_id', connectionIds)
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_my_market_orders', {
+    p_connection_ids: connectionIds
+  });
   if (error) throw error;
   return (data ?? []) as MarketOrder[];
 }
@@ -122,27 +105,27 @@ export async function fetchMarketDisputes(orderIds: string[]) {
 
 export async function markMarketHandoff(connectionId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc('market_mark_handoff', { p_connection_id: connectionId });
+  const { data, error } = await supabase.rpc('market_mark_handoff_safe', { p_connection_id: connectionId });
   if (error) throw error;
-  return data as MarketOrder;
+  return String(data || 'handoff_confirmed');
 }
 
 export async function confirmMarketReceipt(connectionId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc('market_confirm_receipt', { p_connection_id: connectionId });
+  const { data, error } = await supabase.rpc('market_confirm_receipt_safe', { p_connection_id: connectionId });
   if (error) throw error;
-  return data as MarketOrder;
+  return String(data || 'release_ready');
 }
 
 export async function openMarketDispute(connectionId: string, reason: MarketDispute['reason'], details: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc('market_open_dispute', {
+  const { data, error } = await supabase.rpc('market_open_dispute_safe', {
     p_connection_id: connectionId,
     p_reason: reason,
     p_details: details
   });
   if (error) throw error;
-  return data as MarketDispute;
+  return String(data || '');
 }
 
 export async function requestMarketRefund(connectionId: string) {
