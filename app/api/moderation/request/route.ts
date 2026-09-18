@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
-import { enforceAiRateLimit, getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
+import { enforceAiRateLimit, getAuthenticatedUser, getSupabaseServiceClient, requireAal2, requireEnv } from '../../../../lib/server/aspireServer';
 
 export const runtime = 'nodejs';
 
@@ -210,6 +210,7 @@ export async function POST(request: Request) {
       if (!auth?.user) return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
       const access = await getScanAccess(auth.user.id, aspireRequest.poster_id, supabase);
       if (!access.allowed) return NextResponse.json({ error: 'You cannot scan this request.' }, { status: 403 });
+      if (access.staff && auth.user.id !== aspireRequest.poster_id) await requireAal2(auth.accessToken);
       staffCanViewInternals = access.staff;
       await enforceAiRateLimit(supabase, auth.user.id, 'moderation', 20);
     }
@@ -320,6 +321,7 @@ export async function POST(request: Request) {
       }
     }
     if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to continue.' }, { status: 401 });
+    if (message === 'MFA_REQUIRED') return NextResponse.json({ error: 'Complete two-step verification to use staff moderation tools.', code: 'MFA_REQUIRED' }, { status: 403 });
     if (message === 'AI_RATE_LIMIT') return NextResponse.json({ error: 'Safety rescans are being requested too quickly. Try again later.', code: 'AI_RATE_LIMIT' }, { status: 429 });
     if (message.startsWith('MISSING_ENV:OPENAI_API_KEY')) return NextResponse.json({ error: 'Aspire Safety Intelligence is not connected to an API key yet. Behavioral scam checks still ran and the post remains pending.', code: 'AI_NOT_CONFIGURED' }, { status: 503 });
     if (message.startsWith('OPENAI_MODERATION:')) return NextResponse.json({ error: 'The AI content scan could not complete. Behavioral scam checks still ran and the post remains pending.', code: 'AI_SCAN_FAILED' }, { status: 502 });
