@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
 
@@ -51,7 +52,11 @@ function reminderCopy(milestone: ReminderMilestone) {
 function authorized(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  return request.headers.get('authorization') === `Bearer ${secret}`;
+  const authorization = request.headers.get('authorization') || '';
+  const expected = `Bearer ${secret}`;
+  const receivedBytes = Buffer.from(authorization);
+  const expectedBytes = Buffer.from(expected);
+  return receivedBytes.length === expectedBytes.length && timingSafeEqual(receivedBytes, expectedBytes);
 }
 
 function formatStart(start: Date, timezone: string | null) {
