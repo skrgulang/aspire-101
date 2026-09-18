@@ -79,12 +79,12 @@ async function bearerHeaders() {
 }
 
 export async function fetchConnectionPayments(connectionIds: string[]) {
-  if (!connectionIds.length) return [] as ConnectionPayment[];
+  const ids = [...new Set(connectionIds.filter(Boolean))].slice(0, 200);
+  if (!ids.length) return [] as ConnectionPayment[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('connection_payments')
-    .select('id,connection_id,request_id,payer_id,payee_id,currency,gross_amount_cents,platform_fee_cents,provider_amount_cents,base_amount_cents,requester_fee_cents,provider_fee_cents,tip_amount_cents,tip_fee_cents,customer_total_cents,provider_net_cents,fee_policy_version,status,paid_at,released_at,refunded_at,disputed_at,created_at,updated_at')
-    .in('connection_id', connectionIds);
+  const { data, error } = await supabase.rpc('get_connection_payments_for_my_connections', {
+    p_connection_ids: ids
+  });
   if (error) throw error;
   return (data ?? []) as ConnectionPayment[];
 }
