@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { apiError, getAuthenticatedUser, getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
-import { createShippoShipment, getShippoShipment, type ShippoAddress, type ShippoParcel, type ShippoShipment } from '../../../../lib/server/shippo';
+import { createShippoShipment, getShippoShipment, type ShippoAddress, type ShippoParcel, type ShippoShipment, shippoShipmentMatchesOrder } from '../../../../lib/server/shippo';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
     if (!order.shipping_shipment_id) return NextResponse.json({ shipmentId: null, rates: [], selectedRateId: order.shipping_rate_id || null });
 
     const shipment = await getShippoShipment(order.shipping_shipment_id);
-    if (!String(shipment.metadata || '').includes(order.id)) {
+    if (!shippoShipmentMatchesOrder(shipment.metadata, order.id)) {
       return NextResponse.json({ error: 'This shipping quote does not belong to this order.', code: 'SHIPPING_QUOTE_MISMATCH' }, { status: 409 });
     }
     return NextResponse.json({ shipmentId: shipment.object_id, rates: filteredRates(shipment), selectedRateId: order.shipping_rate_id || null });
