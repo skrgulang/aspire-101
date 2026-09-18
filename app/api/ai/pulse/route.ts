@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
+import { enforceAiRateLimit, getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
 
 export const runtime = 'nodejs';
 
@@ -26,7 +26,7 @@ function bucket(row: Row) {
 
 export async function POST(request: Request) {
   try {
-    await getAuthenticatedUser(request);
+    const { user } = await getAuthenticatedUser(request);
     const body = await request.json().catch(() => ({})) as { campusId?: string };
     const campusId = String(body.campusId || '').trim();
     if (!campusId) return NextResponse.json({ error: 'Campus is required.' }, { status: 400 });
@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       });
     }
 
+    await enforceAiRateLimit(supabase, user.id, 'pulse', 20);
     const apiKey = requireEnv('OPENAI_API_KEY');
     const schema = {
       type: 'object', additionalProperties: false,
@@ -113,6 +114,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const raw = error instanceof Error ? error.message : 'UNKNOWN';
     if (raw === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to use Campus Pulse.' }, { status: 401 });
+    if (raw === 'AI_RATE_LIMIT') return NextResponse.json({ error: 'Campus Pulse is being refreshed too quickly. Try again later.', code: 'AI_RATE_LIMIT' }, { status: 429 });
     if (raw.startsWith('MISSING_ENV:OPENAI_API_KEY')) return NextResponse.json({ error: 'Campus Pulse is not connected to AI on this deployment yet.', code: 'AI_NOT_CONFIGURED' }, { status: 503 });
     return NextResponse.json({ error: 'Campus Pulse could not finish.' }, { status: 500 });
   }
