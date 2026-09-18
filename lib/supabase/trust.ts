@@ -155,12 +155,12 @@ export async function fetchRequestsForModeration(limit = 80) {
 }
 
 export async function fetchEnforcementStates(userIds: string[]) {
-  if (!userIds.length) return [] as UserEnforcementState[];
+  const ids = [...new Set(userIds.filter(Boolean))].slice(0, 200);
+  if (!ids.length) return [] as UserEnforcementState[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('user_enforcement_states')
-    .select('user_id,state,reason,expires_at')
-    .in('user_id', [...new Set(userIds)]);
+  const { data, error } = await supabase.rpc('moderator_fetch_enforcement_states', {
+    p_user_ids: ids
+  });
   if (error) throw error;
   return (data ?? []) as UserEnforcementState[];
 }
