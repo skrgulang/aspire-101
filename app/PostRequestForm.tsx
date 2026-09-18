@@ -292,7 +292,10 @@ export default function PostRequestForm() {
       await acknowledgeSafety(`${category}:${kind}`, request.id).catch(() => undefined);
       const supabase = getSupabaseBrowserClient();
       try {
-        await supabase.from('profiles').update({ current_campus_id: visiting ? selectedCampus.id : null, campus_last_selected_at: new Date().toISOString() }).eq('id', request.poster_id);
+        const { error: campusError } = await supabase.rpc('set_my_current_campus', {
+          p_campus_id: visiting ? selectedCampus.id : null
+        });
+        if (campusError) throw campusError;
       } catch {
         // Campus context is helpful but must not block posting.
       }

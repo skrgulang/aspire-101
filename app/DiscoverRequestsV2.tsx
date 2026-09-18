@@ -187,8 +187,8 @@ export default function DiscoverRequestsV2() {
   async function persistCurrentCampus(nextId: string|null) {
     try {
       const supabase = getSupabaseBrowserClient();
-      const { data } = await supabase.auth.getUser();
-      if (data.user) await supabase.from('profiles').update({ current_campus_id: nextId, campus_last_selected_at: new Date().toISOString() }).eq('id', data.user.id);
+      const { error } = await supabase.rpc('set_my_current_campus', { p_campus_id: nextId });
+      if (error) throw error;
     } catch {
       // Browsing still works without persistence.
     }
