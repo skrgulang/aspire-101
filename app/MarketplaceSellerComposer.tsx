@@ -338,7 +338,7 @@ export default function MarketplaceSellerComposer() {
         <div className={styles.basics}>
           <div className={styles.photoBox}>
             {photoUrl ? <img src={photoUrl} alt="Item preview" /> : <div><b>ITEM PHOTO</b><span>Required to submit</span></div>}
-            <label><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={choosePhoto} />{photoUrl ? 'Change photo' : 'Add photo'}</label>
+            <label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />{photoUrl ? 'Change photo' : 'Add photo'}</label>
           </div>
           <div className={styles.fields}>
             <label><span>Item title</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} placeholder="e.g. Calculus textbook" /></label>

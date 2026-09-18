@@ -9,7 +9,6 @@ export type SellerDeliveryMode = 'free' | 'fixed' | 'negotiable';
 
 export type MarketplaceDraft = {
   id: string;
-  user_id: string;
   campus_id: string | null;
   title: string;
   price_cents: number | null;
@@ -23,7 +22,6 @@ export type MarketplaceDraft = {
   photo_storage_path: string | null;
   photo_mime_type: string | null;
   photo_url?: string;
-  created_at: string;
   updated_at: string;
 };
 
@@ -47,6 +45,7 @@ export type MarketplaceListingInput = Omit<MarketplaceDraftInput, 'id'> & {
 
 const draftBucket = 'marketplace-drafts';
 const draftSignedUrlSeconds = 60 * 60;
+const marketplaceDraftSelect = 'id,campus_id,title,price_cents,item_condition,details,fulfillment_methods,shipping_paid_by,seller_delivery_mode,seller_delivery_price_cents,seller_area,photo_storage_path,photo_mime_type,updated_at' as const;
 
 async function requireUser() {
   const supabase = getSupabaseBrowserClient();
@@ -74,12 +73,8 @@ function primaryFulfillment(methods: MarketplaceDeliveryMethod[]) {
 }
 
 function extensionFor(file: File) {
-  const nameExt = file.name.split('.').pop()?.toLowerCase();
-  if (nameExt && /^[a-z0-9]{2,5}$/.test(nameExt)) return nameExt;
   if (file.type === 'image/png') return 'png';
   if (file.type === 'image/webp') return 'webp';
-  if (file.type === 'image/heic') return 'heic';
-  if (file.type === 'image/heif') return 'heif';
   return 'jpg';
 }
 
@@ -121,7 +116,7 @@ export async function listMarketplaceDrafts() {
   const { supabase, user } = await requireUser();
   const { data, error } = await supabase
     .from('marketplace_listing_drafts')
-    .select('*')
+    .select(marketplaceDraftSelect)
     .eq('user_id', user.id)
     .order('updated_at', { ascending: false });
   if (error) throw friendlyError(error, 'Could not load draft items.');
@@ -156,7 +151,7 @@ export async function saveMarketplaceDraft(input: MarketplaceDraftInput) {
       .update(payload)
       .eq('id', input.id)
       .eq('user_id', user.id)
-      .select('*')
+      .select(marketplaceDraftSelect)
       .single();
     if (error) throw friendlyError(error, 'Could not update this draft.');
     return data as MarketplaceDraft;
@@ -165,7 +160,7 @@ export async function saveMarketplaceDraft(input: MarketplaceDraftInput) {
   const { data, error } = await supabase
     .from('marketplace_listing_drafts')
     .insert(payload)
-    .select('*')
+    .select(marketplaceDraftSelect)
     .single();
   if (error) throw friendlyError(error, 'Could not save this draft.');
   return data as MarketplaceDraft;
@@ -194,7 +189,7 @@ export async function uploadMarketplaceDraftPhoto(draftId: string, file: File) {
     .update({ photo_storage_path: path, photo_mime_type: file.type, updated_at: new Date().toISOString() })
     .eq('id', draftId)
     .eq('user_id', user.id)
-    .select('*')
+    .select(marketplaceDraftSelect)
     .single();
 
   if (updateError) {
@@ -231,14 +226,17 @@ export async function deleteMarketplaceDraft(draftId: string) {
     .maybeSingle();
 
   const photoPath = (draft?.photo_storage_path as string | null) || null;
-  if (photoPath) await supabase.storage.from(draftBucket).remove([photoPath]).catch(() => undefined);
 
+  // Delete the database row first so a storage failure can only leave an
+  // unreferenced private object, never a live draft pointing at a missing photo.
   const { error } = await supabase
     .from('marketplace_listing_drafts')
     .delete()
     .eq('id', draftId)
     .eq('user_id', user.id);
   if (error) throw friendlyError(error, 'Could not delete this draft.');
+
+  if (photoPath) await supabase.storage.from(draftBucket).remove([photoPath]).catch(() => undefined);
 }
 
 export async function createMarketplaceListing(input: MarketplaceListingInput) {
