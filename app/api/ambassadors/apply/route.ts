@@ -229,11 +229,25 @@ export async function POST(request: Request) {
     const { data: existing, error: existingError } = await supabase
       .from('campus_ambassador_applications')
       .select('id')
-      .ilike('school_email', schoolEmail)
+      .eq('school_email', schoolEmail)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (existingError) throw existingError;
+
+    // This endpoint is public, so possession of an email address is not proof of
+    // ownership. Never let a duplicate unauthenticated submission overwrite an
+    // existing application. Return a generic success instead.
+    if (existing) {
+      return NextResponse.json({
+        ok: true,
+        emailStatus: domainSignal.status,
+        confirmationEmail: 'not_sent',
+        emailNotice: domainSignal.status === 'unmatched'
+          ? 'Your application was saved. This school email domain is not in Aspire’s campus directory yet, so we’ll verify it during review.'
+          : null
+      });
+    }
 
     const payload = {
       full_name: fullName,
@@ -255,13 +269,13 @@ export async function POST(request: Request) {
       user_agent: clean(request.headers.get('user-agent'), 500),
       updated_at: new Date().toISOString()
     };
-    const { status: _newStatus, ...updatePayload } = payload;
 
     const savedFields = 'id,full_name,school,school_email,major_year,why_aspire,campus_involvement,availability,interested_in,status';
-    const query = existing
-      ? supabase.from('campus_ambassador_applications').update(updatePayload).eq('id', existing.id).select(savedFields).maybeSingle()
-      : supabase.from('campus_ambassador_applications').insert(payload).select(savedFields).single();
-    const { data: savedApplication, error } = await query;
+    const { data: savedApplication, error } = await supabase
+      .from('campus_ambassador_applications')
+      .insert(payload)
+      .select(savedFields)
+      .single();
     if (error) throw error;
     if (!savedApplication) throw new Error('Application could not be loaded after saving.');
 
