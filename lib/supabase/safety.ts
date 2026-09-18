@@ -29,15 +29,19 @@ export async function reportSafety(input: {
   if (error) throw error;
   if (!data.user) throw new Error('You must be signed in to report something.');
 
-  const { error: insertError } = await supabase.from('safety_reports').insert({
-    reporter_id: data.user.id,
-    target_user_id: input.targetUserId ?? null,
-    request_id: input.requestId ?? null,
-    connection_id: input.connectionId ?? null,
-    reason: input.reason,
-    details: input.details?.trim() || null
+  const { error: insertError } = await supabase.rpc('submit_safety_report', {
+    p_reason: input.reason,
+    p_details: input.details?.trim() || null,
+    p_target_user_id: input.targetUserId ?? null,
+    p_request_id: input.requestId ?? null,
+    p_connection_id: input.connectionId ?? null
   });
-  if (insertError) throw insertError;
+  if (insertError) {
+    if (/SAFETY_REPORT_RATE_LIMIT/i.test(insertError.message || '')) {
+      throw new Error('Too many reports were submitted recently. Please try again later.');
+    }
+    throw insertError;
+  }
 }
 
 export async function blockUser(blockedId: string) {
