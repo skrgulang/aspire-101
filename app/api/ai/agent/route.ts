@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
+import { enforceAiRateLimit, getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
 import { looksLikeAspireAction, runAspireBrain, type BrainCandidate } from '../../../../lib/aspire-brain';
 
 export const runtime = 'nodejs';
@@ -312,6 +312,7 @@ export async function POST(request: Request) {
     }
 
     // Only ambiguous Aspire-like intents reach the optional language-model fallback.
+    await enforceAiRateLimit(supabase, user.id, 'agent', 30);
     let flagged = false;
     try {
       flagged = await moderateIntent(message);
@@ -389,6 +390,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const raw = error instanceof Error ? error.message : 'UNKNOWN';
     if (raw === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to use Aspire.' }, { status: 401 });
+    if (raw === 'AI_RATE_LIMIT') return NextResponse.json({ error: 'Aspire AI is being used too quickly. Try again later.', code: 'AI_RATE_LIMIT' }, { status: 429 });
     if (raw.startsWith('MISSING_ENV:OPENAI_API_KEY')) return NextResponse.json({ error: 'Aspire Brain handled the common paths locally, but the fallback parser is not configured.', code: 'AI_FALLBACK_NOT_CONFIGURED' }, { status: 503 });
     if (raw.startsWith('MISSING_ENV:SUPABASE_SERVICE_ROLE_KEY')) return NextResponse.json({ error: 'Aspire database access is not configured on this deployment yet.', code: 'DATABASE_NOT_CONFIGURED' }, { status: 503 });
     return NextResponse.json({ error: 'Aspire could not finish that action. Try again.', code: 'AGENT_RUNTIME_ERROR' }, { status: 500 });
