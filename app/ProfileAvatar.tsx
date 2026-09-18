@@ -40,8 +40,14 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
       const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' });
       if (uploadError) throw uploadError;
       const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
-      const { error: profileError } = await supabase.from('profiles').update({ avatar_url: publicData.publicUrl, image_url: publicData.publicUrl }).eq('id', authData.user.id);
-      if (profileError) throw profileError;
+      const { error: profileError } = await supabase.rpc('set_my_avatar_url', {
+        p_storage_path: path,
+        p_avatar_url: publicData.publicUrl
+      });
+      if (profileError) {
+        await supabase.storage.from('avatars').remove([path]).catch(() => undefined);
+        throw profileError;
+      }
       setUrl(publicData.publicUrl);
       setMessage('Profile photo updated.');
     } catch (error) {
