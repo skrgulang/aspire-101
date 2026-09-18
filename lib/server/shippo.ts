@@ -102,6 +102,16 @@ export async function getShippoShipment(shipmentId: string) {
   return shippoRequest<ShippoShipment>(`/shipments/${encodeURIComponent(shipmentId)}/`);
 }
 
+export function shippoShipmentMatchesOrder(metadata: string | null | undefined, orderId: string) {
+  if (!metadata || !orderId) return false;
+  try {
+    const parsed = JSON.parse(metadata) as { aspire_market_order_id?: unknown };
+    return parsed.aspire_market_order_id === orderId;
+  } catch {
+    return false;
+  }
+}
+
 export async function buyShippoLabel(input: { rateId: string; metadata: string }) {
   return shippoRequest<ShippoTransaction>('/transactions/', {
     method: 'POST',
