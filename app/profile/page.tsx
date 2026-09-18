@@ -43,6 +43,22 @@ type ProfileDraft = {
   interests: string[];
 };
 
+type MyProfileDetailsRow = {
+  display_name: string | null;
+  name: string | null;
+  full_name: string | null;
+  school: string | null;
+  home_campus_id: string | null;
+  current_campus_id: string | null;
+  avatar_url: string | null;
+  image_url: string | null;
+  major: string | null;
+  graduation_year: number | null;
+  bio: string | null;
+  interests: string[] | null;
+  created_at: string;
+};
+
 const interestOptions = ['Study','Gaming','Rides','Startups','Gym','Buy & Sell','Projects','Events','Housing','Photography','Food','Outdoors'];
 
 function formatJoined(value: string) {
@@ -70,14 +86,16 @@ export default function ProfilePage() {
         return;
       }
 
-      const [{ data: profileRow }, { data: schoolVerification }, { data: identityVerification }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
-        supabase.from('profiles').select('display_name,name,full_name,school,home_campus_id,current_campus_id,avatar_url,image_url,major,graduation_year,bio,interests,created_at').eq('id', user.id).maybeSingle(),
+      const [{ data: profileRows, error: profileError }, { data: schoolVerification }, { data: identityVerification }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
+        supabase.rpc('get_my_profile_details'),
         supabase.from('school_verifications').select('status,verification_method,school_email,school,university_id').eq('user_id', user.id).maybeSingle(),
         supabase.from('identity_verifications').select('status').eq('user_id', user.id).maybeSingle(),
         supabase.from('user_preferences').select('profile_visibility').eq('user_id', user.id).maybeSingle(),
         supabase.from('connections').select('id', { count: 'exact', head: true }).eq('status', 'completed').or(`requester_id.eq.${user.id},responder_id.eq.${user.id}`),
         fetchMyRole().catch(() => 'member' as AppRole)
       ]);
+      if (profileError) throw profileError;
+      const profileRow = ((profileRows ?? [])[0] ?? null) as MyProfileDetailsRow | null;
 
       const metadata = user.user_metadata ?? {};
       const backendName = profileRow?.display_name || profileRow?.full_name || profileRow?.name;
@@ -98,12 +116,11 @@ export default function ProfilePage() {
       const resolvedSchool = verifiedSchool || backendSchool || resolvedUniversity?.name || metadataSchool || 'Campus not set';
       const inferredUniversityId = verifiedUniversityId || resolvedUniversity?.id || '';
 
-      const repairPayload: Record<string, string> = {};
-      if (!profileRow?.home_campus_id && inferredUniversityId) repairPayload.home_campus_id = inferredUniversityId;
-      if (!profileRow?.current_campus_id && inferredUniversityId) repairPayload.current_campus_id = inferredUniversityId;
-      if (!backendSchool && resolvedSchool !== 'Campus not set') repairPayload.school = resolvedSchool;
-      if (Object.keys(repairPayload).length) {
-        await supabase.from('profiles').update(repairPayload).eq('id', user.id);
+      if (
+        inferredUniversityId
+        && (!profileRow?.home_campus_id || !profileRow?.current_campus_id || !backendSchool)
+      ) {
+        await supabase.rpc('repair_my_profile_campus');
       }
 
       const nextProfile: ProfileView = {
@@ -181,7 +198,13 @@ export default function ProfilePage() {
         bio: draft.bio.trim().slice(0, 240) || null,
         interests: draft.interests.slice(0, 8)
       };
-      const { error } = await supabase.from('profiles').update(payload).eq('id', authData.user.id);
+      const { error } = await supabase.rpc('update_my_profile_details', {
+        p_display_name: payload.display_name,
+        p_major: payload.major,
+        p_graduation_year: payload.graduation_year,
+        p_bio: payload.bio,
+        p_interests: payload.interests
+      });
       if (error) throw error;
       setProfile((current) => current ? { ...current, name: payload.display_name, major: payload.major || '', graduationYear: year, bio: payload.bio || '', interests: payload.interests } : current);
       setEditing(false);
