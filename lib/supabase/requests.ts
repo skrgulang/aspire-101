@@ -260,54 +260,15 @@ const requestResponseSelect = 'id,request_id,responder_id,message,status,created
 
 export async function respondToRequest(requestId: string, message?: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) throw new Error('You must be signed in to respond.');
-
-  const responderId = authData.user.id;
   const cleanMessage = message?.trim() || null;
-  const { data: existing, error: existingError } = await supabase
-    .from('request_responses')
-    .select(requestResponseSelect)
-    .eq('request_id', requestId)
-    .eq('responder_id', responderId)
-    .maybeSingle();
-  if (existingError) throw friendlyPolicyError(existingError, 'Could not check your response.');
-
-  if (existing) {
-    if (existing.status === 'withdrawn') {
-      const { data: restored, error: restoreError } = await supabase
-        .from('request_responses')
-        .update({ status: 'pending', message: cleanMessage })
-        .eq('id', existing.id)
-        .select(requestResponseSelect)
-        .single();
-      if (restoreError) throw friendlyPolicyError(restoreError, 'Could not restore your interest.');
-      return restored;
-    }
-    return existing;
-  }
-
-  const { data, error } = await supabase
-    .from('request_responses')
-    .insert({ request_id: requestId, responder_id: responderId, message: cleanMessage })
-    .select(requestResponseSelect)
-    .single();
-  if (error) {
-    const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
-    if (error.code === '23505' || /request_responses_request_id_responder_id_key|duplicate key/i.test(detail)) {
-      const { data: raced } = await supabase
-        .from('request_responses')
-        .select(requestResponseSelect)
-        .eq('request_id', requestId)
-        .eq('responder_id', responderId)
-        .maybeSingle();
-      if (raced) return raced;
-      throw new Error('Your interest is already recorded on this post.');
-    }
-    throw friendlyPolicyError(error, 'Could not send your response.');
-  }
-  return data;
+  const { data, error } = await supabase.rpc('submit_request_response', {
+    p_request_id: requestId,
+    p_message: cleanMessage
+  });
+  if (error) throw friendlyPolicyError(error, 'Could not send your response.');
+  const response = Array.isArray(data) ? data[0] : data;
+  if (!response) throw new Error('Could not load your response after saving it.');
+  return response;
 }
 
 export async function buyMarketplaceListing(requestId: string) {
