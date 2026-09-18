@@ -94,11 +94,9 @@ export async function fetchMarketOrders(connectionIds: string[]) {
 export async function fetchMarketDisputes(orderIds: string[]) {
   if (!orderIds.length) return [] as MarketDispute[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('market_disputes')
-    .select('id,market_order_id,opened_by,reason,details,status,created_at,resolved_at')
-    .in('market_order_id', orderIds)
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_my_market_disputes', {
+    p_order_ids: orderIds
+  });
   if (error) throw error;
   return (data ?? []) as MarketDispute[];
 }
