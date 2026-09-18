@@ -149,6 +149,7 @@ export default function PostResubmitEditor({ requestId }: { requestId: string })
 
     setSaving(true);
     setError('');
+    let resubmitAccepted = false;
     try {
       const removed = media.filter((asset) => removedMediaIds.includes(asset.id));
 
@@ -169,6 +170,7 @@ export default function PostResubmitEditor({ requestId }: { requestId: string })
           : null,
         removeMediaIds: removed.map((asset) => asset.id)
       });
+      resubmitAccepted = true;
 
       if (removed.length) await removeRequestMediaStorageObjects(removed);
       if (newPhotos.length) await uploadRequestMedia(request.id, newPhotos);
@@ -181,7 +183,21 @@ export default function PostResubmitEditor({ requestId }: { requestId: string })
       setRemovedMediaIds([]);
       setNewPhotos([]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not resubmit this post.');
+      if (resubmitAccepted) {
+        await runRequestAiSafety(request.id).catch(() => undefined);
+        const refreshed = await fetchEditableRequest(request.id).catch(() => null);
+        if (refreshed) {
+          setSubmitted(refreshed);
+          setRequest(refreshed);
+        }
+        const currentMedia = await fetchRequestMedia([request.id]).catch(() => null);
+        if (currentMedia) setMedia(currentMedia);
+        setRemovedMediaIds([]);
+        setNewPhotos([]);
+        setError('Your post changes were saved, but the new photos did not finish uploading. Aspire rechecked the version that is currently stored. Review the status in My Activity before trying the photos again.');
+      } else {
+        setError(cause instanceof Error ? cause.message : 'Could not resubmit this post.');
+      }
     } finally {
       setSaving(false);
     }
@@ -210,6 +226,7 @@ export default function PostResubmitEditor({ requestId }: { requestId: string })
           : blocked
             ? 'Aspire kept the post private. My Activity will show which review lane still needs a change.'
             : 'Aspire is reviewing the revised text, language, marketplace details, and photos. It stays private until those checks pass.'}</p>
+        {error && <div className={styles.error} role="alert">{error}</div>}
         <div><a className={styles.primaryLink} href="/activity">View review status →</a><button type="button" onClick={() => router.push('/post')}>Create another post</button></div>
       </section>
     );
@@ -267,7 +284,7 @@ export default function PostResubmitEditor({ requestId }: { requestId: string })
               return <figure className={removed ? styles.removedPhoto : ''} key={asset.id}>{asset.public_url ? <img src={asset.public_url} alt="Current post" /> : <div className={styles.photoFallback}>PHOTO</div>}<button type="button" onClick={() => setRemovedMediaIds((current) => current.includes(asset.id) ? current.filter((id) => id !== asset.id) : [...current, asset.id])}>{removed ? 'Keep' : 'Remove'}</button></figure>;
             })}
             {photoPreviews.map((item, index) => <figure key={`${item.file.name}-${index}`}><img src={item.url} alt="New post preview" /><button type="button" onClick={() => setNewPhotos((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button><figcaption>NEW</figcaption></figure>)}
-            {finalPhotoCount < 5 && <label className={styles.addPhoto}><input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple onChange={choosePhotos} /><b>+</b><strong>Add photos</strong><small>{finalPhotoCount}/5</small></label>}
+            {finalPhotoCount < 5 && <label className={styles.addPhoto}><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={choosePhotos} /><b>+</b><strong>Add photos</strong><small>{finalPhotoCount}/5</small></label>}
           </div>
         </section>
 
