@@ -22,6 +22,7 @@ export type AspireNotification = {
 };
 
 const notificationSelect = 'id,kind,connection_id,title,body,read_at,created_at' as const;
+const notificationRealtimeSelect = ['id', 'user_id', 'kind', 'connection_id', 'title', 'body', 'read_at', 'created_at'] as const;
 
 function toAspireNotification(row: Record<string, unknown>): AspireNotification {
   return {
@@ -68,7 +69,13 @@ export function subscribeToNotifications(userId: string, onNotification: (notifi
     .channel(`aspire-notifications-${userId}`)
     .on(
       'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId}`,
+        select: [...notificationRealtimeSelect]
+      },
       (payload) => onNotification(toAspireNotification(payload.new as Record<string, unknown>))
     )
     .subscribe();
