@@ -24,6 +24,7 @@ type PaymentRow = {
   transfer_group: string;
   checkout_attempt: number;
   stripe_checkout_session_id: string | null;
+  stripe_livemode: boolean;
 };
 
 type FeeQuote = {
@@ -114,7 +115,44 @@ export async function POST(request: Request) {
     }).eq('user_id', payeeId).eq('livemode', livemode);
     if (!payoutState.ready) throw new Error('PAYOUT_NOT_READY');
 
-    if (existingPayment && ['secured', 'released'].includes(existingPayment.status)) throw new Error('PAYMENT_ALREADY_SECURED');
+    let paymentSeed = existingPayment as PaymentRow | null;
+    if (paymentSeed && paymentSeed.stripe_livemode !== livemode) {
+      const resettable = new Set(['not_started', 'checkout_created', 'failed', 'cancelled']);
+      if (!resettable.has(paymentSeed.status)) {
+        return NextResponse.json({
+          error: 'This payment belongs to a different Stripe mode and cannot be reused.',
+          code: 'PAYMENT_MODE_MISMATCH'
+        }, { status: 409 });
+      }
+
+      const { data: resetPayment, error: resetError } = await supabase
+        .from('connection_payments')
+        .update({
+          stripe_livemode: livemode,
+          status: 'not_started',
+          checkout_attempt: 0,
+          stripe_checkout_session_id: null,
+          stripe_payment_intent_id: null,
+          stripe_charge_id: null,
+          stripe_transfer_id: null,
+          stripe_refund_id: null,
+          release_claimed_at: null,
+          refund_claimed_at: null,
+          paid_at: null,
+          released_at: null,
+          refunded_at: null,
+          disputed_at: null,
+          failure_reason: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', paymentSeed.id)
+        .select('*')
+        .single();
+      if (resetError) throw resetError;
+      paymentSeed = resetPayment as PaymentRow;
+    }
+
+    if (paymentSeed && ['secured', 'released'].includes(paymentSeed.status)) throw new Error('PAYMENT_ALREADY_SECURED');
 
     const baseAmount = Number(connection.agreed_amount_cents ?? aspireRequest.amount_cents ?? 0);
     if (!Number.isInteger(baseAmount) || baseAmount <= 0) {
@@ -167,7 +205,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This shipping rate leaves no seller proceeds. Choose another rate or have the buyer cover shipping.', code: 'SHIPPING_EXCEEDS_SELLER_PROCEEDS' }, { status: 409 });
     }
 
-    const transferGroup = existingPayment?.transfer_group || `aspire_${connection.id.replace(/-/g, '')}`;
+    const transferGroup = paymentSeed?.transfer_group || `aspire_${connection.id.replace(/-/g, '')}`;
     const feeSnapshot = {
       version: quote.fee_policy_version,
       requester_fee_percent_bps: quote.requester_fee_percent_bps,
@@ -187,8 +225,9 @@ export async function POST(request: Request) {
       provider_net_cents: providerNetCents
     };
 
-    let payment = existingPayment as PaymentRow | null;
+    let payment = paymentSeed;
     const paymentValues = {
+      stripe_livemode: livemode,
       payer_id: payerId,
       payee_id: payeeId,
       currency,
