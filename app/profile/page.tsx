@@ -86,16 +86,18 @@ export default function ProfilePage() {
         return;
       }
 
-      const [{ data: profileRows, error: profileError }, { data: schoolVerification }, { data: identityVerification }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
+      const [{ data: profileRows, error: profileError }, { data: schoolVerificationRows }, { data: identityVerificationRows }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
         supabase.rpc('get_my_profile_details'),
-        supabase.from('school_verifications').select('status,verification_method,school_email,school,university_id').eq('user_id', user.id).maybeSingle(),
-        supabase.from('identity_verifications').select('status').eq('user_id', user.id).maybeSingle(),
+        supabase.rpc('get_my_school_verification'),
+        supabase.rpc('get_my_identity_verification'),
         supabase.from('user_preferences').select('profile_visibility').eq('user_id', user.id).maybeSingle(),
         supabase.from('connections').select('id', { count: 'exact', head: true }).eq('status', 'completed').or(`requester_id.eq.${user.id},responder_id.eq.${user.id}`),
         fetchMyRole().catch(() => 'member' as AppRole)
       ]);
       if (profileError) throw profileError;
       const profileRow = ((profileRows ?? [])[0] ?? null) as MyProfileDetailsRow | null;
+      const schoolVerification = ((schoolVerificationRows ?? [])[0] ?? null);
+      const identityVerification = ((identityVerificationRows ?? [])[0] ?? null);
 
       const metadata = user.user_metadata ?? {};
       const backendName = profileRow?.display_name || profileRow?.full_name || profileRow?.name;
