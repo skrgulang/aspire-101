@@ -6,6 +6,7 @@ type ServiceClient = SupabaseClient;
 const ACCOUNT_REQUEST_EXPORT_SELECT = 'id,poster_id,kind,category,title,details,campus,campus_id,city,scheduled_start_at,scheduled_end_at,timezone,meeting_label,amount_cents,currency,payment_method,market_intent,item_condition,price_negotiable,fulfillment_method,fulfillment_methods,shipping_paid_by_preference,shipping_paid_by_default,seller_delivery_mode,seller_delivery_price_cents,seller_area,quantity,language_code,cover_image_url,cover_image_source,cover_image_asset_id,listing_expires_at,moderation_status,moderation_reason,post_review_status,language_review_status,market_review_status,layered_reviewed_at,status,created_at,updated_at' as const;
 
 const ACCOUNT_PROFILE_EXPORT_SELECT = 'id,display_name,school,city,image_url,location,created_at,updated_at,name,phone,email,email_type,avatar_url,username,username_norm,bio,role,full_name,is_moderator,home_campus_id,current_campus_id,campus_last_selected_at,major,graduation_year,interests' as const;
+const ACCOUNT_PREFERENCE_EXPORT_SELECT = 'user_id,location_mode,profile_visibility,show_major,show_graduation_year,show_interests,show_completed,show_joined,ai_personalization,notify_messages,notify_connections,notify_post_updates,notify_payments,notify_safety,notify_marketing,created_at,updated_at' as const;
 const ACCOUNT_SCHOOL_VERIFICATION_EXPORT_SELECT = 'user_id,school,student_id,status,submitted_at,updated_at,reviewed_at,review_note,university_id,verification_method,school_email,verified_at' as const;
 const ACCOUNT_RESPONSE_EXPORT_SELECT = 'id,request_id,responder_id,message,status,created_at' as const;
 const ACCOUNT_CONNECTION_EXPORT_SELECT = 'id,request_id,requester_id,responder_id,requester_confirmed,responder_confirmed,status,agreed_amount_cents,agreed_terms,payment_method,scheduled_start_at,scheduled_end_at,timezone,meeting_label,coordination_status,last_coordination_at,created_at,updated_at' as const;
@@ -36,7 +37,7 @@ export async function buildAccountExport(supabase: ServiceClient, user: User) {
 
   const [profile, preferences, schoolVerification, identityVerification, requests, responses, connections, reviews, payments, resolutionCases, resolutionResponses, notifications, circleChoices, completionConfirmations, paymentAccount, requestMedia] = await Promise.all([
     expectOk(supabase.from('profiles').select(ACCOUNT_PROFILE_EXPORT_SELECT).eq('id', userId).maybeSingle(), 'profile_export'),
-    expectOk(supabase.from('user_preferences').select('*').eq('user_id', userId).maybeSingle(), 'preferences_export'),
+    expectOk(supabase.from('user_preferences').select(ACCOUNT_PREFERENCE_EXPORT_SELECT).eq('user_id', userId).maybeSingle(), 'preferences_export'),
     expectOk(supabase.from('school_verifications').select(ACCOUNT_SCHOOL_VERIFICATION_EXPORT_SELECT).eq('user_id', userId).maybeSingle(), 'school_export'),
     expectOk(supabase.from('identity_verifications').select('status,provider,verified_at,created_at,updated_at').eq('user_id', userId).maybeSingle(), 'identity_export'),
     expectOk(supabase.from('requests').select(ACCOUNT_REQUEST_EXPORT_SELECT).eq('poster_id', userId).order('created_at', { ascending: false }), 'requests_export'),
