@@ -90,12 +90,12 @@ export async function fetchConnectionPayments(connectionIds: string[]) {
 }
 
 export async function fetchCompletionConfirmations(connectionIds: string[]) {
-  if (!connectionIds.length) return [] as CompletionConfirmation[];
+  const ids = [...new Set(connectionIds.filter(Boolean))].slice(0, 200);
+  if (!ids.length) return [] as CompletionConfirmation[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('connection_completion_confirmations')
-    .select('connection_id,user_id,confirmed_at')
-    .in('connection_id', connectionIds);
+  const { data, error } = await supabase.rpc('get_completion_confirmations_for_my_connections', {
+    p_connection_ids: ids
+  });
   if (error) throw error;
   return (data ?? []) as CompletionConfirmation[];
 }
