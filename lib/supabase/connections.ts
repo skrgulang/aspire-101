@@ -298,12 +298,12 @@ export async function fetchMyCircle() {
 }
 
 export async function fetchConnectionReviews(connectionIds: string[]) {
-  if (!connectionIds.length) return [] as ConnectionReview[];
+  const ids = [...new Set(connectionIds.filter(Boolean))].slice(0, 200);
+  if (!ids.length) return [] as ConnectionReview[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('connection_reviews')
-    .select('id,connection_id,reviewer_id,reviewee_id,would_connect_again,tags,note,created_at,updated_at')
-    .in('connection_id', connectionIds);
+  const { data, error } = await supabase.rpc('get_my_connection_reviews', {
+    p_connection_ids: ids
+  });
   if (error) throw error;
   return (data ?? []) as ConnectionReview[];
 }
