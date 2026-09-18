@@ -67,6 +67,14 @@ export function getSupabaseServiceClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
+export async function requireAal2(accessToken: string) {
+  const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const key = requireEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
+  const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(accessToken);
+  if (error || data?.currentLevel !== 'aal2') throw new Error('MFA_REQUIRED');
+}
+
 export async function enforceAiRateLimit(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
   userId: string,
