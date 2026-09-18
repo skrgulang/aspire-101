@@ -219,10 +219,23 @@ export function verifyStripeWebhookSignature(payload: string, signatureHeader: s
   if (!valid) throw new Error('WEBHOOK_SIGNATURE');
 }
 
-export function publicOrigin(request: Request) {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configured) return configured.replace(/\/$/, '');
-  return new URL(request.url).origin;
+export function publicOrigin(_request: Request) {
+  const configured = requireEnv('NEXT_PUBLIC_SITE_URL').trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(configured);
+  } catch {
+    throw new Error('INVALID_ENV:NEXT_PUBLIC_SITE_URL');
+  }
+
+  const localHost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '::1';
+  if (parsed.protocol !== 'https:' && !(localHost && parsed.protocol === 'http:')) {
+    throw new Error('INVALID_ENV:NEXT_PUBLIC_SITE_URL');
+  }
+  if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+    throw new Error('INVALID_ENV:NEXT_PUBLIC_SITE_URL');
+  }
+  return parsed.origin;
 }
 
 export function apiError(error: unknown) {
