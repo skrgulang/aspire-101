@@ -21,7 +21,7 @@ export type AspireNotification = {
   created_at: string;
 };
 
-const notificationSelect = 'id,kind,connection_id,title,body,read_at,created_at' as const;
+const notificationPollMs = 12_000;
 
 function toAspireNotification(row: Record<string, unknown>): AspireNotification {
   return {
