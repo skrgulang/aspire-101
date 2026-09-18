@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
+import { getAuthenticatedUser, getSupabaseServiceClient, requireAal2, requireEnv } from '../../../../lib/server/aspireServer';
 
 export const runtime = 'nodejs';
 const model = process.env.ASPIRE_AI_MODEL || 'gpt-5.6-terra';
@@ -16,6 +16,7 @@ async function requireReviewer(request: Request) {
   const supabase = getSupabaseServiceClient();
   const { data } = await supabase.from('user_roles').select('role').eq('user_id', auth.user.id).maybeSingle();
   if (data?.role !== 'admin' && data?.role !== 'moderator') throw new Error('REVIEWER_REQUIRED');
+  await requireAal2(auth.accessToken);
   return { ...auth, supabase };
 }
 
@@ -63,6 +64,7 @@ export async function GET(request: Request) {
     const raw = error instanceof Error ? error.message : 'UNKNOWN';
     if (raw === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again.' }, { status: 401 });
     if (raw === 'REVIEWER_REQUIRED') return NextResponse.json({ error: 'Moderator access is required.' }, { status: 403 });
+    if (raw === 'MFA_REQUIRED') return NextResponse.json({ error: 'Complete two-step verification to use Trust & Safety tools.', code: 'MFA_REQUIRED' }, { status: 403 });
     return NextResponse.json({ error: 'Could not load dispute queue.' }, { status: 500 });
   }
 }

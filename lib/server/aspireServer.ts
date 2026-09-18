@@ -67,6 +67,14 @@ export function getSupabaseServiceClient() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
+export async function requireAal2(accessToken: string) {
+  const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const key = requireEnv('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY');
+  const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(accessToken);
+  if (error || data?.currentLevel !== 'aal2') throw new Error('MFA_REQUIRED');
+}
+
 export async function enforceAiRateLimit(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
   userId: string,
@@ -241,6 +249,7 @@ export function publicOrigin(_request: Request) {
 export function apiError(error: unknown) {
   const raw = error instanceof Error ? error.message : 'UNKNOWN';
   if (raw === 'AUTH_REQUIRED') return { status: 401, body: { error: 'Sign in again to continue.' } };
+  if (raw === 'MFA_REQUIRED') return { status: 403, body: { error: 'Complete two-step verification to continue.', code: 'MFA_REQUIRED' } };
   if (raw === 'PHONE_REQUIRED') return { status: 409, body: { error: 'Verify your phone before using Aspire payments.', code: 'PHONE_REQUIRED' } };
   if (raw === 'SCHOOL_REQUIRED') return { status: 409, body: { error: 'Verify your school identity before using Aspire payments.', code: 'SCHOOL_REQUIRED' } };
   if (raw === 'NOT_REQUESTER') return { status: 403, body: { error: 'Only the requester can secure this payment.', code: raw } };
