@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AspireNotification,
-  fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   subscribeToNotifications
@@ -48,21 +47,20 @@ export default function NotificationCenter({
 
   useEffect(() => {
     if (!userId) return;
-    let active = true;
     setLoading(true);
-    void fetchNotifications()
-      .then((next) => { if (active) setItems(next); })
-      .catch(() => { if (active) setItems([]); })
-      .finally(() => { if (active) setLoading(false); });
 
-    const unsubscribe = subscribeToNotifications(userId, (notification) => {
-      setItems((current) => [notification, ...current.filter((item) => item.id !== notification.id)].slice(0, 40));
-    });
+    const unsubscribe = subscribeToNotifications(
+      userId,
+      (next) => {
+        setItems(next);
+        setLoading(false);
+      },
+      () => {
+        setLoading(false);
+      }
+    );
 
-    return () => {
-      active = false;
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, [userId]);
 
   const unread = useMemo(() => items.filter((item) => !item.read_at).length, [items]);
