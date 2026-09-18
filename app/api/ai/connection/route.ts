@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
+import { enforceAiRateLimit, getAuthenticatedUser, getSupabaseServiceClient, requireEnv } from '../../../../lib/server/aspireServer';
 
 export const runtime = 'nodejs';
 const model = process.env.ASPIRE_AI_MODEL || 'gpt-5.6-terra';
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
       created_at: message.created_at
     }));
 
+    await enforceAiRateLimit(supabase, user.id, 'connection', 30);
     const apiKey = requireEnv('OPENAI_API_KEY');
     const schema = {
       type: 'object', additionalProperties: false,
@@ -75,6 +76,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const raw = error instanceof Error ? error.message : 'UNKNOWN';
     if (raw === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to use Connection Copilot.' }, { status: 401 });
+    if (raw === 'AI_RATE_LIMIT') return NextResponse.json({ error: 'Connection Copilot is being used too quickly. Try again later.', code: 'AI_RATE_LIMIT' }, { status: 429 });
     if (raw.startsWith('MISSING_ENV:OPENAI_API_KEY')) return NextResponse.json({ error: 'Connection Copilot is not connected to AI on this deployment yet.', code: 'AI_NOT_CONFIGURED' }, { status: 503 });
     return NextResponse.json({ error: 'Connection Copilot could not finish.' }, { status: 500 });
   }
