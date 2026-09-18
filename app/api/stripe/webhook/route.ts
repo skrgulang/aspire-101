@@ -151,7 +151,14 @@ export async function POST(request: Request) {
 
         if (!payment) throw new Error('STRIPE:Aspire payment record was not found for the completed PaymentIntent.');
         if (payment.stripe_livemode !== eventLivemode) {
-          // Valid event from the other Stripe environment. Keep the current-mode payment untouched.
+          // Valid event from the other Stripe environment. Keep the current-mode payment untouched,
+          // but still close the webhook claim so Stripe does not retry it forever.
+          const { error: ignoredError } = await supabase.from('stripe_webhook_events').update({
+            status: 'processed',
+            processed_at: new Date().toISOString(),
+            processing_error: 'Ignored because Stripe mode did not match the Aspire payment record.'
+          }).eq('event_id', event.id).eq('status', 'received');
+          requireDatabaseWrite(ignoredError);
           return NextResponse.json({ received: true, ignored: true, reason: 'stripe_mode_mismatch' });
         }
         const expectedAmount = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
