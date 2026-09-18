@@ -9,6 +9,20 @@ type Props = {
   name: string;
 };
 
+function ownedAvatarPath(publicUrl: string, expectedOrigin: string, userId: string) {
+  if (!publicUrl) return null;
+  try {
+    const parsed = new URL(publicUrl);
+    if (parsed.origin !== expectedOrigin) return null;
+    const prefix = '/storage/v1/object/public/avatars/';
+    if (!parsed.pathname.startsWith(prefix)) return null;
+    const path = decodeURIComponent(parsed.pathname.slice(prefix.length));
+    return path.startsWith(`${userId}/`) ? path : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
   const [url, setUrl] = useState(initialUrl || '');
   const [busy, setBusy] = useState(false);
@@ -40,6 +54,7 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
       const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' });
       if (uploadError) throw uploadError;
       const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
+      const previousPath = ownedAvatarPath(url, new URL(publicData.publicUrl).origin, authData.user.id);
       const { error: profileError } = await supabase.rpc('set_my_avatar_url', {
         p_storage_path: path,
         p_avatar_url: publicData.publicUrl
@@ -48,6 +63,11 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
         await supabase.storage.from('avatars').remove([path]).catch(() => undefined);
         throw profileError;
       }
+
+      if (previousPath && previousPath !== path) {
+        await supabase.storage.from('avatars').remove([previousPath]).catch(() => undefined);
+      }
+
       setUrl(publicData.publicUrl);
       setMessage('Profile photo updated.');
     } catch (error) {
