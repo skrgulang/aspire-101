@@ -325,7 +325,7 @@
       const m = String(e?.message || e || '');
       if (missingCfg) return 'Project URL / anon key missing or placeholders not replaced.';
       if (/Failed to fetch|NetworkError|TypeError/i.test(m)) return 'Network blocked — check CSP, ad-block/VPN, or project URL.';
-      if (/permission denied|RLS/i.test(m))                 return 'RLS policy missing: allow INSERT / SELECT for anon/auth.';
+      if (/permission denied|RLS/i.test(m))                 return 'RLS policy missing: allow support submission / safe ideas feed access.';
       if (/relation .* does not exist|table .* does not exist/i.test(m)) return 'Missing table: public.support_feedback.';
       return m;
     }
@@ -426,13 +426,7 @@
     async function loadIdeas(silent=false){
       if (missingCfg || !sb) { renderIdeas([]); return; }
       try{
-        const { data, error } = await sb
-          .from('support_feedback')
-          .select('id,type,subject,details,created_at')
-          .eq('approved', true)
-          .neq('type','collaboration')
-          .order('created_at', { ascending:false })
-          .limit(12);
+        const { data, error } = await sb.rpc('get_public_support_feedback', { p_limit: 12 });
         if (error) throw error;
         renderIdeas(data || []);
       }catch(e){
