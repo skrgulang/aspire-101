@@ -7,6 +7,15 @@ import { aspireLogo } from './logo';
 
 type Mode = 'request' | 'update';
 
+function newPasswordError(value: string) {
+  if (value.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[a-z]/.test(value)) return 'Password needs at least one lowercase letter.';
+  if (!/[A-Z]/.test(value)) return 'Password needs at least one uppercase letter.';
+  if (!/[0-9]/.test(value)) return 'Password needs at least one number.';
+  if (!/[!@#$%^&*()_+\-=\[\]{};'\\:"|<>?,./`~]/.test(value)) return 'Password needs at least one symbol.';
+  return '';
+}
+
 export default function PasswordResetForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -36,7 +45,8 @@ export default function PasswordResetForm({ mode }: { mode: Mode }) {
         if (error) throw error;
         setMessage('If an Aspire account exists for that email, a password reset link is on the way. Check your inbox and spam folder.');
       } else {
-        if (password.length < 6) throw new Error('Password must be at least 6 characters.');
+        const passwordError = newPasswordError(password);
+        if (passwordError) throw new Error(passwordError);
         if (password !== confirmPassword) throw new Error('Passwords do not match.');
 
         const { data: sessionData } = await supabase.auth.getSession();
@@ -91,11 +101,11 @@ export default function PasswordResetForm({ mode }: { mode: Mode }) {
             <>
               <label>
                 <span>New password</span>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" minLength={6} autoComplete="new-password" required />
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8+ chars · upper/lower · number · symbol" minLength={8} autoComplete="new-password" required />
               </label>
               <label>
                 <span>Confirm password</span>
-                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Enter it again" minLength={6} autoComplete="new-password" required />
+                <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Enter it again" minLength={8} autoComplete="new-password" required />
               </label>
             </>
           )}
