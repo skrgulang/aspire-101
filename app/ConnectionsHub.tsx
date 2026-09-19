@@ -555,6 +555,8 @@ export default function ConnectionsHub() {
             const isResponder = connectionData.userId === connection.responder_id;
             const state = lifecycleMap.get(connection.id);
             const unreadCount = unread[connection.id] || 0;
+            const mutualConfirmed = Boolean(connection.requester_confirmed && connection.responder_confirmed);
+            const completionCount = Number(Boolean(state?.viewer_completed)) + Number(Boolean(state?.other_completed));
 
             return (
               <article className={`connectionCard ${unreadCount ? 'hasUnread' : ''}`} key={connection.id}>
@@ -567,25 +569,45 @@ export default function ConnectionsHub() {
                   <i>{profileName(other).slice(0, 1).toUpperCase()}</i>
                   <div><strong>{profileName(other)}</strong><span>{other?.school || request?.campus || 'Campus'}</span></div>
                 </div>
-                <div className="connectionChecks">
-                  <span className={connection.requester_confirmed ? 'done' : ''}>Requester chose ✓</span>
-                  <span className={connection.responder_confirmed ? 'done' : ''}>Responder confirmed {connection.responder_confirmed ? '✓' : '…'}</span>
-                  {state?.viewer_completed && <span className="done">You marked complete ✓</span>}
-                  {state?.other_completed && <span className="done">They marked complete ✓</span>}
+                <div className="connectionProgress" aria-label="Connection status">
+                  <div className={connection.requester_confirmed ? 'done' : ''}>
+                    <i>{connection.requester_confirmed ? '✓' : '1'}</i>
+                    <span>Chosen</span>
+                  </div>
+                  <div className={connection.responder_confirmed ? 'done' : ''}>
+                    <i>{connection.responder_confirmed ? '✓' : '2'}</i>
+                    <span>Confirmed</span>
+                  </div>
+                  <div className={mutualConfirmed && completionCount < 2 ? 'active' : mutualConfirmed ? 'done' : ''}>
+                    <i>{mutualConfirmed ? '✓' : '3'}</i>
+                    <span>Coordinate</span>
+                  </div>
+                  <div className={completionCount >= 2 ? 'done' : completionCount === 1 ? 'active' : ''}>
+                    <i>{completionCount >= 2 ? '✓' : '4'}</i>
+                    <span>Complete</span>
+                  </div>
                 </div>
+
+                {connection.status === 'pending' && (
+                  <p className="connectionPendingNote">
+                    {isResponder
+                      ? 'You were chosen for this request. Confirm to unlock private chat and coordination.'
+                      : 'You chose this person. Private chat opens as soon as they confirm.'}
+                  </p>
+                )}
 
                 <div className="connectionActions">
                   {isResponder && connection.status === 'pending' && (
-                    <button type="button" className="button buttonGold" onClick={() => confirm(connection.id)} disabled={busyId === connection.id}>Confirm connection</button>
+                    <button type="button" className="button buttonGold" onClick={() => confirm(connection.id)} disabled={busyId === connection.id}>Confirm & connect</button>
                   )}
                   {['confirmed', 'active'].includes(connection.status) && (
                     <button type="button" className="button buttonGold chatButton" onClick={() => openChat(connection.id, 'connections')}>
-                      Open chat {unreadCount > 0 && <b>{unreadCount}</b>}
+                      Message {unreadCount > 0 && <b>{unreadCount}</b>}
                     </button>
                   )}
                   {['confirmed', 'active'].includes(connection.status) && connection.payment_method !== 'aspire' && !state?.viewer_completed && (
                     <button type="button" className="connectionCancel" onClick={() => markNonAspireComplete(connection.id)} disabled={busyId === `complete-${connection.id}`}>
-                      {busyId === `complete-${connection.id}` ? 'Saving…' : state?.other_completed ? 'They finished · confirm ✓' : 'Mark complete ✓'}
+                      {busyId === `complete-${connection.id}` ? 'Saving…' : state?.other_completed ? 'They finished · confirm' : 'Finish request'}
                     </button>
                   )}
                   {state?.viewer_completed && !state?.other_completed && <span className="responseState">Waiting for them to finish…</span>}
