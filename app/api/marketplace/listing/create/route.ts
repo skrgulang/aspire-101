@@ -124,6 +124,7 @@ export async function POST(request: Request) {
         currency: 'USD',
         payment_method: 'aspire',
         market_intent: 'sell',
+        seller_livemode: livemode,
         item_condition: itemCondition,
         price_negotiable: false,
         fulfillment_method: primaryFulfillment,
