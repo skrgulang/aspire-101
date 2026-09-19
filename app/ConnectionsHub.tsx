@@ -149,6 +149,15 @@ export default function ConnectionsHub() {
     () => connectionData.connections.filter((connection) => ['pending', 'confirmed', 'active'].includes(connection.status)),
     [connectionData.connections]
   );
+  const pendingInvites = useMemo(
+    () => activeConnections.filter((connection) =>
+      connection.status === 'pending'
+      && connection.responder_id === connectionData.userId
+      && Boolean(connection.requester_confirmed)
+      && !connection.responder_confirmed
+    ),
+    [activeConnections, connectionData.userId]
+  );
   const historyConnections = useMemo(
     () => connectionData.connections.filter((connection) => ['completed', 'cancelled'].includes(connection.status)),
     [connectionData.connections]
@@ -466,6 +475,40 @@ export default function ConnectionsHub() {
           <article><strong>{circle.length}</strong><span>people in My Circle</span></article>
         </div>
       </div>
+
+      {pendingInvites.length > 0 && (
+        <section className="inboxInviteRail" aria-label="New connection invitations">
+          <div className="inboxInviteRailHead">
+            <div>
+              <span>{pendingInvites.length > 1 ? 'NEW INVITES' : 'NEW INVITE'}</span>
+              <strong>{pendingInvites.length === 1 ? 'Someone wants to connect with you.' : pendingInvites.length + ' people want to connect with you.'}</strong>
+            </div>
+            <button type="button" onClick={() => setTab('connections')}>See all</button>
+          </div>
+          <div className="inboxInviteCards">
+            {pendingInvites.slice(0, 3).map((connection) => {
+              const request = requestMap.get(connection.request_id);
+              const inviter = connectionProfiles.get(connection.requester_id);
+              return (
+                <article className="inboxInviteCard" key={connection.id}>
+                  <div className="inboxInviteAvatar">{profileName(inviter).slice(0, 1).toUpperCase()}</div>
+                  <div className="inboxInviteCopy">
+                    <span>INVITED YOU TO CONNECT</span>
+                    <strong>{profileName(inviter)}</strong>
+                    <p>{request?.title || 'Aspire connection'}</p>
+                  </div>
+                  <div className="inboxInviteActions">
+                    <button type="button" className="inboxInviteView" onClick={() => setTab('connections')}>View</button>
+                    <button type="button" className="inboxInviteAccept" onClick={() => confirm(connection.id)} disabled={busyId === connection.id}>
+                      {busyId === connection.id ? 'Connecting…' : 'Connect'}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="connectionsTabs">
         <div className="connectionsTabPrimary">

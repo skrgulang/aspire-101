@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import styles from './AppDock.module.css';
 import UiIcon, { UiIconName } from './UiIcon';
 import { aspireLogo } from './logo';
+import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { AspireNotification, subscribeToNotifications } from '../lib/supabase/notifications';
 
 type AppDockTab = 'home' | 'discover' | 'market' | 'post' | 'connections' | 'delivery' | 'activity' | 'saved' | 'transactions' | 'resolution' | 'profile' | 'settings';
 type DockItem = { key: AppDockTab; label: string; href: string; icon: UiIconName; mobile?: boolean };
@@ -32,6 +34,19 @@ const accountItems: DockItem[] = [
 export default function AppDock({ active, preview = false }: { active: AppDockTab; preview?: boolean }) {
   const pathname = usePathname();
   const currentActive: AppDockTab = !preview && pathname.startsWith('/marketplace') ? 'market' : active;
+  const [notifications, setNotifications] = useState<AspireNotification[]>([]);
+
+  const unreadNotifications = useMemo(() => notifications.filter((item) => !item.read_at), [notifications]);
+  const inboxUnread = unreadNotifications.length;
+  const inviteUnread = useMemo(
+    () => unreadNotifications.filter((item) => item.kind === 'connection_chosen' || item.kind === 'request_response').length,
+    [unreadNotifications]
+  );
+  const connectedUnread = useMemo(
+    () => unreadNotifications.filter((item) => item.kind === 'connection_confirmed').length,
+    [unreadNotifications]
+  );
+  const inboxHasPriority = inviteUnread > 0 || connectedUnread > 0;
 
   useEffect(() => {
     const stored = window.localStorage.getItem('aspire-theme');
@@ -39,18 +54,51 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
     document.documentElement.dataset.aspireTheme = next;
   }, []);
 
+  useEffect(() => {
+    if (preview) return;
+    let alive = true;
+    let unsubscribe = () => undefined;
+    const supabase = getSupabaseBrowserClient();
+
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!alive || !data.user) return;
+      unsubscribe = subscribeToNotifications(
+        data.user.id,
+        (items) => { if (alive) setNotifications(items); },
+        () => undefined
+      );
+    }).catch(() => undefined);
+
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
+  }, [preview]);
+
   function renderItem(item: DockItem) {
+    const isInbox = item.key === 'connections';
+    const priorityLabel = inviteUnread > 0
+      ? inviteUnread + ' ' + (inviteUnread === 1 ? 'invite' : 'invites')
+      : connectedUnread > 0
+        ? connectedUnread + ' new ' + (connectedUnread === 1 ? 'match' : 'matches')
+        : '';
+
     return (
       <a
         key={item.key}
         href={preview ? '/ui-preview' : item.href}
-        className={`${styles.navItem} ${!item.mobile ? styles.desktopExtra : ''} ${item.key === currentActive ? styles.active : ''} ${item.key === 'post' ? styles.post : ''}`.trim()}
+        className={`${styles.navItem} ${!item.mobile ? styles.desktopExtra : ''} ${item.key === currentActive ? styles.active : ''} ${item.key === 'post' ? styles.post : ''} ${isInbox && inboxHasPriority ? styles.inboxAttention : ''}`.trim()}
         aria-current={item.key === currentActive ? 'page' : undefined}
-        title={item.label}
+        aria-label={isInbox && inboxUnread > 0 ? 'Inbox, ' + inboxUnread + ' new, ' + (priorityLabel || 'activity') : item.label}
+        title={isInbox && priorityLabel ? 'Inbox · ' + priorityLabel : item.label}
         onClick={preview ? (event) => event.preventDefault() : undefined}
       >
-        <UiIcon name={item.icon} />
+        <i className={styles.iconWrap}>
+          <UiIcon name={item.icon} />
+          {isInbox && inboxUnread > 0 && <b className={`${styles.unreadBadge} ${inboxHasPriority ? styles.priorityBadge : ''}`}>{inboxUnread > 99 ? '99+' : inboxUnread}</b>}
+        </i>
         <span>{item.label}</span>
+        {isInbox && priorityLabel && <em className={styles.inboxMeta}>{priorityLabel}</em>}
       </a>
     );
   }
