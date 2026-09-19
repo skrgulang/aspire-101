@@ -251,3 +251,166 @@
   .ordersNote { grid-template-columns:1fr; }
   .ordersNote > a { width:100%; }
 }
+
+
+/* 2026-09 Delivery refresh: clearer tool page, less landing-page density. */
+.hero {
+  align-items: center;
+}
+.heroCopy { max-width: 760px; }
+.heroNote {
+  min-height: 154px;
+  display: grid;
+  align-content: center;
+}
+.heroActions a {
+  min-width: 190px;
+}
+.flowHeading h2,
+.sectionHeading h2 {
+  font-size: clamp(22px,2.4vw,30px);
+}
+.steps article {
+  min-height: 112px;
+}
+.requestList article {
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+.requestList article:hover {
+  border-color: rgba(255,199,44,.24);
+  background: #151616;
+  transform: translateY(-1px);
+}
+
+@media(max-width:620px) {
+  .shell {
+    width: min(100% - 24px, 520px);
+    padding: 22px 0 92px;
+  }
+  .hero {
+    padding-bottom: 18px;
+    border-bottom-color: rgba(255,255,255,.07);
+  }
+  .heroCopy > span { font-size: 8px; }
+  .hero h1 {
+    margin-top: 6px;
+    font-size: 42px;
+    line-height: .96;
+  }
+  .hero p {
+    max-width: 340px;
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .heroActions {
+    margin-top: 17px;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .heroActions a {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+  .heroActions svg { width: 16px; height: 16px; }
+
+  .flow {
+    padding-top: 20px;
+  }
+  .flowHeading h2 {
+    font-size: 21px;
+  }
+  .flowHeading > p {
+    max-width: 300px;
+    font-size: 9px;
+  }
+  .steps {
+    margin-top: 11px;
+    gap: 7px;
+  }
+  .steps article {
+    min-height: 0;
+    padding: 12px;
+    grid-template-columns: 29px 1fr;
+    gap: 10px;
+    border-radius: 13px;
+  }
+  .steps i {
+    width: 29px;
+    height: 29px;
+    font-size: 11px;
+  }
+  .steps strong { font-size: 12px; }
+  .steps p {
+    margin-top: 3px;
+    font-size: 9px;
+    line-height: 1.4;
+  }
+
+  .requestSection {
+    margin-top: 22px;
+    padding-top: 20px;
+  }
+  .sectionHeading h2 { font-size: 21px; }
+  .sectionHeading > a { font-size: 9px; }
+  .requestList {
+    margin-top: 10px;
+    gap: 7px;
+  }
+  .requestList article {
+    min-height: 70px;
+    padding: 10px;
+    grid-template-columns: 38px minmax(0,1fr) auto;
+    gap: 10px;
+    border-radius: 13px;
+  }
+  .requestIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+  .requestCopy > div span { font-size: 7px; }
+  .requestCopy > div b { font-size: 9px; }
+  .requestCopy > strong {
+    margin-top: 4px;
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .requestCopy small {
+    margin-top: 3px;
+    font-size: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .requestList article > a {
+    grid-column: auto;
+    font-size: 0;
+  }
+  .requestList article > a::after {
+    content: '›';
+    font-size: 22px;
+    color: #8d8b84;
+  }
+
+  .ordersNote {
+    margin-top: 20px;
+    padding: 14px;
+    gap: 10px;
+    border-radius: 14px;
+  }
+  .ordersNote span { font-size: 7px; }
+  .ordersNote strong { font-size: 13px; }
+  .ordersNote p {
+    margin-top: 4px;
+    font-size: 9px;
+  }
+  .ordersNote > a {
+    min-height: 40px;
+    font-size: 10px;
+  }
+}
