@@ -1004,3 +1004,140 @@
     padding: 0 10px;
   }
 }
+
+
+/* 2026-09-19 Connection status polish: one compact, status-first card after a match. */
+.page :global(.connectionProgress) {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 16px 0 14px;
+  padding: 0 4px;
+}
+.page :global(.connectionProgress::before) {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: rgba(255,255,255,.10);
+}
+.page :global(.connectionProgress > div) {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  color: rgba(255,255,255,.42);
+}
+.page :global(.connectionProgress i) {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 999px;
+  background: #111212;
+  color: rgba(255,255,255,.48);
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+}
+.page :global(.connectionProgress span) {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.page :global(.connectionProgress > div.done),
+.page :global(.connectionProgress > div.active) {
+  color: #f6d778;
+}
+.page :global(.connectionProgress > div.done i) {
+  border-color: rgba(255,199,44,.55);
+  background: rgba(255,199,44,.13);
+  color: #ffc72c;
+}
+.page :global(.connectionProgress > div.active i) {
+  border-color: #ffc72c;
+  box-shadow: 0 0 0 4px rgba(255,199,44,.08);
+  color: #ffc72c;
+}
+.page :global(.connectionPendingNote) {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,199,44,.16);
+  border-radius: 12px;
+  background: rgba(255,199,44,.055);
+  color: rgba(255,255,255,.66);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.page :global(.connectionActions) {
+  align-items: center;
+}
+.page :global(.connectionActions .chatButton) {
+  min-width: 132px;
+}
+.page :global(.connectionActions .connectionCancel) {
+  min-height: 40px;
+  border-color: rgba(255,255,255,.10);
+  background: transparent;
+  color: rgba(255,255,255,.62);
+}
+
+:global(html[data-aspire-theme='light']) .page :global(.connectionProgress::before) {
+  background: #e3e3dc;
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionProgress > div) {
+  color: #9a9a92;
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionProgress i) {
+  border-color: #deded7;
+  background: #fff;
+  color: #8c8c84;
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionProgress > div.done),
+:global(html[data-aspire-theme='light']) .page :global(.connectionProgress > div.active) {
+  color: #8a6500;
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionPendingNote) {
+  border-color: rgba(154,112,0,.16);
+  background: #fff9e9;
+  color: #5c5544;
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionActions .connectionCancel) {
+  border-color: #dfdfd8;
+  color: #5f5f58;
+}
+
+@media (max-width: 700px) {
+  .page :global(.connectionProgress) {
+    margin: 14px -2px 12px;
+  }
+  .page :global(.connectionProgress::before) {
+    left: 11%;
+    right: 11%;
+    top: 14px;
+  }
+  .page :global(.connectionProgress i) {
+    width: 28px;
+    height: 28px;
+  }
+  .page :global(.connectionProgress span) {
+    font-size: 7px;
+    letter-spacing: .04em;
+  }
+  .page :global(.connectionPendingNote) {
+    margin-bottom: 10px;
+    font-size: 9px;
+  }
+  .page :global(.connectionActions) {
+    grid-template-columns: 1fr auto;
+  }
+  .page :global(.connectionActions .chatButton),
+  .page :global(.connectionActions .buttonGold) {
+    min-width: 0;
+  }
+}
