@@ -31,11 +31,27 @@ const conditions: { value: ItemCondition; label: string }[] = [
 
 type OptionKey = 'meet' | 'shipping' | 'seller' | 'aspirer';
 type EnabledOptions = Record<OptionKey, boolean>;
+type SellerPayoutStatus = 'NOT_STARTED' | 'ACTION_REQUIRED' | 'UNDER_REVIEW' | 'READY' | 'RESTRICTED';
 
 const DEFAULT_OPTIONS: EnabledOptions = { meet: true, shipping: true, seller: false, aspirer: true };
 
 function revokeLocalPhoto(url: string) {
   if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+}
+
+async function fetchSellerPayoutStatus() {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sign in again to check Stripe payouts.');
+  const response = await fetch('/api/stripe/connect/status', {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({})) as { status?: SellerPayoutStatus; error?: string };
+  if (!response.ok) throw new Error(payload.error || 'Could not check Stripe payout verification.');
+  return payload.status || 'NOT_STARTED';
 }
 
 function detectListingLanguage(text: string, locale?: string | null): RequestLanguageCode {
@@ -72,6 +88,8 @@ export default function MarketplaceSellerComposer() {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [payoutStatus, setPayoutStatus] = useState<SellerPayoutStatus>('NOT_STARTED');
+  const [payoutStatusError, setPayoutStatusError] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -85,10 +103,13 @@ export default function MarketplaceSellerComposer() {
         return;
       }
       try {
-        const [{ data: profile }, universities, savedDrafts] = await Promise.all([
+        const [{ data: profile }, universities, savedDrafts, payoutResult] = await Promise.all([
           supabase.from('profiles').select('current_campus_id,home_campus_id').eq('id', data.user.id).maybeSingle(),
           fetchActiveUniversities(),
-          listMarketplaceDrafts()
+          listMarketplaceDrafts(),
+          fetchSellerPayoutStatus()
+            .then((status) => ({ status, error: '' }))
+            .catch((cause) => ({ status: 'NOT_STARTED' as SellerPayoutStatus, error: cause instanceof Error ? cause.message : 'Could not check Stripe payout verification.' }))
         ]);
         if (!active) return;
         const nextId = profile?.current_campus_id || profile?.home_campus_id || universities[0]?.id || '';
@@ -99,6 +120,8 @@ export default function MarketplaceSellerComposer() {
           setSellerArea((current) => current || [campus.city, campus.state].filter(Boolean).join(', '));
         }
         setDrafts(savedDrafts);
+        setPayoutStatus(payoutResult.status);
+        setPayoutStatusError(payoutResult.error);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Could not load seller tools.');
       } finally {
@@ -269,6 +292,7 @@ export default function MarketplaceSellerComposer() {
     event.preventDefault();
     setError('');
     setNotice('');
+    if (payoutStatus !== 'READY') return setError('Stripe payout verification is required before you can submit an item for sale. You can still save this listing as a private draft.');
     if (!campusId) return setError('Could not resolve your campus.');
     if (!title.trim()) return setError('Add an item title before submitting for review.');
     if (!price || Number(price) <= 0) return setError('Add a price greater than $0 before submitting for review.');
@@ -317,6 +341,83 @@ export default function MarketplaceSellerComposer() {
         <div><span>SELL ON ASPIRE MARKET · {campusName || 'CAMPUS'}</span><h2>List an item.</h2><p>Save it as a private draft, or submit it for review when it is ready. Approved listings appear in Market.</p></div>
         <button type="button" className={styles.newButton} onClick={resetComposer}>+ New item</button>
       </div>
+
+      <section className={`${styles.payoutGate} ${payoutStatus === 'READY' ? styles.payoutReady : styles.payoutNeedsAction}`} aria-label="Stripe seller payout verification">
+        <div className={styles.payoutMark}>{payoutStatus === 'READY' ? '✓' : '
+        <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts and photos stay private. Submitting removes the draft and creates a private listing for review; it appears in Market only after approval.</small></div>
+        {drafts.length ? <div className={styles.draftRail}>{drafts.map((draft) => (
+          <article key={draft.id} className={`${styles.draftCard} ${currentDraftId === draft.id ? styles.currentDraft : ''}`}>
+            <button type="button" onClick={() => loadDraft(draft)}>
+              {draft.photo_url ? <img className={styles.draftThumb} src={draft.photo_url} alt="" /> : <div className={styles.draftThumbEmpty}>NO PHOTO</div>}
+              <small>{draft.price_cents == null ? 'PRICE NOT SET' : `$${(draft.price_cents / 100).toFixed(2)}`}</small>
+              <strong>{draft.title || 'Untitled item'}</strong>
+              <span>{draft.seller_area || 'Selling area not set'}</span>
+              <span>{new Date(draft.updated_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+            </button>
+            <button type="button" className={styles.deleteDraft} onClick={() => removeDraft(draft.id)} aria-label={`Delete ${draft.title || 'draft'}`}>×</button>
+          </article>
+        ))}</div> : <div className={styles.emptyDraft}>No draft items yet. Start below and press <b>Save draft</b> whenever you want to finish later.</div>}
+      </section>
+
+      <form className={styles.form} onSubmit={publish}>
+        <div className={styles.basics}>
+          <div className={styles.photoBox}>
+            {photoUrl ? <img src={photoUrl} alt="Item preview" /> : <div><b>ITEM PHOTO</b><span>Required to submit</span></div>}
+            <label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />{photoUrl ? 'Change photo' : 'Add photo'}</label>
+          </div>
+          <div className={styles.fields}>
+            <label><span>Item title</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} placeholder="e.g. Calculus textbook" /></label>
+            <div className={styles.twoCols}>
+              <label><span>Price</span><div className={styles.money}>$ <input type="number" min="0.01" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="25" /></div></label>
+              <label><span>Condition</span><select value={condition} onChange={(event) => setCondition(event.target.value as ItemCondition)}>{conditions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+            </div>
+            <label><span>Description</span><textarea rows={4} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Model, size, defects, accessories, pickup notes…" /><small>Review language · {requestLanguageLabel(listingLanguage)}</small></label>
+            <label className={styles.areaField}><span>Selling area <b>Public</b></span><input value={sellerArea} onChange={(event) => setSellerArea(event.target.value)} maxLength={120} placeholder="West Lafayette, IN" /><small>City + state only. Do not enter a street, dorm, room, or exact meetup spot.</small></label>
+          </div>
+        </div>
+
+        <div className={styles.sectionHead}><div><span>DELIVERY OPTIONS</span><h3>What are you willing to offer?</h3></div><small>Choose one or more</small></div>
+        <div className={styles.optionGrid}>
+          <button type="button" className={`${styles.option} ${enabled.meet ? styles.active : ''}`} onClick={() => toggle('meet')}><i>{enabled.meet ? '✓' : ''}</i><span><b>Meet up / Local pickup</b><small>Meet the buyer on campus or nearby.</small></span><em>Free</em></button>
+          <button type="button" className={`${styles.option} ${enabled.shipping ? styles.active : ''}`} onClick={() => toggle('shipping')}><i>{enabled.shipping ? '✓' : ''}</i><span><b>Carrier shipping</b><small>Buyer enters an address and chooses an available carrier rate.</small></span><em>Calculated</em></button>
+          <button type="button" className={`${styles.option} ${enabled.seller ? styles.active : ''}`} onClick={() => toggle('seller')}><i>{enabled.seller ? '✓' : ''}</i><span><b>I may deliver it myself</b><small>Let the buyer ask you to bring it directly.</small></span><em>{enabled.seller ? 'On' : 'Off'}</em></button>
+          <button type="button" className={`${styles.option} ${enabled.aspirer ? styles.active : ''}`} onClick={() => toggle('aspirer')}><i>{enabled.aspirer ? '✓' : ''}</i><span><b>Allow Aspirer delivery</b><small>A third student can pick it up from you and deliver it.</small></span><em>Flexible</em></button>
+        </div>
+
+        {enabled.shipping && <div className={styles.subPanel}><h4>Who can cover carrier shipping?</h4><label><input type="radio" checked={shippingPayer === 'buyer'} onChange={() => setShippingPayer('buyer')} /><span><b>Buyer pays shipping</b><small>Added to the buyer checkout.</small></span></label><label><input type="radio" checked={shippingPayer === 'seller'} onChange={() => setShippingPayer('seller')} /><span><b>I’ll cover shipping</b><small>Deducted from your seller proceeds.</small></span></label><label><input type="radio" checked={shippingPayer === 'either'} onChange={() => setShippingPayer('either')} /><span><b>Either is okay</b><small>Buyer can choose who covers it at checkout.</small></span></label></div>}
+
+        {enabled.seller && <div className={styles.subPanel}><h4>Your own delivery terms</h4><div className={styles.pills}>{(['free','fixed','negotiable'] as SellerDeliveryMode[]).map((mode) => <button type="button" key={mode} className={sellerDeliveryMode === mode ? styles.activePill : ''} onClick={() => setSellerDeliveryMode(mode)}>{mode === 'free' ? 'Free' : mode === 'fixed' ? 'Fixed price' : 'Negotiable'}</button>)}</div>{sellerDeliveryMode === 'fixed' && <label className={styles.deliveryPrice}><span>Delivery price</span><div className={styles.money}>$ <input value={sellerDeliveryPrice} inputMode="decimal" onChange={(event) => setSellerDeliveryPrice(event.target.value.replace(/[^0-9.]/g, ''))} /></div></label>}<p>The buyer asks first. You can accept or decline before checkout.</p></div>}
+
+        <section className={styles.buyerPreview}><div><span>BUYER PREVIEW</span><strong>What buyers will see after approval</strong></div><div className={styles.previewTags}>{buyerOptions.map((option) => <span key={option}>✓ {option}</span>)}{!buyerOptions.length && <span>Choose at least one delivery option.</span>}</div></section>
+
+        {(error || notice) && <div id="marketplace-seller-status" className={error ? styles.error : styles.notice} role="status">{error || notice}</div>}
+
+        <div className={styles.actions}>
+          <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>{payoutStatus === 'READY' ? 'Stripe verified ✓ · Submit sends the listing through Post, Language, and Market review.' : 'Save keeps everything private. Publishing unlocks after Stripe payout verification is ready.'}</span></div>
+          <button type="button" className={styles.saveDraft} onClick={saveDraft} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : 'Save draft'}</button>
+          <button type="submit" className={styles.publish} disabled={publishing || savingDraft || payoutStatus !== 'READY'}>{publishing ? 'Submitting…' : payoutStatus === 'READY' ? 'Submit for review →' : 'Stripe verification required'}</button>
+        </div>
+        {error && <div className={styles.bottomError} role="alert">{error}</div>}
+      </form>
+    </section>
+  );
+}}</div>
+        <div className={styles.payoutCopy}>
+          <span>SELLER PAYOUT VERIFICATION</span>
+          <strong>{payoutStatus === 'READY'
+            ? 'Stripe payout verified'
+            : payoutStatus === 'UNDER_REVIEW'
+              ? 'Stripe verification is under review'
+              : payoutStatus === 'ACTION_REQUIRED' || payoutStatus === 'RESTRICTED'
+                ? 'Finish your Stripe payout setup'
+                : 'Stripe setup required before publishing'}</strong>
+          <p>{payoutStatus === 'READY'
+            ? 'You can submit items for review. Buyer checkout re-checks payout eligibility before Stripe payment opens.'
+            : 'Every Aspire Market seller must finish Stripe payout verification before a listing can be submitted. You can still build and save private drafts now.'}</p>
+          {payoutStatusError && <small>{payoutStatusError}</small>}
+        </div>
+        <a href="/profile">{payoutStatus === 'READY' ? 'Manage payouts' : 'Open Stripe setup'} →</a>
+      </section>
 
       <section className={styles.drafts} aria-label="Draft items">
         <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts and photos stay private. Submitting removes the draft and creates a private listing for review; it appears in Market only after approval.</small></div>
