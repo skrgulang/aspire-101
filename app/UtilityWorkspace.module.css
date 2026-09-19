@@ -139,7 +139,7 @@
   opacity: .94;
 }
 
-:global(.transactionsPage .marketOrders) {
+.content :global(.transactionsPage .marketOrders) {
   max-width: none;
   margin: 0;
   padding: 0;
@@ -147,35 +147,35 @@
   background: transparent;
 }
 
-:global(.transactionsPage .marketOrdersHead) {
+.content :global(.transactionsPage .marketOrdersHead) {
   display: none;
 }
 
-:global(.transactionsPage .marketOrderList) {
+.content :global(.transactionsPage .marketOrderList) {
   margin-top: 0;
   gap: 10px;
 }
 
-:global(.transactionsPage .marketOrderCard) {
+.content :global(.transactionsPage .marketOrderCard) {
   padding: 16px;
   border-radius: 16px;
   background: #121313;
 }
 
-:global(.transactionsPage .marketOrderTop h3) {
+.content :global(.transactionsPage .marketOrderTop h3) {
   font-size: 18px;
 }
 
-:global(.transactionsPage .marketOrderPrice strong) {
+.content :global(.transactionsPage .marketOrderPrice strong) {
   font-size: 20px;
 }
 
-:global(.transactionsPage .marketOrderDetails) {
+.content :global(.transactionsPage .marketOrderDetails) {
   margin-top: 12px;
   border-top: 1px solid rgba(255,255,255,.07);
 }
 
-:global(.transactionsPage .marketOrderDetails summary) {
+.content :global(.transactionsPage .marketOrderDetails summary) {
   min-height: 42px;
   display: flex;
   align-items: center;
@@ -188,35 +188,35 @@
   list-style: none;
 }
 
-:global(.transactionsPage .marketOrderDetails summary::-webkit-details-marker) {
+.content :global(.transactionsPage .marketOrderDetails summary::-webkit-details-marker) {
   display: none;
 }
 
-:global(.transactionsPage .marketOrderDetails summary b) {
+.content :global(.transactionsPage .marketOrderDetails summary b) {
   color: #ffc72c;
   font-size: 9px;
 }
 
-:global(.transactionsPage .marketOrderDetails[open] summary) {
+.content :global(.transactionsPage .marketOrderDetails[open] summary) {
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
-:global(.transactionsPage .marketOrderDetailsBody) {
+.content :global(.transactionsPage .marketOrderDetailsBody) {
   padding-top: 2px;
 }
 
-:global(.transactionsPage .marketOrderState) {
+.content :global(.transactionsPage .marketOrderState) {
   margin-top: 12px;
 }
 
-:global(.transactionsPage .marketMoneySummary),
-:global(.transactionsPage .marketProgress),
-:global(.transactionsPage .marketOrderActions) {
+.content :global(.transactionsPage .marketMoneySummary),
+.content :global(.transactionsPage .marketProgress),
+.content :global(.transactionsPage .marketOrderActions) {
   margin-top: 12px;
 }
 
 @media (max-width: 620px) {
-  :global(.transactionsPage .marketOrderCard) { padding: 14px; }
-  :global(.transactionsPage .marketOrderTop) { gap: 10px; }
-  :global(.transactionsPage .marketOrderTop h3) { font-size: 16px; }
+  .content :global(.transactionsPage .marketOrderCard) { padding: 14px; }
+  .content :global(.transactionsPage .marketOrderTop) { gap: 10px; }
+  .content :global(.transactionsPage .marketOrderTop h3) { font-size: 16px; }
 }
