@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     if (!['confirmed', 'active'].includes(connection.status)) throw new Error('CONNECTION_NOT_READY');
 
     const [{ data: aspireRequest }, { data: existingPayment }, { data: marketOrder }] = await Promise.all([
-      supabase.from('requests').select('id,title,kind,amount_cents,currency,campus_id,market_intent').eq('id', connection.request_id).maybeSingle(),
+      supabase.from('requests').select('id,title,kind,amount_cents,currency,campus_id,market_intent,seller_livemode').eq('id', connection.request_id).maybeSingle(),
       supabase.from('connection_payments').select('*').eq('connection_id', connection.id).maybeSingle(),
       supabase
         .from('market_orders')
@@ -81,6 +81,16 @@ export async function POST(request: Request) {
     if (connection.payment_method !== 'aspire') throw new Error('PAYMENT_NOT_REQUIRED');
 
     const isMarket = aspireRequest.kind === 'buy_sell';
+    if (
+      isMarket
+      && aspireRequest.market_intent === 'sell'
+      && aspireRequest.seller_livemode !== livemode
+    ) {
+      return NextResponse.json({
+        error: 'This listing was verified in a different Stripe environment. The seller must relist it before payment can continue.',
+        code: 'LISTING_PAYMENT_MODE_MISMATCH'
+      }, { status: 409 });
+    }
     if (isMarket && !marketOrder) {
       return NextResponse.json({ error: 'This marketplace order is not initialized yet. Reconnect to the listing and try again.', code: 'MARKET_ORDER_NOT_READY' }, { status: 409 });
     }
