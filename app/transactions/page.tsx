@@ -1,7 +1,6 @@
 import MarketOrdersPanel from '../MarketOrdersPanel';
 import ShippingOrderSetupPanel from '../ShippingOrderSetupPanel';
 import SellerDeliveryPanel from '../SellerDeliveryPanel';
-import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
 import AppDock from '../AppDock';
 import styles from '../UtilityWorkspace.module.css';
 
@@ -29,7 +28,6 @@ export default function TransactionsPage() {
           <section className={styles.orderTools} aria-label="Order tools">
             <ShippingOrderSetupPanel />
             <SellerDeliveryPanel />
-            <ConnectionPaymentsPanel />
           </section>
 
         </div>
