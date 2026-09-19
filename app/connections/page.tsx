@@ -1,5 +1,6 @@
 import ConnectionsHub from '../ConnectionsHub';
 import ConnectionCopilotPanel from '../ConnectionCopilotPanel';
+import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
 import AppDock from '../AppDock';
 import PendingChoiceFlash from './PendingChoiceFlash';
 import styles from './ConnectionsRefresh.module.css';
@@ -21,6 +22,7 @@ export default function ConnectionsPage() {
 
       <div className={styles.secondary}>
         <ConnectionCopilotPanel />
+        <ConnectionPaymentsPanel />
       </div>
     </main>
   );
