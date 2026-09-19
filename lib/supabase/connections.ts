@@ -204,27 +204,26 @@ export async function fetchConnectionMessages(connectionId: string) {
 
 export async function sendConnectionMessage(connectionId: string, body: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) throw new Error('You must be signed in.');
-
   const trimmed = body.trim();
   if (!trimmed) throw new Error('Write a message first.');
   if (trimmed.length > 2000) throw new Error('Messages can be up to 2,000 characters.');
 
-  const { data, error } = await supabase
-    .from('connection_messages')
-    .insert({ connection_id: connectionId, sender_id: authData.user.id, body: trimmed })
-    .select(connectionMessageSelect)
-    .single();
+  const { data, error } = await supabase.rpc('send_connection_message', {
+    p_connection_id: connectionId,
+    p_body: trimmed
+  });
   if (error) {
     const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
     if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) throw new Error('That message contains language that is not allowed on Aspire.');
     if (/MESSAGE_RATE_LIMIT/i.test(detail)) throw new Error('You are sending messages too quickly. Wait a moment and try again.');
     if (/ACCOUNT_SUSPENDED/i.test(detail)) throw new Error('This Aspire account is suspended from sending new private messages. Check your account notice or contact support.');
+    if (/Authentication required/i.test(detail)) throw new Error('You must be signed in.');
+    if (/Not authorized/i.test(detail)) throw new Error('Messaging is not available for this connection.');
     throw error;
   }
-  return data as ConnectionMessage;
+  const row = ((data ?? [])[0] ?? null) as ConnectionMessage | null;
+  if (!row) throw new Error('Could not send this message.');
+  return row;
 }
 
 export function subscribeToConnectionMessages(onMessage: (message: ConnectionMessage) => void) {
