@@ -78,6 +78,7 @@ export default function ConnectionsHub() {
   const [chatId, setChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ConnectionMessage[]>([]);
   const [chatText, setChatText] = useState('');
+  const [chatSendError, setChatSendError] = useState('');
   const [connectedConnectionId, setConnectedConnectionId] = useState<string | null>(null);
   const chatIdRef = useRef<string | null>(null);
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
@@ -144,6 +145,23 @@ export default function ConnectionsHub() {
   const connectionProfiles = useMemo(() => new Map(connectionData.profiles.map((profile) => [profile.id, profile])), [connectionData.profiles]);
   const requestMap = useMemo(() => new Map(connectionData.requests.map((request) => [request.id, request])), [connectionData.requests]);
   const circleMap = useMemo(() => new Map(circle.map((entry) => [entry.connection_id, entry])), [circle]);
+  const circleGroups = useMemo(() => {
+    const grouped = new Map<string, CircleEntry[]>();
+    circle.forEach((entry) => {
+      const current = grouped.get(entry.other_user_id) || [];
+      current.push(entry);
+      grouped.set(entry.other_user_id, current);
+    });
+    return Array.from(grouped.entries()).map(([otherUserId, entries]) => ({
+      otherUserId,
+      entries: entries.slice().sort((a, b) => new Date(b.connected_at).getTime() - new Date(a.connected_at).getTime()),
+      chatConnectionId: entries.slice().sort((a, b) => new Date(b.connected_at).getTime() - new Date(a.connected_at).getTime())[0]?.connection_id || ''
+    }));
+  }, [circle]);
+  const circleChatByUser = useMemo(
+    () => new Map(circleGroups.map((group) => [group.otherUserId, group.chatConnectionId])),
+    [circleGroups]
+  );
   const lifecycleMap = useMemo(() => new Map(lifecycle.map((state) => [state.connection_id, state])), [lifecycle]);
   const activeConnections = useMemo(
     () => connectionData.connections.filter((connection) => ['pending', 'confirmed', 'active'].includes(connection.status)),
@@ -254,6 +272,7 @@ export default function ConnectionsHub() {
     setChatId(connectionId);
     setMessages([]);
     setChatText('');
+    setChatSendError('');
     try {
       const next = await fetchConnectionMessages(connectionId);
       setMessages(next);
@@ -268,12 +287,14 @@ export default function ConnectionsHub() {
   function closeChat() {
     sendTyping(false);
     setChatText('');
+    setChatSendError('');
     setChatId(null);
   }
 
   function changeChatText(value: string) {
     if (!canWriteChat(activeChatConnection)) return;
     setChatText(value);
+    if (chatSendError) setChatSendError('');
     sendTyping(Boolean(value.trim()));
   }
 
@@ -285,10 +306,12 @@ export default function ConnectionsHub() {
       const sent = await sendConnectionMessage(chatId, chatText);
       setMessages((current) => addMessage(current, sent));
       setChatText('');
+      setChatSendError('');
       sendTyping(false);
       await markConnectionRead(chatId, sent.id);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not send message.');
+      const message = error instanceof Error ? error.message : 'Could not send message.';
+      setChatSendError(message);
     } finally {
       setBusyId('');
     }
@@ -679,6 +702,8 @@ export default function ConnectionsHub() {
             const otherId = connectionData.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
             const other = connectionProfiles.get(otherId);
             const inCircle = circleMap.has(connection.id);
+            const circleChatId = circleChatByUser.get(otherId) || '';
+            const hasCircleRelationship = Boolean(circleChatId);
             const unreadCount = unread[connection.id] || 0;
 
             return (
@@ -701,9 +726,18 @@ export default function ConnectionsHub() {
                 {connection.status === 'completed' && renderAftercare(connection)}
 
                 <div className="connectionActions">
-                  <button type="button" className={inCircle ? 'button buttonGold chatButton' : 'connectionCancel'} onClick={() => openChat(connection.id, inCircle ? 'circle' : 'history')}>
-                    {inCircle ? 'Message in My Circle' : `View transcript${unreadCount > 0 ? ` · ${unreadCount} unread` : ''}`}
-                  </button>
+                  {hasCircleRelationship && circleChatId !== connection.id ? (
+                    <>
+                      <button type="button" className="button buttonGold chatButton" onClick={() => openChat(circleChatId, 'circle')}>Continue Circle chat</button>
+                      <button type="button" className="connectionCancel" onClick={() => openChat(connection.id, 'history')}>
+                        View this transcript{unreadCount > 0 ? ` · ${unreadCount} unread` : ''}
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" className={inCircle ? 'button buttonGold chatButton' : 'connectionCancel'} onClick={() => openChat(connection.id, inCircle ? 'circle' : 'history')}>
+                      {inCircle ? 'Message in My Circle' : `View transcript${unreadCount > 0 ? ` · ${unreadCount} unread` : ''}`}
+                    </button>
+                  )}
                   <a href="/safety">Safety ↗</a>
                 </div>
               </article>
@@ -714,28 +748,31 @@ export default function ConnectionsHub() {
 
       {tab === 'circle' && (
         <div className="circleList">
-          {!circle.length && (
+          {!circleGroups.length && (
             <div className="connectionsEmpty">
               <strong>Your Circle starts after a real connection.</strong>
-              <p>Complete a request together, then both choose “Keep in my Circle.” That is the only way a completed chat becomes writable again.</p>
+              <p>Complete a request together, then both choose “Keep in my Circle.” After that, Aspire keeps one ongoing Circle chat per person.</p>
               <button type="button" className="button buttonGold" onClick={() => setTab('history')}>Review completed connections</button>
             </div>
           )}
-          {circle.map((entry) => {
+          {circleGroups.map((group) => {
+            const entry = group.entries[0];
             const connection = connectionData.connections.find((item) => item.id === entry.connection_id);
             const request = connection ? requestMap.get(connection.request_id) : undefined;
-            const other = connectionProfiles.get(entry.other_user_id);
-            const unreadCount = unread[entry.connection_id] || 0;
+            const other = connectionProfiles.get(group.otherUserId);
+            const unreadCount = group.entries.reduce((sum, item) => sum + (unread[item.connection_id] || 0), 0);
             return (
-              <article className="circleCard" key={entry.connection_id}>
+              <article className="circleCard" key={group.otherUserId}>
                 <div className="circleAvatar">{profileName(other).slice(0, 1).toUpperCase()}</div>
                 <div className="circleCopy">
                   <span>MY CIRCLE · {other?.school || request?.campus || 'Campus'}</span>
                   <h2>{profileName(other)}</h2>
-                  <p>Connected through “{request?.title || 'an Aspire request'}”. You both chose to keep in touch.</p>
+                  <p>{group.entries.length > 1
+                    ? `${group.entries.length} completed connections together. Aspire keeps them under one ongoing Circle conversation.`
+                    : `Connected through “${request?.title || 'an Aspire request'}”. You both chose to keep in touch.`}</p>
                 </div>
                 <div className="circleActions">
-                  <button type="button" className="button buttonGold" onClick={() => openChat(entry.connection_id, 'circle')}>Message {unreadCount > 0 && <b>{unreadCount}</b>}</button>
+                  <button type="button" className="button buttonGold" onClick={() => openChat(group.chatConnectionId, 'circle')}>Message {unreadCount > 0 && <b>{unreadCount}</b>}</button>
                   <a href="/post">Post another request →</a>
                 </div>
               </article>
@@ -802,6 +839,8 @@ export default function ConnectionsHub() {
         const fromCircle = Boolean(connection && connection.status === 'completed' && circleMap.has(connection.id));
         const writable = canWriteChat(connection);
         const archived = Boolean(connection && ['completed', 'cancelled'].includes(connection.status) && !fromCircle);
+        const circleChatId = otherId ? circleChatByUser.get(otherId) || '' : '';
+        const hasCircleAlternative = Boolean(circleChatId && circleChatId !== connection?.id);
         return (
           <div className="connectionChatOverlay" role="dialog" aria-modal="true" aria-label={archived ? 'Archived connection transcript' : 'Private connection chat'}>
             <section className="connectionChat">
@@ -818,10 +857,10 @@ export default function ConnectionsHub() {
               </header>
               <div className="chatContextBar">
                 <div>
-                  <span>REQUEST</span>
-                  <strong>{request?.title || 'Aspire connection'}</strong>
+                  <span>{fromCircle ? 'MY CIRCLE' : 'REQUEST'}</span>
+                  <strong>{fromCircle ? `Ongoing conversation with ${profileName(other)}` : request?.title || 'Aspire connection'}</strong>
                 </div>
-                <small>{archived ? 'Read-only transcript' : fromCircle ? 'Circle conversation' : 'Private connection'}</small>
+                <small>{archived ? 'Read-only transcript' : fromCircle ? 'One chat per person' : 'Private connection'}</small>
               </div>
               <div className="chatSafetyBar">
                 <span>{fromCircle
@@ -864,20 +903,32 @@ export default function ConnectionsHub() {
                 )}
               </div>
               {writable ? (
-                <form className="chatComposer" onSubmit={send}>
-                  <input
-                    value={chatText}
-                    onChange={(event) => changeChatText(event.target.value)}
-                    maxLength={2000}
-                    placeholder={`Message ${profileName(other)}…`}
-                  />
-                  <button type="submit" disabled={busyId === `chat-${chatId}` || !chatText.trim()}>
-                    <span>Send</span><i aria-hidden="true">↑</i>
-                  </button>
-                </form>
+                <div className="chatComposerStack">
+                  <form className="chatComposer" onSubmit={send}>
+                    <input
+                      value={chatText}
+                      onChange={(event) => changeChatText(event.target.value)}
+                      maxLength={2000}
+                      placeholder={`Message ${profileName(other)}…`}
+                      aria-invalid={Boolean(chatSendError)}
+                    />
+                    <button type="submit" disabled={busyId === `chat-${chatId}` || !chatText.trim()}>
+                      <span>Send</span><i aria-hidden="true">↑</i>
+                    </button>
+                  </form>
+                  {chatSendError && <div className="chatComposerWarning" role="alert"><b>Message not sent.</b><span>{chatSendError}</span></div>}
+                </div>
               ) : (
-                <div className="chatSafetyBar">
-                  Read-only archive. {connection?.status === 'completed' ? 'If both of you choose “Keep in my Circle,” messaging reopens there.' : 'Cancelled connections cannot be reopened for messaging.'}
+                <div className="chatArchiveBar">
+                  <div>
+                    <strong>Read-only archive.</strong>
+                    <span>{hasCircleAlternative
+                      ? `This request is closed, but your Circle conversation with ${profileName(other)} is still open.`
+                      : connection?.status === 'completed'
+                        ? 'If both of you choose “Keep in my Circle,” messaging reopens there.'
+                        : 'This request was cancelled, so this transcript stays read-only.'}</span>
+                  </div>
+                  {hasCircleAlternative && <button type="button" onClick={() => openChat(circleChatId, 'circle')}>Continue Circle chat →</button>}
                 </div>
               )}
             </section>
