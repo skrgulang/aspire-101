@@ -172,15 +172,19 @@
 :global(html[data-aspire-theme='dark']) .dock:hover,
 :global(html[data-aspire-theme='dark']) .dock:focus-within { box-shadow: 0 24px 70px rgba(0,0,0,.46); }
 :global(html[data-aspire-theme='dark']) .brand { background: transparent; color: #f7f4ed; }
-:global(html[data-aspire-theme='dark']) .groupLabel { color: #5f5b54; }
+:global(html[data-aspire-theme='dark']) .groupLabel { color: #8b8477; }
 :global(html[data-aspire-theme='dark']) .navItem,
-:global(html[data-aspire-theme='dark']) .utilityLink { color: #8d887f; }
+:global(html[data-aspire-theme='dark']) .utilityLink { color: #b5afa4; }
 :global(html[data-aspire-theme='dark']) .navItem:hover,
-:global(html[data-aspire-theme='dark']) .utilityLink:hover,
-:global(html[data-aspire-theme='dark']) .active { background: rgba(255,255,255,.06); color: #f7f4ed; }
-:global(html[data-aspire-theme='dark']) .post,
-:global(html[data-aspire-theme='dark']) .post:hover,
-:global(html[data-aspire-theme='dark']) .post.active { background: rgba(255,199,44,.10); color: #f5d56f; }
+:global(html[data-aspire-theme='dark']) .utilityLink:hover { background: #181817; color: #f7f4ed; }
+:global(html[data-aspire-theme='dark']) .active {
+  background: #f4c430;
+  color: #151108;
+  box-shadow: 0 10px 28px rgba(244,196,48,.12);
+}
+:global(html[data-aspire-theme='dark']) .post { color: #d9c46b; }
+:global(html[data-aspire-theme='dark']) .post:hover { background: rgba(244,196,48,.08); color: #f4c430; }
+:global(html[data-aspire-theme='dark']) .post.active { background: #f4c430; color: #151108; }
 :global(html[data-aspire-theme='dark']) .themeButton { border-color: rgba(255,255,255,.10); background: #171716; color: #d8d3ca; }
 
 @media (max-height: 720px) and (min-width: 901px) {
@@ -246,4 +250,29 @@
   .utilityLink span,
   .groupLabel,
   .themeButton::after { transition: none; }
+}
+
+
+@media (max-width: 900px) {
+  :global(html[data-aspire-theme='dark']) .dock,
+  :global(html[data-aspire-theme='dark']) .dock:hover,
+  :global(html[data-aspire-theme='dark']) .dock:focus-within {
+    border-color: rgba(255,255,255,.10);
+    background: rgba(12,12,11,.96);
+    box-shadow: 0 18px 54px rgba(0,0,0,.46);
+  }
+  :global(html[data-aspire-theme='dark']) .navItem {
+    color: #aaa49a;
+  }
+  :global(html[data-aspire-theme='dark']) .navItem:hover {
+    background: #181817;
+    color: #f7f4ed;
+  }
+  :global(html[data-aspire-theme='dark']) .navItem.active,
+  :global(html[data-aspire-theme='dark']) .post,
+  :global(html[data-aspire-theme='dark']) .post:hover,
+  :global(html[data-aspire-theme='dark']) .post.active {
+    background: #f4c430;
+    color: #151108;
+  }
 }
