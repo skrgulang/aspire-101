@@ -1,5 +1,4 @@
 import DiscoverRequestsV2 from '../DiscoverRequestsV2';
-import DiscoverLanguageFilter from '../DiscoverLanguageFilter';
 import AspireMatchStrip from '../AspireMatchStrip';
 import AspireAgentLauncher from '../AspireAgentLauncher';
 import SmartCampusContextBar from '../SmartCampusContextBar';
@@ -12,7 +11,6 @@ export default function DiscoverPage() {
       <div className="discoverShell shell">
         <SmartCampusContextBar label="BROWSING NEAR" />
         <AspireMatchStrip />
-        <DiscoverLanguageFilter />
         <DiscoverRequestsV2 />
       </div>
       <AppDock active="discover" />
