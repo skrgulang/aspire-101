@@ -55,8 +55,13 @@ export async function POST(request: Request) {
     const supabase = getSupabaseServiceClient();
     const livemode = stripeLivemode();
 
-    const [{ data: allowed, error: accessError }, { data: payoutAccount, error: payoutError }] = await Promise.all([
-      supabase.rpc('can_post_request', { uid: user.id }),
+    const [
+      { data: verification, error: verificationError },
+      { data: enforcement, error: enforcementError },
+      { data: payoutAccount, error: payoutError }
+    ] = await Promise.all([
+      supabase.from('school_verifications').select('status').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_enforcement_states').select('state,expires_at').eq('user_id', user.id).maybeSingle(),
       supabase
         .from('payment_accounts')
         .select('stripe_account_id,status,transfers_enabled')
@@ -65,9 +70,16 @@ export async function POST(request: Request) {
         .maybeSingle()
     ]);
 
-    if (accessError) throw accessError;
-    if (!allowed) throw new Error('SCHOOL_REQUIRED');
+    if (verificationError) throw verificationError;
+    if (enforcementError) throw enforcementError;
     if (payoutError) throw payoutError;
+    if (verification?.status !== 'verified') throw new Error('SCHOOL_REQUIRED');
+
+    const enforcementExpired = enforcement?.expires_at
+      ? new Date(enforcement.expires_at).getTime() <= Date.now()
+      : false;
+    if (!enforcementExpired && enforcement?.state === 'suspended') throw new Error('ACCOUNT_SUSPENDED');
+    if (!enforcementExpired && enforcement?.state === 'restricted') throw new Error('ACCOUNT_RESTRICTED');
     if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
 
     const payoutState = await getStripePayoutState(payoutAccount.stripe_account_id);
@@ -131,6 +143,21 @@ export async function POST(request: Request) {
     if (error) throw error;
     return NextResponse.json(data);
   } catch (error) {
+    const raw = error instanceof Error ? error.message : '';
+    const detail = error && typeof error === 'object'
+      ? `${raw} ${'details' in error ? String((error as { details?: unknown }).details || '') : ''} ${'hint' in error ? String((error as { hint?: unknown }).hint || '') : ''}`
+      : raw;
+
+    if (/POST_RATE_LIMIT/i.test(detail)) {
+      return NextResponse.json({ error: 'You are listing items too quickly. Wait a little and try again.', code: 'POST_RATE_LIMIT' }, { status: 429 });
+    }
+    if (/ACCOUNT_SUSPENDED/i.test(detail)) {
+      return NextResponse.json({ error: 'This Aspire account is suspended from publishing new listings.', code: 'ACCOUNT_SUSPENDED' }, { status: 403 });
+    }
+    if (/ACCOUNT_RESTRICTED/i.test(detail)) {
+      return NextResponse.json({ error: 'This Aspire account is temporarily restricted from publishing new listings.', code: 'ACCOUNT_RESTRICTED' }, { status: 403 });
+    }
+
     const resolved = apiError(error);
     return NextResponse.json(resolved.body, { status: resolved.status });
   }
