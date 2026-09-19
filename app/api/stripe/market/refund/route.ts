@@ -49,6 +49,15 @@ export async function POST(request: Request) {
     if (order.seller_handed_off_at) {
       return NextResponse.json({ error: 'The seller already marked handoff. Open a problem report instead of using instant cancellation.', code: 'HANDOFF_ALREADY_STARTED' }, { status: 409 });
     }
+    if (
+      order.fulfillment_method === 'shipping'
+      && ['label_purchasing', 'label_purchased', 'in_transit', 'delivered', 'exception'].includes(String(order.shipping_status))
+    ) {
+      return NextResponse.json({
+        error: 'Carrier shipping has already started. Open a problem report so Aspire can review the label and refund together.',
+        code: 'SHIPPING_ALREADY_STARTED'
+      }, { status: 409 });
+    }
 
     if (!payment || payment.status !== 'secured' || !payment.stripe_payment_intent_id) {
       return NextResponse.json({ error: 'There is no secured Aspire payment to refund.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
@@ -74,6 +83,12 @@ export async function POST(request: Request) {
       }
       if (/RESOLUTION_CASE_OPEN|MARKET_DISPUTE_OPEN/i.test(claimText)) {
         return NextResponse.json({ error: 'This order already has an open review. Resolve that case instead of using instant cancellation.', code: 'ORDER_UNDER_REVIEW' }, { status: 409 });
+      }
+      if (/SHIPPING_ALREADY_STARTED/i.test(claimText)) {
+        return NextResponse.json({
+          error: 'Carrier shipping has already started. Open a problem report so Aspire can review the label and refund together.',
+          code: 'SHIPPING_ALREADY_STARTED'
+        }, { status: 409 });
       }
       throw claimError;
     }
