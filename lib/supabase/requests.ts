@@ -134,6 +134,7 @@ function friendlyPolicyError(error: { message?: string; details?: string; hint?:
   if (/CONTENT_POLICY_BLOCKED/i.test(detail)) return new Error('This post contains language that is not allowed on Aspire. Edit it before submitting.');
   if (/MESSAGE_POLICY_BLOCKED/i.test(detail)) return new Error('That message contains language that is not allowed on Aspire.');
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little before submitting another request.');
+  if (/SELLER_SERVER_REQUIRED/i.test(detail)) return new Error('Seller listings must use the verified Sell flow. Open List an item to continue.');
   if (/RESPONSE_RATE_LIMIT/i.test(detail)) return new Error('You are responding too quickly. Wait a little and try again.');
   if (/request_responses_request_id_responder_id_key|duplicate key.*request_responses/i.test(detail)) return new Error('Your interest is already recorded on this post.');
   if (/ACCOUNT_SUSPENDED/i.test(detail)) return new Error('This Aspire account is suspended from new interactions. Check your account notice or contact support.');
