@@ -94,21 +94,42 @@ export async function buildAccountExport(supabase: ServiceClient, user: User) {
 }
 
 export async function getAccountDeletionBlockers(supabase: ServiceClient, userId: string): Promise<AccountDeletionBlocker[]> {
-  const [activeConnections, unsettledPayments, openCases, activeMarketOrders, legacyOrders, staffProfile] = await Promise.all([
+  const [
+    activeConnections,
+    unsettledPayments,
+    openCases,
+    hasOpenRefundReview,
+    activeMarketOrders,
+    legacyOrders,
+    roleRow,
+    staffProfile
+  ] = await Promise.all([
     expectOk(supabase.from('connections').select('id,status').or(`requester_id.eq.${userId},responder_id.eq.${userId}`).in('status', ['pending', 'confirmed', 'active']).limit(5), 'active_connections_check'),
     expectOk(supabase.from('connection_payments').select('id,status').or(`payer_id.eq.${userId},payee_id.eq.${userId}`).in('status', ['checkout_created', 'processing', 'secured', 'disputed']).limit(5), 'payment_check'),
     expectOk(supabase.from('connection_resolution_cases').select('id,status').or(`opened_by.eq.${userId},against_user_id.eq.${userId}`).in('status', ['submitted', 'under_review']).limit(5), 'resolution_check'),
+    expectOk(supabase.rpc('account_has_open_refund_review', { p_user_id: userId }), 'refund_request_check'),
     expectOk(supabase.from('market_orders').select('id,status').or(`buyer_id.eq.${userId},seller_id.eq.${userId}`).in('status', ['awaiting_payment', 'payment_processing', 'paid', 'handoff_confirmed', 'release_ready', 'disputed']).limit(5), 'market_order_check'),
     expectOk(supabase.from('orders').select('id,status').eq('buyer_id', userId).in('status', ['pending', 'paid']).limit(5), 'legacy_order_check'),
-    expectOk(supabase.from('profiles').select('is_moderator,role').eq('id', userId).maybeSingle(), 'staff_check')
+    expectOk(supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle(), 'role_check'),
+    expectOk(supabase.from('profiles').select('is_moderator,role').eq('id', userId).maybeSingle(), 'staff_profile_check')
   ]);
 
   const blockers: AccountDeletionBlocker[] = [];
   if ((activeConnections || []).length) blockers.push({ code: 'ACTIVE_CONNECTIONS', message: 'Finish or cancel your active connections first.', href: '/connections' });
   if ((unsettledPayments || []).length) blockers.push({ code: 'UNSETTLED_PAYMENTS', message: 'A payment is still processing, secured, or disputed. Resolve it before deleting your account.', href: '/transactions' });
   if ((openCases || []).length) blockers.push({ code: 'OPEN_RESOLUTION', message: 'You have an open Resolution Center case. Close the case before deleting your account.', href: '/resolution' });
+  if (Boolean(hasOpenRefundReview)) blockers.push({ code: 'OPEN_REFUND_REVIEW', message: 'A payment refund review is still open for a payment you are part of. Finish that review before deleting your account.', href: '/resolution' });
   if ((activeMarketOrders || []).length || (legacyOrders || []).length) blockers.push({ code: 'ACTIVE_ORDERS', message: 'A marketplace order is still active. Finish, cancel, or resolve it first.', href: '/transactions' });
-  if (staffProfile && ((staffProfile as { is_moderator?: boolean; role?: string | null }).is_moderator || ['admin', 'moderator'].includes(String((staffProfile as { role?: string | null }).role || '').toLowerCase()))) {
+
+  const authoritativeRole = String((roleRow as { role?: string | null } | null)?.role || '').toLowerCase();
+  const profileLooksPrivileged = Boolean(
+    staffProfile
+    && (
+      (staffProfile as { is_moderator?: boolean }).is_moderator
+      || ['admin', 'moderator'].includes(String((staffProfile as { role?: string | null }).role || '').toLowerCase())
+    )
+  );
+  if (['admin', 'moderator'].includes(authoritativeRole) || profileLooksPrivileged) {
     blockers.push({ code: 'STAFF_ACCOUNT', message: 'Staff accounts must be handed off before self-service deletion.' });
   }
   return blockers;
@@ -134,6 +155,20 @@ async function deleteOwnedStorage(supabase: ServiceClient, userId: string) {
 
   const { error: mediaRowDeleteError } = await supabase.from('request_media').delete().eq('uploader_id', userId);
   if (mediaRowDeleteError) throw new Error(`ACCOUNT_DELETE:request_media_rows:${mediaRowDeleteError.message}`);
+
+  const { data: draftRows, error: draftError } = await supabase
+    .from('marketplace_listing_drafts')
+    .select('photo_storage_path')
+    .eq('user_id', userId);
+  if (draftError) throw new Error(`ACCOUNT_DELETE:marketplace_drafts_list:${draftError.message}`);
+
+  const draftPaths = (draftRows || []).map((row) => String(row.photo_storage_path || '')).filter(Boolean);
+  for (let index = 0; index < draftPaths.length; index += 100) {
+    const { error } = await supabase.storage.from('marketplace-drafts').remove(draftPaths.slice(index, index + 100));
+    if (error) throw new Error(`ACCOUNT_DELETE:marketplace_drafts_storage:${error.message}`);
+  }
+  const { error: draftDeleteError } = await supabase.from('marketplace_listing_drafts').delete().eq('user_id', userId);
+  if (draftDeleteError) throw new Error(`ACCOUNT_DELETE:marketplace_drafts_rows:${draftDeleteError.message}`);
 
   const { data: avatarFiles, error: avatarListError } = await supabase.storage.from('avatars').list(userId, { limit: 1000 });
   if (avatarListError) throw new Error(`ACCOUNT_DELETE:avatar_list:${avatarListError.message}`);
@@ -193,6 +228,7 @@ export async function eraseDirectAccountData(supabase: ServiceClient, userId: st
     ['avatar_moderation_reviews', 'user_id'],
     ['safety_acknowledgements', 'user_id'],
     ['user_daily_activity', 'user_id'],
+    ['saved_requests', 'user_id'],
     ['user_roles', 'user_id'],
     ['user_trust_profiles', 'user_id'],
     ['connection_circle_choices', 'user_id'],

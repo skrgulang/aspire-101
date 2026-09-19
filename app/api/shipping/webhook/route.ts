@@ -26,6 +26,15 @@ function metadataOrderId(value: unknown) {
   } catch { return ''; }
 }
 
+function shouldApplyShippingStatus(current: string, next: string) {
+  if (current === next) return false;
+  if (current === 'delivered') return next === 'delivered';
+  if (next === 'delivered') return true;
+  if (next === 'label_purchased' && ['in_transit', 'exception'].includes(current)) return false;
+  if (current === 'in_transit' && next === 'label_purchased') return false;
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
     if (!webhookAuthorized(request)) return NextResponse.json({ error: 'Invalid webhook token.' }, { status: 401 });
@@ -58,7 +67,7 @@ export async function POST(request: Request) {
 
     const nextStatus = normalizeShippingStatus(statusValue);
     const now = new Date().toISOString();
-    if (order.shipping_status !== nextStatus) {
+    if (shouldApplyShippingStatus(String(order.shipping_status || ''), nextStatus)) {
       const { error: updateError } = await supabase.from('market_orders').update({ shipping_status: nextStatus, shipping_last_event_at: now, updated_at: now }).eq('id', order.id);
       if (updateError) throw updateError;
       await supabase.from('market_order_events').insert({ market_order_id: order.id, actor_id: null, event_type: 'shipping_status_changed', payload: { status: nextStatus, tracking_number: trackingNumber || null } });

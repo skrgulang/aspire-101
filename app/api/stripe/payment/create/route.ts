@@ -25,6 +25,17 @@ type PaymentRow = {
   checkout_attempt: number;
   stripe_checkout_session_id: string | null;
   stripe_livemode: boolean;
+  payer_id?: string;
+  payee_id?: string;
+  currency?: string;
+  base_amount_cents?: number | null;
+  requester_fee_cents?: number | null;
+  provider_fee_cents?: number | null;
+  tip_amount_cents?: number | null;
+  customer_total_cents?: number | null;
+  provider_net_cents?: number | null;
+  fee_policy_version?: string | null;
+  fee_snapshot?: Record<string, unknown> | null;
 };
 
 type FeeQuote = {
@@ -68,7 +79,7 @@ export async function POST(request: Request) {
     if (!['confirmed', 'active'].includes(connection.status)) throw new Error('CONNECTION_NOT_READY');
 
     const [{ data: aspireRequest }, { data: existingPayment }, { data: marketOrder }] = await Promise.all([
-      supabase.from('requests').select('id,title,kind,amount_cents,currency,campus_id,market_intent').eq('id', connection.request_id).maybeSingle(),
+      supabase.from('requests').select('id,title,kind,amount_cents,currency,campus_id,market_intent,seller_livemode').eq('id', connection.request_id).maybeSingle(),
       supabase.from('connection_payments').select('*').eq('connection_id', connection.id).maybeSingle(),
       supabase
         .from('market_orders')
@@ -81,6 +92,16 @@ export async function POST(request: Request) {
     if (connection.payment_method !== 'aspire') throw new Error('PAYMENT_NOT_REQUIRED');
 
     const isMarket = aspireRequest.kind === 'buy_sell';
+    if (
+      isMarket
+      && aspireRequest.market_intent === 'sell'
+      && aspireRequest.seller_livemode !== livemode
+    ) {
+      return NextResponse.json({
+        error: 'This listing was verified in a different Stripe environment. The seller must relist it before payment can continue.',
+        code: 'LISTING_PAYMENT_MODE_MISMATCH'
+      }, { status: 409 });
+    }
     if (isMarket && !marketOrder) {
       return NextResponse.json({ error: 'This marketplace order is not initialized yet. Reconnect to the listing and try again.', code: 'MARKET_ORDER_NOT_READY' }, { status: 409 });
     }
@@ -217,6 +238,7 @@ export async function POST(request: Request) {
       minimum_paid_order_cents: quote.minimum_paid_order_cents,
       standard_payout_cadence: quote.standard_payout_cadence,
       transaction_type: isMarket ? 'marketplace_physical_goods' : 'connection_service',
+      shipping_rate_id: shippingOrder ? marketOrder?.shipping_rate_id || null : null,
       shipping_rate_cents: shippingOrder ? shippingRateCents : 0,
       shipping_paid_by: shippingPaidBy,
       shipping_carrier: shippingOrder ? marketOrder?.shipping_carrier || null : null,
@@ -226,6 +248,7 @@ export async function POST(request: Request) {
     };
 
     let payment = paymentSeed;
+    let previousPaymentSnapshot = paymentSeed;
     const paymentValues = {
       stripe_livemode: livemode,
       payer_id: payerId,
@@ -274,6 +297,7 @@ export async function POST(request: Request) {
         if (concurrentPaymentError) throw concurrentPaymentError;
         if (!concurrentPayment) throw error;
         payment = concurrentPayment as PaymentRow;
+        previousPaymentSnapshot = concurrentPayment as PaymentRow;
       } else {
         payment = data as PaymentRow;
       }
@@ -307,7 +331,27 @@ export async function POST(request: Request) {
 
       if (previousSession.status === 'open') {
         if (!previousSession.url) throw new Error('STRIPE:Existing checkout is still open but has no redirect URL.');
-        if (Number(previousSession.amount_total ?? 0) === customerTotalCents) {
+
+        const previousFeeSnapshot = previousPaymentSnapshot?.fee_snapshot && typeof previousPaymentSnapshot.fee_snapshot === 'object'
+          ? previousPaymentSnapshot.fee_snapshot
+          : {};
+        const snapshotStillMatches =
+          Number(previousPaymentSnapshot?.base_amount_cents ?? -1) === quote.base_amount_cents
+          && Number(previousPaymentSnapshot?.requester_fee_cents ?? -1) === quote.requester_fee_cents
+          && Number(previousPaymentSnapshot?.provider_fee_cents ?? -1) === quote.provider_fee_cents
+          && Number(previousPaymentSnapshot?.tip_amount_cents ?? -1) === quote.tip_amount_cents
+          && Number(previousPaymentSnapshot?.customer_total_cents ?? -1) === customerTotalCents
+          && Number(previousPaymentSnapshot?.provider_net_cents ?? -1) === providerNetCents
+          && String(previousPaymentSnapshot?.fee_policy_version || '') === quote.fee_policy_version
+          && String(previousPaymentSnapshot?.payer_id || '') === payerId
+          && String(previousPaymentSnapshot?.payee_id || '') === payeeId
+          && String(previousPaymentSnapshot?.currency || '').toUpperCase() === currency
+          && String(previousFeeSnapshot.transaction_type || '') === feeSnapshot.transaction_type
+          && String(previousFeeSnapshot.shipping_rate_id || '') === String(feeSnapshot.shipping_rate_id || '')
+          && Number(previousFeeSnapshot.shipping_rate_cents || 0) === Number(feeSnapshot.shipping_rate_cents || 0)
+          && String(previousFeeSnapshot.shipping_paid_by || '') === String(feeSnapshot.shipping_paid_by || '');
+
+        if (Number(previousSession.amount_total ?? 0) === customerTotalCents && snapshotStillMatches) {
           return NextResponse.json({
             url: previousSession.url,
             paymentId: payment.id,
@@ -381,18 +425,22 @@ export async function POST(request: Request) {
       'line_items[1][quantity]': 1,
       'payment_intent_data[transfer_group]': transferGroup,
       'payment_intent_data[metadata][aspire_payment_id]': payment.id,
+      'payment_intent_data[metadata][checkout_attempt]': attempt,
       'payment_intent_data[metadata][connection_id]': connection.id,
       'payment_intent_data[metadata][request_id]': aspireRequest.id,
       'payment_intent_data[metadata][payer_id]': payerId,
       'payment_intent_data[metadata][payee_id]': payeeId,
-      'payment_intent_data[metadata][transaction_type]': isMarket ? 'marketplace' : 'connection',
+      'payment_intent_data[metadata][transaction_type]': feeSnapshot.transaction_type,
       'payment_intent_data[metadata][fee_policy_version]': quote.fee_policy_version,
+      'payment_intent_data[metadata][shipping_rate_id]': shippingOrder ? marketOrder?.shipping_rate_id || '' : '',
       'payment_intent_data[metadata][shipping_rate_cents]': shippingOrder ? shippingRateCents : 0,
       'payment_intent_data[metadata][shipping_paid_by]': shippingPaidBy || '',
       'metadata[aspire_payment_id]': payment.id,
+      'metadata[checkout_attempt]': attempt,
       'metadata[connection_id]': connection.id,
-      'metadata[transaction_type]': isMarket ? 'marketplace' : 'connection',
+      'metadata[transaction_type]': feeSnapshot.transaction_type,
       'metadata[fee_policy_version]': quote.fee_policy_version,
+      'metadata[shipping_rate_id]': shippingOrder ? marketOrder?.shipping_rate_id || '' : '',
       'metadata[shipping_rate_cents]': shippingOrder ? shippingRateCents : 0,
       'metadata[shipping_paid_by]': shippingPaidBy || '',
       success_url: isMarket
@@ -435,6 +483,8 @@ export async function POST(request: Request) {
       status: 'checkout_created',
       checkout_attempt: attempt,
       stripe_checkout_session_id: session.id,
+      stripe_payment_intent_id: null,
+      stripe_charge_id: null,
       failure_reason: null,
       updated_at: new Date().toISOString()
     })

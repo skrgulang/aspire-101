@@ -259,6 +259,11 @@ export function apiError(error: unknown) {
   if (raw === 'PAYMENT_ALREADY_SECURED') return { status: 409, body: { error: 'Payment is already secured for this connection.', code: raw } };
   if (raw === 'COMPLETION_NOT_READY') return { status: 409, body: { error: 'Both people must mark the connection complete before payment can be released.', code: raw } };
   if (raw === 'PAYMENT_NOT_SECURED') return { status: 409, body: { error: 'Payment must be secured before it can be released.', code: raw } };
+  if (raw === 'PAYOUT_HOLD_OPEN') return { status: 409, body: { error: 'This payment has an open refund, dispute, or Resolution Center review. Financial and shipping actions are paused.', code: raw } };
+  if (raw === 'REFUND_IN_PROGRESS') return { status: 409, body: { error: 'A refund is already being processed. Wait for it to finish before continuing.', code: raw } };
+  if (raw === 'PAYOUT_RELEASE_IN_PROGRESS') return { status: 409, body: { error: 'Provider payout is already being processed. Wait for it to finish before continuing.', code: raw } };
+  if (raw === 'SHIPPING_PAYMENT_SNAPSHOT_LOCKED') return { status: 409, body: { error: 'The carrier quote is locked because checkout has already started.', code: raw } };
+  if (raw === 'SHIPPING_ALREADY_STARTED') return { status: 409, body: { error: 'Carrier shipping has already started. Use the Resolution Center for any refund or cancellation.', code: raw } };
   if (raw === 'WEBHOOK_SIGNATURE') return { status: 400, body: { error: 'Invalid Stripe webhook signature.' } };
   if (raw.startsWith('MISSING_ENV:')) return { status: 503, body: { error: 'Payments are not connected to this deployment yet.', code: raw } };
   if (raw.startsWith('INVALID_ENV:')) return { status: 503, body: { error: 'Payments are not configured correctly for this deployment.', code: raw } };
