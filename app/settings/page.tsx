@@ -11,7 +11,7 @@ import UiIcon from '../UiIcon';
 
 type LocationMode = 'off' | 'approximate' | 'precise_on_request';
 type ProfileVisibility = 'private' | 'connections' | 'campus';
-type ThemePreference = 'system' | 'light' | 'dark';
+type ThemePreference = 'light' | 'dark';
 
 type Preferences = {
   location_mode: LocationMode;
@@ -65,7 +65,7 @@ export default function SettingsPage() {
   const [schoolVerified, setSchoolVerified] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
   const [prefs, setPrefs] = useState<Preferences>(defaults);
-  const [theme, setTheme] = useState<ThemePreference>('system');
+  const [theme, setTheme] = useState<ThemePreference>('dark');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -93,7 +93,10 @@ export default function SettingsPage() {
       setPhoneVerified(Boolean(user.phone_confirmed_at));
       if (preferenceRow) setPrefs({ ...defaults, ...(preferenceRow as Preferences) });
       const storedTheme = window.localStorage.getItem('aspire-theme');
-      setTheme(storedTheme === 'light' || storedTheme === 'dark' || storedTheme === 'system' ? storedTheme : 'system');
+      const nextTheme: ThemePreference = storedTheme === 'light' ? 'light' : 'dark';
+      setTheme(nextTheme);
+      if (storedTheme !== 'light' && storedTheme !== 'dark') window.localStorage.setItem('aspire-theme', 'dark');
+      document.documentElement.dataset.aspireTheme = nextTheme;
       setLoading(false);
     });
     return () => { alive = false; };
@@ -113,10 +116,7 @@ export default function SettingsPage() {
   function applyTheme(next: ThemePreference) {
     setTheme(next);
     window.localStorage.setItem('aspire-theme', next);
-    const actual = next === 'system'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-      : next;
-    document.documentElement.dataset.aspireTheme = actual;
+    document.documentElement.dataset.aspireTheme = next;
   }
 
   async function save() {
@@ -274,11 +274,10 @@ export default function SettingsPage() {
             </section>
 
             <section className="settingsCard" id="appearance">
-              <div className="settingsCardHead"><i><UiIcon name="moon" /></i><div><span>APPEARANCE</span><h2>Choose your Aspire look.</h2><p>Appearance belongs in Settings instead of taking up a separate account-menu item.</p></div></div>
+              <div className="settingsCardHead"><i><UiIcon name="moon" /></i><div><span>APPEARANCE</span><h2>Choose your Aspire look.</h2><p>Black & Gold is the default Aspire experience. Light mode stays available if you prefer it.</p></div></div>
               <div className="settingsThemeChoices">
-                <button type="button" className={theme === 'system' ? 'active' : ''} onClick={() => applyTheme('system')}><UiIcon name="settings" /><span>System</span></button>
-                <button type="button" className={theme === 'light' ? 'active' : ''} onClick={() => applyTheme('light')}><UiIcon name="sun" /><span>Light</span></button>
                 <button type="button" className={theme === 'dark' ? 'active' : ''} onClick={() => applyTheme('dark')}><UiIcon name="moon" /><span>Black & Gold</span></button>
+                <button type="button" className={theme === 'light' ? 'active' : ''} onClick={() => applyTheme('light')}><UiIcon name="sun" /><span>Light</span></button>
               </div>
             </section>
 
