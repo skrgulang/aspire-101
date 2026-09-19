@@ -333,22 +333,24 @@ export default function PostRequestForm() {
       <div className="postQuickStarts"><span>TRY ONE</span>{selectedCategory.examples.map((example) => <button type="button" key={example} onClick={() => setTitle(example)}>{example} ↗</button>)}</div>
       <label className="postField postFieldLarge postComposerField"><span>{isMarket ? 'Listing title · required' : selectedCategory.prompt}</span><textarea value={title} onChange={(e) => setTitle(e.target.value)} maxLength={180} rows={3} placeholder={selectedCategory.examples[0]} /><small>{title.length}/180</small></label>
 
-      <RequestScheduleFields
-        mode={scheduleMode}
-        startLocal={startLocal}
-        endLocal={endLocal}
-        meetingLabel={meetingLabel}
-        onModeChange={(next) => {
-          setScheduleMode(next);
-          if (next === 'flexible') {
-            setStartLocal('');
-            setEndLocal('');
-          }
-        }}
-        onStartChange={setStartLocal}
-        onEndChange={setEndLocal}
-        onMeetingLabelChange={setMeetingLabel}
-      />
+      <div className="postScheduleBlock">
+        <RequestScheduleFields
+          mode={scheduleMode}
+          startLocal={startLocal}
+          endLocal={endLocal}
+          meetingLabel={meetingLabel}
+          onModeChange={(next) => {
+            setScheduleMode(next);
+            if (next === 'flexible') {
+              setStartLocal('');
+              setEndLocal('');
+            }
+          }}
+          onStartChange={setStartLocal}
+          onEndChange={setEndLocal}
+          onMeetingLabelChange={setMeetingLabel}
+        />
+      </div>
 
       {isMarket && (
         <section className="marketComposer" aria-label="Campus marketplace listing details">
