@@ -233,7 +233,6 @@ export default function MarketplaceSellerComposer() {
   async function saveDraft() {
     setError('');
     setNotice('');
-    if (payoutStatus !== 'READY') return setError('Stripe payout verification is required before you can submit an item for sale. You can still save this listing as a private draft.');
     if (!campusId) return setError('Could not resolve your campus.');
     if (!methods.length) return setError('Choose at least one delivery option before saving.');
     if (enabled.seller && sellerDeliveryMode === 'fixed' && Number(sellerDeliveryPrice) <= 0) return setError('Add a seller delivery price greater than $0.');
@@ -296,6 +295,7 @@ export default function MarketplaceSellerComposer() {
     event.preventDefault();
     setError('');
     setNotice('');
+    if (payoutStatus !== 'READY') return setError('Stripe payout verification is required before you can submit an item for sale. You can still save this listing as a private draft.');
     if (!campusId) return setError('Could not resolve your campus.');
     if (!title.trim()) return setError('Add an item title before submitting for review.');
     if (!price || Number(price) <= 0) return setError('Add a price greater than $0 before submitting for review.');
