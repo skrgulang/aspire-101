@@ -151,7 +151,7 @@ export async function POST(request: Request) {
       if (paymentId) {
         const { data: payment, error: paymentError } = await supabase
           .from('connection_payments')
-          .select('id,status,customer_total_cents,gross_amount_cents,currency,stripe_livemode')
+          .select('id,status,connection_id,request_id,payer_id,payee_id,customer_total_cents,gross_amount_cents,currency,stripe_livemode,fee_policy_version,fee_snapshot')
           .eq('id', paymentId)
           .maybeSingle();
         requireDatabaseWrite(paymentError);
@@ -174,6 +174,30 @@ export async function POST(request: Request) {
         const receivedCurrency = String(object.currency || '').toLowerCase();
         if (expectedAmount <= 0 || receivedAmount !== expectedAmount || receivedCurrency !== expectedCurrency) {
           throw new Error('STRIPE:Stripe payment amount or currency did not match the Aspire fee snapshot.');
+        }
+
+        const metadata = object.metadata ?? {};
+        const feeSnapshot = payment.fee_snapshot && typeof payment.fee_snapshot === 'object'
+          ? payment.fee_snapshot as Record<string, unknown>
+          : {};
+        const expectedTransactionType = String(feeSnapshot.transaction_type || '');
+        const expectedShippingRateId = String(feeSnapshot.shipping_rate_id || '');
+        const expectedShippingRateCents = String(Number(feeSnapshot.shipping_rate_cents || 0));
+        const expectedShippingPaidBy = String(feeSnapshot.shipping_paid_by || '');
+
+        const snapshotMismatch =
+          String(metadata.connection_id || '') !== String(payment.connection_id || '')
+          || String(metadata.request_id || '') !== String(payment.request_id || '')
+          || String(metadata.payer_id || '') !== String(payment.payer_id || '')
+          || String(metadata.payee_id || '') !== String(payment.payee_id || '')
+          || (payment.fee_policy_version && String(metadata.fee_policy_version || '') !== String(payment.fee_policy_version))
+          || (expectedTransactionType && String(metadata.transaction_type || '') !== expectedTransactionType)
+          || String(metadata.shipping_rate_cents || '0') !== expectedShippingRateCents
+          || String(metadata.shipping_paid_by || '') !== expectedShippingPaidBy
+          || (expectedShippingRateId && String(metadata.shipping_rate_id || '') !== expectedShippingRateId);
+
+        if (snapshotMismatch) {
+          throw new Error('STRIPE:Stripe PaymentIntent metadata did not match the Aspire payment snapshot.');
         }
 
         const { error } = await supabase.from('connection_payments').update({
