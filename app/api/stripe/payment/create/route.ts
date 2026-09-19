@@ -25,6 +25,17 @@ type PaymentRow = {
   checkout_attempt: number;
   stripe_checkout_session_id: string | null;
   stripe_livemode: boolean;
+  payer_id?: string;
+  payee_id?: string;
+  currency?: string;
+  base_amount_cents?: number | null;
+  requester_fee_cents?: number | null;
+  provider_fee_cents?: number | null;
+  tip_amount_cents?: number | null;
+  customer_total_cents?: number | null;
+  provider_net_cents?: number | null;
+  fee_policy_version?: string | null;
+  fee_snapshot?: Record<string, unknown> | null;
 };
 
 type FeeQuote = {
@@ -237,6 +248,7 @@ export async function POST(request: Request) {
     };
 
     let payment = paymentSeed;
+    let previousPaymentSnapshot = paymentSeed;
     const paymentValues = {
       stripe_livemode: livemode,
       payer_id: payerId,
@@ -285,6 +297,7 @@ export async function POST(request: Request) {
         if (concurrentPaymentError) throw concurrentPaymentError;
         if (!concurrentPayment) throw error;
         payment = concurrentPayment as PaymentRow;
+        previousPaymentSnapshot = concurrentPayment as PaymentRow;
       } else {
         payment = data as PaymentRow;
       }
@@ -318,7 +331,27 @@ export async function POST(request: Request) {
 
       if (previousSession.status === 'open') {
         if (!previousSession.url) throw new Error('STRIPE:Existing checkout is still open but has no redirect URL.');
-        if (Number(previousSession.amount_total ?? 0) === customerTotalCents) {
+
+        const previousFeeSnapshot = previousPaymentSnapshot?.fee_snapshot && typeof previousPaymentSnapshot.fee_snapshot === 'object'
+          ? previousPaymentSnapshot.fee_snapshot
+          : {};
+        const snapshotStillMatches =
+          Number(previousPaymentSnapshot?.base_amount_cents ?? -1) === quote.base_amount_cents
+          && Number(previousPaymentSnapshot?.requester_fee_cents ?? -1) === quote.requester_fee_cents
+          && Number(previousPaymentSnapshot?.provider_fee_cents ?? -1) === quote.provider_fee_cents
+          && Number(previousPaymentSnapshot?.tip_amount_cents ?? -1) === quote.tip_amount_cents
+          && Number(previousPaymentSnapshot?.customer_total_cents ?? -1) === customerTotalCents
+          && Number(previousPaymentSnapshot?.provider_net_cents ?? -1) === providerNetCents
+          && String(previousPaymentSnapshot?.fee_policy_version || '') === quote.fee_policy_version
+          && String(previousPaymentSnapshot?.payer_id || '') === payerId
+          && String(previousPaymentSnapshot?.payee_id || '') === payeeId
+          && String(previousPaymentSnapshot?.currency || '').toUpperCase() === currency
+          && String(previousFeeSnapshot.transaction_type || '') === feeSnapshot.transaction_type
+          && String(previousFeeSnapshot.shipping_rate_id || '') === String(feeSnapshot.shipping_rate_id || '')
+          && Number(previousFeeSnapshot.shipping_rate_cents || 0) === Number(feeSnapshot.shipping_rate_cents || 0)
+          && String(previousFeeSnapshot.shipping_paid_by || '') === String(feeSnapshot.shipping_paid_by || '');
+
+        if (Number(previousSession.amount_total ?? 0) === customerTotalCents && snapshotStillMatches) {
           return NextResponse.json({
             url: previousSession.url,
             paymentId: payment.id,
