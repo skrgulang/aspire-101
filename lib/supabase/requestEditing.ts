@@ -45,6 +45,7 @@ function friendlyResubmitError(error: { message?: string; details?: string; hint
   if (/INVALID_SHIPPING_PAYER/i.test(detail)) return new Error('Choose who covers shipping.');
   if (/INVALID_SELLER_DELIVERY_MODE/i.test(detail)) return new Error('Choose a valid seller delivery price option.');
   if (/INVALID_SELLER_DELIVERY_PRICE/i.test(detail)) return new Error('Add a seller delivery price greater than $0.');
+  if (/PAYOUT_VERIFICATION_REQUIRED/i.test(detail)) return new Error('Stripe payout verification expired or needs attention. Refresh your payout status and try again.');
   if (/CONTENT_POLICY_BLOCKED/i.test(detail)) return new Error('The revised wording still contains language that cannot be submitted. Edit it and try again.');
   return new Error(error.message || 'Could not resubmit this post.');
 }
