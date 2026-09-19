@@ -30,6 +30,7 @@ export default function ConnectionCopilotPanel() {
   const [error, setError] = useState('');
   const [result, setResult] = useState<CopilotResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -95,32 +96,46 @@ export default function ConnectionCopilotPanel() {
 
   if (loading) return null;
 
+  const open = expanded || Boolean(result) || Boolean(error);
+
   return (
-    <section className="connectionCopilot">
+    <section className={`connectionCopilot ${open ? 'isOpen' : 'isCollapsed'}`}>
       <div className="connectionCopilotHead">
-        <div><span>✦ ASPIRE CONNECTION COPILOT</span><h2>Turn the chat into a plan.</h2><p>Only runs when you ask. It reads this connection’s recent messages to summarize what is agreed and what is still missing.</p></div>
-        <b>AI · OPTIONAL</b>
+        <div className="connectionCopilotBrand">
+          <span>✦ ASPIRE AI</span>
+          <h2>Plan this connection.</h2>
+          <p>Pull the latest chat into time, place, cost, and what still needs an answer.</p>
+        </div>
+        <div className="connectionCopilotHeadActions">
+          <b>OPTIONAL</b>
+          <button type="button" onClick={() => setExpanded((value) => !value)} aria-expanded={open}>{open ? 'Hide' : 'Open copilot'}</button>
+        </div>
       </div>
-      {!options.length ? <p className="connectionCopilotEmpty">Once you have a confirmed connection, Copilot can help coordinate it.</p> : <>
-        <div className="connectionCopilotControls">
-          <label><span>CONNECTION</span><select value={connectionId} onChange={(event) => { setConnectionId(event.target.value); setResult(null); }}>{options.map((option) => <option value={option.id} key={option.id}>{option.label}</option>)}</select></label>
-          <button className="button buttonGold" type="button" onClick={run} disabled={busy}>{busy ? 'Planning…' : 'Plan with Aspire ✦'}</button>
+
+      {open && (
+        <div className="connectionCopilotBody">
+          {!options.length ? <p className="connectionCopilotEmpty">Copilot becomes available after a connection is confirmed.</p> : <>
+            <div className="connectionCopilotControls">
+              <label><span>CONNECTION</span><select value={connectionId} onChange={(event) => { setConnectionId(event.target.value); setResult(null); }}>{options.map((option) => <option value={option.id} key={option.id}>{option.label}</option>)}</select></label>
+              <button className="button buttonGold" type="button" onClick={run} disabled={busy}>{busy ? 'Summarizing…' : 'Summarize chat ✦'}</button>
+            </div>
+            {selected && <small className="connectionCopilotSelected">{selected.status.toUpperCase()} · Nothing is sent or confirmed for you.</small>}
+          </>}
+          {error && <p className="connectionCopilotError">{error}</p>}
+          {result && <div className="connectionCopilotResult">
+            <div className="connectionCopilotStatus"><span>PLAN STATUS</span><b>{result.plan_status.replace('_',' ').toUpperCase()}</b></div>
+            <p>{result.summary}</p>
+            <div className="connectionCopilotFacts">
+              <span><b>TIME</b>{result.proposed_time || 'Not agreed yet'}</span>
+              <span><b>PLACE</b>{result.proposed_place || 'Not agreed yet'}</span>
+              <span><b>AMOUNT</b>{money(result.proposed_amount_cents)}</span>
+            </div>
+            {result.open_questions.length > 0 && <div className="connectionCopilotQuestions"><strong>Still to confirm</strong>{result.open_questions.map((question) => <span key={question}>· {question}</span>)}</div>}
+            {result.suggested_reply && <div className="connectionCopilotReply"><span>SUGGESTED REPLY</span><p>{result.suggested_reply}</p><button type="button" onClick={copyReply}>{copied ? 'Copied ✓' : 'Copy reply'}</button></div>}
+            <small>{result.safety_note}</small>
+          </div>}
         </div>
-        {selected && <small className="connectionCopilotSelected">{selected.status.toUpperCase()} · AI does not send messages or confirm plans for you.</small>}
-      </>}
-      {error && <p className="connectionCopilotError">{error}</p>}
-      {result && <div className="connectionCopilotResult">
-        <div className="connectionCopilotStatus"><span>PLAN STATUS</span><b>{result.plan_status.replace('_',' ').toUpperCase()}</b></div>
-        <p>{result.summary}</p>
-        <div className="connectionCopilotFacts">
-          <span><b>TIME</b>{result.proposed_time || 'Not agreed yet'}</span>
-          <span><b>PLACE</b>{result.proposed_place || 'Not agreed yet'}</span>
-          <span><b>AMOUNT</b>{money(result.proposed_amount_cents)}</span>
-        </div>
-        {result.open_questions.length > 0 && <div className="connectionCopilotQuestions"><strong>Still to confirm</strong>{result.open_questions.map((question) => <span key={question}>· {question}</span>)}</div>}
-        {result.suggested_reply && <div className="connectionCopilotReply"><span>SUGGESTED REPLY</span><p>{result.suggested_reply}</p><button type="button" onClick={copyReply}>{copied ? 'Copied ✓' : 'Copy reply'}</button></div>}
-        <small>{result.safety_note}</small>
-      </div>}
+      )}
     </section>
   );
 }

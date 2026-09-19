@@ -29,3 +29,95 @@
 .connectionCopilotReply button { border: 0; background: transparent; color: #c3ad61; font-size: 7px; cursor: pointer; padding: 0; }
 .connectionCopilotResult > small { display: block; margin-top: 9px; color: #5f5952; font-size: 7px; line-height: 1.45; }
 @media (max-width: 660px) { .connectionCopilotHead { flex-direction: column; } .connectionCopilotControls { grid-template-columns: 1fr; } }
+
+
+/* 2026-09-19 Copilot is a compact optional utility, not a page hero. */
+.connectionCopilot{
+  margin-top:0;
+  padding:0;
+  overflow:hidden;
+  border-color:rgba(255,255,255,.085);
+  border-radius:16px;
+  background:#111212
+}
+.connectionCopilotHead{
+  min-height:74px;
+  padding:14px 16px;
+  align-items:center
+}
+.connectionCopilotBrand{
+  min-width:0
+}
+.connectionCopilotHead span{
+  color:#a99b63;
+  font-size:7px
+}
+.connectionCopilotHead h2{
+  margin:3px 0 2px;
+  color:#e9e7e0;
+  font-size:15px;
+  letter-spacing:-.02em
+}
+.connectionCopilotHead p{
+  max-width:640px;
+  color:#6f706b;
+  font-size:8px
+}
+.connectionCopilotHeadActions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:none
+}
+.connectionCopilotHeadActions>b{
+  padding:5px 7px;
+  border:1px solid rgba(255,199,44,.10);
+  border-radius:999px;
+  color:#84784e;
+  font-size:6px;
+  letter-spacing:.09em
+}
+.connectionCopilotHeadActions>button{
+  min-height:32px;
+  padding:0 11px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:999px;
+  background:#191a1a;
+  color:#aaa9a3;
+  font:inherit;
+  font-size:8px;
+  font-weight:850;
+  cursor:pointer
+}
+.connectionCopilotHeadActions>button:hover{
+  border-color:rgba(255,199,44,.25);
+  color:#ffc72c
+}
+.connectionCopilotBody{
+  padding:0 16px 15px;
+  border-top:1px solid rgba(255,255,255,.055)
+}
+.connectionCopilotControls{
+  margin-top:13px
+}
+.connectionCopilotControls select{
+  min-height:40px;
+  border-color:rgba(255,255,255,.075);
+  background:#0d0e0e
+}
+.connectionCopilotControls .button{
+  min-height:40px;
+  border-radius:11px
+}
+.connectionCopilotResult{
+  background:#0d0e0e
+}
+@media(max-width:660px){
+  .connectionCopilotHead{
+    align-items:flex-start;
+    flex-direction:row
+  }
+  .connectionCopilotHead p{display:none}
+  .connectionCopilotHeadActions>b{display:none}
+  .connectionCopilotHeadActions>button{white-space:nowrap}
+}

@@ -43,3 +43,61 @@
   .links a { justify-content: center; }
   .links .primary { grid-column: 1 / -1; }
 }
+
+
+/* 2026-09-19 lighter, younger market explainer. */
+.wrap{padding-top:20px;padding-bottom:72px}
+.inner{max-width:1240px}
+.heading{
+  grid-template-columns:minmax(0,1.2fr) minmax(240px,.58fr);
+  gap:28px;
+  padding:28px 0 18px
+}
+.heading span,.step>span,.actionCopy span{
+  color:#9f9055;
+  font-size:8px
+}
+.heading h2{
+  max-width:680px;
+  font-size:clamp(30px,3.3vw,46px);
+  color:#ece8de
+}
+.heading p{
+  color:#777872;
+  font-size:11px
+}
+.steps{gap:10px}
+.step{
+  min-height:0;
+  padding:17px;
+  border-color:rgba(255,255,255,.075);
+  border-radius:16px;
+  background:#111212
+}
+.icon{
+  width:35px;
+  height:35px;
+  margin-bottom:20px;
+  border-radius:11px;
+  background:rgba(255,199,44,.07);
+  color:#c8a84f
+}
+.icon svg{width:17px;height:17px}
+.step h3{font-size:16px}
+.step p{font-size:10px;color:#74756f}
+.actions{
+  margin-top:10px;
+  padding:17px;
+  border-color:rgba(255,199,44,.13);
+  border-radius:16px;
+  background:rgba(255,199,44,.035)
+}
+.actionCopy strong{
+  font-size:12px;
+  color:#d3d0c7
+}
+.links a{
+  min-height:37px;
+  border-radius:999px;
+  font-size:9px
+}

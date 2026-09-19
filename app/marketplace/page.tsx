@@ -8,7 +8,7 @@ export default function MarketplacePage() {
   return (
     <>
       <div className={surfaceStyles.marketWrap}>
-        <SmartCampusContextBar label="SHOPPING NEAR" />
+        <SmartCampusContextBar label="BROWSING" variant="market" />
       </div>
       <MarketplaceCheckoutV5 />
       <MarketCompleteGuide />
