@@ -156,6 +156,20 @@ async function deleteOwnedStorage(supabase: ServiceClient, userId: string) {
   const { error: mediaRowDeleteError } = await supabase.from('request_media').delete().eq('uploader_id', userId);
   if (mediaRowDeleteError) throw new Error(`ACCOUNT_DELETE:request_media_rows:${mediaRowDeleteError.message}`);
 
+  const { data: draftRows, error: draftError } = await supabase
+    .from('marketplace_listing_drafts')
+    .select('photo_storage_path')
+    .eq('user_id', userId);
+  if (draftError) throw new Error(`ACCOUNT_DELETE:marketplace_drafts_list:${draftError.message}`);
+
+  const draftPaths = (draftRows || []).map((row) => String(row.photo_storage_path || '')).filter(Boolean);
+  for (let index = 0; index < draftPaths.length; index += 100) {
+    const { error } = await supabase.storage.from('marketplace-drafts').remove(draftPaths.slice(index, index + 100));
+    if (error) throw new Error(`ACCOUNT_DELETE:marketplace_drafts_storage:${error.message}`);
+  }
+  const { error: draftDeleteError } = await supabase.from('marketplace_listing_drafts').delete().eq('user_id', userId);
+  if (draftDeleteError) throw new Error(`ACCOUNT_DELETE:marketplace_drafts_rows:${draftDeleteError.message}`);
+
   const { data: avatarFiles, error: avatarListError } = await supabase.storage.from('avatars').list(userId, { limit: 1000 });
   if (avatarListError) throw new Error(`ACCOUNT_DELETE:avatar_list:${avatarListError.message}`);
   const avatarPaths = (avatarFiles || []).filter((file) => file.name).map((file) => `${userId}/${file.name}`);
@@ -214,6 +228,7 @@ export async function eraseDirectAccountData(supabase: ServiceClient, userId: st
     ['avatar_moderation_reviews', 'user_id'],
     ['safety_acknowledgements', 'user_id'],
     ['user_daily_activity', 'user_id'],
+    ['saved_requests', 'user_id'],
     ['user_roles', 'user_id'],
     ['user_trust_profiles', 'user_id'],
     ['connection_circle_choices', 'user_id'],
