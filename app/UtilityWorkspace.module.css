@@ -262,3 +262,192 @@
   color: #575750;
   background: #fff;
 }
+
+
+/* 2026-09 Orders refresh: list first, details on demand. */
+:global(.transactionsPage) .header {
+  align-items: center;
+  margin-bottom: 18px;
+}
+:global(.transactionsPage) .lead {
+  max-width: 650px;
+}
+:global(.transactionsPage) .actions a:first-child {
+  color: #ffc72c;
+}
+
+:global(.transactionsPage) .content :global(.marketOrderCard) {
+  padding: 14px 15px;
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+:global(.transactionsPage) .content :global(.marketOrderCard:hover) {
+  border-color: rgba(255,199,44,.24);
+  background: #141515;
+}
+:global(.transactionsPage) .content :global(.marketOrderTop) {
+  align-items: center;
+}
+:global(.transactionsPage) .content :global(.marketOrderTop > div:first-child > span) {
+  font-size: 8px;
+}
+:global(.transactionsPage) .content :global(.marketOrderTop h3) {
+  margin: 5px 0 4px;
+}
+:global(.transactionsPage) .content :global(.marketOrderPrice strong) {
+  font-size: 18px;
+}
+:global(.transactionsPage) .content :global(.marketOrderPrice small) {
+  font-size: 8px;
+}
+
+:global(.transactionsPage) .content :global(.marketOrderDetails) {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+:global(.transactionsPage) .content :global(.marketOrderDetails summary) {
+  min-height: 44px;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  list-style: none;
+  cursor: pointer;
+}
+:global(.transactionsPage) .content :global(.marketOrderDetails summary::-webkit-details-marker) {
+  display: none;
+}
+:global(.transactionsPage) .content :global(.marketOrderDetails summary > span) {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+:global(.transactionsPage) .content :global(.marketOrderDetails summary b) {
+  color: #f4f1e9;
+  font-size: 11px;
+}
+:global(.transactionsPage) .content :global(.marketOrderDetails summary small) {
+  color: #7f7d77;
+  font-size: 9px;
+}
+:global(.transactionsPage) .content :global(.marketOrderDetails summary > strong) {
+  flex: 0 0 auto;
+  color: #ffc72c;
+  font-size: 9px;
+  font-weight: 850;
+}
+:global(.transactionsPage) .content :global(.marketOrderDetails[open] summary) {
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+:global(.transactionsPage) .content :global(.marketOrderDetails[open] summary > strong) {
+  color: #a9a69f;
+}
+:global(.transactionsPage) .content :global(.marketOrderDetailsBody) {
+  padding-top: 2px;
+}
+:global(.transactionsPage) .content :global(.marketOrderState) {
+  margin-top: 12px;
+  padding: 12px;
+}
+:global(.transactionsPage) .content :global(.marketOrderState p) {
+  max-width: 720px;
+}
+:global(.transactionsPage) .content :global(.marketOrderActions .button) {
+  min-height: 40px;
+}
+:global(.transactionsPage) .orderTools {
+  margin-top: 2px;
+}
+:global(.transactionsPage) .fulfillmentHelp {
+  display: none;
+}
+
+@media (max-width: 620px) {
+  :global(.transactionsPage) .header {
+    margin-bottom: 14px;
+    padding-bottom: 16px;
+    gap: 12px;
+  }
+  :global(.transactionsPage) .title {
+    font-size: 42px;
+  }
+  :global(.transactionsPage) .lead {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  :global(.transactionsPage) .actions {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  :global(.transactionsPage) .actions::-webkit-scrollbar { display: none; }
+  :global(.transactionsPage) .actions a {
+    min-height: 38px;
+    flex: 0 0 auto;
+    padding: 0 12px;
+    font-size: 10px;
+  }
+
+  :global(.transactionsPage) .content :global(.marketOrderCard) {
+    padding: 13px;
+    border-radius: 15px;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderTop) {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    gap: 10px;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderTop > div:first-child) {
+    min-width: 0;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderTop h3) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderTop p) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9px;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderPrice) {
+    text-align: right;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderPrice strong) {
+    font-size: 16px;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderDetails summary) {
+    min-height: 42px;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderDetails summary > strong) {
+    max-width: 42%;
+    text-align: right;
+  }
+  :global(.transactionsPage) .content :global(.marketMoneySummary) {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  :global(.transactionsPage) .content :global(.marketProgress) {
+    grid-template-columns: repeat(5, minmax(70px,1fr));
+    gap: 4px;
+    padding-bottom: 4px;
+  }
+  :global(.transactionsPage) .content :global(.marketProgress span) {
+    padding: 8px 5px;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderActions) {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderActions > *) {
+    width: 100%;
+    justify-content: center;
+  }
+  :global(.transactionsPage) .content :global(.marketOrderFinePrint) {
+    display: grid;
+    gap: 4px;
+  }
+}
