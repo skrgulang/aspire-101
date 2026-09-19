@@ -9,6 +9,7 @@ import styles from './SmartCampusContextBar.module.css';
 type Props = {
   label?: string;
   reloadOnChange?: boolean;
+  variant?: 'default' | 'market';
 };
 
 const ACTIVE_CAMPUS_KEY = 'aspire-active-campus-id';
@@ -32,7 +33,7 @@ function writeStoredCampusId(campusId: string) {
   window.localStorage.setItem(ACTIVE_CAMPUS_KEY, campusId);
 }
 
-export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reloadOnChange = true }: Props) {
+export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reloadOnChange = true, variant = 'default' }: Props) {
   const [universities, setUniversities] = useState<University[]>([]);
   const [homeCampusId, setHomeCampusId] = useState('');
   const [activeCampusId, setActiveCampusId] = useState('');
@@ -148,12 +149,16 @@ export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reload
 
   if (!activeCampus || !universities.length) return null;
 
+  const marketMode = variant === 'market';
+
   return (
-    <section className={styles.root} aria-label="Smart campus context">
+    <section className={`${styles.root} ${marketMode ? styles.market : ''}`} aria-label="Smart campus context">
       <div className={styles.identity}>
         <span>{label}</span>
         <strong>{activeCampus.short_name || activeCampus.name}</strong>
-        <small>{campusArea(activeCampus)}{homeCampus && homeCampus.id !== activeCampus.id ? ` · verified at ${homeCampus.short_name || homeCampus.name}` : ' · home campus'}</small>
+        <small>{campusArea(activeCampus)}</small>
+        {marketMode && homeCampus && homeCampus.id !== activeCampus.id && <em className={styles.accountSchool}>Account school · {homeCampus.short_name || homeCampus.name}</em>}
+        {!marketMode && <em className={styles.accountSchool}>{homeCampus && homeCampus.id !== activeCampus.id ? `Verified at ${homeCampus.short_name || homeCampus.name}` : 'Home campus'}</em>}
       </div>
 
       <div className={styles.picker}>
@@ -188,7 +193,7 @@ export default function SmartCampusContextBar({ label = 'CURRENT CAMPUS', reload
         {!locating && !suggestion && !ambiguousNearby.length && !locationUnavailable && nearby[0]?.id === activeCampus.id && <span className={styles.confirmed}>✓ You’re near {activeCampus.short_name || activeCampus.name}</span>}
       </div>
 
-      <p className={styles.privacy}>Your verified school stays the same. Current campus stays synced across Post, Browse, and Market. Device coordinates are used only to suggest nearby campuses and are not saved here.</p>
+      {!marketMode && <p className={styles.privacy}>Your verified school stays the same. Current campus stays synced across Post, Browse, and Market. Device coordinates are used only to suggest nearby campuses and are not saved here.</p>}
     </section>
   );
 }
