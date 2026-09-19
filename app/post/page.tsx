@@ -11,16 +11,17 @@ export default function PostPage() {
       <section className="postWorkspace">
         <header className="postWorkspaceHeader">
           <div>
-            <h1>Create a post or listing</h1>
-            <p>Ask campus for something, offer something useful, or list an item for sale from the same Post workspace.</p>
+            <h1>Create a post</h1>
+            <p>Choose what you need, add the key details, then review it before submission.</p>
           </div>
 
-          <ol className="postProgress" aria-label="Post creation steps">
-            <li className="active"><b>1</b><span>Type</span></li>
-            <li><b>2</b><span>Details</span></li>
-            <li><b>3</b><span>Timing</span></li>
-            <li><b>4</b><span>Review</span></li>
-          </ol>
+          <div className="postFlowHint" aria-label="Post creation flow">
+            <span><b>1</b> Choose</span>
+            <i>→</i>
+            <span><b>2</b> Add details</span>
+            <i>→</i>
+            <span><b>3</b> Review</span>
+          </div>
         </header>
 
         <div className="postWorkspaceGrid">
@@ -40,18 +41,15 @@ export default function PostPage() {
               <div className="postRailHeading"><UiIcon name="bell" /><h2>Posting tips</h2></div>
               <ul className="postTipList">
                 <li><i><UiIcon name="check" /></i><span>Use a clear title that can be understood at a glance.</span></li>
-                <li><i><UiIcon name="check" /></i><span>If you are offering a ride or help, say what you are already doing and when.</span></li>
-                <li><i><UiIcon name="check" /></i><span>Add real photos for marketplace items.</span></li>
-                <li><i><UiIcon name="check" /></i><span>For a sale, choose every delivery method you are actually willing to offer.</span></li>
-                <li><i><UiIcon name="check" /></i><span>Keep exact private addresses inside the matched order or connection.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Add the time, place area, and amount when they matter.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Use real photos for marketplace items and keep private addresses for the connection chat.</span></li>
               </ul>
             </section>
 
             <section className="postRailCard">
               <div className="postRailHeading"><UiIcon name="check" /><h2>Trust & safety</h2></div>
               <ul className="postTipList compact">
-                <li><i><UiIcon name="check" /></i><span>Interact with verified campus members.</span></li>
-                <li><i><UiIcon name="check" /></i><span>Meet in public, well-lit places when possible.</span></li>
+                <li><i><UiIcon name="check" /></i><span>Meet in public when possible and keep exact private details in chat.</span></li>
                 <li><i><UiIcon name="check" /></i><span>Report suspicious activity or prohibited listings.</span></li>
               </ul>
               <a className="postSafetyLink" href="/safety">Learn more about safety <UiIcon name="chevron" /></a>
