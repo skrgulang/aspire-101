@@ -127,3 +127,96 @@
     font-size: 13px;
   }
 }
+
+
+.orderTools {
+  display: grid;
+  gap: 16px;
+}
+
+.fulfillmentHelp {
+  margin-top: 4px;
+  opacity: .94;
+}
+
+:global(.transactionsPage .marketOrders) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+:global(.transactionsPage .marketOrdersHead) {
+  display: none;
+}
+
+:global(.transactionsPage .marketOrderList) {
+  margin-top: 0;
+  gap: 10px;
+}
+
+:global(.transactionsPage .marketOrderCard) {
+  padding: 16px;
+  border-radius: 16px;
+  background: #121313;
+}
+
+:global(.transactionsPage .marketOrderTop h3) {
+  font-size: 18px;
+}
+
+:global(.transactionsPage .marketOrderPrice strong) {
+  font-size: 20px;
+}
+
+:global(.transactionsPage .marketOrderDetails) {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+
+:global(.transactionsPage .marketOrderDetails summary) {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: #b6b3ac;
+  font-size: 10px;
+  font-weight: 800;
+  list-style: none;
+}
+
+:global(.transactionsPage .marketOrderDetails summary::-webkit-details-marker) {
+  display: none;
+}
+
+:global(.transactionsPage .marketOrderDetails summary b) {
+  color: #ffc72c;
+  font-size: 9px;
+}
+
+:global(.transactionsPage .marketOrderDetails[open] summary) {
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+:global(.transactionsPage .marketOrderDetailsBody) {
+  padding-top: 2px;
+}
+
+:global(.transactionsPage .marketOrderState) {
+  margin-top: 12px;
+}
+
+:global(.transactionsPage .marketMoneySummary),
+:global(.transactionsPage .marketProgress),
+:global(.transactionsPage .marketOrderActions) {
+  margin-top: 12px;
+}
+
+@media (max-width: 620px) {
+  :global(.transactionsPage .marketOrderCard) { padding: 14px; }
+  :global(.transactionsPage .marketOrderTop) { gap: 10px; }
+  :global(.transactionsPage .marketOrderTop h3) { font-size: 16px; }
+}
