@@ -472,11 +472,11 @@ export default function ConnectionsHub() {
         <button type="button" className={tab === 'connections' ? 'active' : ''} onClick={() => setTab('connections')}>
           Connections {activeUnreadTotal > 0 && <b className="unreadPill">{activeUnreadTotal}</b>}
         </button>
-        <button type="button" className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
-          History {historyUnreadTotal > 0 && <b className="unreadPill">{historyUnreadTotal}</b>}
-        </button>
         <button type="button" className={tab === 'circle' ? 'active' : ''} onClick={() => setTab('circle')}>
           My Circle {circleUnreadTotal > 0 && <b className="unreadPill">{circleUnreadTotal}</b>}
+        </button>
+        <button type="button" className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
+          History {historyUnreadTotal > 0 && <b className="unreadPill">{historyUnreadTotal}</b>}
         </button>
         <NotificationCenter
           userId={connectionData.userId}
@@ -696,7 +696,7 @@ export default function ConnectionsHub() {
               <div className="connectionSuccessSteps" aria-label="Connection progress">
                 <div className="active"><i>✓</i><span>Connected</span></div>
                 <div><i>2</i><span>Chat</span></div>
-                <div><i>3</i><span>Agree details</span></div>
+                <div><i>3</i><span>Coordinate</span></div>
                 <div><i>4</i><span>Complete</span></div>
               </div>
               <button
@@ -718,7 +718,7 @@ export default function ConnectionsHub() {
                   setTab('connections');
                 }}
               >
-                View connection
+                Open connection
               </button>
             </section>
           </div>

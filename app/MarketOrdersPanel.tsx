@@ -251,7 +251,15 @@ export default function MarketOrdersPanel() {
                 <div className="marketOrderPrice"><strong>{money(order.agreed_amount_cents, order.currency)}</strong><small>{payWithAspire ? 'Aspire Protected' : 'Off-platform'}</small></div>
               </div>
 
+              <details className="marketOrderDetails">
+                <summary>
+                  <span><b>{state.label}</b><small>{shippingOrder ? 'Shipping order' : 'Campus meetup'} · {isBuyer ? 'Buying' : 'Selling'}</small></span>
+                  <strong>View status &amp; actions →</strong>
+                </summary>
+                <div className="marketOrderDetailsBody">
               <div className={`marketOrderState ${order.status}`}><i>{order.status === 'disputed' ? '!' : order.status === 'released' ? '✓' : '○'}</i><div><strong>{state.label}</strong><p>{state.note}</p>{dispute && <small>Report: {disputeReasons.find((item) => item.value === dispute.reason)?.label || dispute.reason} · {dispute.status.replace('_', ' ')}</small>}</div></div>
+
+
 
               {payWithAspire && (quote || payment) && <div className="marketMoneySummary">{isBuyer ? <><div><span>Item</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div>{shippingOrder && shippingRate > 0 && <div><span>{carrierName || 'Carrier shipping'}</span><strong>{shippingPaidBy === 'buyer' ? money(shippingRate, order.shipping_currency || order.currency) : 'Seller covers'}</strong></div>}<div><span>Aspire service fee</span><strong>{money(requesterFee, order.currency)}</strong></div><div className="total"><span>You pay</span><strong>{money(buyerTotal, order.currency)}</strong></div></> : <><div><span>Sale price</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div><div><span>Aspire platform fee</span><strong>−{money(providerFee, order.currency)}</strong></div>{shippingOrder && shippingRate > 0 && <div><span>{carrierName || 'Carrier shipping'}</span><strong>{shippingPaidBy === 'seller' ? `−${money(shippingRate, order.shipping_currency || order.currency)}` : 'Buyer pays'}</strong></div>}<div className="total"><span>You receive</span><strong>{money(sellerNet, order.currency)}</strong></div></>}</div>}
 
@@ -276,6 +284,8 @@ export default function MarketOrdersPanel() {
               {disputeFor === order.connection_id && canDispute && <div className="marketDisputeComposer"><div><span>PAUSE PAYOUT + REPORT</span><strong>What went wrong?</strong></div><select value={disputeReason} onChange={(event) => setDisputeReason(event.target.value as MarketDispute['reason'])}>{disputeReasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><textarea rows={3} value={disputeDetails} onChange={(event) => setDisputeDetails(event.target.value)} placeholder="Describe the item, handoff, payment, or safety issue. Keep the details factual." maxLength={2000} /><div><button type="button" className="marketSecondary" onClick={() => setDisputeFor(null)}>Never mind</button><button type="button" className="marketDanger solid" onClick={() => submitDispute(order.connection_id)} disabled={busy === `dispute-${order.connection_id}`}>Submit report + pause payout</button></div></div>}
 
               <footer className="marketOrderFinePrint"><span>{shippingOrder ? `${order.shipping_carrier || 'Carrier'} shipping · ${String(order.shipping_status || 'not started').replaceAll('_', ' ')}` : 'Campus pickup'} · {request.item_condition ? request.item_condition.replace('_', ' ') : 'condition not listed'}{request.price_negotiable ? ' · price was negotiable' : ''}</span><span>Order #{order.id.slice(0, 8)}</span></footer>
+                </div>
+              </details>
             </article>
           );
         })}
