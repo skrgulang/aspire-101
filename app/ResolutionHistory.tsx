@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ConnectionResolutionCase, fetchMyResolutionHistory } from '../lib/supabase/resolution';
+import { fetchMySafetyReports, type SafetyReportHistoryItem } from '../lib/supabase/safety';
+import { fetchMyConnections } from '../lib/supabase/connections';
+import { fetchMarketDisputes, fetchMarketOrders, type MarketDispute } from '../lib/supabase/marketplace';
 import styles from './ResolutionHistory.module.css';
+
+type MarketReportRow = {
+  dispute: MarketDispute;
+  requestId: string;
+  requestTitle: string;
+  category: string;
+  campus: string | null;
+};
 
 function reasonLabel(reason: ConnectionResolutionCase['reason']) {
   if (reason === 'no_show') return 'No-show';
@@ -14,13 +25,48 @@ function reasonLabel(reason: ConnectionResolutionCase['reason']) {
   return 'Other issue';
 }
 
+function safetyReasonLabel(reason: SafetyReportHistoryItem['reason']) {
+  if (reason === 'harassment') return 'Harassment';
+  if (reason === 'scam') return 'Scam';
+  if (reason === 'unsafe') return 'Unsafe activity';
+  if (reason === 'illegal') return 'Illegal activity';
+  if (reason === 'hate') return 'Hate';
+  if (reason === 'sexual') return 'Sexual content';
+  if (reason === 'spam') return 'Spam';
+  return 'Other safety report';
+}
+
+function marketReasonLabel(reason: MarketDispute['reason']) {
+  if (reason === 'item_not_as_described') return 'Item not as described';
+  if (reason === 'item_not_received') return 'Item not received';
+  if (reason === 'counterfeit_or_prohibited') return 'Counterfeit / prohibited';
+  if (reason === 'payment_issue') return 'Payment issue';
+  if (reason === 'unsafe_handoff') return 'Unsafe handoff';
+  return 'Marketplace issue';
+}
+
 function statusCopy(item: ConnectionResolutionCase) {
-  if (item.status === 'submitted') return { label: 'Submitted', detail: 'Payout remains paused while the case is open.' };
+  if (item.status === 'submitted') return { label: 'Submitted', detail: 'The case is recorded and waiting for review.' };
   if (item.status === 'under_review') return { label: 'Under review', detail: 'Aspire is reviewing the connection record and participant statements.' };
   if (item.status === 'resolved_refund') return { label: 'Refunded', detail: 'Aspire approved a refund. Bank posting time may vary after Stripe processes it.' };
   if (item.status === 'resolved_release') return { label: 'Payment released', detail: 'Aspire resolved the case and released the eligible provider payment.' };
   if (item.status === 'resolved_partial') return { label: 'Partially resolved', detail: 'Aspire approved a reviewed partial outcome.' };
-  return { label: 'Closed', detail: 'Aspire reviewed and closed this case without a financial resolution from the case.' };
+  return { label: 'Closed', detail: 'Aspire reviewed and closed this case.' };
+}
+
+function safetyStatusCopy(item: SafetyReportHistoryItem) {
+  if (item.status === 'submitted') return { label: 'Submitted', detail: 'Your safety report was received.' };
+  if (item.status === 'reviewing') return { label: 'Under review', detail: 'Aspire Safety is reviewing the report.' };
+  if (item.status === 'resolved') return { label: 'Resolved', detail: 'Aspire Safety completed its review.' };
+  return { label: 'Closed', detail: 'The report was reviewed and closed.' };
+}
+
+function marketStatusCopy(item: MarketDispute) {
+  if (item.status === 'open') return { label: 'Submitted', detail: 'The marketplace report is open and seller payout remains paused when applicable.' };
+  if (item.status === 'under_review') return { label: 'Under review', detail: 'Aspire is reviewing the order, payment, and handoff record.' };
+  if (item.status === 'resolved_buyer') return { label: 'Resolved for buyer', detail: 'Aspire completed the marketplace review with a buyer-side outcome.' };
+  if (item.status === 'resolved_seller') return { label: 'Resolved for seller', detail: 'Aspire completed the marketplace review with a seller-side outcome.' };
+  return { label: 'Closed', detail: 'The marketplace report is closed.' };
 }
 
 function money(cents: number | null, currency: string | null) {
@@ -33,36 +79,106 @@ function reviewedWhen(value: string | null) {
   return new Date(value).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+function isConnectionOpen(item: ConnectionResolutionCase) {
+  return ['submitted', 'under_review'].includes(item.status);
+}
+function isSafetyOpen(item: SafetyReportHistoryItem) {
+  return ['submitted', 'reviewing'].includes(item.status);
+}
+function isMarketOpen(item: MarketDispute) {
+  return ['open', 'under_review'].includes(item.status);
+}
+
 export default function ResolutionHistory() {
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchMyResolutionHistory>> | null>(null);
+  const [safetyReports, setSafetyReports] = useState<SafetyReportHistoryItem[]>([]);
+  const [marketReports, setMarketReports] = useState<MarketReportRow[]>([]);
+  const [extraRequests, setExtraRequests] = useState<{ id: string; title: string; category: string; campus: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'open' | 'closed'>('all');
 
   useEffect(() => {
     let alive = true;
-    void fetchMyResolutionHistory()
-      .then((next) => { if (alive) setData(next); })
-      .catch((nextError) => {
+    void (async () => {
+      try {
+        const [next, reports, base] = await Promise.all([
+          fetchMyResolutionHistory(),
+          fetchMySafetyReports(),
+          fetchMyConnections()
+        ]);
+        const requestMap = new Map(base.requests.map((request) => [request.id, request]));
+        const marketConnections = base.connections.filter((connection) => requestMap.get(connection.request_id)?.kind === 'buy_sell');
+        const orders = await fetchMarketOrders(marketConnections.map((connection) => connection.id));
+        const disputes = await fetchMarketDisputes(orders.map((order) => order.id));
+        const orderMap = new Map(orders.map((order) => [order.id, order]));
+        const nextMarketReports = disputes.map((dispute) => {
+          const order = orderMap.get(dispute.market_order_id);
+          const request = order ? requestMap.get(order.request_id) : undefined;
+          return {
+            dispute,
+            requestId: order?.request_id || '',
+            requestTitle: request?.title || 'Marketplace order',
+            category: request?.category || 'Buy & sell',
+            campus: request?.campus || null
+          };
+        });
+
+        if (!alive) return;
+        setData(next);
+        setSafetyReports(reports);
+        setMarketReports(nextMarketReports);
+        setExtraRequests(base.requests.map((request) => ({
+          id: request.id,
+          title: request.title,
+          category: request.category,
+          campus: request.campus || null
+        })));
+      } catch (nextError) {
         if (!alive) return;
         if (nextError instanceof Error && nextError.message === 'AUTH_REQUIRED') {
           window.location.assign('/login?next=%2Fresolution');
           return;
         }
         setError(nextError instanceof Error ? nextError.message : 'Could not load your Resolution Center history.');
-      })
-      .finally(() => { if (alive) setLoading(false); });
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
     return () => { alive = false; };
   }, []);
 
-  const requestMap = useMemo(() => new Map((data?.requests ?? []).map((item) => [item.id, item])), [data]);
+  const requestMap = useMemo(() => new Map([
+    ...(data?.requests ?? []).map((item) => [item.id, item] as const),
+    ...extraRequests.map((item) => [item.id, item] as const)
+  ]), [data, extraRequests]);
+
   const cases = useMemo(() => {
     const current = data?.cases ?? [];
-    if (filter === 'open') return current.filter((item) => ['submitted', 'under_review'].includes(item.status));
-    if (filter === 'closed') return current.filter((item) => !['submitted', 'under_review'].includes(item.status));
+    if (filter === 'open') return current.filter(isConnectionOpen);
+    if (filter === 'closed') return current.filter((item) => !isConnectionOpen(item));
     return current;
   }, [data, filter]);
-  const openCount = useMemo(() => (data?.cases ?? []).filter((item) => ['submitted', 'under_review'].includes(item.status)).length, [data]);
+
+  const visibleSafety = useMemo(() => {
+    if (filter === 'open') return safetyReports.filter(isSafetyOpen);
+    if (filter === 'closed') return safetyReports.filter((item) => !isSafetyOpen(item));
+    return safetyReports;
+  }, [filter, safetyReports]);
+
+  const visibleMarket = useMemo(() => {
+    if (filter === 'open') return marketReports.filter((item) => isMarketOpen(item.dispute));
+    if (filter === 'closed') return marketReports.filter((item) => !isMarketOpen(item.dispute));
+    return marketReports;
+  }, [filter, marketReports]);
+
+  const openCount = useMemo(() =>
+    (data?.cases ?? []).filter(isConnectionOpen).length
+    + safetyReports.filter(isSafetyOpen).length
+    + marketReports.filter((item) => isMarketOpen(item.dispute)).length,
+  [data, marketReports, safetyReports]);
+
+  const visibleCount = cases.length + visibleSafety.length + visibleMarket.length;
 
   if (loading) return <div className={styles.loading}><span /><strong>Loading Resolution Center…</strong></div>;
   if (error) return <div className={styles.error}><strong>Couldn’t load your cases.</strong><p>{error}</p></div>;
@@ -70,7 +186,7 @@ export default function ResolutionHistory() {
   return (
     <section className={styles.section} aria-label="Your Resolution Center cases">
       <header className={styles.head}>
-        <div><span>YOUR CASES</span><h2>Resolution Center</h2><p>Track no-show, cancellation, refund, payment, and safety issues connected to your Aspire activity.</p></div>
+        <div><span>YOUR CASES &amp; REPORTS</span><h2>Resolution Center</h2><p>See connection cases opened by either participant, marketplace disputes, and safety reports you submitted.</p></div>
         <div className={styles.summary}><strong>{openCount}</strong><span>open {openCount === 1 ? 'case' : 'cases'}</span></div>
       </header>
 
@@ -80,10 +196,10 @@ export default function ResolutionHistory() {
         <button className={filter === 'closed' ? styles.active : ''} type="button" onClick={() => setFilter('closed')}>Closed</button>
       </nav>
 
-      {!cases.length ? (
+      {!visibleCount ? (
         <div className={styles.empty}>
-          <strong>{filter === 'all' ? 'No Resolution Center cases.' : `No ${filter} cases.`}</strong>
-          <p>If a problem happens during an active connection, use <b>Get help</b> from Aspire Live. Payment protection applies only to eligible Pay with Aspire transactions.</p>
+          <strong>{filter === 'all' ? 'No cases or reports yet.' : `No ${filter} cases or reports.`}</strong>
+          <p>Connection cases from either participant, marketplace reports, and safety reports you submit will stay here with their current status.</p>
           <a href="/connections">Open connections →</a>
         </div>
       ) : (
@@ -93,12 +209,12 @@ export default function ResolutionHistory() {
             const status = statusCopy(item);
             const amount = money(item.payment_total_cents_snapshot, item.currency_snapshot);
             const refundAmount = money(item.refund_cents ?? item.payment_total_cents_snapshot, item.currency_snapshot);
-            const isOpen = ['submitted', 'under_review'].includes(item.status);
+            const open = isConnectionOpen(item);
             const openedByMe = item.opened_by === data?.userId;
             return (
-              <article id={`case-${item.id}`} className={`${styles.card} ${isOpen ? styles.open : ''}`} key={item.id}>
+              <article id={`case-${item.id}`} className={`${styles.card} ${open ? styles.open : ''}`} key={item.id}>
                 <div className={styles.top}>
-                  <div><span>{reasonLabel(item.reason).toUpperCase()}</span><h3>{request?.title || 'Aspire connection issue'}</h3><small>{request ? [request.category, request.campus].filter(Boolean).join(' · ') : 'Connection case'}</small></div>
+                  <div><span>CONNECTION CASE · {reasonLabel(item.reason).toUpperCase()}</span><h3>{request?.title || 'Aspire connection issue'}</h3><small>{request ? [request.category, request.campus].filter(Boolean).join(' · ') : 'Connection case'}</small></div>
                   {amount && <strong>{amount}</strong>}
                 </div>
                 <div className={styles.status}><i /><div><strong>{status.label}</strong><p>{status.detail}</p></div></div>
@@ -120,9 +236,50 @@ export default function ResolutionHistory() {
                   </div>
                 )}
                 <div className={styles.actions}>
-                  {isOpen ? <a href="/connections">Open active connection →</a> : <a href="/transactions">View transactions →</a>}
+                  {open ? <a href="/connections">Open active connection →</a> : <a href="/transactions">View transactions →</a>}
                   <a className={styles.policy} href="/resolution-policy">Policy</a>
                 </div>
+              </article>
+            );
+          })}
+
+          {visibleMarket.map(({ dispute, requestTitle, category, campus }) => {
+            const status = marketStatusCopy(dispute);
+            const open = isMarketOpen(dispute);
+            return (
+              <article className={`${styles.card} ${open ? styles.open : ''}`} key={`market-${dispute.id}`}>
+                <div className={styles.top}>
+                  <div><span>MARKETPLACE REPORT · {marketReasonLabel(dispute.reason).toUpperCase()}</span><h3>{requestTitle}</h3><small>{[category, campus].filter(Boolean).join(' · ') || 'Marketplace order'}</small></div>
+                </div>
+                <div className={styles.status}><i /><div><strong>{status.label}</strong><p>{status.detail}</p></div></div>
+                <div className={styles.meta}>
+                  <span>Opened {new Date(dispute.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                  <span>{dispute.opened_by === data?.userId ? 'Opened by you' : 'Opened by the other participant'}</span>
+                  <span>Order report #{dispute.id.slice(0, 8).toUpperCase()}</span>
+                </div>
+                {dispute.details && <div className={styles.note}><b>Report details</b><p>{dispute.details}</p></div>}
+                <div className={styles.actions}><a href="/transactions">View order →</a><a className={styles.policy} href="/resolution-policy">Policy</a></div>
+              </article>
+            );
+          })}
+
+          {visibleSafety.map((item) => {
+            const status = safetyStatusCopy(item);
+            const request = item.request_id ? requestMap.get(item.request_id) : undefined;
+            const open = isSafetyOpen(item);
+            return (
+              <article className={`${styles.card} ${open ? styles.open : ''}`} key={`safety-${item.id}`}>
+                <div className={styles.top}>
+                  <div><span>SAFETY REPORT · {safetyReasonLabel(item.reason).toUpperCase()}</span><h3>{request?.title || 'Safety report'}</h3><small>Submitted by you · Aspire Safety</small></div>
+                </div>
+                <div className={styles.status}><i /><div><strong>{status.label}</strong><p>{status.detail}</p></div></div>
+                <div className={styles.meta}>
+                  <span>Submitted {new Date(item.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+                  <span>Safety report #{item.id.slice(0, 8).toUpperCase()}</span>
+                  {item.reviewed_at && <span>Reviewed {new Date(item.reviewed_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>}
+                </div>
+                {item.details && <div className={styles.note}><b>Your report</b><p>{item.details}</p></div>}
+                <div className={styles.actions}><a href="/safety">Safety Center →</a><a className={styles.policy} href="/resolution-policy">Policy</a></div>
               </article>
             );
           })}
