@@ -23,8 +23,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Use the carrier rate the buyer selected before payment.', code: 'SHIPPING_RATE_LOCKED' }, { status: 409 });
     }
     if (!['paid', 'handoff_confirmed'].includes(order.status)) return NextResponse.json({ error: 'The buyer payment must be secured before purchasing a label.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
-    if (order.shipping_status === 'label_purchased' && order.shipping_label_url) {
-      return NextResponse.json({ status: 'label_purchased', transactionId: order.shipping_transaction_id, labelUrl: order.shipping_label_url, trackingNumber: order.shipping_tracking_number, trackingUrl: order.shipping_tracking_url, duplicate: true });
+    if (
+      order.shipping_transaction_id
+      && order.shipping_label_url
+      && ['label_purchased', 'in_transit', 'delivered', 'exception'].includes(String(order.shipping_status))
+    ) {
+      return NextResponse.json({
+        status: order.shipping_status,
+        transactionId: order.shipping_transaction_id,
+        labelUrl: order.shipping_label_url,
+        trackingNumber: order.shipping_tracking_number,
+        trackingUrl: order.shipping_tracking_url,
+        duplicate: true
+      });
     }
 
     const shipment = await getShippoShipment(order.shipping_shipment_id);
