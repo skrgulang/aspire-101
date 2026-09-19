@@ -398,46 +398,49 @@ export default function MarketplaceCheckoutV5() {
     <main className="marketV4Page">
       <AppDock active="market" />
       <div className="marketV4Shell">
-        <header className="marketV4Hero">
-          <div className="marketV4HeroCopy">
-            <p>ASPIRE MARKET · {campus?.short_name || 'CAMPUS'}</p>
-            <h1>Campus stuff, without the messy handoff.</h1>
-            <span>Buy from students and use only the handoff methods each seller actually offers.</span>
+        <header className="marketV4Hero marketV4HeroEditorial">
+          <div className="marketV4HeroLead">
+            <div className="marketV4HeroCopy">
+              <div className="marketV4Kicker"><span>FRESH ON CAMPUS</span><b>{campus?.short_name || 'CAMPUS'}</b></div>
+              <h1>Good finds,<br /><em>right around {campus?.short_name || 'campus'}.</em></h1>
+              <span>Student-to-student listings with pickup, shipping, and delivery options shown upfront.</span>
+            </div>
+            <div className="marketV4HeroActions">
+              <a className="marketV4GhostAction" href="/transactions"><UiIcon name="wallet" />Orders</a>
+              <a className="marketV4PrimaryAction" href="/post?mode=sell"><UiIcon name="plus" />Sell something</a>
+            </div>
           </div>
-          <div className="marketV4HeroActions">
-            <a className="marketV4GhostAction" href="/transactions"><UiIcon name="wallet" />Orders</a>
-            <a className="marketV4PrimaryAction" href="/post?mode=sell"><UiIcon name="plus" />Sell an item</a>
+
+          <label className="marketV4HeroSearch">
+            <UiIcon name="search" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${campus?.short_name || 'campus'} Market`} aria-label="Search marketplace listings" />
+            {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}
+          </label>
+
+          <div className="marketV4HeroTools">
+            <div className="marketV4Filters" aria-label="Delivery filters">
+              {([
+                ['all', 'Everything'], ['meet', 'Meetup'], ['ship', 'Ships'], ['seller', 'Seller delivery'], ['aspirer', 'Aspirer delivery']
+              ] as Array<[MarketFilter, string]>).map(([value, label]) => (
+                <button key={value} type="button" className={filter === value ? 'active' : ''} onClick={() => setFilter(value)} aria-pressed={filter === value}>{label}</button>
+              ))}
+            </div>
+            <label className="marketV4Sort">
+              <span>Sort</span>
+              <select value={sort} onChange={(event) => setSort(event.target.value as MarketSort)}>
+                <option value="newest">Freshest</option>
+                <option value="price_asc">Price: low to high</option>
+                <option value="price_desc">Price: high to low</option>
+              </select>
+            </label>
           </div>
         </header>
 
         {notice && <div className="marketV4Notice" role="status">{notice}</div>}
 
-        <section className="marketV4Toolbar" aria-label="Market search and filters">
-          <label className="marketV4Search">
-            <UiIcon name="search" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${campus?.short_name || 'campus'} listings`} aria-label="Search marketplace listings" />
-            {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}
-          </label>
-          <div className="marketV4Filters" aria-label="Delivery filters">
-            {([
-              ['all', 'All'], ['meet', 'Meet up'], ['ship', 'Shipping'], ['seller', 'Seller delivery'], ['aspirer', 'Aspirer delivery']
-            ] as Array<[MarketFilter, string]>).map(([value, label]) => (
-              <button key={value} type="button" className={filter === value ? 'active' : ''} onClick={() => setFilter(value)} aria-pressed={filter === value}>{label}</button>
-            ))}
-          </div>
-          <label className="marketV4Sort">
-            <span>Sort</span>
-            <select value={sort} onChange={(event) => setSort(event.target.value as MarketSort)}>
-              <option value="newest">Newest</option>
-              <option value="price_asc">Price: low to high</option>
-              <option value="price_desc">Price: high to low</option>
-            </select>
-          </label>
-        </section>
-
         <div className="marketV4ResultMeta">
-          <div><strong>{loading ? 'Loading listings…' : `${visibleItems.length} ${visibleItems.length === 1 ? 'listing' : 'listings'}`}</strong><span>{campus?.name || 'Your campus'}</span></div>
-          <a href="/post?mode=sell">Your item missing? Sell it →</a>
+          <div><strong>{loading ? 'Loading the Market…' : `${visibleItems.length} ${visibleItems.length === 1 ? 'find' : 'finds'}`}</strong><span>{campus?.name || 'Your campus'} student market</span></div>
+          <a href="/post?mode=sell">List yours <span>↗</span></a>
         </div>
 
         {loading ? (
@@ -452,7 +455,7 @@ export default function MarketplaceCheckoutV5() {
                   <button className="marketV4CardHit" type="button" aria-label={`Buy ${item.title}`} onClick={() => openDelivery(item)} />
                   <div className="marketV4Media">
                     {media ? <img src={media} alt={item.title} /> : <UiIcon name="tag" />}
-                    <div className="marketV4MediaTop"><span>{item.id === directItemId ? 'Selected' : 'For sale'}</span>{item.price_negotiable && <b>Negotiable</b>}</div>
+                    <div className="marketV4MediaTop"><span>{item.id === directItemId ? 'Selected' : conditionLabel(item.item_condition)}</span>{item.price_negotiable && <b>Negotiable</b>}</div>
                   </div>
                   <div className="marketV4Body">
                     <div className="marketV4TitleRow"><h2>{item.title}</h2><strong>{money(item.amount_cents)}</strong></div>
@@ -462,7 +465,7 @@ export default function MarketplaceCheckoutV5() {
                       <span>{conditionLabel(item.item_condition)}</span>
                       {methods.map((method) => <span key={method}>{deliveryLabel(method)}{method === 'seller_delivery' ? ` · ${sellerDeliverySummary(item)}` : ''}</span>)}
                     </div>
-                    <button className="marketV4Buy" type="button" onClick={() => openDelivery(item)}>Buy now <span>→</span></button>
+                    <button className="marketV4Buy" type="button" onClick={() => openDelivery(item)}>View item <span>↗</span></button>
                   </div>
                 </article>
               );
