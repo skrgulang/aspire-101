@@ -283,3 +283,62 @@
   .marketV4Badges span:nth-of-type(n+2){display:none}
   .marketV4Buy{width:100%}
 }
+
+
+/* 2026-09-19 Checkout protection state. */
+.marketV4ProtectionBar{
+  margin:2px 0 14px;
+  padding:11px 12px;
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:13px;
+  background:#111212
+}
+.marketV4ProtectionBar>i{
+  width:30px;
+  height:30px;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  font-style:normal;
+  font-size:10px;
+  font-weight:950
+}
+.marketV4ProtectionBar>div{
+  display:grid;
+  gap:2px
+}
+.marketV4ProtectionBar strong{
+  color:#d6d3ca;
+  font-size:9px
+}
+.marketV4ProtectionBar span{
+  color:#787973;
+  font-size:8px;
+  line-height:1.45
+}
+.marketV4ProtectionBar.protected{
+  border-color:rgba(95,207,142,.18);
+  background:rgba(95,207,142,.035)
+}
+.marketV4ProtectionBar.protected>i{
+  border:1px solid rgba(95,207,142,.26);
+  background:rgba(95,207,142,.08);
+  color:#82d6a4
+}
+.marketV4ProtectionBar.unprotected>i{
+  border:1px solid rgba(255,199,44,.18);
+  background:rgba(255,199,44,.06);
+  color:#c8a847
+}
+:global(html[data-aspire-theme='light']) .marketV4ProtectionBar{
+  border-color:#e6e6df;
+  background:#fafaf7
+}
+:global(html[data-aspire-theme='light']) .marketV4ProtectionBar.protected{
+  border-color:#cce6d6;
+  background:#f6fcf8
+}
