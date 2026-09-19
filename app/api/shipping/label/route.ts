@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
     let transaction;
     try {
-      transaction = await buyShippoLabel({ rateId: rate.object_id, metadata: JSON.stringify({ aspire_market_order_id: order.id, request_id: order.request_id }) });
+      transaction = await buyShippoLabel({ rateId: rate.object_id, metadata: JSON.stringify({ aspire_market_order_id: order.id }) });
     } catch (purchaseError) {
       await supabase.from('market_orders').update({ shipping_status: 'label_failed', updated_at: new Date().toISOString() }).eq('id', order.id).eq('shipping_status', 'label_purchasing');
       throw purchaseError;
