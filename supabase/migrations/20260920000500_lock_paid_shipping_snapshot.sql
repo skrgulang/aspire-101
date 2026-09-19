@@ -284,3 +284,26 @@ revoke all on function public.account_has_open_refund_review(uuid)
   from public, anon, authenticated;
 grant execute on function public.account_has_open_refund_review(uuid)
   to service_role;
+
+
+-- Webhooks must not recreate personal verification rows after a user has
+-- completed soft account deletion.
+create or replace function public.account_is_active_for_service_event(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = auth, public
+as $$
+  select exists (
+    select 1
+    from auth.users u
+    where u.id = p_user_id
+      and u.deleted_at is null
+  );
+$$;
+
+revoke all on function public.account_is_active_for_service_event(uuid)
+  from public, anon, authenticated;
+grant execute on function public.account_is_active_for_service_event(uuid)
+  to service_role;
