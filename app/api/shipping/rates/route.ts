@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       addressFrom,
       addressTo,
       parcel: packageData,
-      metadata: JSON.stringify({ aspire_market_order_id: order.id, request_id: order.request_id })
+      metadata: JSON.stringify({ aspire_market_order_id: order.id })
     });
     const rates = filteredRates(shipment);
     if (!rates.length) return NextResponse.json({ error: 'No configured carrier rates were found. Check the Shippo carrier connections and addresses.', code: 'NO_SHIPPING_RATES' }, { status: 502 });
