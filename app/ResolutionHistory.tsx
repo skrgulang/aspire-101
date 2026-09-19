@@ -186,7 +186,7 @@ export default function ResolutionHistory() {
   return (
     <section className={styles.section} aria-label="Your Resolution Center cases">
       <header className={styles.head}>
-        <div><span>YOUR CASES &amp; REPORTS</span><h2>Resolution Center</h2><p>See connection cases opened by either participant, marketplace disputes, and safety reports you submitted.</p></div>
+        <div><span>YOUR CASES &amp; REPORTS</span><h2>Resolution Center</h2><p>Connection and order cases opened by either participant appear here. Safety reports you submit stay visible with their review status; reports submitted by someone else stay private during review.</p></div>
         <div className={styles.summary}><strong>{openCount}</strong><span>open {openCount === 1 ? 'case' : 'cases'}</span></div>
       </header>
 
