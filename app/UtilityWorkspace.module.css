@@ -139,7 +139,7 @@
   opacity: .94;
 }
 
-.content :global(.transactionsPage .marketOrders) {
+:global(.transactionsPage) .content :global(.marketOrders) {
   max-width: none;
   margin: 0;
   padding: 0;
@@ -147,35 +147,35 @@
   background: transparent;
 }
 
-.content :global(.transactionsPage .marketOrdersHead) {
+:global(.transactionsPage) .content :global(.marketOrdersHead) {
   display: none;
 }
 
-.content :global(.transactionsPage .marketOrderList) {
+:global(.transactionsPage) .content :global(.marketOrderList) {
   margin-top: 0;
   gap: 10px;
 }
 
-.content :global(.transactionsPage .marketOrderCard) {
+:global(.transactionsPage) .content :global(.marketOrderCard) {
   padding: 16px;
   border-radius: 16px;
   background: #121313;
 }
 
-.content :global(.transactionsPage .marketOrderTop h3) {
+:global(.transactionsPage) .content :global(.marketOrderTop h3) {
   font-size: 18px;
 }
 
-.content :global(.transactionsPage .marketOrderPrice strong) {
+:global(.transactionsPage) .content :global(.marketOrderPrice strong) {
   font-size: 20px;
 }
 
-.content :global(.transactionsPage .marketOrderDetails) {
+:global(.transactionsPage) .content :global(.marketOrderDetails) {
   margin-top: 12px;
   border-top: 1px solid rgba(255,255,255,.07);
 }
 
-.content :global(.transactionsPage .marketOrderDetails summary) {
+:global(.transactionsPage) .content :global(.marketOrderDetails summary) {
   min-height: 42px;
   display: flex;
   align-items: center;
@@ -188,35 +188,77 @@
   list-style: none;
 }
 
-.content :global(.transactionsPage .marketOrderDetails summary::-webkit-details-marker) {
+:global(.transactionsPage) .content :global(.marketOrderDetails summary::-webkit-details-marker) {
   display: none;
 }
 
-.content :global(.transactionsPage .marketOrderDetails summary b) {
+:global(.transactionsPage) .content :global(.marketOrderDetails summary b) {
   color: #ffc72c;
   font-size: 9px;
 }
 
-.content :global(.transactionsPage .marketOrderDetails[open] summary) {
+:global(.transactionsPage) .content :global(.marketOrderDetails[open] summary) {
   border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
-.content :global(.transactionsPage .marketOrderDetailsBody) {
+:global(.transactionsPage) .content :global(.marketOrderDetailsBody) {
   padding-top: 2px;
 }
 
-.content :global(.transactionsPage .marketOrderState) {
+:global(.transactionsPage) .content :global(.marketOrderState) {
   margin-top: 12px;
 }
 
-.content :global(.transactionsPage .marketMoneySummary),
-.content :global(.transactionsPage .marketProgress),
-.content :global(.transactionsPage .marketOrderActions) {
+:global(.transactionsPage) .content :global(.marketMoneySummary),
+:global(.transactionsPage) .content :global(.marketProgress),
+:global(.transactionsPage) .content :global(.marketOrderActions) {
   margin-top: 12px;
 }
 
 @media (max-width: 620px) {
-  .content :global(.transactionsPage .marketOrderCard) { padding: 14px; }
-  .content :global(.transactionsPage .marketOrderTop) { gap: 10px; }
-  .content :global(.transactionsPage .marketOrderTop h3) { font-size: 16px; }
+  :global(.transactionsPage) .content :global(.marketOrderCard) { padding: 14px; }
+  :global(.transactionsPage) .content :global(.marketOrderTop) { gap: 10px; }
+  :global(.transactionsPage) .content :global(.marketOrderTop h3) { font-size: 16px; }
+}
+
+
+/* Keep Orders readable in both themes. The legacy marketplace order component was authored dark-first. */
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketOrderCard) {
+  border-color: #e1e1db;
+  background: #fff;
+  color: #1b1b18;
+  box-shadow: 0 8px 24px rgba(22,22,18,.035);
+}
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketOrderTop h3),
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketOrderPrice strong),
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketOrderState strong),
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketMoneySummary strong) {
+  color: #1b1b18;
+}
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketOrderTop p),
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketOrderState p),
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketMoneySummary span),
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketWaiting),
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketOrderFinePrint) {
+  color: #777770;
+}
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketOrderState) {
+  background: #f7f7f3;
+}
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketMoneySummary > div) {
+  border-color: #e5e5de;
+  background: #fbfbf8;
+}
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketProgress span) {
+  background: #f3f3ee;
+  color: #85857e;
+}
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketProgress span.done) {
+  background: #ffc72c;
+  color: #17130a;
+}
+:global(html[data-aspire-theme='light'] .transactionsPage) .content :global(.marketSecondary) {
+  border-color: #dcdcd5;
+  color: #575750;
+  background: #fff;
 }
