@@ -49,36 +49,30 @@ html[data-aspire-theme='dark'] .connectionsPage {
   padding: 4px 0 24px;
 }
 
-.connectionsPage .connectionsHero .eyebrow { display: none; }
+.connectionsPage .connectionsHero .eyebrow {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--inbox-gold);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .15em;
+}
 .connectionsPage .connectionsHero h1 {
   margin: 0;
-  font-size: 0;
-  line-height: 1;
-  letter-spacing: 0;
-}
-.connectionsPage .connectionsHero h1 span { display: none; }
-.connectionsPage .connectionsHero h1::after {
-  content: 'Inbox';
-  display: block;
   color: var(--inbox-text);
   font-family: var(--font-inter), Arial, sans-serif;
   font-size: clamp(38px, 4vw, 56px);
-  font-style: normal;
   font-weight: 850;
   line-height: 1;
   letter-spacing: -.045em;
 }
+.connectionsPage .connectionsHero h1 span { display: none; }
 .connectionsPage .connectionsHero > div:first-child > p:last-child {
   max-width: 620px;
   margin: 9px 0 0;
-  color: transparent;
-  font-size: 0;
-  line-height: 1.5;
-}
-.connectionsPage .connectionsHero > div:first-child > p:last-child::after {
-  content: 'Manage responses, connections, and private chats.';
   color: var(--inbox-muted);
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .connectionsPage .connectionsStats {
@@ -196,7 +190,6 @@ html[data-aspire-theme='dark'] .connectionsPage .connectionsTabs a { color: var(
 .connectionsPage .inboxRequest,
 .connectionsPage .connectionCard,
 .connectionsPage .circleCard {
-  padding: 16px;
   border: 1px solid var(--inbox-border);
   border-radius: 17px;
   background: var(--inbox-surface);
@@ -389,4 +382,23 @@ html[data-aspire-theme='dark'] .connectionsPage .status-open { color: var(--inbo
   .connectionsPage .responseRow { grid-template-columns: 34px minmax(0,1fr); }
   .connectionsPage .responseRow > button,
   .connectionsPage .responseState { grid-column: 2; justify-self: start; }
+}
+
+
+/* Inbox structure is owned by the component CSS now; keep these global rules non-conflicting. */
+.connectionsPage .inboxRequest { padding: 0; }
+.connectionsPage .connectionsTabPrimary,
+.connectionsPage .connectionsTabTools {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+.connectionsPage .connectionsTabTools {
+  margin-left: auto;
+}
+.connectionsPage .connectionsTabTools .notificationToggle {
+  margin-left: 0;
+}
+.connectionsPage .connectionsTabTools > a {
+  margin-left: 0;
 }
