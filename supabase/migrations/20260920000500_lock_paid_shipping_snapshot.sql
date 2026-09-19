@@ -259,3 +259,28 @@ $$;
 
 revoke all on function public.claim_connection_payment_refund(uuid,uuid)
   from public, anon, authenticated;
+
+
+-- Account deletion must stay blocked while either side of a payment has an
+-- unresolved refund review, including released payments whose status alone no
+-- longer looks unsettled.
+create or replace function public.account_has_open_refund_review(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.payment_refund_requests prr
+    join public.connection_payments cp on cp.id = prr.payment_id
+    where prr.status in ('open','under_review','approved')
+      and p_user_id in (cp.payer_id, cp.payee_id)
+  );
+$$;
+
+revoke all on function public.account_has_open_refund_review(uuid)
+  from public, anon, authenticated;
+grant execute on function public.account_has_open_refund_review(uuid)
+  to service_role;
