@@ -1676,3 +1676,99 @@
   .page :global(.inboxInviteCard){grid-template-columns:35px minmax(0,1fr);padding:10px}
   .page :global(.inboxInviteAvatar){width:35px;height:35px}
 }
+
+
+/* 2026-09-19 Circle chat unification + inline message policy feedback. */
+.page :global(.chatComposerStack){
+  display:grid;
+  border-top:1px solid rgba(255,255,255,.07);
+  background:#101111
+}
+.page :global(.chatComposerStack .chatComposer){
+  border-top:0
+}
+.page :global(.chatComposerWarning){
+  margin:-3px 12px 10px;
+  padding:8px 10px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  border:1px solid rgba(255,94,94,.18);
+  border-radius:10px;
+  background:rgba(255,76,76,.055);
+  color:#c99191;
+  font-size:8px;
+  line-height:1.4
+}
+.page :global(.chatComposerWarning b){
+  color:#e0aaaa;
+  font-size:8px
+}
+.page :global(.chatComposerWarning span){
+  color:#9d8585
+}
+.page :global(.chatComposer input[aria-invalid='true']){
+  border-color:rgba(255,94,94,.35);
+  box-shadow:0 0 0 3px rgba(255,94,94,.045)
+}
+.page :global(.chatArchiveBar){
+  min-height:66px;
+  padding:10px 14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  border-top:1px solid rgba(255,255,255,.07);
+  background:#101111
+}
+.page :global(.chatArchiveBar>div){
+  min-width:0;
+  display:grid;
+  gap:2px
+}
+.page :global(.chatArchiveBar strong){
+  color:#c8c6bf;
+  font-size:9px
+}
+.page :global(.chatArchiveBar span){
+  color:#777872;
+  font-size:8px;
+  line-height:1.4
+}
+.page :global(.chatArchiveBar button){
+  flex:none;
+  min-height:36px;
+  padding:0 11px;
+  border:1px solid rgba(255,199,44,.24);
+  border-radius:10px;
+  background:rgba(255,199,44,.07);
+  color:#d5b64f;
+  font:inherit;
+  font-size:8px;
+  font-weight:850;
+  cursor:pointer
+}
+:global(html[data-aspire-theme='light']) .page :global(.chatComposerStack),
+:global(html[data-aspire-theme='light']) .page :global(.chatArchiveBar){
+  border-color:#ecece6;
+  background:#fff
+}
+:global(html[data-aspire-theme='light']) .page :global(.chatComposerWarning){
+  border-color:#f0caca;
+  background:#fff6f6;
+  color:#8a5151
+}
+:global(html[data-aspire-theme='light']) .page :global(.chatArchiveBar strong){color:#343430}
+:global(html[data-aspire-theme='light']) .page :global(.chatArchiveBar span){color:#777770}
+@media(max-width:700px){
+  .page :global(.chatComposerWarning){
+    margin:-2px 10px calc(8px + env(safe-area-inset-bottom));
+  }
+  .page :global(.chatArchiveBar){
+    padding:9px 10px calc(9px + env(safe-area-inset-bottom));
+  }
+  .page :global(.chatArchiveBar button){
+    min-height:34px;
+    max-width:145px
+  }
+}

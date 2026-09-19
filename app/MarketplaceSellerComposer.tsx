@@ -31,11 +31,27 @@ const conditions: { value: ItemCondition; label: string }[] = [
 
 type OptionKey = 'meet' | 'shipping' | 'seller' | 'aspirer';
 type EnabledOptions = Record<OptionKey, boolean>;
+type SellerPayoutStatus = 'NOT_STARTED' | 'ACTION_REQUIRED' | 'UNDER_REVIEW' | 'READY' | 'RESTRICTED';
 
 const DEFAULT_OPTIONS: EnabledOptions = { meet: true, shipping: true, seller: false, aspirer: true };
 
 function revokeLocalPhoto(url: string) {
   if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+}
+
+async function fetchSellerPayoutStatus(): Promise<SellerPayoutStatus> {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sign in again to check Stripe payouts.');
+  const response = await fetch('/api/stripe/connect/status', {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({})) as { status?: SellerPayoutStatus; error?: string };
+  if (!response.ok) throw new Error(payload.error || 'Could not check Stripe payout verification.');
+  return payload.status || 'NOT_STARTED';
 }
 
 function detectListingLanguage(text: string, locale?: string | null): RequestLanguageCode {
@@ -72,6 +88,8 @@ export default function MarketplaceSellerComposer() {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [savingDraft, setSavingDraft] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [payoutStatus, setPayoutStatus] = useState<SellerPayoutStatus>('NOT_STARTED');
+  const [payoutStatusError, setPayoutStatusError] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -85,10 +103,16 @@ export default function MarketplaceSellerComposer() {
         return;
       }
       try {
-        const [{ data: profile }, universities, savedDrafts] = await Promise.all([
+        const [{ data: profile }, universities, savedDrafts, payoutResult] = await Promise.all([
           supabase.from('profiles').select('current_campus_id,home_campus_id').eq('id', data.user.id).maybeSingle(),
           fetchActiveUniversities(),
-          listMarketplaceDrafts()
+          listMarketplaceDrafts(),
+          fetchSellerPayoutStatus()
+            .then((status) => ({ status, error: '' }))
+            .catch((cause) => ({
+              status: 'NOT_STARTED' as SellerPayoutStatus,
+              error: cause instanceof Error ? cause.message : 'Could not check Stripe payout verification.'
+            }))
         ]);
         if (!active) return;
         const nextId = profile?.current_campus_id || profile?.home_campus_id || universities[0]?.id || '';
@@ -99,6 +123,8 @@ export default function MarketplaceSellerComposer() {
           setSellerArea((current) => current || [campus.city, campus.state].filter(Boolean).join(', '));
         }
         setDrafts(savedDrafts);
+        setPayoutStatus(payoutResult.status);
+        setPayoutStatusError(payoutResult.error);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Could not load seller tools.');
       } finally {
@@ -269,6 +295,7 @@ export default function MarketplaceSellerComposer() {
     event.preventDefault();
     setError('');
     setNotice('');
+    if (payoutStatus !== 'READY') return setError('Stripe payout verification is required before you can submit an item for sale. You can still save this listing as a private draft.');
     if (!campusId) return setError('Could not resolve your campus.');
     if (!title.trim()) return setError('Add an item title before submitting for review.');
     if (!price || Number(price) <= 0) return setError('Add a price greater than $0 before submitting for review.');
@@ -317,6 +344,25 @@ export default function MarketplaceSellerComposer() {
         <div><span>SELL ON ASPIRE MARKET · {campusName || 'CAMPUS'}</span><h2>List an item.</h2><p>Save it as a private draft, or submit it for review when it is ready. Approved listings appear in Market.</p></div>
         <button type="button" className={styles.newButton} onClick={resetComposer}>+ New item</button>
       </div>
+
+      <section className={`${styles.payoutGate} ${payoutStatus === 'READY' ? styles.payoutReady : styles.payoutNeedsAction}`} aria-label="Stripe seller payout verification">
+        <div className={styles.payoutMark}>{payoutStatus === 'READY' ? '✓' : '$'}</div>
+        <div className={styles.payoutCopy}>
+          <span>SELLER PAYOUT VERIFICATION</span>
+          <strong>{payoutStatus === 'READY'
+            ? 'Stripe payout verified'
+            : payoutStatus === 'UNDER_REVIEW'
+              ? 'Stripe verification is under review'
+              : payoutStatus === 'ACTION_REQUIRED' || payoutStatus === 'RESTRICTED'
+                ? 'Finish your Stripe payout setup'
+                : 'Stripe setup required before publishing'}</strong>
+          <p>{payoutStatus === 'READY'
+            ? 'You can submit items for review. Buyer checkout re-checks payout eligibility before Stripe payment opens.'
+            : 'Every Aspire Market seller must finish Stripe payout verification before a listing can be submitted. You can still build and save private drafts now.'}</p>
+          {payoutStatusError && <small>{payoutStatusError}</small>}
+        </div>
+        <a href="/profile">{payoutStatus === 'READY' ? 'Manage payouts' : 'Open Stripe setup'} →</a>
+      </section>
 
       <section className={styles.drafts} aria-label="Draft items">
         <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts and photos stay private. Submitting removes the draft and creates a private listing for review; it appears in Market only after approval.</small></div>
@@ -368,9 +414,9 @@ export default function MarketplaceSellerComposer() {
         {(error || notice) && <div id="marketplace-seller-status" className={error ? styles.error : styles.notice} role="status">{error || notice}</div>}
 
         <div className={styles.actions}>
-          <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>Save keeps everything private. Submit sends the listing through Post, Language, and Market review before it can appear publicly.</span></div>
+          <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>{payoutStatus === 'READY' ? 'Stripe verified ✓ · Submit sends the listing through Post, Language, and Market review.' : 'Save keeps everything private. Publishing unlocks after Stripe payout verification is ready.'}</span></div>
           <button type="button" className={styles.saveDraft} onClick={saveDraft} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : 'Save draft'}</button>
-          <button type="submit" className={styles.publish} disabled={publishing || savingDraft}>{publishing ? 'Submitting…' : 'Submit for review →'}</button>
+          <button type="submit" className={styles.publish} disabled={publishing || savingDraft || payoutStatus !== 'READY'}>{publishing ? 'Submitting…' : payoutStatus === 'READY' ? 'Submit for review →' : 'Stripe verification required'}</button>
         </div>
         {error && <div className={styles.bottomError} role="alert">{error}</div>}
       </form>
