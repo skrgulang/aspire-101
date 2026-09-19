@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import {
   fetchEditableRequest,
   removeRequestMediaStorageObjects,
@@ -47,6 +48,22 @@ function initialMethods(request: EditableRequest) {
 function dollars(cents: number | null | undefined) {
   if (cents == null) return '';
   return (cents / 100).toFixed(cents % 100 === 0 ? 0 : 2);
+}
+
+async function requireSellerPayoutReady() {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sign in again before resubmitting this listing.');
+
+  const response = await fetch('/api/stripe/connect/status', {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({})) as { status?: string; error?: string };
+  if (!response.ok) throw new Error(payload.error || 'Could not verify your Stripe payout status.');
+  if (payload.status !== 'READY') throw new Error('Finish Stripe payout verification before resubmitting an item for sale.');
 }
 
 export default function PostResubmitEditor({ requestId }: { requestId: string }) {
@@ -151,6 +168,7 @@ export default function PostResubmitEditor({ requestId }: { requestId: string })
     setError('');
     let resubmitAccepted = false;
     try {
+      if (isSelling) await requireSellerPayoutReady();
       const removed = media.filter((asset) => removedMediaIds.includes(asset.id));
 
       await resubmitRequestForReview({
