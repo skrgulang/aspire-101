@@ -762,21 +762,31 @@ export default function ConnectionsHub() {
         return (
           <div className="connectionChatOverlay" role="dialog" aria-modal="true" aria-label={archived ? 'Archived connection transcript' : 'Private connection chat'}>
             <section className="connectionChat">
-              <header>
-                <div>
-                  <span>{fromCircle ? 'MY CIRCLE · REAL-TIME CHAT' : archived ? 'ARCHIVED CONNECTION · READ-ONLY' : 'PRIVATE CONNECTION · LIVE'}</span>
-                  <strong>{profileName(other)} · {request?.title || 'Aspire chat'}</strong>
-                  {writable && <small className={`chatPresence ${otherOnline ? 'online' : ''}`}><i />{otherOnline ? 'Online now' : 'Offline'}</small>}
+              <header className="chatHeader">
+                <div className="chatIdentity">
+                  <i className="chatAvatar">{profileName(other).slice(0, 1).toUpperCase()}</i>
+                  <div className="chatIdentityCopy">
+                    <span>{fromCircle ? 'MY CIRCLE' : archived ? 'ARCHIVED' : 'CONNECTED'}</span>
+                    <strong>{profileName(other)}</strong>
+                    {writable && <small className={`chatPresence ${otherOnline ? 'online' : ''}`}><i />{otherOnline ? 'Online now' : 'Offline'}</small>}
+                  </div>
                 </div>
                 <button type="button" onClick={closeChat} aria-label="Close chat">×</button>
               </header>
+              <div className="chatContextBar">
+                <div>
+                  <span>REQUEST</span>
+                  <strong>{request?.title || 'Aspire connection'}</strong>
+                </div>
+                <small>{archived ? 'Read-only transcript' : fromCircle ? 'Circle conversation' : 'Private connection'}</small>
+              </div>
               <div className="chatSafetyBar">
                 <span>{fromCircle
-                  ? 'You both chose to keep in touch after completing a connection.'
+                  ? 'You both chose to stay in touch.'
                   : archived
-                    ? 'This connection is closed. The transcript stays available for your records, but new messages are disabled.'
-                    : 'Both sides confirmed. Keep timing, location, scope, and money clear.'}{' '}
-                <a href="/safety">Safety center ↗</a></span>
+                    ? 'This connection is closed and messages are read-only.'
+                    : 'Keep plans and payment details in this chat for clarity.'}{' '}
+                <a href="/safety">Safety ↗</a></span>
                 {otherId && <div className="chatSafetyActions">
                   <button type="button" onClick={() => reportChat(chatId, otherId)} disabled={busyId === `report-${chatId}`}>Report</button>
                   <button type="button" className="danger" onClick={() => blockChatUser(chatId, otherId)} disabled={busyId === `block-${chatId}`}>Block</button>
@@ -788,8 +798,16 @@ export default function ConnectionsHub() {
                 )}
                 {!messages.length && (
                   <div className="chatEmpty">
-                    <strong>{archived ? 'No messages in this archived connection.' : 'You\'re connected.'}</strong>
-                    <p>{archived ? 'The connection is closed, so there is nothing else to send here.' : 'Start with the details that matter: where, when, what, and how much if money is involved.'}</p>
+                    <i aria-hidden="true">{archived ? '✓' : '↔'}</i>
+                    <strong>{archived ? 'No messages in this connection.' : 'You’re connected.'}</strong>
+                    <p>{archived ? 'This transcript is read-only.' : `Send ${profileName(other)} the details you need to get started.`}</p>
+                    {!archived && (
+                      <div className="chatPromptChips" aria-hidden="true">
+                        <span>Where?</span>
+                        <span>When?</span>
+                        <span>Details?</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 {messages.map((message) => (
@@ -808,9 +826,11 @@ export default function ConnectionsHub() {
                     value={chatText}
                     onChange={(event) => changeChatText(event.target.value)}
                     maxLength={2000}
-                    placeholder={fromCircle ? `Message ${profileName(other)}…` : 'Message about the request…'}
+                    placeholder={`Message ${profileName(other)}…`}
                   />
-                  <button type="submit" disabled={busyId === `chat-${chatId}` || !chatText.trim()}>Send ↑</button>
+                  <button type="submit" disabled={busyId === `chat-${chatId}` || !chatText.trim()}>
+                    <span>Send</span><i aria-hidden="true">↑</i>
+                  </button>
                 </form>
               ) : (
                 <div className="chatSafetyBar">
