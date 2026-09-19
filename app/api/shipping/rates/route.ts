@@ -111,6 +111,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The shipping rate is locked after buyer payment. Contact support if the label rate needs to be refreshed.', code: 'SHIPPING_RATE_LOCKED' }, { status: 409 });
     }
 
+    const { data: payment, error: paymentError } = await supabase
+      .from('connection_payments')
+      .select('status')
+      .eq('connection_id', order.connection_id)
+      .maybeSingle();
+    if (paymentError) throw paymentError;
+    if (payment && !['not_started', 'failed', 'cancelled'].includes(String(payment.status))) {
+      return NextResponse.json({
+        error: 'A checkout is already open or submitted. Finish or cancel it before refreshing carrier rates.',
+        code: 'SHIPPING_RATE_LOCKED'
+      }, { status: 409 });
+    }
+
     const addressFrom = address(body?.addressFrom);
     const storedAddressTo = address(order.delivery_address);
     const legacyAddressTo = address(body?.addressTo);
