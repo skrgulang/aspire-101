@@ -127,3 +127,96 @@
     font-size: 13px;
   }
 }
+
+
+.orderTools {
+  display: grid;
+  gap: 16px;
+}
+
+.fulfillmentHelp {
+  margin-top: 4px;
+  opacity: .94;
+}
+
+.content :global(.transactionsPage .marketOrders) {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.content :global(.transactionsPage .marketOrdersHead) {
+  display: none;
+}
+
+.content :global(.transactionsPage .marketOrderList) {
+  margin-top: 0;
+  gap: 10px;
+}
+
+.content :global(.transactionsPage .marketOrderCard) {
+  padding: 16px;
+  border-radius: 16px;
+  background: #121313;
+}
+
+.content :global(.transactionsPage .marketOrderTop h3) {
+  font-size: 18px;
+}
+
+.content :global(.transactionsPage .marketOrderPrice strong) {
+  font-size: 20px;
+}
+
+.content :global(.transactionsPage .marketOrderDetails) {
+  margin-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.content :global(.transactionsPage .marketOrderDetails summary) {
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: #b6b3ac;
+  font-size: 10px;
+  font-weight: 800;
+  list-style: none;
+}
+
+.content :global(.transactionsPage .marketOrderDetails summary::-webkit-details-marker) {
+  display: none;
+}
+
+.content :global(.transactionsPage .marketOrderDetails summary b) {
+  color: #ffc72c;
+  font-size: 9px;
+}
+
+.content :global(.transactionsPage .marketOrderDetails[open] summary) {
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.content :global(.transactionsPage .marketOrderDetailsBody) {
+  padding-top: 2px;
+}
+
+.content :global(.transactionsPage .marketOrderState) {
+  margin-top: 12px;
+}
+
+.content :global(.transactionsPage .marketMoneySummary),
+.content :global(.transactionsPage .marketProgress),
+.content :global(.transactionsPage .marketOrderActions) {
+  margin-top: 12px;
+}
+
+@media (max-width: 620px) {
+  .content :global(.transactionsPage .marketOrderCard) { padding: 14px; }
+  .content :global(.transactionsPage .marketOrderTop) { gap: 10px; }
+  .content :global(.transactionsPage .marketOrderTop h3) { font-size: 16px; }
+}
