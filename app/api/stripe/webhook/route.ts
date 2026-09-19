@@ -123,25 +123,36 @@ export async function POST(request: Request) {
 
     if (event.type === 'checkout.session.completed') {
       const paymentId = object.metadata?.aspire_payment_id;
-      if (paymentId) {
+      const checkoutAttempt = Number(object.metadata?.checkout_attempt || 0);
+      if (paymentId && Number.isInteger(checkoutAttempt) && checkoutAttempt > 0 && object.id) {
         const { error } = await supabase.from('connection_payments').update({
           status: 'processing',
-          stripe_checkout_session_id: object.id || null,
           stripe_payment_intent_id: objectId(object.payment_intent),
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
+        })
+          .eq('id', paymentId)
+          .eq('stripe_livemode', eventLivemode)
+          .eq('checkout_attempt', checkoutAttempt)
+          .eq('stripe_checkout_session_id', object.id)
+          .in('status', ['checkout_created', 'failed', 'processing']);
         requireDatabaseWrite(error);
       }
     }
 
     if (event.type === 'checkout.session.async_payment_failed') {
       const paymentId = object.metadata?.aspire_payment_id;
-      if (paymentId) {
+      const checkoutAttempt = Number(object.metadata?.checkout_attempt || 0);
+      if (paymentId && Number.isInteger(checkoutAttempt) && checkoutAttempt > 0 && object.id) {
         const { error } = await supabase.from('connection_payments').update({
           status: 'failed',
           failure_reason: 'Stripe reported that the asynchronous payment failed.',
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['checkout_created', 'processing']);
+        })
+          .eq('id', paymentId)
+          .eq('stripe_livemode', eventLivemode)
+          .eq('checkout_attempt', checkoutAttempt)
+          .eq('stripe_checkout_session_id', object.id)
+          .in('status', ['checkout_created', 'processing']);
         requireDatabaseWrite(error);
       }
     }
@@ -151,7 +162,7 @@ export async function POST(request: Request) {
       if (paymentId) {
         const { data: payment, error: paymentError } = await supabase
           .from('connection_payments')
-          .select('id,status,connection_id,request_id,payer_id,payee_id,customer_total_cents,gross_amount_cents,currency,stripe_livemode,fee_policy_version,fee_snapshot')
+          .select('id,status,connection_id,request_id,payer_id,payee_id,customer_total_cents,gross_amount_cents,currency,stripe_livemode,fee_policy_version,fee_snapshot,checkout_attempt,stripe_payment_intent_id')
           .eq('id', paymentId)
           .maybeSingle();
         requireDatabaseWrite(paymentError);
@@ -184,8 +195,15 @@ export async function POST(request: Request) {
         const expectedShippingRateId = String(feeSnapshot.shipping_rate_id || '');
         const expectedShippingRateCents = String(Number(feeSnapshot.shipping_rate_cents || 0));
         const expectedShippingPaidBy = String(feeSnapshot.shipping_paid_by || '');
+        const eventCheckoutAttempt = Number(metadata.checkout_attempt || 0);
+        const currentCheckoutAttempt = Number(payment.checkout_attempt || 0);
+        const intentBindingMismatch = payment.status === 'secured'
+          ? Boolean(payment.stripe_payment_intent_id && object.id && payment.stripe_payment_intent_id !== object.id)
+          : !Number.isInteger(eventCheckoutAttempt) || eventCheckoutAttempt <= 0 || eventCheckoutAttempt !== currentCheckoutAttempt;
 
         const snapshotMismatch =
+          intentBindingMismatch
+          ||
           String(metadata.connection_id || '') !== String(payment.connection_id || '')
           || String(metadata.request_id || '') !== String(payment.request_id || '')
           || String(metadata.payer_id || '') !== String(payment.payer_id || '')
@@ -214,13 +232,18 @@ export async function POST(request: Request) {
 
     if (event.type === 'payment_intent.payment_failed') {
       const paymentId = object.metadata?.aspire_payment_id;
-      if (paymentId) {
+      const checkoutAttempt = Number(object.metadata?.checkout_attempt || 0);
+      if (paymentId && Number.isInteger(checkoutAttempt) && checkoutAttempt > 0) {
         const { error } = await supabase.from('connection_payments').update({
           status: 'failed',
           stripe_payment_intent_id: object.id || null,
           failure_reason: object.last_payment_error?.message || 'Stripe reported that the payment failed.',
           updated_at: new Date().toISOString()
-        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['not_started', 'checkout_created', 'processing', 'failed']);
+        })
+          .eq('id', paymentId)
+          .eq('stripe_livemode', eventLivemode)
+          .eq('checkout_attempt', checkoutAttempt)
+          .in('status', ['checkout_created', 'processing', 'failed']);
         requireDatabaseWrite(error);
       }
     }
