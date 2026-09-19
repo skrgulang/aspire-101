@@ -450,6 +450,8 @@ export async function POST(request: Request) {
       status: 'checkout_created',
       checkout_attempt: attempt,
       stripe_checkout_session_id: session.id,
+      stripe_payment_intent_id: null,
+      stripe_charge_id: null,
       failure_reason: null,
       updated_at: new Date().toISOString()
     })
