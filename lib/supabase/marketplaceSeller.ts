@@ -240,57 +240,63 @@ export async function deleteMarketplaceDraft(draftId: string) {
 }
 
 export async function createMarketplaceListing(input: MarketplaceListingInput) {
-  const { supabase, user } = await requireUser();
+  const { supabase } = await requireUser();
   const methods = normalizeMethods(input.fulfillmentMethods);
   if (!methods.length) throw new Error('Choose at least one delivery option.');
   if (!input.title.trim()) throw new Error('Add an item title.');
   if (!input.priceCents || input.priceCents <= 0) throw new Error('Add a price greater than $0.');
   if (!normalizeSellerArea(input.sellerArea)) throw new Error('Add a public selling area such as West Lafayette, IN.');
 
-  const { data: allowed, error: accessError } = await supabase.rpc('can_post_request');
-  if (accessError) throw accessError;
-  if (!allowed) throw new Error('Verify your campus identity before publishing an item.');
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Sign in again to publish this item.');
 
-  const shippingPolicy = methods.includes('shipping') ? input.shippingPaidBy || 'buyer' : null;
-  const { data, error } = await supabase
-    .from('requests')
-    .insert({
-      poster_id: user.id,
-      kind: 'buy_sell',
-      category: 'Buy & sell',
+  const response = await fetch('/api/marketplace/listing/create', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      campusId: input.campusId,
       title: input.title.trim().slice(0, 180),
-      details: input.details?.trim() || null,
-      campus_id: input.campusId,
-      latitude: null,
-      longitude: null,
-      seller_area: normalizeSellerArea(input.sellerArea),
-      amount_cents: input.priceCents,
-      currency: 'USD',
-      payment_method: 'aspire',
-      market_intent: 'sell',
-      item_condition: input.itemCondition,
-      price_negotiable: false,
-      fulfillment_method: primaryFulfillment(methods),
-      fulfillment_methods: methods,
-      shipping_paid_by_default: shippingPolicy,
-      shipping_paid_by_preference: shippingPolicy,
-      seller_delivery_mode: methods.includes('seller_delivery') ? input.sellerDeliveryMode || 'negotiable' : null,
-      seller_delivery_price_cents: methods.includes('seller_delivery') && input.sellerDeliveryMode === 'fixed'
+      priceCents: input.priceCents,
+      itemCondition: input.itemCondition,
+      details: input.details?.trim() || '',
+      fulfillmentMethods: methods,
+      shippingPaidBy: methods.includes('shipping') ? input.shippingPaidBy || 'buyer' : null,
+      sellerDeliveryMode: methods.includes('seller_delivery') ? input.sellerDeliveryMode || 'negotiable' : null,
+      sellerDeliveryPriceCents: methods.includes('seller_delivery') && input.sellerDeliveryMode === 'fixed'
         ? input.sellerDeliveryPriceCents ?? null
         : null,
-      quantity: 1,
-      language_code: input.languageCode || 'en',
-      cover_image_url: null,
-      cover_image_source: 'none',
-      cover_image_asset_id: null,
-      listing_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      sellerArea: normalizeSellerArea(input.sellerArea),
+      languageCode: input.languageCode || 'en'
     })
-    .select('id,title,moderation_status')
-    .single();
+  });
 
-  if (error) throw friendlyError(error, 'Could not publish this item.');
+  const payload = await response.json().catch(() => ({})) as {
+    id?: string;
+    title?: string;
+    moderation_status?: string;
+    error?: string;
+    code?: string;
+  };
+
+  if (!response.ok || !payload.id) {
+    if (payload.code === 'PAYOUT_NOT_READY') {
+      throw new Error('Finish Stripe payout verification before publishing an item for sale.');
+    }
+    throw new Error(payload.error || 'Could not publish this item.');
+  }
+
+  const data = {
+    id: payload.id,
+    title: payload.title || input.title.trim(),
+    moderation_status: payload.moderation_status
+  };
   await runRequestAiSafety(data.id).catch(() => undefined);
-  return data as { id: string; moderation_status?: string; title: string };
+  return data;
 }
 
 export async function rollbackMarketplaceListing(requestId: string) {
