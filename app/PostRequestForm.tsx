@@ -74,7 +74,7 @@ export default function PostRequestForm() {
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'none' | 'aspire'>('none');
   const [photos, setPhotos] = useState<File[]>([]);
-  const [marketIntent, setMarketIntent] = useState<MarketIntent>('sell');
+  const [marketIntent, setMarketIntent] = useState<MarketIntent>('wanted');
   const [itemCondition, setItemCondition] = useState<ItemCondition>('good');
   const [priceNegotiable, setPriceNegotiable] = useState(false);
   const [fulfillmentMethod, setFulfillmentMethod] = useState<FulfillmentMethod>('campus_pickup');
@@ -165,7 +165,7 @@ export default function PostRequestForm() {
     setKind(item.defaultKind);
     if (item.defaultKind === 'buy_sell') {
       setPaymentMethod('aspire');
-      setMarketIntent('sell');
+      setMarketIntent('wanted');
       setItemCondition('good');
       setFulfillmentMethod('campus_pickup');
     } else if (item.defaultKind === 'paid_help' || item.defaultKind === 'split_cost') {
@@ -178,7 +178,10 @@ export default function PostRequestForm() {
 
   function chooseKind(next: RequestKind) {
     setKind(next);
-    if (next === 'buy_sell') setPaymentMethod('aspire');
+    if (next === 'buy_sell') {
+      setPaymentMethod('aspire');
+      setMarketIntent('wanted');
+    }
     if (next === 'paid_help' || next === 'split_cost') setPaymentMethod('aspire');
     if (next === 'community' || next === 'collaboration') {
       setAmount('');
@@ -223,6 +226,10 @@ export default function PostRequestForm() {
     setError('');
     if (!title.trim()) return setError('Tell campus what you need first.');
     if (!selectedCampus) return setError('Choose a supported campus for this request.');
+    if (isMarket && marketIntent === 'sell') {
+      router.push('/post?mode=sell');
+      return;
+    }
     if (scheduleMode === 'scheduled') {
       if (!startLocal) return setError('Choose the date and start time, or switch timing to Flexible.');
       const start = new Date(startLocal).getTime();
@@ -356,7 +363,7 @@ export default function PostRequestForm() {
         <section className="marketComposer" aria-label="Campus marketplace listing details">
           <div className="marketComposerHead"><div><span>ASPIRE MARKET</span><h2>Set the transaction up clearly.</h2></div><b>Aspire Protected available</b></div>
           <div className="marketIntentGrid">
-            <button type="button" className={marketIntent === 'sell' ? 'active' : ''} onClick={() => { setMarketIntent('sell'); setPaymentMethod('aspire'); }}><i>↑</i><strong>I&apos;m selling</strong><span>I have the item. A buyer will pay me.</span></button>
+            <button type="button" className={marketIntent === 'sell' ? 'active' : ''} onClick={() => router.push('/post?mode=sell')}><i>↑</i><strong>I&apos;m selling</strong><span>Use the seller flow with Stripe payout verification.</span></button>
             <button type="button" className={marketIntent === 'wanted' ? 'active' : ''} onClick={() => { setMarketIntent('wanted'); setPaymentMethod('aspire'); }}><i>↓</i><strong>I&apos;m looking to buy</strong><span>I&apos;m posting what I want to find.</span></button>
           </div>
           <div className="marketFields">
