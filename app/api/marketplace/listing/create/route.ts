@@ -42,13 +42,13 @@ export async function POST(request: Request) {
 
     if (!campusId) return badRequest('Choose a campus before publishing.');
     if (!title) return badRequest('Add an item title.');
-    if (!Number.isInteger(priceCents) || priceCents <= 0) return badRequest('Add a price greater than $0.');
+    if (!Number.isInteger(priceCents) || priceCents <= 0 || priceCents > 2147483647) return badRequest('Add a valid item price greater than $0.');
     if (!itemConditions.has(itemCondition)) return badRequest('Choose a valid item condition.');
     if (!sellerArea) return badRequest('Add a public selling area such as West Lafayette, IN.');
     if (!methods.length) return badRequest('Choose at least one delivery option.');
     if (methods.includes('shipping') && !shippingPayers.has(shippingPaidBy)) return badRequest('Choose who can cover shipping.');
     if (methods.includes('seller_delivery') && !sellerDeliveryModes.has(sellerDeliveryMode)) return badRequest('Choose valid seller delivery terms.');
-    if (methods.includes('seller_delivery') && sellerDeliveryMode === 'fixed' && (!Number.isInteger(sellerDeliveryPriceCents) || sellerDeliveryPriceCents! <= 0)) {
+    if (methods.includes('seller_delivery') && sellerDeliveryMode === 'fixed' && (!Number.isInteger(sellerDeliveryPriceCents) || sellerDeliveryPriceCents! <= 0 || sellerDeliveryPriceCents! > 2147483647)) {
       return badRequest('Add a seller delivery price greater than $0.');
     }
 
@@ -58,10 +58,12 @@ export async function POST(request: Request) {
     const [
       { data: verification, error: verificationError },
       { data: enforcement, error: enforcementError },
+      { data: campus, error: campusError },
       { data: payoutAccount, error: payoutError }
     ] = await Promise.all([
       supabase.from('school_verifications').select('status').eq('user_id', user.id).maybeSingle(),
       supabase.from('user_enforcement_states').select('state,expires_at').eq('user_id', user.id).maybeSingle(),
+      supabase.from('universities').select('id,active').eq('id', campusId).eq('active', true).maybeSingle(),
       supabase
         .from('payment_accounts')
         .select('stripe_account_id,status,transfers_enabled')
@@ -72,8 +74,10 @@ export async function POST(request: Request) {
 
     if (verificationError) throw verificationError;
     if (enforcementError) throw enforcementError;
+    if (campusError) throw campusError;
     if (payoutError) throw payoutError;
     if (verification?.status !== 'verified') throw new Error('SCHOOL_REQUIRED');
+    if (!campus?.id) return badRequest('Choose a supported active campus.', 'CAMPUS_REQUIRED');
 
     const enforcementExpired = enforcement?.expires_at
       ? new Date(enforcement.expires_at).getTime() <= Date.now()
