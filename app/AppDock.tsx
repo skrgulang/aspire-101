@@ -34,9 +34,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
 
   useEffect(() => {
     const stored = window.localStorage.getItem('aspire-theme');
-    const next = stored === 'dark' || stored === 'light'
-      ? stored
-      : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    const next = stored === 'light' || stored === 'dark' ? stored : 'dark';
     document.documentElement.dataset.aspireTheme = next;
   }, []);
 
