@@ -494,6 +494,22 @@ export default function MarketplaceCheckoutV5() {
               <div><p>BUY NOW · DELIVERY + PAYMENT</p><h2>How do you want to get it?</h2><span>{deliveryFor.title} · {money(itemAmount)}</span>{deliveryFor.seller_area && <span>📍 Seller area: {deliveryFor.seller_area}</span>}</div>
             </div>
 
+            <div className={`marketV4ProtectionBar ${protectedPayment && deliveryChoice !== 'seller' ? 'protected' : 'unprotected'}`}>
+              <i>{protectedPayment && deliveryChoice !== 'seller' ? '✓' : 'i'}</i>
+              <div>
+                <strong>{deliveryChoice === 'seller'
+                  ? 'No charge yet'
+                  : protectedPayment
+                    ? 'Aspire Protected · Stripe checkout'
+                    : 'Pay in person · no Aspire payment protection'}</strong>
+                <span>{deliveryChoice === 'seller'
+                  ? 'The seller must agree to delivery first. If protected checkout is used later, seller payout verification is re-checked before payment opens.'
+                  : protectedPayment
+                    ? 'Before Stripe checkout opens, Aspire re-checks that the seller is eligible to receive payouts. Payment, refund, and dispute status stay attached to the order.'
+                    : 'You pay the seller directly at meetup. Aspire does not process or protect that payment.'}</span>
+              </div>
+            </div>
+
             <div className="marketV4Choices">
               {supports(deliveryFor, 'meet') && <button type="button" className={deliveryChoice === 'meet' ? 'active' : ''} onClick={() => chooseDelivery('meet')}><div><b>Meet up</b><em>Delivery $0</em></div><span>{deliveryFor.seller_area ? `Meet in the ${deliveryFor.seller_area} area.` : 'Meet the seller on campus or nearby.'}</span></button>}
               {supports(deliveryFor, 'ship') && <button type="button" className={deliveryChoice === 'ship' ? 'active' : ''} onClick={() => chooseDelivery('ship')}><div><b>Ship to me</b><em>+ carrier rate</em></div><span>{activeShippingPolicy === 'seller' ? 'Seller covers the carrier rate.' : activeShippingPolicy === 'either' ? 'Buyer or seller can cover shipping.' : 'Buyer covers the carrier rate.'}</span></button>}
