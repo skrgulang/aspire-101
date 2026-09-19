@@ -14,6 +14,7 @@ import IdentityVerificationCard from '../IdentityVerificationCard';
 import MfaSecurityCard from '../MfaSecurityCard';
 import ProfileAvatar from '../ProfileAvatar';
 import UiIcon from '../UiIcon';
+import PaymentConnectRow from '../PaymentConnectRow';
 
 type ProfileVisibility = 'private' | 'connections' | 'campus';
 
@@ -306,6 +307,12 @@ export default function ProfilePage() {
           </div>
 
           <aside className="studentIdentityAside">
+            <div className="studentIdentityAsideCard">
+              <span>SELLER PAYOUTS</span>
+              <h3>Stripe payout verification</h3>
+              <p>Required before you can publish an item for sale or receive protected Aspire payments. Stripe handles the payout identity and bank-account verification.</p>
+              <PaymentConnectRow phoneVerified={profile.phoneVerified} schoolVerified={profile.schoolVerified} />
+            </div>
             <div className="studentIdentityAsideCard">
               <span>PROFILE AUDIENCE</span>
               <h3>{audienceLabel}</h3>
