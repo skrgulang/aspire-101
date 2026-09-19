@@ -1526,3 +1526,153 @@
     display: none;
   }
 }
+
+
+/* 2026-09-19 Inbox invitation rail — action-first without changing connection logic. */
+.page :global(.inboxInviteRail){
+  margin:0 0 14px;
+  padding:12px;
+  border:1px solid rgba(255,199,44,.18);
+  border-radius:17px;
+  background:
+    linear-gradient(115deg,rgba(255,199,44,.075),transparent 42%),
+    #111212
+}
+.page :global(.inboxInviteRailHead){
+  min-height:34px;
+  padding:1px 3px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px
+}
+.page :global(.inboxInviteRailHead>div){
+  display:grid;
+  gap:2px
+}
+.page :global(.inboxInviteRailHead span){
+  color:#b99b43;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.13em
+}
+.page :global(.inboxInviteRailHead strong){
+  color:#e9e7e0;
+  font-size:12px
+}
+.page :global(.inboxInviteRailHead>button){
+  min-height:30px;
+  padding:0 10px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;
+  background:rgba(255,255,255,.025);
+  color:#9b9b95;
+  font:inherit;
+  font-size:8px;
+  font-weight:800;
+  cursor:pointer
+}
+.page :global(.inboxInviteCards){
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px
+}
+.page :global(.inboxInviteCard){
+  min-width:0;
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr);
+  gap:9px 10px;
+  align-items:center;
+  padding:11px;
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:14px;
+  background:#151616
+}
+.page :global(.inboxInviteAvatar){
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,199,44,.28);
+  border-radius:50%;
+  background:rgba(255,199,44,.07);
+  color:#ffc72c;
+  font-size:11px;
+  font-weight:900
+}
+.page :global(.inboxInviteCopy){
+  min-width:0;
+  display:grid;
+  gap:2px
+}
+.page :global(.inboxInviteCopy span){
+  color:#817543;
+  font-size:6px;
+  font-weight:900;
+  letter-spacing:.10em
+}
+.page :global(.inboxInviteCopy strong){
+  overflow:hidden;
+  color:#ece9e2;
+  font-size:11px;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
+.page :global(.inboxInviteCopy p){
+  margin:0;
+  overflow:hidden;
+  color:#73746f;
+  font-size:8px;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
+.page :global(.inboxInviteActions){
+  grid-column:1/-1;
+  display:grid;
+  grid-template-columns:auto 1fr;
+  gap:7px
+}
+.page :global(.inboxInviteActions button){
+  min-height:34px;
+  border-radius:10px;
+  font:inherit;
+  font-size:8px;
+  font-weight:850;
+  cursor:pointer
+}
+.page :global(.inboxInviteView){
+  padding:0 12px;
+  border:1px solid rgba(255,255,255,.08);
+  background:transparent;
+  color:#999a94
+}
+.page :global(.inboxInviteAccept){
+  border:1px solid #ffc72c;
+  background:#ffc72c;
+  color:#17120a
+}
+.page :global(.inboxInviteAccept:disabled){
+  opacity:.5;
+  cursor:not-allowed
+}
+:global(html[data-aspire-theme='light']) .page :global(.inboxInviteRail){
+  border-color:#eadcae;
+  background:linear-gradient(115deg,#fff8de,transparent 42%),#fff
+}
+:global(html[data-aspire-theme='light']) .page :global(.inboxInviteRailHead strong),
+:global(html[data-aspire-theme='light']) .page :global(.inboxInviteCopy strong){
+  color:#1a1a18
+}
+:global(html[data-aspire-theme='light']) .page :global(.inboxInviteCard){
+  border-color:#e8e8e1;
+  background:#fff
+}
+@media(max-width:980px){
+  .page :global(.inboxInviteCards){grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .page :global(.inboxInviteRail){padding:10px;border-radius:15px}
+  .page :global(.inboxInviteRailHead strong){font-size:11px}
+  .page :global(.inboxInviteCard){grid-template-columns:35px minmax(0,1fr);padding:10px}
+  .page :global(.inboxInviteAvatar){width:35px;height:35px}
+}
