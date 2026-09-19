@@ -88,21 +88,28 @@ export async function POST(request: Request) {
       };
 
       if (aspireUserId) {
-        const { data: existingIdentity, error: identityLookupError } = await supabase
-          .from('identity_verifications')
-          .select('stripe_livemode,provider_session_id')
-          .eq('user_id', aspireUserId)
-          .maybeSingle();
-        requireDatabaseWrite(identityLookupError);
+        const { data: accountActive, error: accountActiveError } = await supabase.rpc('account_is_active_for_service_event', {
+          p_user_id: aspireUserId
+        });
+        requireDatabaseWrite(accountActiveError);
 
-        const staleMode = existingIdentity && existingIdentity.stripe_livemode !== eventLivemode;
-        const staleSession = existingIdentity?.provider_session_id && sessionId && existingIdentity.provider_session_id !== sessionId;
-        if (!staleMode && !staleSession) {
-          const query = existingIdentity
-            ? supabase.from('identity_verifications').update(identityPatch).eq('user_id', aspireUserId).eq('stripe_livemode', eventLivemode)
-            : supabase.from('identity_verifications').insert({ user_id: aspireUserId, ...identityPatch });
-          const { error } = await query;
-          requireDatabaseWrite(error);
+        if (accountActive) {
+          const { data: existingIdentity, error: identityLookupError } = await supabase
+            .from('identity_verifications')
+            .select('stripe_livemode,provider_session_id')
+            .eq('user_id', aspireUserId)
+            .maybeSingle();
+          requireDatabaseWrite(identityLookupError);
+
+          const staleMode = existingIdentity && existingIdentity.stripe_livemode !== eventLivemode;
+          const staleSession = existingIdentity?.provider_session_id && sessionId && existingIdentity.provider_session_id !== sessionId;
+          if (!staleMode && !staleSession) {
+            const query = existingIdentity
+              ? supabase.from('identity_verifications').update(identityPatch).eq('user_id', aspireUserId).eq('stripe_livemode', eventLivemode)
+              : supabase.from('identity_verifications').insert({ user_id: aspireUserId, ...identityPatch });
+            const { error } = await query;
+            requireDatabaseWrite(error);
+          }
         }
       } else if (sessionId) {
         const { error } = await supabase
