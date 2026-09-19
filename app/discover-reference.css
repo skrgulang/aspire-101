@@ -45,10 +45,10 @@ html[data-aspire-theme='dark'] .discoverPage {
 /* Header: compact product workspace, not a landing page. */
 .discoverPage .discoverV2Header {
   display: grid;
-  grid-template-columns: minmax(0,1fr) 310px;
+  grid-template-columns: minmax(0,1fr) minmax(190px,240px);
   gap: 24px;
   align-items: end;
-  padding: 16px 0 12px;
+  padding: 8px 0 12px;
 }
 .discoverPage .discoverV2Header .eyebrow { display: none; }
 .discoverPage .discoverV2Header h1 {
@@ -71,30 +71,31 @@ html[data-aspire-theme='dark'] .discoverPage {
   line-height: 1.5;
 }
 
-.discoverPage .discoverV2CampusControl {
-  min-width: 0;
-  justify-items: stretch;
+.discoverPage .discoverLanguageFilter {
+  width: min(100%,240px);
+  display: grid;
   gap: 6px;
+  justify-self: end;
+  align-self: end;
 }
-.discoverPage .discoverV2CampusControl > span { display: none; }
-.discoverPage .discoverV2CampusControl label { width: 100%; }
-.discoverPage .discoverV2CampusControl label > span { display: none; }
-.discoverPage .discoverV2CampusControl select {
-  min-height: 48px;
-  padding: 0 14px;
+.discoverPage .discoverLanguageFilter > span {
+  color: var(--browse-muted);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+.discoverPage .discoverLanguageFilter select {
+  min-height: 44px;
+  width: 100%;
+  padding: 0 36px 0 13px;
   border: 1px solid var(--browse-border);
-  border-radius: 13px;
+  border-radius: 12px;
   background: var(--browse-surface);
   color: var(--browse-text);
   font-size: 12px;
   font-weight: 750;
 }
-html[data-aspire-theme='dark'] .discoverPage .discoverV2CampusControl select { background: #10100f; }
-.discoverPage .discoverV2CampusControl > b {
-  justify-self: end;
-  color: var(--browse-muted);
-  font-size: 8px;
-}
+html[data-aspire-theme='dark'] .discoverPage .discoverLanguageFilter select { background: #10100f; }
 
 /* Search bar and category row mirror the reference density. */
 .discoverPage .discoverV2SearchWrap { margin-top: 8px; }
@@ -273,7 +274,7 @@ html[data-aspire-theme='dark'] .discoverPage .discoverV2CardTop b { background: 
 
 @media (max-width: 1120px) {
   .discoverPage .discoverV2List { grid-template-columns: 1fr; }
-  .discoverPage .discoverV2Header { grid-template-columns: minmax(0,1fr) 270px; }
+  .discoverPage .discoverV2Header { grid-template-columns: minmax(0,1fr) minmax(180px,220px); }
 }
 
 @media (max-width: 900px) {
@@ -283,8 +284,7 @@ html[data-aspire-theme='dark'] .discoverPage .discoverV2CardTop b { background: 
   }
   .discoverPage .discoverV2Header { grid-template-columns: 1fr; gap: 14px; }
   .discoverPage .discoverV2Header h1::before { font-size: 36px; }
-  .discoverPage .discoverV2CampusControl { justify-items: stretch; }
-  .discoverPage .discoverV2CampusControl > b { justify-self: start; }
+  .discoverPage .discoverLanguageFilter { width: 100%; justify-self: stretch; }
 }
 
 @media (max-width: 560px) {

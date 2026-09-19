@@ -7,7 +7,7 @@ import { fetchActiveUniversities, University } from '../lib/supabase/universitie
 import { respondToRequest } from '../lib/supabase/requests';
 import { blockUser, reportSafety, SafetyReason } from '../lib/supabase/safety';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
-import CampusPicker from './CampusPicker';
+import DiscoverLanguageFilter from './DiscoverLanguageFilter';
 import CampusFeedCard, { campusFeedCardStyles } from './CampusFeedCard';
 import { buildDemoDiscoverRequests, filterDemoDiscoverRequests, isPreviewDemoEnabled } from './demoPreviewPosts';
 import { CAMPUS_FEED_REFRESH_EVENT, CAMPUS_FEED_REFRESH_STORAGE_KEY } from './campusFeedSync';
@@ -50,7 +50,6 @@ export default function DiscoverRequestsV2() {
   const [currentUserId,setCurrentUserId] = useState<string|null>(null);
   const [homeCampusId,setHomeCampusId] = useState<string|null>(null);
   const [activeCampusId,setActiveCampusId] = useState<string|null>(null);
-  const [pendingCampusId,setPendingCampusId] = useState<string|null>(null);
   const [universities,setUniversities] = useState<University[]>([]);
   const [query,setQuery] = useState('');
   const [debouncedQuery,setDebouncedQuery] = useState('');
@@ -171,38 +170,6 @@ export default function DiscoverRequestsV2() {
 
   const homeCampus = useMemo(() => universities.find((c) => c.id === homeCampusId) ?? null, [universities, homeCampusId]);
   const activeCampus = useMemo(() => universities.find((c) => c.id === activeCampusId) ?? null, [universities, activeCampusId]);
-  const pendingCampus = useMemo(() => universities.find((c) => c.id === pendingCampusId) ?? null, [universities, pendingCampusId]);
-  const visiting = Boolean(homeCampus && activeCampus && homeCampus.id !== activeCampus.id);
-
-  function chooseCampus(nextId: string) {
-    if (nextId === activeCampusId) return;
-    if (nextId === homeCampusId || window.sessionStorage.getItem(`aspire-campus-confirmed:${nextId}`) === '1') {
-      setActiveCampusId(nextId);
-      window.sessionStorage.setItem('aspire-active-campus-id', nextId);
-      return;
-    }
-    setPendingCampusId(nextId);
-  }
-
-  async function persistCurrentCampus(nextId: string|null) {
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.rpc('set_my_current_campus', { p_campus_id: nextId });
-      if (error) throw error;
-    } catch {
-      // Browsing still works without persistence.
-    }
-  }
-
-  function confirmCampusSwitch() {
-    if (!pendingCampusId) return;
-    window.sessionStorage.setItem(`aspire-campus-confirmed:${pendingCampusId}`, '1');
-    window.sessionStorage.setItem('aspire-active-campus-id', pendingCampusId);
-    setActiveCampusId(pendingCampusId);
-    void persistCurrentCampus(pendingCampusId === homeCampusId ? null : pendingCampusId);
-    setPendingCampusId(null);
-  }
-
   async function respond(item: DiscoverRequest) {
     setBusyId(item.id);
     setMessage('');
@@ -257,8 +224,8 @@ export default function DiscoverRequestsV2() {
 
   return <section className="discoverV2Experience">
     <header className="discoverV2Header">
-      <div><p className="eyebrow">DISCOVER · {visiting ? 'VISITING' : 'HOME CAMPUS'}</p><h1>Search {activeCampus.short_name}.</h1><p>Find requests around the campus you’re browsing without changing your verified school identity.</p></div>
-      <div className="discoverV2CampusControl discoverCampusPickerControl"><span>ACTIVE CAMPUS</span><CampusPicker universities={universities} value={activeCampusId || ''} onChange={chooseCampus} homeCampusId={homeCampusId || ''} maxNearbyMiles={300} /><b className={visiting ? 'visiting' : ''}>{visiting ? `VISITING FROM ${homeCampus.short_name.toUpperCase()}` : 'HOME CAMPUS ✓'}</b>{visiting && <button type="button" onClick={() => { setActiveCampusId(homeCampus.id); window.sessionStorage.setItem('aspire-active-campus-id', homeCampus.id); void persistCurrentCampus(null); }}>Return to {homeCampus.short_name}</button>}</div>
+      <div><p className="eyebrow">DISCOVER</p><h1>Search {activeCampus.short_name}.</h1><p>Find requests around the campus you’re browsing without changing your verified school identity.</p></div>
+      <DiscoverLanguageFilter />
     </header>
 
     <div className="discoverV2SearchWrap"><div className="discoverV2SearchBox"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${activeCampus.short_name} — Math 55, ride to IND, Valorant...`} aria-label={`Search ${activeCampus.short_name} requests`} />{query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search">×</button>}</div>{!query && <div className="discoverV2Suggestions" aria-label="Suggested searches"><span>TRY</span>{suggestions.map((suggestion) => <button key={suggestion} type="button" onClick={() => setQuery(suggestion)}>{suggestion}</button>)}</div>}</div>
@@ -289,7 +256,6 @@ export default function DiscoverRequestsV2() {
           />;
         })}</div>}
 
-    {pendingCampus && <div className="discoverV2ModalBackdrop" role="dialog" aria-modal="true" aria-label="Browse another campus"><div className="discoverV2Modal"><span>VISITING CAMPUS</span><h2>Browse {pendingCampus.short_name}?</h2><p>{pendingCampus.name} is different from your home campus, {homeCampus.name}. Requests and campus activity shown here will now be based on {pendingCampus.short_name}. Your verified Aspire identity stays tied to {homeCampus.short_name}.</p><div><button type="button" onClick={() => setPendingCampusId(null)}>Stay at {activeCampus.short_name}</button><button className="button buttonGold" type="button" onClick={confirmCampusSwitch}>Browse {pendingCampus.short_name}</button></div></div></div>}
     {safetyItem && <div className="discoverV2ModalBackdrop" role="dialog" aria-modal="true" aria-label="Request safety options"><div className="discoverV2Modal safety"><button className="discoverV2ModalClose" type="button" onClick={() => setSafetyItem(null)} aria-label="Close">×</button><span>REQUEST SAFETY</span><h2>Something off?</h2><p>Report what happened or block this account. Normal private messages are not manually reviewed unless there is a safety reason to do so.</p><label><span>Reason</span><select value={reportReason} onChange={(event) => setReportReason(event.target.value as SafetyReason)}>{reportReasons.map((reason) => <option key={reason.value} value={reason.value}>{reason.label}</option>)}</select></label><label><span>Details <em>optional</em></span><textarea rows={3} value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} placeholder="Keep it factual and specific." /></label><div><button className="discoverV2Danger" type="button" onClick={blockCurrent} disabled={busyId === `block:${safetyItem.id}`}>Block account</button><button className="button buttonGold" type="button" onClick={submitReport} disabled={busyId === `report:${safetyItem.id}`}>Submit report</button></div></div></div>}
   </section>;
 }
