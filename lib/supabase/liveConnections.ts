@@ -156,12 +156,9 @@ export async function fetchLiveConnections() {
       supabase.rpc('get_my_active_connection_locations', {
         p_connection_ids: connectionIds
       }),
-      supabase
-        .from('connection_schedule_proposals')
-        .select('id,connection_id,proposed_by,start_at,end_at,timezone,meeting_label,status,responded_by,responded_at,created_at,updated_at')
-        .in('connection_id', connectionIds)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
+      supabase.rpc('get_pending_schedule_proposals_for_my_connections', {
+        p_connection_ids: connectionIds
+      })
     ]);
     locations = (locationRows ?? []) as ConnectionLocationShare[];
     if (proposalError && !missingPreviewRelation(proposalError)) throw proposalError;
