@@ -94,21 +94,42 @@ export async function buildAccountExport(supabase: ServiceClient, user: User) {
 }
 
 export async function getAccountDeletionBlockers(supabase: ServiceClient, userId: string): Promise<AccountDeletionBlocker[]> {
-  const [activeConnections, unsettledPayments, openCases, activeMarketOrders, legacyOrders, staffProfile] = await Promise.all([
+  const [
+    activeConnections,
+    unsettledPayments,
+    openCases,
+    openRefundRequests,
+    activeMarketOrders,
+    legacyOrders,
+    roleRow,
+    staffProfile
+  ] = await Promise.all([
     expectOk(supabase.from('connections').select('id,status').or(`requester_id.eq.${userId},responder_id.eq.${userId}`).in('status', ['pending', 'confirmed', 'active']).limit(5), 'active_connections_check'),
     expectOk(supabase.from('connection_payments').select('id,status').or(`payer_id.eq.${userId},payee_id.eq.${userId}`).in('status', ['checkout_created', 'processing', 'secured', 'disputed']).limit(5), 'payment_check'),
     expectOk(supabase.from('connection_resolution_cases').select('id,status').or(`opened_by.eq.${userId},against_user_id.eq.${userId}`).in('status', ['submitted', 'under_review']).limit(5), 'resolution_check'),
+    expectOk(supabase.from('payment_refund_requests').select('id,status').eq('requested_by', userId).in('status', ['open', 'under_review', 'approved']).limit(5), 'refund_request_check'),
     expectOk(supabase.from('market_orders').select('id,status').or(`buyer_id.eq.${userId},seller_id.eq.${userId}`).in('status', ['awaiting_payment', 'payment_processing', 'paid', 'handoff_confirmed', 'release_ready', 'disputed']).limit(5), 'market_order_check'),
     expectOk(supabase.from('orders').select('id,status').eq('buyer_id', userId).in('status', ['pending', 'paid']).limit(5), 'legacy_order_check'),
-    expectOk(supabase.from('profiles').select('is_moderator,role').eq('id', userId).maybeSingle(), 'staff_check')
+    expectOk(supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle(), 'role_check'),
+    expectOk(supabase.from('profiles').select('is_moderator,role').eq('id', userId).maybeSingle(), 'staff_profile_check')
   ]);
 
   const blockers: AccountDeletionBlocker[] = [];
   if ((activeConnections || []).length) blockers.push({ code: 'ACTIVE_CONNECTIONS', message: 'Finish or cancel your active connections first.', href: '/connections' });
   if ((unsettledPayments || []).length) blockers.push({ code: 'UNSETTLED_PAYMENTS', message: 'A payment is still processing, secured, or disputed. Resolve it before deleting your account.', href: '/transactions' });
   if ((openCases || []).length) blockers.push({ code: 'OPEN_RESOLUTION', message: 'You have an open Resolution Center case. Close the case before deleting your account.', href: '/resolution' });
+  if ((openRefundRequests || []).length) blockers.push({ code: 'OPEN_REFUND_REVIEW', message: 'A payment refund review is still open. Finish that review before deleting your account.', href: '/resolution' });
   if ((activeMarketOrders || []).length || (legacyOrders || []).length) blockers.push({ code: 'ACTIVE_ORDERS', message: 'A marketplace order is still active. Finish, cancel, or resolve it first.', href: '/transactions' });
-  if (staffProfile && ((staffProfile as { is_moderator?: boolean; role?: string | null }).is_moderator || ['admin', 'moderator'].includes(String((staffProfile as { role?: string | null }).role || '').toLowerCase()))) {
+
+  const authoritativeRole = String((roleRow as { role?: string | null } | null)?.role || '').toLowerCase();
+  const profileLooksPrivileged = Boolean(
+    staffProfile
+    && (
+      (staffProfile as { is_moderator?: boolean }).is_moderator
+      || ['admin', 'moderator'].includes(String((staffProfile as { role?: string | null }).role || '').toLowerCase())
+    )
+  );
+  if (['admin', 'moderator'].includes(authoritativeRole) || profileLooksPrivileged) {
     blockers.push({ code: 'STAFF_ACCOUNT', message: 'Staff accounts must be handed off before self-service deletion.' });
   }
   return blockers;
