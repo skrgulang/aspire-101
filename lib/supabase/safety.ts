@@ -2,6 +2,18 @@ import { getSupabaseBrowserClient } from './client';
 
 export type SafetyReason = 'spam' | 'harassment' | 'scam' | 'unsafe' | 'illegal' | 'hate' | 'sexual' | 'other';
 
+export type SafetyReportHistoryItem = {
+  id: string;
+  target_user_id: string | null;
+  request_id: string | null;
+  connection_id: string | null;
+  reason: SafetyReason;
+  details: string | null;
+  status: 'submitted' | 'reviewing' | 'resolved' | 'dismissed';
+  created_at: string;
+  reviewed_at: string | null;
+};
+
 export async function acknowledgeSafety(contextType: string, requestId?: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.auth.getUser();
@@ -65,4 +77,18 @@ export async function fetchBlockedUserIds() {
   const { data, error } = await supabase.from('user_blocks').select('blocked_id');
   if (error) throw error;
   return (data ?? []).map((row) => row.blocked_id as string);
+}
+
+
+export async function fetchMySafetyReports(limit = 100) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('get_my_safety_reports', {
+    p_limit: Math.max(1, Math.min(200, Math.trunc(limit)))
+  });
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''}`;
+    if (/get_my_safety_reports|could not find the function|does not exist/i.test(detail)) return [] as SafetyReportHistoryItem[];
+    throw error;
+  }
+  return (data ?? []) as SafetyReportHistoryItem[];
 }
