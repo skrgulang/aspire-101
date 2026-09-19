@@ -2,7 +2,6 @@ import MarketOrdersPanel from '../MarketOrdersPanel';
 import ShippingOrderSetupPanel from '../ShippingOrderSetupPanel';
 import SellerDeliveryPanel from '../SellerDeliveryPanel';
 import ConnectionPaymentsPanel from '../ConnectionPaymentsPanel';
-import OrderWayfinder from '../OrderWayfinder';
 import AppDock from '../AppDock';
 import styles from '../UtilityWorkspace.module.css';
 
@@ -15,7 +14,7 @@ export default function TransactionsPage() {
           <div className={styles.headerCopy}>
             <p className={styles.eyebrow}>MARKETPLACE</p>
             <h1 className={styles.title}>Orders</h1>
-            <p className={styles.lead}>Track marketplace payment, meetup, shipping, receipt confirmation, and payout. Delivery requests stay in their own flow.</p>
+            <p className={styles.lead}>Marketplace purchases and sales. Open an order to see payment, handoff, shipping, and payout status.</p>
           </div>
           <div className={styles.actions}>
             <a href="/marketplace">Shop Market</a>
@@ -33,9 +32,6 @@ export default function TransactionsPage() {
             <ConnectionPaymentsPanel />
           </section>
 
-          <div className={styles.fulfillmentHelp}>
-            <OrderWayfinder />
-          </div>
         </div>
       </div>
     </main>
