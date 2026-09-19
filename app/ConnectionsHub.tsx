@@ -78,6 +78,7 @@ export default function ConnectionsHub() {
   const [chatId, setChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ConnectionMessage[]>([]);
   const [chatText, setChatText] = useState('');
+  const [connectedConnectionId, setConnectedConnectionId] = useState<string | null>(null);
   const chatIdRef = useRef<string | null>(null);
   const chatMessagesRef = useRef<HTMLDivElement | null>(null);
 
@@ -213,9 +214,10 @@ export default function ConnectionsHub() {
     setNotice('');
     try {
       await confirmConnection(connectionId);
-      setNotice('Connected. Private chat is now open.');
+      setNotice('Connected. You can message each other and coordinate the next step.');
       await reload(true);
-      await openChat(connectionId, 'connections');
+      setTab('connections');
+      setConnectedConnectionId(connectionId);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not confirm this connection.');
     } finally {
@@ -454,9 +456,9 @@ export default function ConnectionsHub() {
     <section className="connectionsHub">
       <div className="connectionsHero">
         <div>
-          <p className="eyebrow">YOUR ASPIRE</p>
-          <h1>Requests.<br /><span>Connections.</span></h1>
-          <p>Connect for the task, close the task cleanly, then choose whether the relationship continues.</p>
+          <p className="eyebrow">INBOX</p>
+          <h1>Inbox</h1>
+          <p>Replies, connections, and private chats.</p>
         </div>
         <div className="connectionsStats">
           <article><strong>{activeConnections.length}</strong><span>active connections</span></article>
@@ -672,6 +674,56 @@ export default function ConnectionsHub() {
           })}
         </div>
       )}
+
+      {connectedConnectionId && (() => {
+        const connection = connectionData.connections.find((item) => item.id === connectedConnectionId);
+        if (!connection) return null;
+        const request = requestMap.get(connection.request_id);
+        const otherId = connectionData.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
+        const other = connectionProfiles.get(otherId);
+        return (
+          <div className="connectionSuccessOverlay" role="dialog" aria-modal="true" aria-label="Connection confirmed">
+            <section className="connectionSuccessModal">
+              <button className="connectionSuccessClose" type="button" onClick={() => setConnectedConnectionId(null)} aria-label="Close">×</button>
+              <div className="connectionSuccessPeople" aria-hidden="true">
+                <i>{profileName(other).slice(0,1).toUpperCase()}</i>
+                <b>↔</b>
+                <i>{connectionData.userId ? 'YOU' : 'Y'}</i>
+              </div>
+              <span>CONNECTION CONFIRMED</span>
+              <h2>You’re connected!</h2>
+              <p>You and <strong>{profileName(other)}</strong> can now coordinate privately{request?.title ? <> for <b>{request.title}</b></> : null}.</p>
+              <div className="connectionSuccessSteps" aria-label="Connection progress">
+                <div className="active"><i>✓</i><span>Connected</span></div>
+                <div><i>2</i><span>Chat</span></div>
+                <div><i>3</i><span>Agree details</span></div>
+                <div><i>4</i><span>Complete</span></div>
+              </div>
+              <button
+                className="connectionSuccessPrimary"
+                type="button"
+                onClick={() => {
+                  const id = connectedConnectionId;
+                  setConnectedConnectionId(null);
+                  if (id) void openChat(id, 'connections');
+                }}
+              >
+                Message now →
+              </button>
+              <button
+                className="connectionSuccessSecondary"
+                type="button"
+                onClick={() => {
+                  setConnectedConnectionId(null);
+                  setTab('connections');
+                }}
+              >
+                View connection
+              </button>
+            </section>
+          </div>
+        );
+      })()}
 
       {chatId && (() => {
         const connection = connectionData.connections.find((item) => item.id === chatId);
