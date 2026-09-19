@@ -468,23 +468,27 @@ export default function ConnectionsHub() {
       </div>
 
       <div className="connectionsTabs">
-        <button type="button" className={tab === 'requests' ? 'active' : ''} onClick={() => setTab('requests')}>My requests</button>
-        <button type="button" className={tab === 'connections' ? 'active' : ''} onClick={() => setTab('connections')}>
-          Connections {activeUnreadTotal > 0 && <b className="unreadPill">{activeUnreadTotal}</b>}
-        </button>
-        <button type="button" className={tab === 'circle' ? 'active' : ''} onClick={() => setTab('circle')}>
-          My Circle {circleUnreadTotal > 0 && <b className="unreadPill">{circleUnreadTotal}</b>}
-        </button>
-        <button type="button" className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
-          History {historyUnreadTotal > 0 && <b className="unreadPill">{historyUnreadTotal}</b>}
-        </button>
-        <NotificationCenter
-          userId={connectionData.userId}
-          onShowRequests={() => setTab('requests')}
-          onShowConnections={() => setTab('connections')}
-          onOpenChat={(connectionId) => { void openChat(connectionId); }}
-        />
-        <a href="/discover">Discover requests ↗</a>
+        <div className="connectionsTabPrimary">
+          <button type="button" className={tab === 'requests' ? 'active' : ''} onClick={() => setTab('requests')}>My requests</button>
+          <button type="button" className={tab === 'connections' ? 'active' : ''} onClick={() => setTab('connections')}>
+            Connections {activeUnreadTotal > 0 && <b className="unreadPill">{activeUnreadTotal}</b>}
+          </button>
+          <button type="button" className={tab === 'circle' ? 'active' : ''} onClick={() => setTab('circle')}>
+            My Circle {circleUnreadTotal > 0 && <b className="unreadPill">{circleUnreadTotal}</b>}
+          </button>
+          <button type="button" className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>
+            History {historyUnreadTotal > 0 && <b className="unreadPill">{historyUnreadTotal}</b>}
+          </button>
+        </div>
+        <div className="connectionsTabTools">
+          <NotificationCenter
+            userId={connectionData.userId}
+            onShowRequests={() => setTab('requests')}
+            onShowConnections={() => setTab('connections')}
+            onOpenChat={(connectionId) => { void openChat(connectionId); }}
+          />
+          <a href="/discover">Discover requests ↗</a>
+        </div>
       </div>
 
       {notice && <div className="connectionsNotice" role="status">{notice}</div>}
@@ -523,7 +527,7 @@ export default function ConnectionsHub() {
                           <p>{response.message || 'I can help with this.'}</p>
                         </div>
                         {request.status === 'open' && response.status === 'pending'
-                          ? <button type="button" onClick={() => accept(response.id)} disabled={busyId === response.id}>Choose →</button>
+                          ? <button type="button" onClick={() => accept(response.id)} disabled={busyId === response.id}>Choose</button>
                           : <span className="responseState">{response.status}</span>}
                       </div>
                     );
