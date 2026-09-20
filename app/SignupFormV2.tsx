@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { trackProductEvent } from '../lib/analytics/client';
 import { findNearbyUniversities, NearbyUniversity, resolveUniversityByEmail, University } from '../lib/supabase/universities';
 import { aspireLogo } from './logo';
 import AppLoader from './AppLoader';
@@ -148,6 +149,12 @@ export default function SignupFormV2() {
       });
       if (error) throw error;
       setDetectedCampus(campus);
+      void trackProductEvent('signup_submitted', {
+        campus_id: campus.id,
+        confirmation_required: !data.session,
+        interest_count: interests.length,
+        has_major: Boolean(major.trim())
+      });
       if (data.session) enter(nextPath);
       else {
         setPendingConfirmation(true);
