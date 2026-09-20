@@ -2,25 +2,13 @@ import { NextResponse } from 'next/server';
 import {
   apiError,
   getAuthenticatedUser,
+  getStripeRecipientPayoutState,
   getSupabaseServiceClient,
   publicOrigin,
-  stripeFormRequest,
-  stripeGet
+  stripeFormRequest
 } from '../../../../../lib/server/aspireServer';
 
 type CheckoutSession = { id: string; url: string | null };
-
-type StripeConnectAccount = {
-  capabilities?: { transfers?: string | null };
-  payouts_enabled?: boolean;
-  details_submitted?: boolean;
-  requirements?: {
-    currently_due?: string[];
-    past_due?: string[];
-    pending_verification?: string[];
-    disabled_reason?: string | null;
-  };
-};
 
 type PaymentRow = {
   id: string;
@@ -66,25 +54,6 @@ type FeeQuote = {
   minimum_paid_order_cents: number;
   standard_payout_cadence: string;
 };
-
-function stripePayoutState(account: StripeConnectAccount) {
-  const transferActive = account.capabilities?.transfers === 'active';
-  const payoutsEnabled = account.payouts_enabled === true;
-  const currentlyDue = account.requirements?.currently_due ?? [];
-  const pastDue = account.requirements?.past_due ?? [];
-  const disabledReason = account.requirements?.disabled_reason || '';
-  const requirementsDue = new Set([...currentlyDue, ...pastDue]).size;
-  const ready = transferActive && payoutsEnabled;
-  const status = ready
-    ? 'READY'
-    : pastDue.length > 0 || disabledReason.includes('past_due')
-      ? 'RESTRICTED'
-      : currentlyDue.length > 0 || account.details_submitted === false
-        ? 'ACTION_REQUIRED'
-        : 'UNDER_REVIEW';
-
-  return { ready, status, requirementsDue };
-}
 
 function quoteFromPayment(payment: PaymentRow): FeeQuote | null {
   if (
@@ -168,12 +137,9 @@ export async function POST(request: Request) {
 
     if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
 
-    // Do not trust a stale local READY/RESTRICTED flag. Stripe's stable Connect
-    // account endpoint is the source of truth immediately before checkout.
-    const stripeAccount = await stripeGet<StripeConnectAccount>(
-      `/v1/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}`
-    );
-    const payoutState = stripePayoutState(stripeAccount);
+    // Re-check Stripe immediately before checkout. A local READY flag is only
+    // a cache; Accounts v2 recipient capability is the source of truth.
+    const payoutState = await getStripeRecipientPayoutState(payoutAccount.stripe_account_id);
     await supabase.from('payment_accounts').update({
       status: payoutState.status,
       transfers_enabled: payoutState.ready,
