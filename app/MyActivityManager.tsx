@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import type { AspireRequest } from '../lib/supabase/requests';
+import { deleteRequestDraft, listRequestDrafts, type RequestDraft } from '../lib/supabase/requestDrafts';
+import { deleteMarketplaceDraft, listMarketplaceDrafts, type MarketplaceDraft } from '../lib/supabase/marketplaceSeller';
 import UiIcon from './UiIcon';
 import { buildDemoAspireRequests, isDemoPreviewPostId, isPreviewDemoEnabled, setDemoPreviewPostStatus } from './demoPreviewPosts';
 import styles from './MyActivityManager.module.css';
 
 type ConnectionRow = { request_id: string; status: string };
-type Filter = 'all' | 'open' | 'review' | 'action' | 'closed';
+type Filter = 'all' | 'drafts' | 'open' | 'review' | 'action' | 'closed';
 type LaneStatus = 'pending' | 'pass' | 'review' | 'block' | 'not_applicable';
 type ActivityRequest = AspireRequest & {
   post_review_status?: LaneStatus;
@@ -124,6 +126,8 @@ function needsAction(request: ActivityRequest) {
 
 export default function MyActivityManager() {
   const [requests, setRequests] = useState<ActivityRequest[]>([]);
+  const [requestDrafts, setRequestDrafts] = useState<RequestDraft[]>([]);
+  const [sellerDrafts, setSellerDrafts] = useState<MarketplaceDraft[]>([]);
   const [connections, setConnections] = useState<ConnectionRow[]>([]);
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
@@ -144,11 +148,15 @@ export default function MyActivityManager() {
         return;
       }
 
-      const [requestResult, profileResult] = await Promise.all([
+      const [requestResult, profileResult, savedRequestDrafts, savedSellerDrafts] = await Promise.all([
         supabase.rpc('get_my_activity_requests'),
-        supabase.from('profiles').select('school').eq('id', auth.user.id).maybeSingle()
+        supabase.from('profiles').select('school').eq('id', auth.user.id).maybeSingle(),
+        listRequestDrafts(),
+        listMarketplaceDrafts()
       ]);
       if (requestResult.error) throw requestResult.error;
+      setRequestDrafts(savedRequestDrafts);
+      setSellerDrafts(savedSellerDrafts);
 
       const realRequests = (requestResult.data ?? []) as ActivityRequest[];
       const previewCampus = typeof profileResult.data?.school === 'string' && profileResult.data.school.trim()
@@ -185,6 +193,7 @@ export default function MyActivityManager() {
   }, [hasPendingReview, load]);
 
   const visible = useMemo(() => requests.filter((request) => {
+    if (filter === 'drafts') return false;
     if (filter === 'open') return request.status === 'open';
     if (filter === 'review') return isInReview(request);
     if (filter === 'action') return needsAction(request);
@@ -194,15 +203,59 @@ export default function MyActivityManager() {
 
   const counts = useMemo(() => ({
     all: requests.length,
+    drafts: requestDrafts.length + sellerDrafts.length,
     open: requests.filter((request) => request.status === 'open').length,
     review: requests.filter(isInReview).length,
     action: requests.filter(needsAction).length,
     closed: requests.filter((request) => request.status !== 'open').length
-  }), [requests]);
+  }), [requests, requestDrafts, sellerDrafts]);
+
+  const draftItems = useMemo(() => [
+    ...requestDrafts.map((draft) => ({
+      id: draft.id,
+      mode: draft.composer_mode === 'offer' ? 'OFFER' : 'NEED',
+      title: draft.title || (draft.composer_mode === 'offer' ? 'Untitled offer' : 'Untitled request'),
+      detail: draft.category || 'Draft post',
+      updatedAt: draft.updated_at,
+      href: draft.composer_mode === 'offer'
+        ? `/post?mode=offer&draft=${encodeURIComponent(draft.id)}`
+        : `/post?draft=${encodeURIComponent(draft.id)}`,
+      deleteKind: 'request' as const
+    })),
+    ...sellerDrafts.map((draft) => ({
+      id: draft.id,
+      mode: 'SELL',
+      title: draft.title || 'Untitled item',
+      detail: draft.seller_area || 'Marketplace draft',
+      updatedAt: draft.updated_at,
+      href: `/post?mode=sell&draft=${encodeURIComponent(draft.id)}`,
+      deleteKind: 'seller' as const
+    }))
+  ].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()), [requestDrafts, sellerDrafts]);
 
   function hasActiveConnection(requestId: string) {
     if (isDemoPreviewPostId(requestId)) return false;
     return connections.some((connection) => connection.request_id === requestId && connection.status !== 'cancelled');
+  }
+
+  async function deleteDraft(id: string, kind: 'request' | 'seller', title: string) {
+    if (!window.confirm(`Delete “${title}” draft? This cannot be undone.`)) return;
+    setBusyId(`draft-${id}`);
+    setNotice('');
+    try {
+      if (kind === 'seller') {
+        await deleteMarketplaceDraft(id);
+        setSellerDrafts((current) => current.filter((draft) => draft.id !== id));
+      } else {
+        await deleteRequestDraft(id);
+        setRequestDrafts((current) => current.filter((draft) => draft.id !== id));
+      }
+      setNotice('Draft deleted.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not delete this draft.');
+    } finally {
+      setBusyId('');
+    }
   }
 
   async function closePost(request: ActivityRequest) {
@@ -262,13 +315,14 @@ export default function MyActivityManager() {
         <div>
           <span>YOUR STUFF</span>
           <h1>My Activity</h1>
-          <p>Track each post from submission through review and publication. Posts stay private until the required review lanes pass.</p>
+          <p>Draft privately, come back anytime, then track each post from review through publication and completion.</p>
         </div>
         <a href="/post"><UiIcon name="plus" /> New post</a>
       </header>
 
       <div className={styles.stats}>
-        <article><strong>{counts.all}</strong><span>Total posts</span></article>
+        <article><strong>{counts.all}</strong><span>Published / submitted</span></article>
+        <article className={counts.drafts ? styles.draftStat : ''}><strong>{counts.drafts}</strong><span>Drafts</span></article>
         <article><strong>{counts.open}</strong><span>Open</span></article>
         <article><strong>{counts.review}</strong><span>In review</span></article>
         <article className={counts.action ? styles.attentionStat : ''}><strong>{counts.action}</strong><span>Needs action</span></article>
@@ -278,6 +332,7 @@ export default function MyActivityManager() {
       <div className={styles.toolbar}>
         <div className={styles.tabs}>
           <button className={filter === 'all' ? styles.active : ''} onClick={() => setFilter('all')}>All <b>{counts.all}</b></button>
+          <button className={filter === 'drafts' ? styles.active : ''} onClick={() => setFilter('drafts')}>Drafts <b>{counts.drafts}</b></button>
           <button className={filter === 'open' ? styles.active : ''} onClick={() => setFilter('open')}>Open <b>{counts.open}</b></button>
           <button className={filter === 'review' ? styles.active : ''} onClick={() => setFilter('review')}>In review <b>{counts.review}</b></button>
           <button className={`${filter === 'action' ? styles.active : ''} ${counts.action ? styles.actionTab : ''}`.trim()} onClick={() => setFilter('action')}>Needs action <b>{counts.action}</b></button>
@@ -296,6 +351,40 @@ export default function MyActivityManager() {
 
       {loading ? (
         <div className={styles.empty}>Loading your posts…</div>
+      ) : filter === 'drafts' ? (
+        draftItems.length ? (
+          <div className={styles.draftList}>
+            {draftItems.map((draft) => (
+              <article className={styles.draftCard} key={`${draft.deleteKind}-${draft.id}`}>
+                <div className={styles.draftIcon}>{draft.mode === 'SELL' ? '$' : draft.mode === 'OFFER' ? '↑' : '+'}</div>
+                <div className={styles.draftCopy}>
+                  <div>
+                    <span>{draft.mode} DRAFT</span>
+                    <small>Updated {relativeTime(draft.updatedAt)}</small>
+                  </div>
+                  <h2>{draft.title}</h2>
+                  <p>{draft.detail}</p>
+                </div>
+                <div className={styles.draftActions}>
+                  <a href={draft.href}>Continue →</a>
+                  <button
+                    type="button"
+                    onClick={() => void deleteDraft(draft.id, draft.deleteKind, draft.title)}
+                    disabled={busyId === `draft-${draft.id}`}
+                  >
+                    {busyId === `draft-${draft.id}` ? 'Deleting…' : 'Delete'}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.empty}>
+            <strong>No drafts yet.</strong>
+            <span>Use Save draft from Need, Offer, or Sell and it will appear here.</span>
+            <a href="/post">Start a post →</a>
+          </div>
+        )
       ) : !visible.length ? (
         <div className={styles.empty}>
           <strong>{filter === 'action' ? 'Nothing needs your attention.' : filter === 'review' ? 'No posts are under review.' : filter === 'closed' ? 'No closed posts yet.' : 'No posts here yet.'}</strong>
@@ -331,11 +420,22 @@ export default function MyActivityManager() {
                         {lanes.map((lane) => {
                           const status = laneStatus(request, lane);
                           const name = lane === 'post' ? 'Post' : lane === 'language' ? 'Language' : 'Market';
-                          return <div className={styles.reviewLane} key={lane}><span>{name}</span><b className={styles[`lane_${status}`] || ''}>{status === 'not_applicable' ? 'N/A' : status}</b><small>{laneMessage(request, lane)}</small></div>;
+                          return (
+                            <div className={styles.reviewLane} key={lane}>
+                              <span>{name}</span>
+                              <b className={styles[`lane_${status}`] || ''}>{status === 'not_applicable' ? 'N/A' : status}</b>
+                              <small>{laneMessage(request, lane)}</small>
+                            </div>
+                          );
                         })}
                       </div>
                       {request.moderation_status === 'pending' && <small className={styles.autoRefresh}>Status refreshes automatically while this post is under review.</small>}
-                      {(review.key === 'changes' || review.key === 'rejected') && <div className={styles.reviewActions}><a className={styles.primaryReviewAction} href={`/post?edit=${encodeURIComponent(request.id)}`}>Edit &amp; resubmit →</a>{request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}</div>}
+                      {(review.key === 'changes' || review.key === 'rejected') && (
+                        <div className={styles.reviewActions}>
+                          <a className={styles.primaryReviewAction} href={`/post?edit=${encodeURIComponent(request.id)}`}>Edit &amp; resubmit →</a>
+                          {request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}
+                        </div>
+                      )}
                     </section>
                   )}
                 </div>

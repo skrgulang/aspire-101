@@ -779,3 +779,48 @@ html[data-aspire-theme='dark'] .postSafetyLink { color: var(--post-gold); }
     font-size: 9px;
   }
 }
+
+
+/* 2026-09-19 composer refresh: native selects/datetime replaced by Aspire controls. */
+.postPageRefreshed .postLanguageField{
+  order:7;
+  margin-top:12px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+.postPageRefreshed .postDraftNotice{
+  order:12;
+  margin:10px 0 0;
+  padding:11px 13px;
+  border:1px solid rgba(255,199,44,.25);
+  border-radius:11px;
+  background:rgba(255,199,44,.07);
+  color:#8d6b09;
+  font-size:10px;
+  font-weight:750;
+}
+html[data-aspire-theme='dark'] .postPageRefreshed .postDraftNotice{color:#dfc15f}
+.postPageRefreshed .postSubmitRow{order:14}
+.postSubmitActions{display:flex;align-items:center;gap:8px;flex:none}
+.postSaveDraft{
+  min-height:44px;
+  padding:0 15px;
+  border:1px solid var(--post-border);
+  border-radius:12px;
+  background:transparent;
+  color:var(--post-text);
+  font:inherit;
+  font-size:10px;
+  font-weight:850;
+  cursor:pointer;
+}
+.postSaveDraft:hover:not(:disabled){border-color:rgba(255,199,44,.45);background:rgba(255,199,44,.06);color:#967000}
+html[data-aspire-theme='dark'] .postSaveDraft:hover:not(:disabled){color:#ffc72c}
+.postSaveDraft:disabled{opacity:.5;cursor:default}
+@media(max-width:700px){
+  .postPageRefreshed .postSubmitRow{align-items:stretch;display:grid;gap:10px}
+  .postSubmitActions{display:grid;grid-template-columns:1fr 1fr;width:100%}
+  .postSubmitActions button{width:100%;min-width:0;padding-inline:9px}
+}

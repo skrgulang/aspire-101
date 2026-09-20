@@ -6,6 +6,7 @@ import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { uploadRequestMedia, validateRequestImages } from '../lib/supabase/requestMedia';
 import { fetchActiveUniversities } from '../lib/supabase/universities';
 import { requestLanguageLabel, type ItemCondition, type RequestLanguageCode } from '../lib/supabase/requests';
+import PostLanguagePicker from './PostLanguagePicker';
 import {
   createMarketplaceListing,
   deleteMarketplaceDraft,
@@ -54,18 +55,6 @@ async function fetchSellerPayoutStatus(): Promise<SellerPayoutStatus> {
   return payload.status || 'NOT_STARTED';
 }
 
-function detectListingLanguage(text: string, locale?: string | null): RequestLanguageCode {
-  if (/[\u3040-\u30ff]/.test(text)) return 'ja';
-  if (/[\uac00-\ud7af]/.test(text)) return 'ko';
-  if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
-  if (/[\u0600-\u06ff]/.test(text)) return 'ar';
-  if (/[\u0900-\u097f]/.test(text)) return 'hi';
-
-  const base = (locale || '').trim().toLowerCase().split('-')[0];
-  if (base === 'es' || base === 'fr' || base === 'vi') return base;
-  return 'en';
-}
-
 export default function MarketplaceSellerComposer() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -76,6 +65,7 @@ export default function MarketplaceSellerComposer() {
   const [price, setPrice] = useState('');
   const [condition, setCondition] = useState<ItemCondition>('good');
   const [details, setDetails] = useState('');
+  const [language, setLanguage] = useState<RequestLanguageCode>('any');
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState('');
   const [savedPhotoPath, setSavedPhotoPath] = useState<string | null>(null);
@@ -123,6 +113,14 @@ export default function MarketplaceSellerComposer() {
           setSellerArea((current) => current || [campus.city, campus.state].filter(Boolean).join(', '));
         }
         setDrafts(savedDrafts);
+        const requestedDraftId = typeof window !== 'undefined'
+          ? new URLSearchParams(window.location.search).get('draft')?.trim() || ''
+          : '';
+        if (requestedDraftId) {
+          const requestedDraft = savedDrafts.find((draft) => draft.id === requestedDraftId);
+          if (requestedDraft) loadDraft(requestedDraft);
+          else setNotice('That saved item draft is no longer available.');
+        }
         setPayoutStatus(payoutResult.status);
         setPayoutStatusError(payoutResult.error);
       } catch (cause) {
@@ -144,11 +142,6 @@ export default function MarketplaceSellerComposer() {
     if (enabled.aspirer) result.push('aspirer_delivery');
     return result;
   }, [enabled]);
-
-  const listingLanguage = useMemo(
-    () => detectListingLanguage(`${title}\n${details}`, typeof navigator === 'undefined' ? null : navigator.language),
-    [title, details]
-  );
 
   const buyerOptions = useMemo(() => {
     const result: string[] = [];
@@ -188,6 +181,7 @@ export default function MarketplaceSellerComposer() {
     setPrice('');
     setCondition('good');
     setDetails('');
+    setLanguage('any');
     setPhoto(null);
     setPhotoUrl('');
     setSavedPhotoPath(null);
@@ -208,6 +202,7 @@ export default function MarketplaceSellerComposer() {
     setPrice(draft.price_cents == null ? '' : (draft.price_cents / 100).toFixed(draft.price_cents % 100 === 0 ? 0 : 2));
     setCondition(draft.item_condition || 'good');
     setDetails(draft.details || '');
+    setLanguage(draft.language_code || 'any');
     if (draft.seller_area) setSellerArea(draft.seller_area);
     setEnabled({
       meet: draft.fulfillment_methods.includes('campus_pickup'),
@@ -249,7 +244,8 @@ export default function MarketplaceSellerComposer() {
         shippingPaidBy: enabled.shipping ? shippingPayer : null,
         sellerDeliveryMode: enabled.seller ? sellerDeliveryMode : null,
         sellerDeliveryPriceCents: enabled.seller && sellerDeliveryMode === 'fixed' ? Math.round(Number(sellerDeliveryPrice) * 100) : null,
-        sellerArea
+        sellerArea,
+        languageCode: language
       });
       setCurrentDraftId(saved.id);
 
@@ -321,7 +317,7 @@ export default function MarketplaceSellerComposer() {
         sellerDeliveryMode: enabled.seller ? sellerDeliveryMode : null,
         sellerDeliveryPriceCents: enabled.seller && sellerDeliveryMode === 'fixed' ? Math.round(Number(sellerDeliveryPrice) * 100) : null,
         sellerArea,
-        languageCode: listingLanguage
+        languageCode: language
       });
       createdId = listing.id;
       await uploadRequestMedia(listing.id, [listingPhoto]);
@@ -392,10 +388,12 @@ export default function MarketplaceSellerComposer() {
               <label><span>Price</span><div className={styles.money}>$ <input type="number" min="0.01" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="25" /></div></label>
               <label><span>Condition</span><select value={condition} onChange={(event) => setCondition(event.target.value as ItemCondition)}>{conditions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             </div>
-            <label><span>Description</span><textarea rows={4} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Model, size, defects, accessories, pickup notes…" /><small>Review language · {requestLanguageLabel(listingLanguage)}</small></label>
+            <label><span>Description</span><textarea rows={4} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Model, size, defects, accessories, pickup notes…" /><small>Reach · {requestLanguageLabel(language)}</small></label>
             <label className={styles.areaField}><span>Selling area <b>Public</b></span><input value={sellerArea} onChange={(event) => setSellerArea(event.target.value)} maxLength={120} placeholder="West Lafayette, IN" /><small>City + state only. Do not enter a street, dorm, room, or exact meetup spot.</small></label>
           </div>
         </div>
+
+        <PostLanguagePicker value={language} onChange={setLanguage} compact />
 
         <div className={styles.sectionHead}><div><span>DELIVERY OPTIONS</span><h3>What are you willing to offer?</h3></div><small>Choose one or more</small></div>
         <div className={styles.optionGrid}>

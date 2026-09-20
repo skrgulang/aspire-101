@@ -21,6 +21,7 @@ export type MarketplaceDraft = {
   seller_area: string | null;
   photo_storage_path: string | null;
   photo_mime_type: string | null;
+  language_code: RequestLanguageCode;
   photo_url?: string;
   updated_at: string;
 };
@@ -37,15 +38,14 @@ export type MarketplaceDraftInput = {
   sellerDeliveryMode?: SellerDeliveryMode | null;
   sellerDeliveryPriceCents?: number | null;
   sellerArea?: string | null;
-};
-
-export type MarketplaceListingInput = Omit<MarketplaceDraftInput, 'id'> & {
   languageCode?: RequestLanguageCode;
 };
 
+export type MarketplaceListingInput = Omit<MarketplaceDraftInput, 'id'>;
+
 const draftBucket = 'marketplace-drafts';
 const draftSignedUrlSeconds = 60 * 60;
-const marketplaceDraftSelect = 'id,campus_id,title,price_cents,item_condition,details,fulfillment_methods,shipping_paid_by,seller_delivery_mode,seller_delivery_price_cents,seller_area,photo_storage_path,photo_mime_type,updated_at' as const;
+const marketplaceDraftSelect = 'id,campus_id,title,price_cents,item_condition,details,fulfillment_methods,shipping_paid_by,seller_delivery_mode,seller_delivery_price_cents,seller_area,photo_storage_path,photo_mime_type,language_code,updated_at' as const;
 
 async function requireUser() {
   const supabase = getSupabaseBrowserClient();
@@ -142,6 +142,7 @@ export async function saveMarketplaceDraft(input: MarketplaceDraftInput) {
       ? input.sellerDeliveryPriceCents ?? null
       : null,
     seller_area: normalizeSellerArea(input.sellerArea),
+    language_code: input.languageCode || 'any',
     updated_at: new Date().toISOString()
   };
 

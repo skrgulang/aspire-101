@@ -11,7 +11,7 @@ export default function DiscoverLanguageFilter() {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(storageKey);
-    if (stored === 'all' || requestLanguages.some((item) => item.value === stored)) setLanguage(stored || 'all');
+    if (stored === 'all' || requestLanguages.some((item) => item.value !== 'any' && item.value === stored)) setLanguage(stored || 'all');
   }, []);
 
   function choose(next: string) {
@@ -29,7 +29,7 @@ export default function DiscoverLanguageFilter() {
         aria-label="Filter campus posts by language"
       >
         <option value="all">All languages</option>
-        {requestLanguages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+        {requestLanguages.filter((item) => item.value !== 'any').map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
       </select>
     </label>
   );
