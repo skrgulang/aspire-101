@@ -5,8 +5,10 @@ import {
   fetchConnectionUnreadCounts,
   fetchMyConnections,
   fetchMyRequestInbox,
+  subscribeToMyConnectionActivity,
   type PublicProfile
 } from '../lib/supabase/connections';
+import { fetchLiveConnections } from '../lib/supabase/liveConnections';
 import { fetchMarketOrders } from '../lib/supabase/marketplace';
 import { fetchMyResolutionHistory } from '../lib/supabase/resolution';
 import UiIcon, { type UiIconName } from './UiIcon';
@@ -28,6 +30,7 @@ function profileName(profile?: PublicProfile) {
 export default function CampusActionCenter() {
   const [items, setItems] = useState<ActionItem[]>([]);
   const [totalItems, setTotalItems] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState('');
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
 
@@ -40,18 +43,44 @@ export default function CampusActionCenter() {
       const connectionsPromise = fetchMyConnections();
       const unreadPromise = fetchConnectionUnreadCounts();
       const resolutionPromise = fetchMyResolutionHistory();
-      const [inbox, connectionData, unreadRows, resolutionHistory] = await Promise.all([
+      const livePromise = fetchLiveConnections();
+      const [inbox, connectionData, unreadRows, resolutionHistory, liveData] = await Promise.all([
         inboxPromise,
         connectionsPromise,
         unreadPromise,
-        resolutionPromise
+        resolutionPromise,
+        livePromise
       ]);
+      setCurrentUserId(connectionData.userId);
 
       const orders = await fetchMarketOrders(connectionData.connections.map((connection) => connection.id));
       const requestMap = new Map(connectionData.requests.map((request) => [request.id, request]));
       const inboxRequestMap = new Map(inbox.requests.map((request) => [request.id, request]));
       const connectionProfileMap = new Map(connectionData.profiles.map((profile) => [profile.id, profile]));
       const next: ActionItem[] = [];
+
+      liveData.scheduleProposals
+        .filter((proposal) => proposal.proposed_by !== liveData.userId)
+        .slice(0, 2)
+        .forEach((proposal) => {
+          const connection = liveData.connections.find((item) => item.id === proposal.connection_id);
+          const request = connection ? requestMap.get(connection.request_id) : undefined;
+          const when = new Date(proposal.start_at).toLocaleString([], {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit'
+          });
+          next.push({
+            key: `schedule-${proposal.id}`,
+            title: 'Review a proposed plan change',
+            detail: [request?.title || 'Active connection', when, proposal.meeting_label].filter(Boolean).join(' · '),
+            href: '/connections',
+            icon: 'calendar',
+            tone: 'gold'
+          });
+        });
 
       connectionData.connections
         .filter((connection) =>
@@ -148,6 +177,11 @@ export default function CampusActionCenter() {
     window.addEventListener('focus', refresh);
     return () => window.removeEventListener('focus', refresh);
   }, [load]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    return subscribeToMyConnectionActivity(currentUserId, () => void load(true));
+  }, [currentUserId, load]);
 
   if (loading) {
     return (
