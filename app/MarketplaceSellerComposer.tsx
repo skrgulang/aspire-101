@@ -80,6 +80,7 @@ export default function MarketplaceSellerComposer() {
   const [publishing, setPublishing] = useState(false);
   const [payoutStatus, setPayoutStatus] = useState<SellerPayoutStatus>('NOT_STARTED');
   const [payoutStatusError, setPayoutStatusError] = useState('');
+  const [payoutBusy, setPayoutBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -123,6 +124,16 @@ export default function MarketplaceSellerComposer() {
         }
         setPayoutStatus(payoutResult.status);
         setPayoutStatusError(payoutResult.error);
+        if (typeof window !== 'undefined') {
+          const paymentReturn = new URLSearchParams(window.location.search).get('payments');
+          if (paymentReturn === 'return') {
+            setNotice(payoutResult.status === 'READY'
+              ? 'Stripe payout setup complete. You can now submit this item for review.'
+              : 'Welcome back from Stripe. Your payout status is still updating; check it again in a moment.');
+          } else if (paymentReturn === 'refresh') {
+            setNotice('That Stripe setup link expired. Select Continue setup to open a fresh secure link.');
+          }
+        }
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Could not load seller tools.');
       } finally {
@@ -223,6 +234,50 @@ export default function MarketplaceSellerComposer() {
 
   async function refreshDrafts() {
     setDrafts(await listMarketplaceDrafts());
+  }
+
+  async function openPayoutFlow() {
+    setPayoutBusy(true);
+    setPayoutStatusError('');
+    setError('');
+    setNotice('');
+    try {
+      if (payoutStatus === 'UNDER_REVIEW') {
+        const nextStatus = await fetchSellerPayoutStatus();
+        setPayoutStatus(nextStatus);
+        setNotice(nextStatus === 'READY'
+          ? 'Stripe payout setup is ready. You can now submit this item for review.'
+          : 'Stripe is still reviewing your payout account. No additional action is needed right now.');
+        return;
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Sign in again to set up payouts.');
+
+      const ready = payoutStatus === 'READY';
+      const response = await fetch(ready ? '/api/stripe/connect/dashboard' : '/api/stripe/connect/onboard', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(ready ? {} : { 'Content-Type': 'application/json' })
+        },
+        ...(ready ? {} : { body: JSON.stringify({ returnTo: 'seller' }) })
+      });
+      const payload = await response.json().catch(() => ({})) as { url?: string; error?: string; code?: string };
+      if (!response.ok || !payload.url) {
+        if (payload.code === 'SCHOOL_REQUIRED') throw new Error('Verify your school email before setting up seller payouts.');
+        if (payload.code === 'PHONE_REQUIRED') throw new Error('Verify your phone before setting up seller payouts.');
+        throw new Error(payload.error || 'Could not open Stripe payout setup.');
+      }
+      window.location.assign(payload.url);
+    } catch (cause) {
+      setPayoutStatusError(cause instanceof Error ? cause.message : 'Could not open Stripe payout setup.');
+    } finally {
+      setPayoutBusy(false);
+    }
   }
 
   async function saveDraft() {
@@ -341,23 +396,100 @@ export default function MarketplaceSellerComposer() {
         <button type="button" className={styles.newButton} onClick={resetComposer}>+ New item</button>
       </div>
 
-      <section className={`${styles.payoutGate} ${payoutStatus === 'READY' ? styles.payoutReady : styles.payoutNeedsAction}`} aria-label="Stripe seller payout verification">
-        <div className={styles.payoutMark}>{payoutStatus === 'READY' ? '✓' : '$'}</div>
-        <div className={styles.payoutCopy}>
-          <span>SELLER PAYOUT VERIFICATION</span>
-          <strong>{payoutStatus === 'READY'
-            ? 'Stripe payout verified'
-            : payoutStatus === 'UNDER_REVIEW'
-              ? 'Stripe verification is under review'
-              : payoutStatus === 'ACTION_REQUIRED' || payoutStatus === 'RESTRICTED'
-                ? 'Finish your Stripe payout setup'
-                : 'Stripe setup required before publishing'}</strong>
-          <p>{payoutStatus === 'READY'
-            ? 'You can submit items for review. Buyer checkout re-checks payout eligibility before Stripe payment opens.'
-            : 'Every Aspire Market seller must finish Stripe payout verification before a listing can be submitted. You can still build and save private drafts now.'}</p>
-          {payoutStatusError && <small>{payoutStatusError}</small>}
+      <section className={`${styles.payoutGate} ${payoutStatus === 'READY' ? styles.payoutReady : styles.payoutNeedsAction}`} aria-label="Seller payout account">
+        <div className={styles.payoutHeader}>
+          <div className={styles.payoutMark}>{payoutStatus === 'READY' ? '✓' : '
+      <section className={styles.drafts} aria-label="Draft items">
+        <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts and photos stay private. Submitting removes the draft and creates a private listing for review; it appears in Market only after approval.</small></div>
+        {drafts.length ? <div className={styles.draftRail}>{drafts.map((draft) => (
+          <article key={draft.id} className={`${styles.draftCard} ${currentDraftId === draft.id ? styles.currentDraft : ''}`}>
+            <button type="button" onClick={() => loadDraft(draft)}>
+              {draft.photo_url ? <img className={styles.draftThumb} src={draft.photo_url} alt="" /> : <div className={styles.draftThumbEmpty}>NO PHOTO</div>}
+              <small>{draft.price_cents == null ? 'PRICE NOT SET' : `$${(draft.price_cents / 100).toFixed(2)}`}</small>
+              <strong>{draft.title || 'Untitled item'}</strong>
+              <span>{draft.seller_area || 'Selling area not set'}</span>
+              <span>{new Date(draft.updated_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>
+            </button>
+            <button type="button" className={styles.deleteDraft} onClick={() => removeDraft(draft.id)} aria-label={`Delete ${draft.title || 'draft'}`}>×</button>
+          </article>
+        ))}</div> : <div className={styles.emptyDraft}>No draft items yet. Start below and press <b>Save draft</b> whenever you want to finish later.</div>}
+      </section>
+
+      <form className={styles.form} onSubmit={publish}>
+        <div className={styles.basics}>
+          <div className={styles.photoBox}>
+            {photoUrl ? <img src={photoUrl} alt="Item preview" /> : <div><b>ITEM PHOTO</b><span>Required to submit</span></div>}
+            <label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />{photoUrl ? 'Change photo' : 'Add photo'}</label>
+          </div>
+          <div className={styles.fields}>
+            <label><span>Item title</span><input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} placeholder="e.g. Calculus textbook" /></label>
+            <div className={styles.twoCols}>
+              <label><span>Price</span><div className={styles.money}>$ <input type="number" min="0.01" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="25" /></div></label>
+              <label><span>Condition</span><select value={condition} onChange={(event) => setCondition(event.target.value as ItemCondition)}>{conditions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+            </div>
+            <label><span>Description</span><textarea rows={4} value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Model, size, defects, accessories, pickup notes…" /><small>Reach · {requestLanguageLabel(language)}</small></label>
+            <label className={styles.areaField}><span>Selling area <b>Public</b></span><input value={sellerArea} onChange={(event) => setSellerArea(event.target.value)} maxLength={120} placeholder="West Lafayette, IN" /><small>City + state only. Do not enter a street, dorm, room, or exact meetup spot.</small></label>
+          </div>
         </div>
-        <a href="/profile">{payoutStatus === 'READY' ? 'Manage payouts' : 'Open Stripe setup'} →</a>
+
+        <PostLanguagePicker value={language} onChange={setLanguage} compact />
+
+        <div className={styles.sectionHead}><div><span>DELIVERY OPTIONS</span><h3>What are you willing to offer?</h3></div><small>Choose one or more</small></div>
+        <div className={styles.optionGrid}>
+          <button type="button" className={`${styles.option} ${enabled.meet ? styles.active : ''}`} onClick={() => toggle('meet')}><i>{enabled.meet ? '✓' : ''}</i><span><b>Meet up / Local pickup</b><small>Meet the buyer on campus or nearby.</small></span><em>Free</em></button>
+          <button type="button" className={`${styles.option} ${enabled.shipping ? styles.active : ''}`} onClick={() => toggle('shipping')}><i>{enabled.shipping ? '✓' : ''}</i><span><b>Carrier shipping</b><small>Buyer enters an address and chooses an available carrier rate.</small></span><em>Calculated</em></button>
+          <button type="button" className={`${styles.option} ${enabled.seller ? styles.active : ''}`} onClick={() => toggle('seller')}><i>{enabled.seller ? '✓' : ''}</i><span><b>I may deliver it myself</b><small>Let the buyer ask you to bring it directly.</small></span><em>{enabled.seller ? 'On' : 'Off'}</em></button>
+          <button type="button" className={`${styles.option} ${enabled.aspirer ? styles.active : ''}`} onClick={() => toggle('aspirer')}><i>{enabled.aspirer ? '✓' : ''}</i><span><b>Allow Aspirer delivery</b><small>A third student can pick it up from you and deliver it.</small></span><em>Flexible</em></button>
+        </div>
+
+        {enabled.shipping && <div className={styles.subPanel}><h4>Who can cover carrier shipping?</h4><label><input type="radio" checked={shippingPayer === 'buyer'} onChange={() => setShippingPayer('buyer')} /><span><b>Buyer pays shipping</b><small>Added to the buyer checkout.</small></span></label><label><input type="radio" checked={shippingPayer === 'seller'} onChange={() => setShippingPayer('seller')} /><span><b>I’ll cover shipping</b><small>Deducted from your seller proceeds.</small></span></label><label><input type="radio" checked={shippingPayer === 'either'} onChange={() => setShippingPayer('either')} /><span><b>Either is okay</b><small>Buyer can choose who covers it at checkout.</small></span></label></div>}
+
+        {enabled.seller && <div className={styles.subPanel}><h4>Your own delivery terms</h4><div className={styles.pills}>{(['free','fixed','negotiable'] as SellerDeliveryMode[]).map((mode) => <button type="button" key={mode} className={sellerDeliveryMode === mode ? styles.activePill : ''} onClick={() => setSellerDeliveryMode(mode)}>{mode === 'free' ? 'Free' : mode === 'fixed' ? 'Fixed price' : 'Negotiable'}</button>)}</div>{sellerDeliveryMode === 'fixed' && <label className={styles.deliveryPrice}><span>Delivery price</span><div className={styles.money}>$ <input value={sellerDeliveryPrice} inputMode="decimal" onChange={(event) => setSellerDeliveryPrice(event.target.value.replace(/[^0-9.]/g, ''))} /></div></label>}<p>The buyer asks first. You can accept or decline before checkout.</p></div>}
+
+        <section className={styles.buyerPreview}><div><span>BUYER PREVIEW</span><strong>What buyers will see after approval</strong></div><div className={styles.previewTags}>{buyerOptions.map((option) => <span key={option}>✓ {option}</span>)}{!buyerOptions.length && <span>Choose at least one delivery option.</span>}</div></section>
+
+        {(error || notice) && <div id="marketplace-seller-status" className={error ? styles.error : styles.notice} role="status">{error || notice}</div>}
+
+        <div className={styles.actions}>
+          <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>{payoutStatus === 'READY' ? 'Stripe verified ✓ · Submit sends the listing through Post, Language, and Market review.' : 'Save keeps everything private. Publishing unlocks after Stripe payout verification is ready.'}</span></div>
+          <button type="button" className={styles.saveDraft} onClick={saveDraft} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : currentDraftId ? 'Save changes' : 'Save draft'}</button>
+          <button type="submit" className={styles.publish} disabled={publishing || savingDraft || payoutStatus !== 'READY'}>{publishing ? 'Submitting…' : payoutStatus === 'READY' ? 'Submit for review →' : 'Stripe verification required'}</button>
+        </div>
+      </form>
+    </section>
+  );
+}}</div>
+          <div className={styles.payoutCopy}>
+            <span>SELLER PAYOUT ACCOUNT</span>
+            <strong>{payoutStatus === 'READY'
+              ? 'Ready to get paid'
+              : payoutStatus === 'UNDER_REVIEW'
+                ? 'Stripe is reviewing your account'
+                : payoutStatus === 'ACTION_REQUIRED' || payoutStatus === 'RESTRICTED'
+                  ? 'Finish setting up your payout account'
+                  : 'Set up how you’ll get paid'}</strong>
+            <p>{payoutStatus === 'READY'
+              ? 'Your bank details stay with Stripe. Aspire can send your seller earnings after an order is completed.'
+              : 'Aspire uses Stripe to verify sellers and send earnings securely. You can save drafts now, but setup is required before publishing.'}</p>
+          </div>
+          <button type="button" className={styles.payoutAction} onClick={openPayoutFlow} disabled={payoutBusy}>
+            {payoutBusy
+              ? 'Opening…'
+              : payoutStatus === 'READY'
+                ? 'Manage payouts'
+                : payoutStatus === 'UNDER_REVIEW'
+                  ? 'Check status'
+                  : payoutStatus === 'NOT_STARTED'
+                    ? 'Set up payouts'
+                    : 'Continue setup'} →
+          </button>
+        </div>
+        {payoutStatus !== 'READY' && <div className={styles.payoutSteps} aria-label="Payout setup steps">
+          <div><i>1</i><span><b>Verify identity</b><small>Handled securely by Stripe</small></span></div>
+          <div><i>2</i><span><b>Add bank account</b><small>Aspire never stores bank details</small></span></div>
+          <div><i>3</i><span><b>Receive earnings</b><small>After the order is completed</small></span></div>
+        </div>}
+        {payoutStatusError && <div className={styles.payoutError} role="status">{payoutStatusError}</div>}
       </section>
 
       <section className={styles.drafts} aria-label="Draft items">
