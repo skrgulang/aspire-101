@@ -90,20 +90,25 @@ export async function initializeProductObservability() {
   const amplitudeKey = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY?.trim();
   if (amplitudeKey && !amplitudeReady) {
     amplitude.init(amplitudeKey, undefined, {
-      autocapture: false
+      autocapture: false,
+      fetchRemoteConfig: false
     });
     amplitudeReady = true;
   }
 
   const datadogApplicationId = process.env.NEXT_PUBLIC_DATADOG_APPLICATION_ID?.trim();
   const datadogClientToken = process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN?.trim();
+  const observedEnvironment =
+    typeof window !== 'undefined' && window.location.hostname === 'aspires101.com'
+      ? 'production'
+      : 'preview';
   if (datadogApplicationId && datadogClientToken && !datadogReady) {
     datadogRum.init({
       applicationId: datadogApplicationId,
       clientToken: datadogClientToken,
       site: 'datadoghq.com',
       service: 'aspire101-web',
-      env: process.env.NEXT_PUBLIC_APP_ENV?.trim() || 'production',
+      env: observedEnvironment,
       sessionSampleRate: 100,
       sessionReplaySampleRate: 0,
       trackUserInteractions: false,
@@ -121,7 +126,7 @@ export async function initializeProductObservability() {
 
     if (!sessionStartTracked) {
       sessionStartTracked = true;
-      const environment = process.env.NEXT_PUBLIC_APP_ENV?.trim() || 'production';
+      const environment = observedEnvironment;
       if (amplitudeReady) amplitude.track('product_session_started', { environment });
       if (datadogReady) datadogRum.addAction('product_session_started', { environment });
     }
