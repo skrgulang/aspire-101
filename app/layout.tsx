@@ -72,24 +72,68 @@ import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
+import GoogleAnalytics from './GoogleAnalytics';
 import { aspireLogo } from './logo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','700'], variable: '--font-display' });
 
+const siteTitle = 'Aspire 101 — Ask campus. Feel at home.';
+const siteDescription = 'A college request network that helps students find support, make connections, and feel more at home on campus.';
+
 export const metadata: Metadata = {
-  title: 'Aspire 101 — Ask campus. Feel at home.',
-  description: 'A college request network that helps students find support, make connections, and feel more at home on campus.',
-  icons: { icon: '/favicon.webp', shortcut: '/favicon.webp', apple: '/favicon.webp' }
+  metadataBase: new URL('https://aspires101.com'),
+  applicationName: 'Aspire 101',
+  title: siteTitle,
+  description: siteDescription,
+  icons: { icon: '/favicon.webp', shortcut: '/favicon.webp', apple: '/favicon.webp' },
+  openGraph: {
+    type: 'website',
+    siteName: 'Aspire 101',
+    title: siteTitle,
+    description: siteDescription,
+    images: [
+      {
+        url: '/logo.svg',
+        width: 256,
+        height: 256,
+        alt: 'Aspire 101'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary',
+    title: siteTitle,
+    description: siteDescription,
+    images: ['/logo.svg']
+  }
+};
+
+const organizationStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Cloudora Labs, Inc.',
+  alternateName: 'Aspire101',
+  url: 'https://aspires101.com',
+  logo: 'https://aspires101.com/logo.svg',
+  brand: {
+    '@type': 'Brand',
+    name: 'Aspire101'
+  }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <body className={`${inter.variable} ${display.variable}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationStructuredData) }}
+        />
         {children}
         <SiteFooter />
         <CookieBanner />
+        <GoogleAnalytics />
       </body>
     </html>
   );
