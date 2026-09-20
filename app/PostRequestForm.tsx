@@ -430,7 +430,7 @@ export default function PostRequestForm() {
       <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · {schedulePreview} · {requestLanguageLabel(language)} · #{posted.id.slice(0, 8)} · {posted.moderationStatus === 'approved' ? 'published' : posted.moderationStatus === 'pending' ? 'pending review' : 'blocked by safety review'}</small></article>
       {posted.warning && <p className="postError">{posted.warning}</p>}
       <p className="postSuccessNote">{posted.moderationStatus === 'approved' ? (isMarket ? 'Your listing passed the automated review and is now visible in Aspire Market.' : 'Your post passed the automated review and is now visible in the campus feed.') : posted.moderationStatus === 'pending' ? (isMarket ? 'Your marketplace listing is saved but stays private until the remaining review is complete.' : 'Your request is saved but stays private until the remaining review is complete.') : 'This post was not published because the automated safety review found a serious policy concern. Contact Aspire Safety if you believe this was a mistake.'}</p>
-      <div className="postSuccessActions"><a className="button buttonGold" href="/activity">View my activity <span>↗</span></a><button className="quietPostButton" type="button" onClick={resetPost}>Submit another</button></div>
+      <div className="postSuccessActions"><a className="button buttonGold" href="/activity">View my posts <span>↗</span></a><button className="quietPostButton" type="button" onClick={resetPost}>Submit another</button></div>
     </section>
   );
 
