@@ -9,6 +9,8 @@
     "test:brain": "node scripts/aspire-brain-regression.mjs"
   },
   "dependencies": {
+    "@amplitude/analytics-browser": "^2.45.10",
+    "@datadog/browser-rum": "^7.13.0",
     "@supabase/supabase-js": "^2.57.0",
     "next": "15.5.24",
     "nodemailer": "^10.0.9",
