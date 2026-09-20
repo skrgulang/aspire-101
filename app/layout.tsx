@@ -74,6 +74,7 @@ import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
+import GoogleAnalytics from './GoogleAnalytics';
 import { aspireLogo } from './logo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -152,6 +153,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         {children}
         <SiteFooter />
         <CookieBanner />
+        <GoogleAnalytics />
       </body>
     </html>
   );
