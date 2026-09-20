@@ -3,6 +3,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { trackGa4Event } from '../lib/analytics/ga4';
 import {
   createRequest,
   FulfillmentMethod,
@@ -411,6 +412,14 @@ export default function PostRequestForm() {
       }
       clearAspireAgentDraft();
       setAgentPrepared(false);
+      trackGa4Event('request_posted', {
+        post_type: 'need',
+        category,
+        request_kind: kind,
+        scheduled: scheduleMode === 'scheduled',
+        payment_involved: moneyInvolved,
+        language_code: language
+      });
       setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, moderationStatus, warning });
       setConfirming(false);
     } catch (err) {

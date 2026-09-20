@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { trackGa4Event } from '../lib/analytics/ga4';
 import { createRequest, type RequestLanguageCode } from '../lib/supabase/requests';
 import { deleteRequestDraft, getRequestDraft, saveRequestDraft } from '../lib/supabase/requestDrafts';
 import { fetchActiveUniversities, type University } from '../lib/supabase/universities';
@@ -302,6 +303,14 @@ export default function OfferPostForm() {
         await deleteRequestDraft(currentDraftId).catch(() => undefined);
         setCurrentDraftId(null);
       }
+      trackGa4Event('request_posted', {
+        post_type: 'offer',
+        category,
+        request_kind: 'community',
+        scheduled: scheduleMode === 'scheduled',
+        payment_involved: false,
+        language_code: language
+      });
       setPosted({ id: request.id, title: request.title });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not post your offer.');
