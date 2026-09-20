@@ -50,7 +50,7 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
@@ -374,4 +374,57 @@
   .reviewHead { display: grid; }
   .reviewHead > b { width: max-content; }
   .actionNotice { display: grid; gap: 6px; }
+}
+
+
+.draftStat{border-color:#e5cc74!important;background:#fffaf0!important}
+.draftStat strong{color:#876600}
+.draftList{display:grid;gap:10px}
+.draftCard{
+  min-height:106px;
+  padding:16px 18px;
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) auto;
+  gap:14px;
+  align-items:center;
+  border:1px solid #e7e7e2;
+  border-radius:16px;
+  background:#fff;
+}
+.draftIcon{
+  width:44px;height:44px;display:grid;place-items:center;border-radius:13px;
+  background:#fff4cf;color:#725700;font-size:17px;font-weight:950
+}
+.draftCopy{min-width:0}
+.draftCopy>div{display:flex;align-items:center;gap:9px}
+.draftCopy>div span{color:#8b6b0b;font-size:8px;font-weight:950;letter-spacing:.1em}
+.draftCopy>div small{color:#99958e;font-size:8px}
+.draftCopy h2{margin:5px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px}
+.draftCopy p{margin:4px 0 0;color:#77736c;font-size:10px}
+.draftActions{display:flex;align-items:center;gap:8px}
+.draftActions a,.draftActions button{
+  min-height:38px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:10px;font-size:10px;font-weight:850;text-decoration:none
+}
+.draftActions a{background:#ffc72c;color:#191309}
+.draftActions button{border:1px solid #e4e1da;background:transparent;color:#8a8175;cursor:pointer}
+.draftActions button:hover:not(:disabled){border-color:#e4b2ae;color:#a53d34;background:#fff7f6}
+.draftActions button:disabled{opacity:.5;cursor:default}
+
+:global(html[data-aspire-theme='dark']) .draftStat{border-color:rgba(255,199,44,.23)!important;background:rgba(255,199,44,.055)!important}
+:global(html[data-aspire-theme='dark']) .draftStat strong{color:#e6c45a}
+:global(html[data-aspire-theme='dark']) .draftCard{border-color:rgba(255,255,255,.09);background:#151514}
+:global(html[data-aspire-theme='dark']) .draftIcon{background:rgba(255,199,44,.1);color:#e4c04f}
+:global(html[data-aspire-theme='dark']) .draftCopy h2{color:#f0ece3}
+:global(html[data-aspire-theme='dark']) .draftCopy p{color:#89847c}
+:global(html[data-aspire-theme='dark']) .draftActions button{border-color:rgba(255,255,255,.1);color:#928c83}
+
+@media(max-width:900px){
+  .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .draftCard{grid-template-columns:38px minmax(0,1fr);padding:13px}
+  .draftIcon{width:38px;height:38px;border-radius:11px}
+  .draftActions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}
+  .draftActions a,.draftActions button{width:100%}
 }
