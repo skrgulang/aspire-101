@@ -11,7 +11,7 @@ const itemConditions = new Set(['new', 'like_new', 'good', 'fair', 'for_parts'])
 const fulfillmentMethods = new Set(['campus_pickup', 'shipping', 'seller_delivery', 'aspirer_delivery']);
 const shippingPayers = new Set(['buyer', 'seller', 'either']);
 const sellerDeliveryModes = new Set(['free', 'fixed', 'negotiable']);
-const languages = new Set(['en', 'zh', 'es', 'ko', 'ja', 'fr', 'hi', 'ar', 'vi', 'other']);
+const languages = new Set(['any', 'en', 'zh', 'es', 'ko', 'ja', 'fr', 'hi', 'ar', 'vi', 'other']);
 
 function cleanText(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, max) : '';
