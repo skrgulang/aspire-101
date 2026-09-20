@@ -298,12 +298,39 @@ export default function MyActivityManager() {
         return;
       }
       const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.from('requests').delete().eq('id', request.id);
+      const { data: mediaRows, error: mediaError } = await supabase
+        .from('request_media')
+        .select('storage_path')
+        .eq('request_id', request.id);
+      if (mediaError) throw mediaError;
+
+      const { data: deleted, error } = await supabase
+        .from('requests')
+        .delete()
+        .eq('id', request.id)
+        .select('id')
+        .maybeSingle();
       if (error) throw error;
+      if (!deleted?.id) {
+        throw new Error('This post could not be permanently deleted because it has protected activity history.');
+      }
+
+      const mediaPaths = (mediaRows || []).map((row) => String(row.storage_path || '')).filter(Boolean);
+      let photoCleanupFailed = false;
+      if (mediaPaths.length) {
+        const { error: storageError } = await supabase.storage.from('request-media').remove(mediaPaths);
+        photoCleanupFailed = Boolean(storageError);
+      }
+
       setRequests((current) => current.filter((item) => item.id !== request.id));
-      setNotice('Post deleted permanently.');
+      setNotice(photoCleanupFailed
+        ? 'Post deleted. Aspire could not finish photo cleanup right away.'
+        : 'Post deleted permanently.');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not delete this post.');
+      const raw = error instanceof Error ? error.message : '';
+      setNotice(/permission denied|row-level security|policy/i.test(raw)
+        ? 'Aspire could not delete this post right now. Refresh and try again.'
+        : raw || 'Could not delete this post.');
     } finally {
       setBusyId('');
     }
