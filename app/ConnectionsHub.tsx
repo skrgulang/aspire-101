@@ -24,7 +24,8 @@ import {
   sendConnectionMessage,
   setCircleChoice,
   submitConnectionReview,
-  subscribeToConnectionMessages
+  subscribeToConnectionMessages,
+  subscribeToMyConnectionActivity
 } from '../lib/supabase/connections';
 import { useConnectionRealtimeRoom } from '../lib/supabase/connection-realtime';
 import { confirmConnectionCompletion } from '../lib/supabase/payments';
@@ -134,6 +135,13 @@ export default function ConnectionsHub() {
       }
     });
   }, [connectionData.userId]);
+
+  useEffect(() => {
+    if (!connectionData.userId) return;
+    return subscribeToMyConnectionActivity(connectionData.userId, () => {
+      void reload(true);
+    });
+  }, [connectionData.userId, reload]);
 
   useEffect(() => {
     if (!chatId) return;
