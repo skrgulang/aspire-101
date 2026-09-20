@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import {
   createRequest,
-  detectRequestLanguage,
   FulfillmentMethod,
   ItemCondition,
   MarketIntent,
