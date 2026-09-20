@@ -9,7 +9,7 @@ import {
   type PublicProfile
 } from '../lib/supabase/connections';
 import { fetchLiveConnections } from '../lib/supabase/liveConnections';
-import { fetchMarketOrders } from '../lib/supabase/marketplace';
+import { fetchMarketOrders, fetchMarketPriceProposals } from '../lib/supabase/marketplace';
 import { fetchMyResolutionHistory } from '../lib/supabase/resolution';
 import UiIcon, { type UiIconName } from './UiIcon';
 import styles from './CampusActionCenter.module.css';
@@ -54,6 +54,7 @@ export default function CampusActionCenter() {
       setCurrentUserId(connectionData.userId);
 
       const orders = await fetchMarketOrders(connectionData.connections.map((connection) => connection.id));
+      const priceProposals = await fetchMarketPriceProposals(orders.map((order) => order.id));
       const requestMap = new Map(connectionData.requests.map((request) => [request.id, request]));
       const inboxRequestMap = new Map(inbox.requests.map((request) => [request.id, request]));
       const connectionProfileMap = new Map(connectionData.profiles.map((profile) => [profile.id, profile]));
@@ -78,6 +79,26 @@ export default function CampusActionCenter() {
             detail: [request?.title || 'Active connection', when, proposal.meeting_label].filter(Boolean).join(' · '),
             href: '/connections',
             icon: 'calendar',
+            tone: 'gold'
+          });
+        });
+
+      priceProposals
+        .filter((proposal) => proposal.proposed_by !== connectionData.userId)
+        .slice(0, 2)
+        .forEach((proposal) => {
+          const order = orders.find((item) => item.id === proposal.market_order_id);
+          const request = order ? requestMap.get(order.request_id) : undefined;
+          const price = new Intl.NumberFormat(undefined, {
+            style: 'currency',
+            currency: proposal.currency
+          }).format(proposal.amount_cents / 100);
+          next.push({
+            key: `market-price-${proposal.id}`,
+            title: 'Review a proposed order price',
+            detail: `${request?.title || 'Marketplace order'} · ${price}`,
+            href: `/transactions?connection=${encodeURIComponent(proposal.connection_id)}`,
+            icon: 'tag',
             tone: 'gold'
           });
         });
