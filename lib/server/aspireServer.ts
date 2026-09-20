@@ -56,6 +56,52 @@ export async function stripeRequest<T>(path: string, init: RequestInit = {}) {
   return payload as T;
 }
 
+export type StripeRecipientPayoutStatus = 'ACTION_REQUIRED' | 'UNDER_REVIEW' | 'READY' | 'RESTRICTED';
+
+type StripeRecipientAccount = {
+  configuration?: {
+    recipient?: {
+      capabilities?: {
+        stripe_balance?: {
+          stripe_transfers?: {
+            status?: string | null;
+          };
+        };
+      };
+    };
+  };
+};
+
+export function stripeRecipientPayoutState(account: StripeRecipientAccount) {
+  const capabilityStatus = account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status || 'inactive';
+  const ready = capabilityStatus === 'active';
+  const status: StripeRecipientPayoutStatus = ready
+    ? 'READY'
+    : capabilityStatus === 'pending'
+      ? 'UNDER_REVIEW'
+      : capabilityStatus === 'restricted'
+        ? 'RESTRICTED'
+        : 'ACTION_REQUIRED';
+
+  return {
+    ready,
+    status,
+    requirementsDue: ready ? 0 : 1
+  };
+}
+
+/**
+ * Stripe is the source of truth for seller payout eligibility. Aspire never
+ * receives or stores bank account/routing details; sellers enter them only in
+ * Stripe-hosted onboarding and manage them in the Express Dashboard.
+ */
+export async function getStripeRecipientPayoutState(accountId: string) {
+  const account = await stripeRequest<StripeRecipientAccount>(
+    `/v2/core/accounts/${encodeURIComponent(accountId)}?include[]=configuration.recipient`
+  );
+  return stripeRecipientPayoutState(account);
+}
+
 /** Form-encoded helper for stable Stripe v1 endpoints such as Checkout, Transfers and Refunds. */
 export async function stripeFormRequest<T>(
   path: string,
