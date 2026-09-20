@@ -17,8 +17,7 @@ export type ProductEventName =
   | 'payout_released'
   | 'review_submitted';
 
-type AnalyticsPrimitive = string | number | boolean | null;
-type AnalyticsValue = AnalyticsPrimitive | AnalyticsPrimitive[];
+type AnalyticsValue = string | number | boolean | null;
 export type ProductEventProperties = Record<string, AnalyticsValue | undefined>;
 
 let amplitudeReady = false;
@@ -47,14 +46,6 @@ function sanitizeProperties(properties: ProductEventProperties = {}) {
   Object.entries(properties).forEach(([rawKey, rawValue]) => {
     const key = rawKey.trim().slice(0, 64);
     if (!key || blockedPropertyPattern.test(key) || rawValue === undefined) return;
-
-    if (Array.isArray(rawValue)) {
-      safe[key] = rawValue
-        .slice(0, 12)
-        .map((value) => typeof value === 'string' ? value.slice(0, 120) : value);
-      return;
-    }
-
     safe[key] = typeof rawValue === 'string' ? rawValue.slice(0, 120) : rawValue;
   });
 
@@ -62,16 +53,17 @@ function sanitizeProperties(properties: ProductEventProperties = {}) {
 }
 
 function setAnalyticsUser(userId: string | null) {
+  const previousUserId = currentUserId;
   currentUserId = userId;
 
   if (amplitudeReady) {
     if (userId) amplitude.setUserId(userId);
-    else amplitude.reset();
+    else if (previousUserId) amplitude.reset();
   }
 
   if (datadogReady) {
     if (userId) datadogRum.setUser({ id: userId });
-    else datadogRum.clearUser();
+    else if (previousUserId) datadogRum.clearUser();
   }
 }
 
@@ -106,7 +98,7 @@ export async function initializeProductObservability() {
     datadogRum.init({
       applicationId: datadogApplicationId,
       clientToken: datadogClientToken,
-      site: process.env.NEXT_PUBLIC_DATADOG_SITE?.trim() || 'datadoghq.com',
+      site: 'datadoghq.com',
       service: 'aspire101-web',
       env: process.env.NEXT_PUBLIC_APP_ENV?.trim() || 'production',
       sessionSampleRate: 100,
