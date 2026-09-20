@@ -1,0 +1,4 @@
+Contact: mailto:team@aspires101.com
+Canonical: https://aspires101.com/.well-known/security.txt
+Expires: 2027-09-20T23:59:59Z
+Preferred-Languages: en, zh
