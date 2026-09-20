@@ -2,11 +2,11 @@ const development = process.env.NODE_ENV !== 'production';
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${development ? " 'unsafe-eval'" : ''} https://js.stripe.com`,
+  `script-src 'self' 'unsafe-inline'${development ? " 'unsafe-eval'" : ''} https://js.stripe.com https://www.googletagmanager.com`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://r.stripe.com https://q.stripe.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://r.stripe.com https://q.stripe.com https://www.google-analytics.com https://*.google-analytics.com",
   "frame-src https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
