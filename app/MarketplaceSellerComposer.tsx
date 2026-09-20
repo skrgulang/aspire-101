@@ -80,6 +80,7 @@ export default function MarketplaceSellerComposer() {
   const [publishing, setPublishing] = useState(false);
   const [payoutStatus, setPayoutStatus] = useState<SellerPayoutStatus>('NOT_STARTED');
   const [payoutStatusError, setPayoutStatusError] = useState('');
+  const [payoutBusy, setPayoutBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
@@ -123,6 +124,16 @@ export default function MarketplaceSellerComposer() {
         }
         setPayoutStatus(payoutResult.status);
         setPayoutStatusError(payoutResult.error);
+        if (typeof window !== 'undefined') {
+          const paymentReturn = new URLSearchParams(window.location.search).get('payments');
+          if (paymentReturn === 'return') {
+            setNotice(payoutResult.status === 'READY'
+              ? 'Stripe payout setup complete. You can now submit this item for review.'
+              : 'Welcome back from Stripe. Your payout status is still updating; check it again in a moment.');
+          } else if (paymentReturn === 'refresh') {
+            setNotice('That Stripe setup link expired. Select Continue setup to open a fresh secure link.');
+          }
+        }
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'Could not load seller tools.');
       } finally {
@@ -223,6 +234,50 @@ export default function MarketplaceSellerComposer() {
 
   async function refreshDrafts() {
     setDrafts(await listMarketplaceDrafts());
+  }
+
+  async function openPayoutFlow() {
+    setPayoutBusy(true);
+    setPayoutStatusError('');
+    setError('');
+    setNotice('');
+    try {
+      if (payoutStatus === 'UNDER_REVIEW') {
+        const nextStatus = await fetchSellerPayoutStatus();
+        setPayoutStatus(nextStatus);
+        setNotice(nextStatus === 'READY'
+          ? 'Stripe payout setup is ready. You can now submit this item for review.'
+          : 'Stripe is still reviewing your payout account. No additional action is needed right now.');
+        return;
+      }
+
+      const supabase = getSupabaseBrowserClient();
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Sign in again to set up payouts.');
+
+      const ready = payoutStatus === 'READY';
+      const response = await fetch(ready ? '/api/stripe/connect/dashboard' : '/api/stripe/connect/onboard', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(ready ? {} : { 'Content-Type': 'application/json' })
+        },
+        ...(ready ? {} : { body: JSON.stringify({ returnTo: 'seller' }) })
+      });
+      const payload = await response.json().catch(() => ({})) as { url?: string; error?: string; code?: string };
+      if (!response.ok || !payload.url) {
+        if (payload.code === 'SCHOOL_REQUIRED') throw new Error('Verify your school email before setting up seller payouts.');
+        if (payload.code === 'PHONE_REQUIRED') throw new Error('Verify your phone before setting up seller payouts.');
+        throw new Error(payload.error || 'Could not open Stripe payout setup.');
+      }
+      window.location.assign(payload.url);
+    } catch (cause) {
+      setPayoutStatusError(cause instanceof Error ? cause.message : 'Could not open Stripe payout setup.');
+    } finally {
+      setPayoutBusy(false);
+    }
   }
 
   async function saveDraft() {
@@ -341,23 +396,40 @@ export default function MarketplaceSellerComposer() {
         <button type="button" className={styles.newButton} onClick={resetComposer}>+ New item</button>
       </div>
 
-      <section className={`${styles.payoutGate} ${payoutStatus === 'READY' ? styles.payoutReady : styles.payoutNeedsAction}`} aria-label="Stripe seller payout verification">
-        <div className={styles.payoutMark}>{payoutStatus === 'READY' ? '✓' : '$'}</div>
-        <div className={styles.payoutCopy}>
-          <span>SELLER PAYOUT VERIFICATION</span>
-          <strong>{payoutStatus === 'READY'
-            ? 'Stripe payout verified'
-            : payoutStatus === 'UNDER_REVIEW'
-              ? 'Stripe verification is under review'
-              : payoutStatus === 'ACTION_REQUIRED' || payoutStatus === 'RESTRICTED'
-                ? 'Finish your Stripe payout setup'
-                : 'Stripe setup required before publishing'}</strong>
-          <p>{payoutStatus === 'READY'
-            ? 'You can submit items for review. Buyer checkout re-checks payout eligibility before Stripe payment opens.'
-            : 'Every Aspire Market seller must finish Stripe payout verification before a listing can be submitted. You can still build and save private drafts now.'}</p>
-          {payoutStatusError && <small>{payoutStatusError}</small>}
+      <section className={`${styles.payoutGate} ${payoutStatus === 'READY' ? styles.payoutReady : styles.payoutNeedsAction}`} aria-label="Seller payout account">
+        <div className={styles.payoutHeader}>
+          <div className={styles.payoutMark}>{payoutStatus === 'READY' ? '✓' : 'PAY'}</div>
+          <div className={styles.payoutCopy}>
+            <span>SELLER PAYOUT ACCOUNT</span>
+            <strong>{payoutStatus === 'READY'
+              ? 'Ready to get paid'
+              : payoutStatus === 'UNDER_REVIEW'
+                ? 'Stripe is reviewing your account'
+                : payoutStatus === 'ACTION_REQUIRED' || payoutStatus === 'RESTRICTED'
+                  ? 'Finish setting up your payout account'
+                  : 'Set up how you’ll get paid'}</strong>
+            <p>{payoutStatus === 'READY'
+              ? 'Your bank details stay with Stripe. Aspire can send your seller earnings after an order is completed.'
+              : 'Aspire uses Stripe to verify sellers and send earnings securely. You can save drafts now, but setup is required before publishing.'}</p>
+          </div>
+          <button type="button" className={styles.payoutAction} onClick={openPayoutFlow} disabled={payoutBusy}>
+            {payoutBusy
+              ? 'Opening…'
+              : payoutStatus === 'READY'
+                ? 'Manage payouts'
+                : payoutStatus === 'UNDER_REVIEW'
+                  ? 'Check status'
+                  : payoutStatus === 'NOT_STARTED'
+                    ? 'Set up payouts'
+                    : 'Continue setup'} →
+          </button>
         </div>
-        <a href="/profile">{payoutStatus === 'READY' ? 'Manage payouts' : 'Open Stripe setup'} →</a>
+        {payoutStatus !== 'READY' && <div className={styles.payoutSteps} aria-label="Payout setup steps">
+          <div><i>1</i><span><b>Verify identity</b><small>Handled securely by Stripe</small></span></div>
+          <div><i>2</i><span><b>Add bank account</b><small>Aspire never stores bank details</small></span></div>
+          <div><i>3</i><span><b>Receive earnings</b><small>After the order is completed</small></span></div>
+        </div>}
+        {payoutStatusError && <div className={styles.payoutError} role="status">{payoutStatusError}</div>}
       </section>
 
       <section className={styles.drafts} aria-label="Draft items">

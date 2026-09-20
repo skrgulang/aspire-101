@@ -2,13 +2,17 @@
 
 .payoutGate{
   display:grid;
-  grid-template-columns:42px minmax(0,1fr) auto;
-  gap:12px;
-  align-items:center;
+  gap:14px;
   padding:14px 15px;
   border:1px solid rgba(255,255,255,.12);
   border-radius:17px;
   background:rgba(255,255,255,.025)
+}
+.payoutHeader{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center
 }
 .payoutMark{
   width:42px;
@@ -40,23 +44,64 @@
   font-size:10px;
   line-height:1.5
 }
-.payoutCopy small{
-  color:#c79494;
-  font-size:8px
-}
-.payoutGate>a{
-  min-height:38px;
-  padding:0 12px;
+.payoutAction{
+  min-height:40px;
+  padding:0 14px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  border:1px solid rgba(255,199,44,.24);
+  border:1px solid rgba(255,199,44,.28);
   border-radius:999px;
-  color:#d9ba57;
-  font-size:9px;
+  background:rgba(255,199,44,.07);
+  color:#e6c45d;
+  font:inherit;
+  font-size:10px;
   font-weight:900;
-  text-decoration:none;
+  cursor:pointer;
   white-space:nowrap
+}
+.payoutAction:hover{border-color:rgba(255,199,44,.55);background:rgba(255,199,44,.11)}
+.payoutAction:disabled{opacity:.62;cursor:wait}
+.payoutSteps{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.08)
+}
+.payoutSteps>div{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+  padding:9px 10px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  background:rgba(0,0,0,.1)
+}
+.payoutSteps i{
+  width:24px;
+  height:24px;
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,199,44,.25);
+  border-radius:8px;
+  color:#ffc72c;
+  font-size:10px;
+  font-style:normal;
+  font-weight:950
+}
+.payoutSteps span,.payoutSteps b,.payoutSteps small{display:block;min-width:0}
+.payoutSteps b{font-size:10px}
+.payoutSteps small{margin-top:2px;color:var(--muted,#8f8a82);font-size:8px;line-height:1.3}
+.payoutError{
+  padding:9px 11px;
+  border:1px solid rgba(255,91,91,.28);
+  border-radius:11px;
+  background:rgba(255,91,91,.07);
+  color:#ffb4b4;
+  font-size:10px
 }
 .payoutReady{
   border-color:rgba(94,205,139,.18);
@@ -78,9 +123,11 @@
   color:#ffc72c
 }
 @media(max-width:720px){
-  .payoutGate{grid-template-columns:38px minmax(0,1fr);padding:12px}
+  .payoutGate{padding:12px}
+  .payoutHeader{grid-template-columns:38px minmax(0,1fr)}
   .payoutMark{width:38px;height:38px}
-  .payoutGate>a{grid-column:1/-1;width:100%;box-sizing:border-box}
+  .payoutAction{grid-column:1/-1;width:100%;box-sizing:border-box}
+  .payoutSteps{grid-template-columns:1fr}
 }
 :global(html[data-aspire-theme='light']) .payoutGate{
   border-color:#e6e2d4;
