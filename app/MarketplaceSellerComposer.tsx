@@ -398,7 +398,40 @@ export default function MarketplaceSellerComposer() {
 
       <section className={`${styles.payoutGate} ${payoutStatus === 'READY' ? styles.payoutReady : styles.payoutNeedsAction}`} aria-label="Seller payout account">
         <div className={styles.payoutHeader}>
-          <div className={styles.payoutMark}>{payoutStatus === 'READY' ? '✓' : '
+          <div className={styles.payoutMark}>{payoutStatus === 'READY' ? '✓' : 'PAY'}</div>
+          <div className={styles.payoutCopy}>
+            <span>SELLER PAYOUT ACCOUNT</span>
+            <strong>{payoutStatus === 'READY'
+              ? 'Ready to get paid'
+              : payoutStatus === 'UNDER_REVIEW'
+                ? 'Stripe is reviewing your account'
+                : payoutStatus === 'ACTION_REQUIRED' || payoutStatus === 'RESTRICTED'
+                  ? 'Finish setting up your payout account'
+                  : 'Set up how you’ll get paid'}</strong>
+            <p>{payoutStatus === 'READY'
+              ? 'Your bank details stay with Stripe. Aspire can send your seller earnings after an order is completed.'
+              : 'Aspire uses Stripe to verify sellers and send earnings securely. You can save drafts now, but setup is required before publishing.'}</p>
+          </div>
+          <button type="button" className={styles.payoutAction} onClick={openPayoutFlow} disabled={payoutBusy}>
+            {payoutBusy
+              ? 'Opening…'
+              : payoutStatus === 'READY'
+                ? 'Manage payouts'
+                : payoutStatus === 'UNDER_REVIEW'
+                  ? 'Check status'
+                  : payoutStatus === 'NOT_STARTED'
+                    ? 'Set up payouts'
+                    : 'Continue setup'} →
+          </button>
+        </div>
+        {payoutStatus !== 'READY' && <div className={styles.payoutSteps} aria-label="Payout setup steps">
+          <div><i>1</i><span><b>Verify identity</b><small>Handled securely by Stripe</small></span></div>
+          <div><i>2</i><span><b>Add bank account</b><small>Aspire never stores bank details</small></span></div>
+          <div><i>3</i><span><b>Receive earnings</b><small>After the order is completed</small></span></div>
+        </div>}
+        {payoutStatusError && <div className={styles.payoutError} role="status">{payoutStatusError}</div>}
+      </section>
+
       <section className={styles.drafts} aria-label="Draft items">
         <div className={styles.draftHead}><div><span>DRAFT ITEMS</span><strong>{drafts.length} saved</strong></div><small>Drafts and photos stay private. Submitting removes the draft and creates a private listing for review; it appears in Market only after approval.</small></div>
         {drafts.length ? <div className={styles.draftRail}>{drafts.map((draft) => (
