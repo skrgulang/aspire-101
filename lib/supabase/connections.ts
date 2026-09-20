@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { trackProductEvent } from '../analytics/client';
 import type { AspireRequest } from './requests';
 import { REQUEST_PUBLIC_SELECT } from './requestProjection';
 
@@ -152,6 +153,7 @@ export async function acceptRequestResponse(responseId: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('accept_request_response', { p_response_id: responseId });
   if (error) throw error;
+  void trackProductEvent('connection_chosen');
   return data as string;
 }
 
@@ -159,6 +161,7 @@ export async function confirmConnection(connectionId: string) {
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.rpc('confirm_connection', { p_connection_id: connectionId });
   if (error) throw error;
+  void trackProductEvent('connection_confirmed');
 }
 
 export async function cancelConnection(connectionId: string) {
@@ -346,5 +349,9 @@ export async function submitConnectionReview(connectionId: string, wouldConnectA
     p_note: note || null
   });
   if (error) throw error;
+  void trackProductEvent('review_submitted', {
+    would_connect_again: wouldConnectAgain,
+    tag_count: tags.length
+  });
   return Number(data);
 }
