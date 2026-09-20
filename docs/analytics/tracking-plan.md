@@ -14,9 +14,9 @@ Analytics initializes only when the existing Aspire cookie preference has `analy
 
 | Event | Fires when | Allowed properties |
 | --- | --- | --- |
-| `signup_submitted` | Supabase accepts a signup request | `campus_id`, `email_confirmation_required`, `interest_count`, `has_major` |
+| `signup_submitted` | Supabase accepts a signup request | `campus_id`, `confirmation_required`, `interest_count`, `has_major` |
 | `request_created` | A request row is created successfully | `request_kind`, `category`, `payment_method`, `scheduled`, `language_code` |
-| `response_sent` | A response to a request is saved | `has_message` |
+| `response_sent` | A response to a request is saved | `with_note` |
 | `connection_chosen` | A requester accepts a response | no content fields |
 | `connection_confirmed` | The other party confirms the connection | no content fields |
 | `connection_completion_marked` | A user marks a connection complete | `confirmation_count` |
