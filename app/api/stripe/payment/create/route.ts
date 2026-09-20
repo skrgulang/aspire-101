@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       supabase.from('connection_payments').select('*').eq('connection_id', connection.id).maybeSingle(),
       supabase
         .from('market_orders')
-        .select('id,buyer_id,seller_id,status,fulfillment_method,shipping_rate_id,shipping_rate_cents,shipping_currency,shipping_paid_by,shipping_carrier,shipping_service')
+        .select('id,buyer_id,seller_id,status,agreed_amount_cents,price_locked_at,fulfillment_method,shipping_rate_id,shipping_rate_cents,shipping_currency,shipping_paid_by,shipping_carrier,shipping_service')
         .eq('connection_id', connection.id)
         .maybeSingle()
     ]);
@@ -203,6 +203,28 @@ export async function POST(request: Request) {
     }
     if (!Number.isInteger(providerNetCents) || providerNetCents <= 0) {
       return NextResponse.json({ error: 'This shipping rate leaves no seller proceeds. Choose another rate or have the buyer cover shipping.', code: 'SHIPPING_EXCEEDS_SELLER_PROCEEDS' }, { status: 409 });
+    }
+
+    // Lock the marketplace price before any Stripe Checkout Session can be created.
+    // The amount predicate makes this atomic with mutual price acceptance: either the
+    // accepted price wins first and this update returns no row, or checkout wins first
+    // and the proposal response sees price_locked_at and refuses to change the order.
+    if (isMarket) {
+      const { data: lockedOrder, error: priceLockError } = await supabase
+        .from('market_orders')
+        .update({ price_locked_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', marketOrder!.id)
+        .eq('agreed_amount_cents', baseAmount)
+        .in('status', ['awaiting_payment', 'payment_processing'])
+        .select('id,agreed_amount_cents,price_locked_at')
+        .maybeSingle();
+      if (priceLockError) throw priceLockError;
+      if (!lockedOrder) {
+        return NextResponse.json({
+          error: 'The agreed price changed before checkout started. Refresh the order to review the new total.',
+          code: 'MARKET_PRICE_CHANGED'
+        }, { status: 409 });
+      }
     }
 
     const transferGroup = paymentSeed?.transfer_group || `aspire_${connection.id.replace(/-/g, '')}`;

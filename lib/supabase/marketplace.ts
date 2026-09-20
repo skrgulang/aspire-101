@@ -39,6 +39,20 @@ export type MarketOrder = {
   seller_delivery_status?: 'not_started' | 'awaiting_payment' | 'ready' | 'out_for_delivery' | 'delivered' | 'completed' | 'cancelled' | null;
 };
 
+export type MarketPriceProposal = {
+  id: string;
+  market_order_id: string;
+  connection_id: string;
+  proposed_by: string;
+  amount_cents: number;
+  currency: string;
+  status: 'pending' | 'accepted' | 'declined' | 'superseded';
+  responded_by: string | null;
+  responded_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ShippingAddress = {
   name: string;
   street1: string;
@@ -91,6 +105,56 @@ export async function fetchMarketOrders(connectionIds: string[]) {
   });
   if (error) throw error;
   return (data ?? []) as MarketOrder[];
+}
+
+export async function fetchMarketPriceProposals(orderIds: string[]) {
+  if (!orderIds.length) return [] as MarketPriceProposal[];
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase
+    .from('market_price_proposals')
+    .select('id,market_order_id,connection_id,proposed_by,amount_cents,currency,status,responded_by,responded_at,created_at,updated_at')
+    .in('market_order_id', orderIds)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return [] as MarketPriceProposal[];
+    throw error;
+  }
+  return (data ?? []) as MarketPriceProposal[];
+}
+
+function priceProposalError(error: { code?: string; message?: string }) {
+  const detail = error.message || '';
+  if (/PRICE_LOCKED_(CHECKOUT|PAYMENT|ORDER)/.test(detail)) {
+    return new Error('The price is locked because checkout or order fulfillment has already started.');
+  }
+  if (detail.includes('PRICE_BELOW_ASPIRE_MINIMUM')) {
+    return new Error('That price is below the minimum for Pay with Aspire.');
+  }
+  if (detail.includes('PRICE_LEAVES_NO_SELLER_PROCEEDS')) {
+    return new Error('That price would leave no seller proceeds after fees or shipping.');
+  }
+  return error;
+}
+
+export async function proposeMarketPrice(orderId: string, amountCents: number) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('propose_market_price', {
+    p_market_order_id: orderId,
+    p_amount_cents: amountCents
+  });
+  if (error) throw priceProposalError(error);
+  return String(data || '');
+}
+
+export async function respondMarketPrice(proposalId: string, accept: boolean) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('respond_market_price', {
+    p_proposal_id: proposalId,
+    p_accept: accept
+  });
+  if (error) throw priceProposalError(error);
+  return String(data || '');
 }
 
 export async function fetchMarketDisputes(orderIds: string[]) {
