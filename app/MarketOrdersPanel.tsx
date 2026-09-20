@@ -245,6 +245,25 @@ export default function MarketOrdersPanel() {
           const shippingPaidBy = order.shipping_paid_by ?? quote?.shippingPaidBy ?? null;
           const shippingOrder = order.fulfillment_method === 'shipping';
           const shippingReady = !shippingOrder || Boolean(order.shipping_rate_id && quote);
+          const nextAction = (() => {
+            if (['awaiting_payment', 'payment_processing'].includes(order.status)) {
+              if (shippingOrder && !shippingReady) return isSeller ? 'Prepare shipping' : 'Choose shipping';
+              if (payWithAspire && isBuyer) return 'Pay securely';
+              if (payWithAspire && isSeller) return 'Waiting for buyer payment';
+              return 'Review meetup details';
+            }
+            if (order.status === 'paid') {
+              return isSeller && !order.seller_handed_off_at ? 'Mark item handed off' : 'Waiting for seller handoff';
+            }
+            if (order.status === 'handoff_confirmed') {
+              return isBuyer && !order.buyer_received_at ? 'Confirm item received' : 'Waiting for buyer confirmation';
+            }
+            if (order.status === 'release_ready') return 'Release seller payout';
+            if (order.status === 'disputed') return 'Review reported issue';
+            if (order.status === 'refunded') return 'View refund details';
+            if (order.status === 'released') return 'View receipt';
+            return 'Review order details';
+          })();
           const canDispute = ['paid','handoff_confirmed','release_ready'].includes(order.status) && !dispute;
           const paidStage = ['paid','handoff_confirmed','release_ready','released','disputed'].includes(order.status);
           const handoffStage = Boolean(order.seller_handed_off_at);
@@ -263,7 +282,7 @@ export default function MarketOrdersPanel() {
               <details className="marketOrderDetails">
                 <summary>
                   <span><b>{state.label}</b><small>{shippingOrder ? 'Shipping order' : 'Campus meetup'} · {isBuyer ? 'Buying' : 'Selling'}</small></span>
-                  <strong>View status &amp; actions →</strong>
+                  <strong>{nextAction} →</strong>
                 </summary>
                 <div className="marketOrderDetailsBody">
               <div className={`marketOrderState ${order.status}`}><i>{order.status === 'disputed' ? '!' : order.status === 'released' ? '✓' : '○'}</i><div><strong>{state.label}</strong><p>{state.note}</p>{dispute && <small>Report: {disputeReasons.find((item) => item.value === dispute.reason)?.label || dispute.reason} · {dispute.status.replace('_', ' ')}</small>}</div></div>

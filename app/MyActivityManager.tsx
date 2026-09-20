@@ -341,7 +341,7 @@ export default function MyActivityManager() {
       <header className={styles.header}>
         <div>
           <span>YOUR STUFF</span>
-          <h1>My Activity</h1>
+          <h1>My Posts</h1>
           <p>Draft privately, come back anytime, then track each post from review through publication and completion.</p>
         </div>
         <a href="/post"><UiIcon name="plus" /> New post</a>

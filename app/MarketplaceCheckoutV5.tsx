@@ -489,10 +489,16 @@ export default function MarketplaceCheckoutV5() {
           </div>
         ) : (
           <div className="marketV4Empty">
-            <UiIcon name="search" /><span>NO LISTINGS MATCH</span>
-            <h2>{query ? `Nothing matched “${query}”.` : 'Nothing matches this delivery filter yet.'}</h2>
-            <p>Clear the filters or be the first student to list something here.</p>
-            <div><button type="button" onClick={() => { setQuery(''); setFilter('all'); setSort('newest'); }}>Clear filters</button><a href="/post?mode=sell">Sell an item →</a></div>
+            <UiIcon name="search" /><span>{items.length === 0 ? 'BE THE FIRST' : 'NO LISTINGS MATCH'}</span>
+            <h2>{items.length === 0
+              ? `No listings at ${campus?.short_name || 'your campus'} yet.`
+              : query
+                ? `Nothing matched “${query}”.`
+                : 'Nothing matches this delivery filter yet.'}</h2>
+            <p>{items.length === 0
+              ? 'Start the campus market by listing an item. New listings appear after review.'
+              : 'Try a different search or clear the delivery filter.'}</p>
+            <div>{items.length > 0 && <button type="button" onClick={() => { setQuery(''); setFilter('all'); setSort('newest'); }}>Clear filters</button>}<a href="/post?mode=sell">Sell an item →</a></div>
           </div>
         )}
       </div>
