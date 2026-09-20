@@ -15,11 +15,14 @@ export default function CookieBanner() {
   }, []);
 
   function save(choice: Choice) {
-    window.localStorage.setItem('aspire-cookie-consent', JSON.stringify({
+    const consent = {
       choice,
       analytics: choice === 'all' ? true : analytics,
       savedAt: new Date().toISOString()
-    }));
+    };
+
+    window.localStorage.setItem('aspire-cookie-consent', JSON.stringify(consent));
+    window.dispatchEvent(new CustomEvent('aspire-cookie-consent-changed', { detail: consent }));
     setVisible(false);
     setManaging(false);
   }
