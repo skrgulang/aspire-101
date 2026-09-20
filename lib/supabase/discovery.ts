@@ -22,7 +22,7 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
 };
 
 const discoverLanguageKey = 'aspire:discover-language';
-const supportedLanguages = new Set<RequestLanguageCode>(['any','en','zh','es','ko','ja','fr','hi','ar','vi','other']);
+const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
 
 function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
   if (value) return value;
