@@ -19,6 +19,7 @@ function hasAnalyticsConsent() {
 }
 
 export default function GoogleAnalytics() {
+  // Measurement ID is supplied by Vercel at build time.
   const measurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
   const [enabled, setEnabled] = useState(false);
 
