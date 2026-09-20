@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { trackProductEvent } from '../analytics/client';
 import { validateRequestImages } from './requestMedia';
 import { runRequestAiSafety } from './trust';
 import type { ItemCondition, RequestLanguageCode } from './requests';
@@ -297,6 +298,13 @@ export async function createMarketplaceListing(input: MarketplaceListingInput) {
     moderation_status: payload.moderation_status
   };
   await runRequestAiSafety(data.id).catch(() => undefined);
+  void trackProductEvent('marketplace_listing_created', {
+    item_condition: input.itemCondition,
+    language_code: input.languageCode || 'en',
+    fulfillment_count: methods.length,
+    shipping_enabled: methods.includes('shipping'),
+    seller_delivery_enabled: methods.includes('seller_delivery')
+  });
   return data;
 }
 
