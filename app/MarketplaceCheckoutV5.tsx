@@ -185,7 +185,8 @@ export default function MarketplaceCheckoutV5() {
           .filter((item) =>
             item.kind === 'buy_sell' &&
             item.market_intent === 'sell' &&
-            item.payment_method === 'aspire'
+            item.payment_method === 'aspire' &&
+            (item.poster_id !== data.user!.id || item.moderation_status === 'approved')
           );
         setItems(visible);
 
