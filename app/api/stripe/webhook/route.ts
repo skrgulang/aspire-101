@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiError, getSupabaseServiceClient, verifyStripeWebhookSignature } from '../../../../lib/server/aspireServer';
+import { apiError, getSupabaseServiceClient, stripeFormRequest, verifyStripeWebhookSignature } from '../../../../lib/server/aspireServer';
 
 type StripeEvent = {
   id: string;
@@ -27,6 +27,103 @@ function latestRefundId(value: unknown) {
 
 function requireDatabaseWrite(error: unknown) {
   if (error) throw error;
+}
+
+type RecoverablePayment = {
+  id: string;
+  status: string;
+  stripe_transfer_id: string | null;
+  stripe_transfer_reversal_id?: string | null;
+  provider_net_cents: number | null;
+  provider_amount_cents: number | null;
+};
+
+type StripeTransferReversal = { id: string; amount?: number | null };
+
+async function recoverReleasedTransfer(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  payment: RecoverablePayment,
+  reason: 'refund' | 'dispute',
+  stripeEventId: string,
+  refundId: string | null = null
+) {
+  if (!payment.stripe_transfer_id) return { status: 'not_required' as const };
+
+  const recoveredCents = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+  if (recoveredCents <= 0) throw new Error('STRIPE:Seller transfer recovery amount was invalid.');
+
+  const { data: claim, error: claimError } = await supabase.rpc('claim_connection_payment_transfer_recovery', {
+    p_payment_id: payment.id,
+    p_reason: reason
+  });
+  requireDatabaseWrite(claimError);
+
+  const claimStatus = typeof claim?.status === 'string' ? claim.status : '';
+  if (claimStatus === 'busy') throw new Error('STRIPE:Seller transfer recovery is already in progress.');
+  if (claimStatus === 'not_required') return { status: 'not_required' as const };
+
+  if (claimStatus === 'reversed') {
+    const reversalId = typeof claim?.reversal_id === 'string'
+      ? claim.reversal_id
+      : payment.stripe_transfer_reversal_id;
+    if (!reversalId) throw new Error('STRIPE:Recovered seller transfer is missing its reversal reference.');
+    const { error: reconcileError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
+      p_payment_id: payment.id,
+      p_reason: reason,
+      p_outcome: 'reversed',
+      p_reversal_id: reversalId,
+      p_amount_cents: recoveredCents,
+      p_refund_id: refundId,
+      p_error: null,
+      p_stripe_event_id: stripeEventId
+    });
+    requireDatabaseWrite(reconcileError);
+    return { status: 'reversed' as const, reversalId };
+  }
+
+  if (claimStatus !== 'claimed') {
+    throw new Error('STRIPE:Seller transfer recovery could not be claimed.');
+  }
+
+  try {
+    const reversal = await stripeFormRequest<StripeTransferReversal>(
+      `/v1/transfers/${encodeURIComponent(payment.stripe_transfer_id)}/reversals`,
+      {
+        amount: recoveredCents,
+        'metadata[aspire_payment_id]': payment.id,
+        'metadata[recovery_reason]': reason,
+        'metadata[stripe_event_id]': stripeEventId
+      },
+      { idempotencyKey: `aspire_transfer_recovery_${payment.id}` }
+    );
+
+    const { error: recordError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
+      p_payment_id: payment.id,
+      p_reason: reason,
+      p_outcome: 'reversed',
+      p_reversal_id: reversal.id,
+      p_amount_cents: Number(reversal.amount ?? recoveredCents),
+      p_refund_id: refundId,
+      p_error: null,
+      p_stripe_event_id: stripeEventId
+    });
+    requireDatabaseWrite(recordError);
+    return { status: 'reversed' as const, reversalId: reversal.id };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown transfer reversal error';
+    const { error: recordError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
+      p_payment_id: payment.id,
+      p_reason: reason,
+      p_outcome: 'manual_required',
+      p_reversal_id: null,
+      p_amount_cents: recoveredCents,
+      p_refund_id: refundId,
+      p_error: message,
+      p_stripe_event_id: stripeEventId
+    });
+    requireDatabaseWrite(recordError);
+    throw error;
+  }
 }
 
 export async function POST(request: Request) {
@@ -197,43 +294,66 @@ export async function POST(request: Request) {
     if (event.type === 'charge.dispute.created' || event.type === 'radar.early_fraud_warning.created') {
       const chargeId = objectId(object.charge);
       if (chargeId) {
-        const { error } = await supabase.from('connection_payments').update({
-          status: 'disputed',
-          disputed_at: new Date().toISOString(),
-          failure_reason: event.type === 'radar.early_fraud_warning.created'
-            ? 'Stripe Radar issued an early fraud warning. Payout is paused for review.'
-            : 'Stripe opened a payment dispute. Payout is paused for review.',
-          updated_at: new Date().toISOString()
-        }).eq('stripe_charge_id', chargeId).eq('stripe_livemode', eventLivemode).neq('status', 'refunded');
-        requireDatabaseWrite(error);
+        const { data: payment, error: paymentError } = await supabase
+          .from('connection_payments')
+          .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+          .eq('stripe_charge_id', chargeId)
+          .eq('stripe_livemode', eventLivemode)
+          .maybeSingle();
+        requireDatabaseWrite(paymentError);
+
+        if (payment && payment.status !== 'refunded') {
+          const { error } = await supabase.from('connection_payments').update({
+            status: 'disputed',
+            disputed_at: new Date().toISOString(),
+            failure_reason: event.type === 'radar.early_fraud_warning.created'
+              ? 'Stripe Radar issued an early fraud warning. Payout is paused for review.'
+              : payment.stripe_transfer_id
+                ? 'Stripe opened a payment dispute after seller payout. Transfer recovery is in progress.'
+                : 'Stripe opened a payment dispute. Payout is paused for review.',
+            updated_at: new Date().toISOString()
+          }).eq('id', payment.id).neq('status', 'refunded');
+          requireDatabaseWrite(error);
+
+          // An early warning pauses an unreleased payout but does not itself remove funds.
+          // A real dispute after release immediately attempts to recover the seller transfer.
+          if (event.type === 'charge.dispute.created' && payment.stripe_transfer_id) {
+            await recoverReleasedTransfer(supabase, payment, 'dispute', event.id);
+          }
+        }
       }
     }
 
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {
       const { data: payment, error: paymentError } = await supabase
         .from('connection_payments')
-        .select('id,status,stripe_refund_id,stripe_livemode')
+        .select('id,status,stripe_refund_id,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
         .eq('stripe_charge_id', object.id)
         .eq('stripe_livemode', eventLivemode)
         .maybeSingle();
       requireDatabaseWrite(paymentError);
 
-      // A released transfer needs manual recovery; do not erase that liability by
-      // flattening it into the ordinary refunded state. All normal app refunds are
-      // serialized against payout release before Stripe receives the request.
-      if (payment && payment.status !== 'released') {
+      if (payment) {
         const refundId = latestRefundId(object.refunds) || payment.stripe_refund_id;
         if (!refundId) throw new Error('STRIPE:Full refund event did not include a refund identifier.');
-        const { error } = await supabase.rpc('finalize_connection_payment_refund', {
-          p_payment_id: payment.id,
-          p_refund_id: refundId,
-          p_amount_cents: Number(object.amount_refunded || object.amount || 0),
-          p_actor_id: null,
-          p_resolution_case_id: null,
-          p_note: 'Stripe confirmed a full refund.',
-          p_stripe_status: 'succeeded'
-        });
-        requireDatabaseWrite(error);
+
+        if (payment.stripe_transfer_id) {
+          // Separate charges and transfers do not reverse a seller transfer when the
+          // platform charge is refunded. Recover it explicitly and preserve any
+          // insufficient-balance failure as an auditable, retryable liability.
+          await recoverReleasedTransfer(supabase, payment, 'refund', event.id, refundId);
+        } else if (payment.status !== 'released') {
+          const { error } = await supabase.rpc('finalize_connection_payment_refund', {
+            p_payment_id: payment.id,
+            p_refund_id: refundId,
+            p_amount_cents: Number(object.amount_refunded || object.amount || 0),
+            p_actor_id: null,
+            p_resolution_case_id: null,
+            p_note: 'Stripe confirmed a full refund.',
+            p_stripe_status: 'succeeded'
+          });
+          requireDatabaseWrite(error);
+        }
       }
     }
 
