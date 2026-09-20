@@ -1,0 +1,251 @@
+.center {
+  border: 1px solid color-mix(in srgb, var(--surface-border, #31302c) 88%, #f6bf24 12%);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(246, 191, 36, .07), rgba(255, 255, 255, .025) 42%), var(--surface, #151513);
+  overflow: hidden;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, .16);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px 16px;
+}
+
+.head span {
+  color: #f6bf24;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .16em;
+}
+
+.head h2 {
+  margin: 4px 0 0;
+  color: var(--text-primary, #f6f3ea);
+  font-size: clamp(21px, 2vw, 29px);
+  letter-spacing: -.04em;
+}
+
+.head b {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #f6bf24;
+  color: #17140a;
+  font-size: 14px;
+}
+
+.list {
+  display: grid;
+  border-top: 1px solid rgba(255, 255, 255, .075);
+}
+
+.item,
+.fallback {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 14px;
+  min-height: 76px;
+  padding: 13px 22px;
+  color: inherit;
+  text-decoration: none;
+  transition: background .16s ease, transform .16s ease;
+}
+
+.item + .item {
+  border-top: 1px solid rgba(255, 255, 255, .065);
+}
+
+.item:hover,
+.fallback:hover {
+  background: rgba(255, 255, 255, .045);
+}
+
+.item:active,
+.fallback:active {
+  transform: scale(.995);
+}
+
+.item > i {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+
+.item > i svg,
+.fallback > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.gold {
+  color: #f6bf24;
+  background: rgba(246, 191, 36, .13);
+}
+
+.blue {
+  color: #82b8ff;
+  background: rgba(71, 139, 240, .14);
+}
+
+.red {
+  color: #ff8f86;
+  background: rgba(238, 80, 68, .13);
+}
+
+.item > span,
+.fallback > span,
+.clear > span {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.item strong,
+.fallback strong,
+.clear strong {
+  color: var(--text-primary, #f6f3ea);
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.item small,
+.fallback small,
+.clear small {
+  overflow: hidden;
+  color: var(--text-secondary, #9f9a90);
+  font-size: 13px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item > svg,
+.fallback > svg {
+  color: var(--text-secondary, #8f8a80);
+}
+
+.clear {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px 22px;
+  border-top: 1px solid rgba(255, 255, 255, .075);
+}
+
+.clear > i {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  color: #79d39a;
+  background: rgba(73, 190, 114, .13);
+}
+
+.clear > i svg {
+  width: 20px;
+  height: 20px;
+}
+
+.clear a {
+  color: #f6bf24;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.fallback {
+  border-top: 1px solid rgba(255, 255, 255, .075);
+}
+
+.loading {
+  display: grid;
+  gap: 10px;
+  padding: 23px;
+}
+
+.loading i,
+.loading span {
+  display: block;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.1), rgba(255,255,255,.04));
+  background-size: 220% 100%;
+  animation: shimmer 1.2s infinite linear;
+}
+
+.loading i {
+  width: 30%;
+  height: 18px;
+}
+
+.loading span:first-of-type {
+  width: 72%;
+}
+
+.loading span:last-of-type {
+  width: 48%;
+}
+
+@keyframes shimmer {
+  to { background-position: -220% 0; }
+}
+
+@media (max-width: 680px) {
+  .center {
+    border-radius: 20px;
+  }
+
+  .head {
+    padding: 19px 18px 14px;
+  }
+
+  .item,
+  .fallback {
+    grid-template-columns: 40px minmax(0, 1fr) 16px;
+    padding: 12px 17px;
+  }
+
+  .item > i {
+    width: 40px;
+    height: 40px;
+  }
+
+  .item small,
+  .fallback small,
+  .clear small {
+    white-space: normal;
+  }
+
+  .clear {
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: 16px 17px 20px;
+  }
+
+  .clear a {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item,
+  .fallback {
+    transition: none;
+  }
+
+  .loading i,
+  .loading span {
+    animation: none;
+  }
+}
