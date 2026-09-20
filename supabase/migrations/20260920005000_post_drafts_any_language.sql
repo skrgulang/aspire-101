@@ -6,6 +6,15 @@ alter table public.requests
   add constraint requests_language_code_check
   check (language_code in ('any','en','zh','es','ko','ja','fr','hi','ar','vi','other'));
 
+alter table public.marketplace_listing_drafts
+  add column if not exists language_code text not null default 'any';
+
+alter table public.marketplace_listing_drafts
+  drop constraint if exists marketplace_listing_drafts_language_code_check;
+alter table public.marketplace_listing_drafts
+  add constraint marketplace_listing_drafts_language_code_check
+  check (language_code in ('any','en','zh','es','ko','ja','fr','hi','ar','vi','other'));
+
 create table if not exists public.request_drafts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
