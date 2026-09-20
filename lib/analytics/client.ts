@@ -6,6 +6,7 @@ import { nextjsPlugin } from '@datadog/browser-rum-nextjs';
 import { getSupabaseBrowserClient } from '../supabase/client';
 
 export type ProductEventName =
+  | 'product_session_started'
   | 'signup_submitted'
   | 'request_created'
   | 'response_sent'
@@ -25,6 +26,7 @@ let amplitudeReady = false;
 let datadogReady = false;
 let authListenerReady = false;
 let currentUserId: string | null = null;
+let sessionStartTracked = false;
 
 const blockedPropertyPattern =
   /(email|name|title|message|detail|address|location|latitude|longitude|phone|student|token|secret|password|document|content|text)/i;
@@ -116,6 +118,13 @@ export async function initializeProductObservability() {
   if (amplitudeReady || datadogReady) {
     startAuthIdentitySync();
     if (currentUserId) setAnalyticsUser(currentUserId);
+
+    if (!sessionStartTracked) {
+      sessionStartTracked = true;
+      const environment = process.env.NEXT_PUBLIC_APP_ENV?.trim() || 'production';
+      if (amplitudeReady) amplitude.track('product_session_started', { environment });
+      if (datadogReady) datadogRum.addAction('product_session_started', { environment });
+    }
   }
 
   return amplitudeReady || datadogReady;
