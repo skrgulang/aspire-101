@@ -17,6 +17,9 @@ type Payment = {
   gross_amount_cents: number | null;
   provider_amount_cents: number | null;
   stripe_transfer_id: string | null;
+  transfer_recovery_status: string;
+  transfer_recovery_reason: string | null;
+  stripe_transfer_reversal_id: string | null;
   paid_at: string | null;
   released_at: string | null;
   refunded_at: string | null;
@@ -34,7 +37,7 @@ export async function GET(request: Request) {
     const [{ data: payments, error: paymentError }, { data: payoutAccount }] = await Promise.all([
       supabase
         .from('connection_payments')
-        .select('id,connection_id,request_id,payer_id,payee_id,currency,status,base_amount_cents,requester_fee_cents,provider_fee_cents,customer_total_cents,provider_net_cents,gross_amount_cents,provider_amount_cents,stripe_transfer_id,paid_at,released_at,refunded_at,disputed_at,created_at,updated_at')
+        .select('id,connection_id,request_id,payer_id,payee_id,currency,status,base_amount_cents,requester_fee_cents,provider_fee_cents,customer_total_cents,provider_net_cents,gross_amount_cents,provider_amount_cents,stripe_transfer_id,transfer_recovery_status,transfer_recovery_reason,stripe_transfer_reversal_id,paid_at,released_at,refunded_at,disputed_at,created_at,updated_at')
         .eq('stripe_livemode', livemode)
         .or(`payer_id.eq.${user.id},payee_id.eq.${user.id}`)
         .order('updated_at', { ascending: false })
@@ -113,6 +116,11 @@ export async function GET(request: Request) {
         requesterFeeCents: Number(payment.requester_fee_cents || 0),
         providerFeeCents: Number(payment.provider_fee_cents || 0),
         transferReference: payment.stripe_transfer_id ? payment.stripe_transfer_id.slice(-8) : null,
+        transferRecoveryStatus: payment.transfer_recovery_status,
+        transferRecoveryReason: payment.transfer_recovery_reason,
+        transferReversalReference: payment.stripe_transfer_reversal_id
+          ? payment.stripe_transfer_reversal_id.slice(-8)
+          : null,
         paidAt: payment.paid_at,
         releasedAt: payment.released_at,
         refundedAt: payment.refunded_at,
