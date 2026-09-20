@@ -82,7 +82,7 @@ const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','7
 export const metadata: Metadata = {
   title: 'Aspire 101 — Ask campus. Feel at home.',
   description: 'A college request network that helps students find support, make connections, and feel more at home on campus.',
-  icons: { icon: aspireLogo, shortcut: aspireLogo, apple: aspireLogo }
+  icons: { icon: '/favicon.webp', shortcut: '/favicon.webp', apple: '/favicon.webp' }
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
