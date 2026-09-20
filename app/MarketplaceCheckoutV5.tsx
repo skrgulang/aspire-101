@@ -114,6 +114,7 @@ function deliveryLabel(method: FulfillmentMethod) {
 export default function MarketplaceCheckoutV5() {
   const router = useRouter();
   const [campus, setCampus] = useState<University | null>(null);
+  const [viewerId, setViewerId] = useState('');
   const [items, setItems] = useState<MarketplaceItem[]>([]);
   const [deliveryFor, setDeliveryFor] = useState<MarketplaceItem | null>(null);
   const [deliveryChoice, setDeliveryChoice] = useState<DeliveryChoice>('meet');
@@ -140,6 +141,7 @@ export default function MarketplaceCheckoutV5() {
         router.replace('/login?next=%2Fmarketplace');
         return;
       }
+      setViewerId(data.user.id);
 
       const [{ data: profile }, universities] = await Promise.all([
         supabase.from('profiles').select('current_campus_id,home_campus_id').eq('id', data.user.id).maybeSingle(),
@@ -183,16 +185,20 @@ export default function MarketplaceCheckoutV5() {
           .filter((item) =>
             item.kind === 'buy_sell' &&
             item.market_intent === 'sell' &&
-            item.payment_method === 'aspire' &&
-            item.poster_id !== data.user!.id
+            item.payment_method === 'aspire'
           );
         setItems(visible);
 
         const directId = new URLSearchParams(window.location.search).get('item') || '';
         setDirectItemId(directId);
         const directItem = directId ? visible.find((item) => item.id === directId) : undefined;
-        if (directItem) openDelivery(directItem);
-        else if (directId) setNotice('That listing is no longer available on this campus.');
+        if (directItem?.poster_id === data.user.id) {
+          setNotice('This is your listing. Use My Activity to manage or close it.');
+        } else if (directItem) {
+          openDelivery(directItem);
+        } else if (directId) {
+          setNotice('That listing is no longer available on this campus.');
+        }
       }
       setLoading(false);
     }).catch((error) => {
@@ -231,6 +237,14 @@ export default function MarketplaceCheckoutV5() {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [items, query, filter, sort]);
+
+  function openItem(item: MarketplaceItem) {
+    if (item.poster_id === viewerId) {
+      router.push('/activity');
+      return;
+    }
+    openDelivery(item);
+  }
 
   function openDelivery(item: MarketplaceItem) {
     setDeliveryFor(item);
@@ -450,12 +464,13 @@ export default function MarketplaceCheckoutV5() {
             {visibleItems.map((item) => {
               const media = item.media?.[0]?.public_url || item.cover_image_url;
               const methods = methodsFor(item);
+              const ownListing = item.poster_id === viewerId;
               return (
-                <article className="marketV4Product" key={item.id}>
-                  <button className="marketV4CardHit" type="button" aria-label={`Buy ${item.title}`} onClick={() => openDelivery(item)} />
+                <article className={`marketV4Product ${ownListing ? 'marketV4OwnProduct' : ''}`} key={item.id}>
+                  <button className="marketV4CardHit" type="button" aria-label={ownListing ? `Manage your listing ${item.title}` : `View ${item.title}`} onClick={() => openItem(item)} />
                   <div className="marketV4Media">
                     {media ? <img src={media} alt={item.title} /> : <UiIcon name="tag" />}
-                    <div className="marketV4MediaTop"><span>{item.id === directItemId ? 'Selected' : conditionLabel(item.item_condition)}</span>{item.price_negotiable && <b>Negotiable</b>}</div>
+                    <div className="marketV4MediaTop"><span>{ownListing ? 'Your listing' : item.id === directItemId ? 'Selected' : conditionLabel(item.item_condition)}</span>{item.price_negotiable && <b>Negotiable</b>}</div>
                   </div>
                   <div className="marketV4Body">
                     <div className="marketV4TitleRow"><h2>{item.title}</h2><strong>{money(item.amount_cents)}</strong></div>
@@ -465,7 +480,7 @@ export default function MarketplaceCheckoutV5() {
                       <span>{conditionLabel(item.item_condition)}</span>
                       {methods.map((method) => <span key={method}>{deliveryLabel(method)}{method === 'seller_delivery' ? ` · ${sellerDeliverySummary(item)}` : ''}</span>)}
                     </div>
-                    <button className="marketV4Buy" type="button" onClick={() => openDelivery(item)}>View item <span>↗</span></button>
+                    <button className={`marketV4Buy ${ownListing ? 'marketV4Manage' : ''}`} type="button" onClick={() => openItem(item)}>{ownListing ? 'Manage listing' : 'View item'} <span>↗</span></button>
                   </div>
                 </article>
               );
