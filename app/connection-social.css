@@ -207,6 +207,26 @@
   font-weight: 800;
 }
 
+.circleRemove {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #6f6a62;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.circleRemove:hover:not(:disabled) {
+  color: #d98c8c;
+}
+
+.circleRemove:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
 .connectionChat header span::after {
   content: '  •';
   color: #6ee29d;
