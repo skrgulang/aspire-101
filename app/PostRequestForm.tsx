@@ -10,11 +10,11 @@ import {
   ItemCondition,
   MarketIntent,
   requestLanguageLabel,
-  requestLanguages,
   RequestKind,
   RequestLanguageCode
 } from '../lib/supabase/requests';
 import { uploadRequestMedia, validateRequestImages } from '../lib/supabase/requestMedia';
+import { deleteRequestDraft, getRequestDraft, replaceRequestDraftMedia, restoreRequestDraftFiles, saveRequestDraft } from '../lib/supabase/requestDrafts';
 import { acknowledgeSafety } from '../lib/supabase/safety';
 import { runRequestAiSafety } from '../lib/supabase/trust';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
@@ -22,6 +22,7 @@ import { clearAspireAgentDraft, markAspireAgentOutcome, readAspireAgentDraft } f
 import CampusPicker from './CampusPicker';
 import PaymentFeePreview from './PaymentFeePreview';
 import RequestScheduleFields, { type RequestScheduleMode } from './RequestScheduleFields';
+import PostLanguagePicker from './PostLanguagePicker';
 
 type CategoryOption = { label: string; value: string; icon: string; prompt: string; examples: string[]; defaultKind: RequestKind };
 
@@ -70,7 +71,7 @@ export default function PostRequestForm() {
   const [details, setDetails] = useState('');
   const [category, setCategory] = useState('Ride');
   const [kind, setKind] = useState<RequestKind>('split_cost');
-  const [language, setLanguage] = useState<RequestLanguageCode>('en');
+  const [language, setLanguage] = useState<RequestLanguageCode>('any');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'none' | 'aspire'>('none');
   const [photos, setPhotos] = useState<File[]>([]);
@@ -88,6 +89,10 @@ export default function PostRequestForm() {
   const [posted, setPosted] = useState<{ id: string; title: string; campus: string; moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked'; warning?: string } | null>(null);
   const [agentPrepared, setAgentPrepared] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draftNotice, setDraftNotice] = useState('');
 
   const selectedCategory = categories.find((item) => item.value === category) ?? categories[0];
   const context = safetyContext(category, kind);
@@ -107,7 +112,9 @@ export default function PostRequestForm() {
   useEffect(() => () => photoPreviews.forEach((item) => URL.revokeObjectURL(item.url)), [photoPreviews]);
 
   useEffect(() => {
-    if (typeof navigator !== 'undefined') setLanguage(detectRequestLanguage(navigator.language));
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem('aspire:post-language') as RequestLanguageCode | null;
+    setLanguage(stored || 'any');
   }, []);
 
   useEffect(() => {
@@ -159,6 +166,58 @@ export default function PostRequestForm() {
     });
     return () => { active = false; };
   }, [router]);
+
+  useEffect(() => {
+    if (checkingAuth || draftLoaded || typeof window === 'undefined') return;
+    const draftId = new URLSearchParams(window.location.search).get('draft')?.trim() || '';
+    if (!draftId) {
+      setDraftLoaded(true);
+      return;
+    }
+
+    let active = true;
+    void getRequestDraft(draftId).then(async (draft) => {
+      if (!active) return;
+      if (!draft || draft.composer_mode !== 'need') {
+        setDraftNotice('That draft is no longer available.');
+        setDraftLoaded(true);
+        return;
+      }
+      try {
+        const restoredPhotos = draft.media.length ? await restoreRequestDraftFiles(draft) : [];
+        if (!active) return;
+        setCurrentDraftId(draft.id);
+        if (draft.campus_id) setCampusId(draft.campus_id);
+        setCategory(draft.category || 'Other');
+        setKind(draft.kind || 'community');
+        setTitle(draft.title || '');
+        setDetails(draft.details || '');
+        setLanguage(draft.language_code || 'any');
+        setAmount(draft.amount_cents == null ? '' : (draft.amount_cents / 100).toFixed(draft.amount_cents % 100 === 0 ? 0 : 2));
+        setMarketIntent(draft.market_intent || 'wanted');
+        setItemCondition(draft.item_condition || 'good');
+        setPriceNegotiable(Boolean(draft.price_negotiable));
+        setFulfillmentMethod(draft.fulfillment_method || 'campus_pickup');
+        setScheduleMode(draft.schedule_mode || 'flexible');
+        setStartLocal(draft.start_local || '');
+        setEndLocal(draft.end_local || '');
+        setMeetingLabel(draft.meeting_label || '');
+        setPhotos(restoredPhotos);
+        setDraftNotice('Draft restored. Keep editing, or submit when it is ready.');
+      } catch (cause) {
+        if (active) setDraftNotice(cause instanceof Error ? cause.message : 'Draft restored, but its saved photos could not be loaded.');
+      } finally {
+        if (active) setDraftLoaded(true);
+      }
+    }).catch((cause) => {
+      if (active) {
+        setDraftNotice(cause instanceof Error ? cause.message : 'Could not open this draft.');
+        setDraftLoaded(true);
+      }
+    });
+    return () => { active = false; };
+  }, [checkingAuth, draftLoaded]);
+
 
   function chooseCategory(item: CategoryOption) {
     setCategory(item.value);
@@ -219,6 +278,44 @@ export default function PostRequestForm() {
     setEndLocal('');
     setMeetingLabel('');
     setFulfillmentMethod('campus_pickup');
+    setCurrentDraftId(null);
+    setDraftNotice('');
+  }
+
+  async function saveDraft() {
+    setError('');
+    setDraftNotice('');
+    if (!campusId) return setError('Choose a campus before saving this draft.');
+    setSavingDraft(true);
+    try {
+      const saved = await saveRequestDraft({
+        id: currentDraftId,
+        composerMode: 'need',
+        campusId,
+        category,
+        kind,
+        title,
+        details,
+        languageCode: language,
+        amountCents: amount && Number(amount) > 0 ? Math.round(Number(amount) * 100) : null,
+        marketIntent: isMarket ? marketIntent : null,
+        itemCondition: isMarket && marketIntent === 'sell' ? itemCondition : null,
+        priceNegotiable: isMarket ? priceNegotiable : false,
+        fulfillmentMethod: isMarket ? fulfillmentMethod : null,
+        scheduleMode,
+        startLocal: scheduleMode === 'scheduled' ? startLocal : null,
+        endLocal: scheduleMode === 'scheduled' ? endLocal : null,
+        timezone: scheduleMode === 'scheduled' ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' : null,
+        meetingLabel
+      });
+      setCurrentDraftId(saved.id);
+      await replaceRequestDraftMedia(saved.id, photos);
+      setDraftNotice('Draft saved privately. You can find it anytime in My Activity.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save this draft.');
+    } finally {
+      setSavingDraft(false);
+    }
   }
 
   function openConfirmation(event: FormEvent<HTMLFormElement>) {
@@ -281,10 +378,12 @@ export default function PostRequestForm() {
         language_code: language
       });
       let warning = '';
+      let mediaUploadSucceeded = true;
       if (photos.length) {
         try {
           await uploadRequestMedia(request.id, photos);
         } catch (mediaError) {
+          mediaUploadSucceeded = false;
           warning = mediaError instanceof Error ? `Request submitted, but photos could not upload: ${mediaError.message}` : 'Request submitted, but photos could not upload.';
         }
       }
@@ -307,6 +406,10 @@ export default function PostRequestForm() {
         // Campus context is helpful but must not block posting.
       }
       if (agentSessionId) await markAspireAgentOutcome(agentSessionId, 'posted').catch(() => undefined);
+      if (currentDraftId && mediaUploadSucceeded) {
+        await deleteRequestDraft(currentDraftId).catch(() => undefined);
+        setCurrentDraftId(null);
+      }
       clearAspireAgentDraft();
       setAgentPrepared(false);
       setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, moderationStatus, warning });
@@ -328,7 +431,7 @@ export default function PostRequestForm() {
       <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · {schedulePreview} · {requestLanguageLabel(language)} · #{posted.id.slice(0, 8)} · {posted.moderationStatus === 'approved' ? 'published' : posted.moderationStatus === 'pending' ? 'pending review' : 'blocked by safety review'}</small></article>
       {posted.warning && <p className="postError">{posted.warning}</p>}
       <p className="postSuccessNote">{posted.moderationStatus === 'approved' ? (isMarket ? 'Your listing passed the automated review and is now visible in Aspire Market.' : 'Your post passed the automated review and is now visible in the campus feed.') : posted.moderationStatus === 'pending' ? (isMarket ? 'Your marketplace listing is saved but stays private until the remaining review is complete.' : 'Your request is saved but stays private until the remaining review is complete.') : 'This post was not published because the automated safety review found a serious policy concern. Contact Aspire Safety if you believe this was a mistake.'}</p>
-      <div className="postSuccessActions"><a className="button buttonGold" href="/connections">View my activity <span>↗</span></a><button className="quietPostButton" type="button" onClick={resetPost}>Submit another</button></div>
+      <div className="postSuccessActions"><a className="button buttonGold" href="/activity">View my activity <span>↗</span></a><button className="quietPostButton" type="button" onClick={resetPost}>Submit another</button></div>
     </section>
   );
 
@@ -381,15 +484,17 @@ export default function PostRequestForm() {
 
       <div className="postEssentials"><div className="postField postCampusField"><span>Campus context</span><CampusPicker universities={universities} value={campusId} onChange={setCampusId} homeCampusId={homeCampusId} maxNearbyMiles={300} /><small>{visiting ? `VISITING · You are posting at ${selectedCampus?.short_name}, but your verified identity remains ${homeCampus?.short_name}.` : `HOME CAMPUS · ${homeCampus?.name || 'Your verified university'} stays attached to your identity.`}</small></div><fieldset className="postKinds"><legend>Exchange</legend><div className="postKindGrid">{kinds.map((item) => <button type="button" key={item.value} className={kind === item.value ? 'postKind active' : 'postKind'} onClick={() => chooseKind(item.value)}><strong>{item.label}</strong><span>{item.helper}</span></button>)}</div></fieldset></div>
 
-      <label className="postField postLanguageField"><span>Post language</span><select value={language} onChange={(event) => setLanguage(event.target.value as RequestLanguageCode)}>{requestLanguages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><small>This helps students filter the campus feed for the audience and language they prefer.</small></label>
+      <div className="postLanguageField"><PostLanguagePicker value={language} onChange={setLanguage} /></div>
 
       {moneyInvolved && !isMarket && <section className="marketPaymentChoice servicePaymentChoice"><div><span>PAID POST</span><strong>Set the amount — paid requests use Aspire Protected.</strong></div><label className="postField serviceAmount"><span>{kind === 'paid_help' ? 'What are you offering?' : 'Amount / share'}</span><div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" /></div></label><div className="marketProtectionNote"><i>✓</i><div><strong>Pay online · Aspire Protected</strong><p>Stripe secures the payment. Release happens only after the work is confirmed complete; disputes can pause payout. Free Community posts do not create a payment.</p></div></div><PaymentFeePreview amount={amount} campusId={campusId} /></section>}
 
       {isMarket && <section className="marketPaymentChoice"><div><span>PAYMENT</span><strong>Marketplace sales use Aspire Protected.</strong></div><div className="marketProtectionNote"><i>✓</i><div><strong>Pay online · Aspire Protected</strong><p>The buyer pays through Stripe. Aspire holds the seller payout until handoff or delivery confirmation; a dispute pauses release. Offline cash is not supported for marketplace orders.</p></div></div><PaymentFeePreview amount={amount} campusId={campusId} /></section>}
 
       <label className="postField postDetailsField"><span>{isMarket ? 'Description' : 'Anything else?'} <em>optional</em></span><textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} placeholder={isMarket ? 'Model, size, included accessories, defects, approximate pickup area, or anything a buyer should know.' : 'What to bring, access notes, or anything that helps someone decide. Keep exact private addresses for the connection chat.'} /></label>
-      <div className="postContextCard"><div><span>SAFETY FOR THIS REQUEST</span><strong>{context.title}</strong></div><p>{context.note}</p><a href="/safety">Safety center ↗</a></div>{error && <p className="postError" role="alert">{error}</p>}
-      <div className="postSubmitRow"><p>Submitting sends this to Aspire&apos;s review gate. It will not appear publicly in Discover until it is approved. Automated policy checks may block clearly prohibited language before submission.</p><button className="button buttonGold" type="submit">Review + submit <span>→</span></button></div>
+      <div className="postContextCard"><div><span>SAFETY FOR THIS REQUEST</span><strong>{context.title}</strong></div><p>{context.note}</p><a href="/safety">Safety center ↗</a></div>
+      {draftNotice && <p className="postDraftNotice" role="status">{draftNotice}</p>}
+      {error && <p className="postError" role="alert">{error}</p>}
+      <div className="postSubmitRow"><p>Not ready? Save this privately and finish it later from My Activity. Submitting sends it through Aspire review before anyone else sees it.</p><div className="postSubmitActions"><button className="postSaveDraft" type="button" onClick={() => void saveDraft()} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : currentDraftId ? 'Save changes' : 'Save draft'}</button><button className="button buttonGold" type="submit">Review + submit <span>→</span></button></div></div>
     </form>
 
     {confirming && selectedCampus && <div className="publishOverlay" role="dialog" aria-modal="true" aria-labelledby="publish-title"><div className="publishModal publishModalContext"><span className="publishKicker">BEFORE YOU SUBMIT · {isMarket ? 'ASPIRE MARKET' : selectedCategory.label.toUpperCase()}</span><h2 id="publish-title">{context.title}</h2><p>{context.note}</p><div className="publishPreviewMeta"><span>{selectedCampus.short_name}</span><span>{schedulePreview}</span>{meetingLabel.trim() && <span>{meetingLabel.trim()}</span>}<span>{requestLanguageLabel(language)}</span>{moneyInvolved && <span>${Number(amount).toFixed(2)} · ONLINE PROTECTED</span>}{isMarket && <span>{marketIntent === 'sell' ? 'SELLING' : 'WANTED'}</span>}{isMarket && priceNegotiable && <span>NEGOTIABLE</span>}{visiting && <span>Visiting from {homeCampus?.short_name} ✓</span>}{photos.length > 0 && <span>{photos.length} photo{photos.length === 1 ? '' : 's'}</span>}</div><div className="publishRules"><span><b>01</b> Submitted to {selectedCampus.short_name} for review. {visiting ? `Your identity remains ${homeCampus?.short_name}.` : 'This is your home campus.'}</span><span><b>02</b> {scheduleMode === 'scheduled' ? 'Your selected time will carry into the connection and power the countdown. Either person can update it later.' : 'Timing stays flexible until you and the other person agree in the private connection.'}</span><span><b>03</b> {!moneyInvolved ? 'This is a free post, so there is no checkout, payment warranty, or payout flow.' : 'Aspire Protected records Stripe payment and holds payout until completion, handoff, or receipt confirmation.'}</span></div><p className="publishFinePrint">Aspire uses automated checks and human review to reduce abusive, prohibited, or unsafe content. Follow the <a href="/guidelines" target="_blank">Community Guidelines ↗</a> and <a href="/safety" target="_blank">Safety Center ↗</a>.</p><div className="publishActions"><button className="quietPostButton" type="button" onClick={() => setConfirming(false)} disabled={publishing}>Go back</button><button className="button buttonGold" type="button" onClick={publish} disabled={publishing}>{publishing ? (photos.length ? 'Submitting + uploading…' : 'Submitting…') : 'Submit for review'}</button></div></div></div>}
