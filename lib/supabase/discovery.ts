@@ -22,7 +22,7 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
 };
 
 const discoverLanguageKey = 'aspire:discover-language';
-const supportedLanguages = new Set<RequestLanguageCode>(['en','zh','es','ko','ja','fr','hi','ar','vi','other']);
+const supportedLanguages = new Set<RequestLanguageCode>(['any','en','zh','es','ko','ja','fr','hi','ar','vi','other']);
 
 function resolveLanguageFilter(value?: RequestLanguageCode | 'all'): RequestLanguageCode | 'all' {
   if (value) return value;
@@ -83,7 +83,7 @@ function localCategory(item: Pick<DiscoverRequest, 'title' | 'category' | 'kind'
 
 function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: DiscoverCategory, language?: RequestLanguageCode | 'all') {
   if (category && category !== 'Anything' && localCategory(item) !== category) return false;
-  if (language && language !== 'all' && (item.language_code || 'en') !== language) return false;
+  if (language && language !== 'all' && (item.language_code || 'en') !== 'any' && (item.language_code || 'en') !== language) return false;
   const needle = query?.trim().toLowerCase();
   if (!needle) return true;
   return `${item.title} ${item.details || ''} ${item.category || ''}`.toLowerCase().includes(needle);
