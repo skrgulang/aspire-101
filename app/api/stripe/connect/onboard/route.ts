@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiError, getAuthenticatedUser, getSupabaseServiceClient, publicOrigin, stripeLivemode, stripeRequest } from '../../../../../lib/server/aspireServer';
+import { apiError, getAuthenticatedUser, getSupabaseServiceClient, publicOrigin, requireStripeLivePilotUser, stripeLivemode, stripeRequest } from '../../../../../lib/server/aspireServer';
 
 type StripeAccount = { id: string };
 type StripeAccountLink = { url: string };
@@ -7,6 +7,7 @@ type StripeAccountLink = { url: string };
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
+    requireStripeLivePilotUser(user.id);
     const body = await request.json().catch(() => ({})) as { returnTo?: unknown };
     const returnToSeller = body.returnTo === 'seller';
     if (!user.phone_confirmed_at) throw new Error('PHONE_REQUIRED');

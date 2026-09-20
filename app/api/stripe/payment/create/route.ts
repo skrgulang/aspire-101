@@ -4,6 +4,7 @@ import {
   getAuthenticatedUser,
   getStripePayoutState,
   getSupabaseServiceClient,
+  requireStripeLivePilotUser,
   publicOrigin,
   stripeFormRequest,
   stripeGet,
@@ -50,6 +51,7 @@ type FeeQuote = {
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
+    requireStripeLivePilotUser(user.id);
     if (!user.phone_confirmed_at) throw new Error('PHONE_REQUIRED');
 
     const body = await request.json().catch(() => ({}));

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { apiError, getAuthenticatedUser, getSupabaseServiceClient, publicOrigin, stripeFormRequest, stripeGet, stripeLivemode } from '../../../../../lib/server/aspireServer';
+import { apiError, getAuthenticatedUser, getSupabaseServiceClient, publicOrigin, requireStripeLivePilotUser, stripeFormRequest, stripeGet, stripeLivemode } from '../../../../../lib/server/aspireServer';
 
 type StripeIdentitySession = {
   id: string;
@@ -11,6 +11,7 @@ type StripeIdentitySession = {
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
+    requireStripeLivePilotUser(user.id);
     const supabase = getSupabaseServiceClient();
     const livemode = stripeLivemode();
     const { data: existing } = await supabase
