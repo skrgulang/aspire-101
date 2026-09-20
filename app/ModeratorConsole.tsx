@@ -78,7 +78,10 @@ export default function ModeratorConsole() {
         fetchSafetyReportsForModeration(),
         fetchRequestsForModeration()
       ]);
-      const userIds = [...new Set(activeRequests.map((request) => request.poster_id))];
+      const userIds = [...new Set([
+        ...activeRequests.map((request) => request.poster_id),
+        ...safety.flatMap((report) => report.target_user_id ? [report.target_user_id] : [])
+      ])];
       const [media, enforcements] = await Promise.all([
         fetchRequestMedia(activeRequests.map((request) => request.id)).catch(() => [] as RequestMedia[]),
         fetchEnforcementStates(userIds).catch(() => [] as UserEnforcementState[])
@@ -137,6 +140,38 @@ export default function ModeratorConsole() {
       await reload();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not update this report.');
+    } finally { setBusy(''); }
+  }
+
+  async function changeReportedAccount(report: SafetyReportForModeration, next: 'active' | 'restricted' | 'suspended') {
+    if (!report.target_user_id) {
+      setNotice('This report is not linked to a specific account.');
+      return;
+    }
+    const current = effectiveEnforcement(enforcementMap.get(report.target_user_id));
+    if (current === next) return;
+
+    let reason = 'Restored after Trust & Safety review.';
+    let expiresAt: string | null = null;
+    if (next === 'restricted') {
+      reason = window.prompt('Reason for a 7-day restriction:', `Safety report ${report.id.slice(0, 8)} requires additional review.`) ?? '';
+      if (!reason.trim()) return;
+      expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    } else if (next === 'suspended') {
+      reason = window.prompt('Reason for suspension:', `Safety report ${report.id.slice(0, 8)} indicates a serious policy concern.`) ?? '';
+      if (!reason.trim()) return;
+      if (!window.confirm('Suspend this account from new posts, responses, and private messages? This action is audited.')) return;
+    } else if (!window.confirm('Restore this account to active status? This action is audited.')) {
+      return;
+    }
+
+    setBusy(`report-enforce-${report.id}`);
+    try {
+      await setUserEnforcement(report.target_user_id, next, reason, expiresAt);
+      setNotice(next === 'active' ? 'Reported account restored.' : next === 'restricted' ? 'Reported account restricted for 7 days.' : 'Reported account suspended.');
+      await reload();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update the reported account.');
     } finally { setBusy(''); }
   }
 
@@ -358,12 +393,32 @@ export default function ModeratorConsole() {
             <div className="moderatorPanelHead"><div><span>SAFETY QUEUE</span><h2>Reports</h2></div><p>Review platform records and submitted context. Aspire should not claim it can independently verify everything that happens offline.</p></div>
             <div className="moderatorList">
               {!openReports.length && <div className="moderatorEmpty"><i>✓</i><strong>No open safety reports.</strong><span>New reports that need human judgment will appear here.</span></div>}
-              {openReports.map((report) => (
-                <article className="moderatorRow moderatorReportRow" key={report.id}>
-                  <div className="moderatorRowMain"><span>{report.reason.toUpperCase()} · {report.status.toUpperCase()}</span><strong>{report.details || 'No additional details.'}</strong><small>Report {report.id.slice(0, 8)} · {when(report.created_at)}</small></div>
-                  <div className="moderatorRowActions"><button type="button" onClick={() => updateReport(report, 'reviewing')} disabled={busy === `report-${report.id}`}>Reviewing</button><button type="button" className="moderatorReject" onClick={() => updateReport(report, 'dismissed')} disabled={busy === `report-${report.id}`}>Dismiss</button><button type="button" className="button buttonGold" onClick={() => updateReport(report, 'resolved')} disabled={busy === `report-${report.id}`}>Resolve</button></div>
-                </article>
-              ))}
+              {openReports.map((report) => {
+                const targetState = report.target_user_id ? effectiveEnforcement(enforcementMap.get(report.target_user_id)) : 'active';
+                const enforcementBusy = busy === `report-enforce-${report.id}`;
+                return (
+                  <article className="moderatorRow moderatorReportRow" key={report.id}>
+                    <div className="moderatorRowMain">
+                      <span>{report.reason.toUpperCase()} · {report.status.toUpperCase()} · ACCOUNT {targetState.toUpperCase()}</span>
+                      <strong>{report.details || 'No additional details.'}</strong>
+                      <small>
+                        Report {report.id.slice(0, 8)} · {when(report.created_at)}
+                        {report.target_user_id ? ` · target ${report.target_user_id.slice(0, 8)}` : ' · no account target'}
+                        {report.connection_id ? ` · connection ${report.connection_id.slice(0, 8)}` : ''}
+                        {report.request_id ? ` · post ${report.request_id.slice(0, 8)}` : ''}
+                      </small>
+                    </div>
+                    <div className="moderatorRowActions">
+                      {report.target_user_id && targetState === 'active' && <button type="button" onClick={() => changeReportedAccount(report, 'restricted')} disabled={enforcementBusy}>Restrict 7d</button>}
+                      {report.target_user_id && targetState !== 'suspended' && <button type="button" className="moderatorReject" onClick={() => changeReportedAccount(report, 'suspended')} disabled={enforcementBusy}>Suspend</button>}
+                      {report.target_user_id && targetState !== 'active' && <button type="button" onClick={() => changeReportedAccount(report, 'active')} disabled={enforcementBusy}>Restore</button>}
+                      <button type="button" onClick={() => updateReport(report, 'reviewing')} disabled={busy === `report-${report.id}`}>Reviewing</button>
+                      <button type="button" className="moderatorReject" onClick={() => updateReport(report, 'dismissed')} disabled={busy === `report-${report.id}`}>Dismiss</button>
+                      <button type="button" className="button buttonGold" onClick={() => updateReport(report, 'resolved')} disabled={busy === `report-${report.id}`}>Resolve</button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
         )}
