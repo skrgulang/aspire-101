@@ -348,3 +348,65 @@ html[data-aspire-theme='dark'] .marketEmpty h2 { color:#eeeae2; }
   .marketProgress { grid-template-columns: repeat(5, 82px); overflow-x: auto; }
   .marketOrders { padding: 16px; }
 }
+
+
+.marketPriceProposal,
+.marketPriceComposer {
+  margin-top: 14px;
+  border: 1px solid rgba(255, 193, 7, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 193, 7, 0.055);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.marketPriceProposal > div:first-child,
+.marketPriceComposer > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.marketPriceProposal > div:first-child > span,
+.marketPriceComposer > div:first-child > span {
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.marketPriceProposal > div:first-child > strong,
+.marketPriceComposer > div:first-child > strong {
+  font-size: 18px;
+}
+
+.marketPriceProposal small,
+.marketPriceComposer small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.marketPriceProposal > div:last-child,
+.marketPriceComposer > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.marketPriceComposer label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.marketPriceComposer input {
+  width: min(240px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 12px 14px;
+  font: inherit;
+}
