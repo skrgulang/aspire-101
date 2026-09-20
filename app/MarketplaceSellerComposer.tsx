@@ -409,8 +409,8 @@ export default function MarketplaceSellerComposer() {
                   ? 'Finish setting up your payout account'
                   : 'Set up how you’ll get paid'}</strong>
             <p>{payoutStatus === 'READY'
-              ? 'Your bank details stay with Stripe. Aspire can send your seller earnings after an order is completed.'
-              : 'Aspire uses Stripe to verify sellers and send earnings securely. You can save drafts now, but setup is required before publishing.'}</p>
+              ? 'Your bank account and routing details are entered and stored only with Stripe. Aspire can send your seller earnings after an order is completed.'
+              : 'Aspire uses Stripe to verify sellers, collect bank details, and send earnings securely. Aspire never receives or stores those bank details. You can save drafts now, but setup is required before publishing.'}</p>
           </div>
           <button type="button" className={styles.payoutAction} onClick={openPayoutFlow} disabled={payoutBusy}>
             {payoutBusy

@@ -14,10 +14,10 @@ type StatusResponse = {
 };
 
 const copy: Record<PaymentStatus, { title: string; detail: string; action: string }> = {
-  NOT_STARTED: { title: 'Payments & earnings', detail: 'Set up Stripe before you receive money.', action: 'Start setup' },
-  ACTION_REQUIRED: { title: 'Finish payout setup', detail: 'Stripe still needs information from you.', action: 'Continue' },
+  NOT_STARTED: { title: 'Seller payouts', detail: 'Add a bank account securely in Stripe before receiving seller earnings.', action: 'Set up payouts' },
+  ACTION_REQUIRED: { title: 'Finish seller payout setup', detail: 'Stripe still needs identity or bank information from you.', action: 'Continue in Stripe' },
   UNDER_REVIEW: { title: 'Payout identity under review', detail: 'Stripe is reviewing your payout account.', action: 'Check again' },
-  READY: { title: 'Payments ready ✓', detail: 'Your account can receive Aspire payouts through Stripe.', action: 'Manage payouts' },
+  READY: { title: 'Seller payouts ready ✓', detail: 'Stripe confirmed this account can receive Aspire seller earnings.', action: 'Manage bank & payouts' },
   RESTRICTED: { title: 'Payout action required', detail: 'Stripe needs an update before payouts can continue.', action: 'Fix setup' }
 };
 
@@ -123,6 +123,7 @@ export default function PaymentConnectRow({ phoneVerified, schoolVerified }: { p
         <strong>{loading ? 'Checking payments…' : state.title}</strong>
         <span>{loading ? 'Syncing Stripe status' : state.detail}</span>
         <a className="paymentMoneyLink" href="/money">View Aspire Money →</a>
+        <small>Bank account and routing details are entered and stored only with Stripe. Aspire never receives them.</small>
         {message && <small className="paymentConnectMessage" role="status">{message}</small>}
       </div>
       <button type="button" onClick={openStripe} disabled={loading || busy}>
