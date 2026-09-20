@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { trackProductEvent } from '../analytics/client';
 import {
   clearPostCoverPreference,
   coverSourceForAsset,
@@ -249,6 +250,13 @@ export async function createRequest(input: CreateRequestInput) {
     .single();
 
   if (error) throw friendlyPolicyError(error, 'Could not submit this request.');
+  void trackProductEvent('request_created', {
+    request_kind: input.kind,
+    category: input.category,
+    payment_method: paymentMethod,
+    scheduled,
+    language_code: input.language_code || readPreferredPostLanguage()
+  });
   clearPostCoverPreference();
   notifyCampusFeedChanged();
   await runRequestAiSafety(data.id).catch(() => undefined);
@@ -267,6 +275,7 @@ export async function respondToRequest(requestId: string, message?: string) {
   if (error) throw friendlyPolicyError(error, 'Could not send your response.');
   const response = Array.isArray(data) ? data[0] : data;
   if (!response) throw new Error('Could not load your response after saving it.');
+  void trackProductEvent('response_sent', { with_note: Boolean(cleanMessage) });
   return response;
 }
 
@@ -284,5 +293,6 @@ export async function buyMarketplaceListing(requestId: string) {
     if (/MARKETPLACE_REQUIRES_ASPIRE/i.test(detail)) throw new Error('Marketplace purchases must use Aspire Protected checkout.');
     throw new Error(error.message || 'Could not reserve this item.');
   }
+  void trackProductEvent('marketplace_order_reserved');
   return String(data);
 }
