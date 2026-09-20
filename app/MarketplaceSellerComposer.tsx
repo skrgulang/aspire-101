@@ -413,10 +413,9 @@ export default function MarketplaceSellerComposer() {
 
         <div className={styles.actions}>
           <div><strong>{currentDraftId ? 'Editing saved draft' : 'New item'}</strong><span>{payoutStatus === 'READY' ? 'Stripe verified ✓ · Submit sends the listing through Post, Language, and Market review.' : 'Save keeps everything private. Publishing unlocks after Stripe payout verification is ready.'}</span></div>
-          <button type="button" className={styles.saveDraft} onClick={saveDraft} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : 'Save draft'}</button>
+          <button type="button" className={styles.saveDraft} onClick={saveDraft} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : currentDraftId ? 'Save changes' : 'Save draft'}</button>
           <button type="submit" className={styles.publish} disabled={publishing || savingDraft || payoutStatus !== 'READY'}>{publishing ? 'Submitting…' : payoutStatus === 'READY' ? 'Submit for review →' : 'Stripe verification required'}</button>
         </div>
-        {error && <div className={styles.bottomError} role="alert">{error}</div>}
       </form>
     </section>
   );
