@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fetchMyConnections } from '../lib/supabase/connections';
+import { fetchMyConnections, subscribeToMyConnectionActivity } from '../lib/supabase/connections';
 import {
   createAspireCheckout,
   fetchAspireFeeQuote,
@@ -13,10 +13,14 @@ import {
   confirmMarketReceipt,
   fetchMarketDisputes,
   fetchMarketOrders,
+  fetchMarketPriceProposals,
   markMarketHandoff,
   MarketDispute,
+  MarketPriceProposal,
   openMarketDispute,
-  requestMarketRefund
+  proposeMarketPrice,
+  requestMarketRefund,
+  respondMarketPrice
 } from '../lib/supabase/marketplace';
 
 function money(cents: number | null | undefined, currency = 'USD') {
@@ -56,6 +60,9 @@ export default function MarketOrdersPanel() {
   const [payments, setPayments] = useState<ConnectionPayment[]>([]);
   const [quotes, setQuotes] = useState<AspireFeeQuote[]>([]);
   const [disputes, setDisputes] = useState<MarketDispute[]>([]);
+  const [priceProposals, setPriceProposals] = useState<MarketPriceProposal[]>([]);
+  const [priceFor, setPriceFor] = useState<string | null>(null);
+  const [priceInput, setPriceInput] = useState('');
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
   const [disputeFor, setDisputeFor] = useState<string | null>(null);
@@ -76,20 +83,22 @@ export default function MarketOrdersPanel() {
           .filter((order) => ['awaiting_payment', 'payment_processing'].includes(order.status))
           .map((order) => order.connection_id)
       );
-      const [nextPayments, nextQuotes, nextDisputes] = await Promise.all([
+      const [nextPayments, nextQuotes, nextDisputes, nextPriceProposals] = await Promise.all([
         fetchConnectionPayments(ids),
         Promise.all(
           marketConnections
             .filter((connection) => quoteConnectionIds.has(connection.id))
             .map((connection) => fetchAspireFeeQuote(connection.id).catch(() => null))
         ),
-        fetchMarketDisputes(nextOrders.map((order) => order.id))
+        fetchMarketDisputes(nextOrders.map((order) => order.id)),
+        fetchMarketPriceProposals(nextOrders.map((order) => order.id))
       ]);
       setBase({ ...nextBase, connections: marketConnections });
       setOrders(nextOrders);
       setPayments(nextPayments);
       setQuotes(nextQuotes.filter(Boolean) as AspireFeeQuote[]);
       setDisputes(nextDisputes);
+      setPriceProposals(nextPriceProposals);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load marketplace orders.');
     } finally {
@@ -107,6 +116,11 @@ export default function MarketOrdersPanel() {
     }
   }, [reload]);
 
+  useEffect(() => {
+    if (!base?.userId) return;
+    return subscribeToMyConnectionActivity(base.userId, () => void reload(true));
+  }, [base?.userId, reload]);
+
   const requestMap = useMemo(() => new Map((base?.requests ?? []).map((request) => [request.id, request])), [base]);
   const connectionMap = useMemo(() => new Map((base?.connections ?? []).map((connection) => [connection.id, connection])), [base]);
   const profileMap = useMemo(() => new Map((base?.profiles ?? []).map((profile) => [profile.id, profile])), [base]);
@@ -119,6 +133,51 @@ export default function MarketOrdersPanel() {
     });
     return map;
   }, [disputes]);
+  const priceProposalMap = useMemo(
+    () => new Map(priceProposals.map((proposal) => [proposal.market_order_id, proposal])),
+    [priceProposals]
+  );
+
+  function beginPriceProposal(orderId: string, currentAmountCents: number) {
+    setPriceFor(orderId);
+    setPriceInput((currentAmountCents / 100).toFixed(2));
+  }
+
+  async function submitPriceProposal(orderId: string) {
+    const amount = Number(priceInput);
+    const amountCents = Math.round(amount * 100);
+    if (!Number.isFinite(amount) || amount <= 0 || amountCents > 100000000) {
+      setNotice('Enter a valid proposed price.');
+      return;
+    }
+    setBusy(`price-${orderId}`);
+    setNotice('');
+    try {
+      await proposeMarketPrice(orderId, amountCents);
+      setPriceFor(null);
+      setPriceInput('');
+      setNotice('Price proposed. The current price stays active until the other person accepts.');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not propose that price.');
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function answerPriceProposal(proposalId: string, accept: boolean) {
+    setBusy(`price-response-${proposalId}`);
+    setNotice('');
+    try {
+      await respondMarketPrice(proposalId, accept);
+      setNotice(accept ? 'Price accepted. Fees and totals were recalculated.' : 'Price declined. The current order price did not change.');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not respond to that price.');
+    } finally {
+      setBusy('');
+    }
+  }
 
   async function pay(connectionId: string) {
     setBusy(`pay-${connectionId}`);
@@ -230,6 +289,7 @@ export default function MarketOrdersPanel() {
           const payment = paymentMap.get(order.connection_id);
           const quote = quoteMap.get(order.connection_id);
           const dispute = disputeMap.get(order.id);
+          const priceProposal = priceProposalMap.get(order.id);
           const isBuyer = base.userId === order.buyer_id;
           const isSeller = base.userId === order.seller_id;
           const otherId = isBuyer ? order.seller_id : order.buyer_id;
@@ -264,6 +324,8 @@ export default function MarketOrdersPanel() {
             if (order.status === 'released') return 'View receipt';
             return 'Review order details';
           })();
+          const priceIsUnlocked = ['awaiting_payment','off_platform'].includes(order.status)
+            && (!payment || payment.status === 'not_started');
           const canDispute = ['paid','handoff_confirmed','release_ready'].includes(order.status) && !dispute;
           const paidStage = ['paid','handoff_confirmed','release_ready','released','disputed'].includes(order.status);
           const handoffStage = Boolean(order.seller_handed_off_at);
@@ -291,9 +353,21 @@ export default function MarketOrdersPanel() {
 
               {payWithAspire && (quote || payment) && <div className="marketMoneySummary">{isBuyer ? <><div><span>Item</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div>{shippingOrder && shippingRate > 0 && <div><span>{carrierName || 'Carrier shipping'}</span><strong>{shippingPaidBy === 'buyer' ? money(shippingRate, order.shipping_currency || order.currency) : 'Seller covers'}</strong></div>}<div><span>Aspire service fee</span><strong>{money(requesterFee, order.currency)}</strong></div><div className="total"><span>You pay</span><strong>{money(buyerTotal, order.currency)}</strong></div></> : <><div><span>Sale price</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div><div><span>Aspire platform fee</span><strong>−{money(providerFee, order.currency)}</strong></div>{shippingOrder && shippingRate > 0 && <div><span>{carrierName || 'Carrier shipping'}</span><strong>{shippingPaidBy === 'seller' ? `−${money(shippingRate, order.shipping_currency || order.currency)}` : 'Buyer pays'}</strong></div>}<div className="total"><span>You receive</span><strong>{money(sellerNet, order.currency)}</strong></div></>}</div>}
 
+              {priceProposal && <div className="marketPriceProposal">
+                <div><span>PRICE CHANGE PROPOSED</span><strong>{money(priceProposal.amount_cents, priceProposal.currency)}</strong><small>{priceProposal.proposed_by === base.userId ? `Waiting for ${profileName(other)} to accept. The current price remains ${money(order.agreed_amount_cents, order.currency)}.` : `${profileName(other)} proposed this price. Nothing changes unless you accept.`}</small></div>
+                {priceProposal.proposed_by !== base.userId && <div><button className="marketSecondary" type="button" disabled={busy === `price-response-${priceProposal.id}`} onClick={() => answerPriceProposal(priceProposal.id, false)}>Keep current price</button><button className="button buttonGold" type="button" disabled={busy === `price-response-${priceProposal.id}`} onClick={() => answerPriceProposal(priceProposal.id, true)}>Accept new price</button></div>}
+              </div>}
+
+              {priceFor === order.id && !priceProposal && priceIsUnlocked && <div className="marketPriceComposer">
+                <div><span>MUTUAL PRICE CHANGE</span><strong>Propose a new item price</strong><small>The other person must accept before the order total changes. Starting Stripe checkout locks the price.</small></div>
+                <label><span>New price</span><input type="number" min="0.01" max="1000000" step="0.01" inputMode="decimal" value={priceInput} onChange={(event) => setPriceInput(event.target.value)} /></label>
+                <div><button className="marketSecondary" type="button" onClick={() => setPriceFor(null)}>Never mind</button><button className="button buttonGold" type="button" disabled={busy === `price-${order.id}`} onClick={() => submitPriceProposal(order.id)}>Send price proposal</button></div>
+              </div>}
+
               <div className="marketProgress" aria-label="Marketplace order progress"><span className="done"><i>1</i><b>Matched</b></span><span className={paidStage ? 'done' : order.status === 'payment_processing' ? 'current' : ''}><i>2</i><b>Paid</b></span><span className={handoffStage ? 'done' : paidStage ? 'current' : ''}><i>3</i><b>Handoff</b></span><span className={receiptStage ? 'done' : handoffStage ? 'current' : ''}><i>4</i><b>Received</b></span><span className={releasedStage ? 'done' : receiptStage ? 'current' : ''}><i>5</i><b>Released</b></span></div>
 
               <div className="marketOrderActions">
+                {priceIsUnlocked && !priceProposal && priceFor !== order.id && <button className="marketSecondary" type="button" onClick={() => beginPriceProposal(order.id, order.agreed_amount_cents)}>Propose different price</button>}
                 {shippingOrder && !shippingReady && ['awaiting_payment','payment_processing'].includes(order.status) && <a className="button buttonGold" href={shippingSetupHref}>{isSeller ? 'Prepare live shipping rates →' : 'Choose carrier rate →'}</a>}
                 {payWithAspire && isBuyer && shippingReady && typeof buyerTotal === 'number' && ['awaiting_payment','payment_processing'].includes(order.status) && (!payment || ['not_started','failed','checkout_created'].includes(payment.status)) && <button className="button buttonGold" type="button" onClick={() => pay(order.connection_id)} disabled={busy === `pay-${order.connection_id}`}>{busy === `pay-${order.connection_id}` ? 'Opening Stripe…' : `Secure ${money(buyerTotal, order.currency)} →`}</button>}
                 {shippingOrder && shippingReady && !secured && <a className="marketSecondary" href={shippingSetupHref}>Review carrier selection</a>}
