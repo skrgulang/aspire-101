@@ -51,6 +51,24 @@ export function stripeLivemode() {
   throw new Error('INVALID_ENV:STRIPE_SECRET_KEY');
 }
 
+/**
+ * Production Live Mode starts behind a fail-closed pilot allowlist. Test mode is
+ * unaffected. Keep the allowlist server-only and remove calls to this guard only
+ * after the controlled end-to-end transaction, refund, and dispute drills pass.
+ */
+export function requireStripeLivePilotUser(userId: string) {
+  if (!stripeLivemode()) return;
+
+  const allowedUserIds = new Set(
+    (process.env.STRIPE_LIVE_PILOT_USER_IDS || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+
+  if (!allowedUserIds.has(userId)) throw new Error('STRIPE_LIVE_PILOT_ONLY');
+}
+
 export async function getAuthenticatedUser(request: Request): Promise<{ user: User; accessToken: string }> {
   const accessToken = requireBearerToken(request);
   const url = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
@@ -260,6 +278,10 @@ export function apiError(error: unknown) {
   if (raw === 'COMPLETION_NOT_READY') return { status: 409, body: { error: 'Both people must mark the connection complete before payment can be released.', code: raw } };
   if (raw === 'PAYMENT_NOT_SECURED') return { status: 409, body: { error: 'Payment must be secured before it can be released.', code: raw } };
   if (raw === 'WEBHOOK_SIGNATURE') return { status: 400, body: { error: 'Invalid Stripe webhook signature.' } };
+  if (raw === 'STRIPE_LIVE_PILOT_ONLY') return {
+    status: 403,
+    body: { error: 'Live payments are currently limited to approved pilot accounts.', code: raw }
+  };
   if (raw.startsWith('MISSING_ENV:')) return { status: 503, body: { error: 'Payments are not connected to this deployment yet.', code: raw } };
   if (raw.startsWith('INVALID_ENV:')) return { status: 503, body: { error: 'Payments are not configured correctly for this deployment.', code: raw } };
   if (raw.startsWith('STRIPE:')) return { status: 502, body: { error: raw.slice(7), code: 'STRIPE_ERROR' } };
