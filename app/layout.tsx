@@ -79,16 +79,68 @@ import { aspireLogo } from './logo';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','700'], variable: '--font-display' });
 
+const siteDescription = 'Aspire 101 is a campus request and connection network for college students to find study partners and rides, exchange items, coordinate help, and connect with verified campus communities.';
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://aspires101.com'),
   title: 'Aspire 101 — Ask campus. Feel at home.',
-  description: 'A college request network that helps students find support, make connections, and feel more at home on campus.',
-  icons: { icon: '/favicon.webp', shortcut: '/favicon.webp', apple: '/favicon.webp' }
+  description: siteDescription,
+  applicationName: 'Aspire 101',
+  alternates: { canonical: '/' },
+  icons: { icon: '/favicon.webp', shortcut: '/favicon.webp', apple: '/favicon.webp' },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1
+    }
+  },
+  openGraph: {
+    type: 'website',
+    url: 'https://aspires101.com/',
+    siteName: 'Aspire 101',
+    title: 'Aspire 101 — Ask campus. Feel at home.',
+    description: siteDescription
+  }
+};
+
+const siteStructuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://aspires101.com/#organization',
+      name: 'Aspire 101',
+      url: 'https://aspires101.com/',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://aspires101.com/favicon.webp'
+      },
+      description: siteDescription
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://aspires101.com/#website',
+      url: 'https://aspires101.com/',
+      name: 'Aspire 101',
+      description: siteDescription,
+      publisher: { '@id': 'https://aspires101.com/#organization' }
+    }
+  ]
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" data-aspire-theme="dark">
       <body className={`${inter.variable} ${display.variable}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteStructuredData) }}
+        />
         {children}
         <SiteFooter />
         <CookieBanner />
