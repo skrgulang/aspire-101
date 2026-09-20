@@ -55,18 +55,6 @@ async function fetchSellerPayoutStatus(): Promise<SellerPayoutStatus> {
   return payload.status || 'NOT_STARTED';
 }
 
-function detectListingLanguage(text: string, locale?: string | null): RequestLanguageCode {
-  if (/[\u3040-\u30ff]/.test(text)) return 'ja';
-  if (/[\uac00-\ud7af]/.test(text)) return 'ko';
-  if (/[\u4e00-\u9fff]/.test(text)) return 'zh';
-  if (/[\u0600-\u06ff]/.test(text)) return 'ar';
-  if (/[\u0900-\u097f]/.test(text)) return 'hi';
-
-  const base = (locale || '').trim().toLowerCase().split('-')[0];
-  if (base === 'es' || base === 'fr' || base === 'vi') return base;
-  return 'en';
-}
-
 export default function MarketplaceSellerComposer() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
