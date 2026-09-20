@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   apiError,
   getAuthenticatedUser,
+  getStripeRecipientPayoutState,
   getSupabaseServiceClient,
   stripeFormRequest,
   stripeGet
@@ -9,41 +10,10 @@ import {
 
 type StripePaymentIntent = { latest_charge?: string | { id?: string } | null };
 type StripeTransfer = { id: string };
-type StripeConnectAccount = {
-  capabilities?: { transfers?: string | null };
-  payouts_enabled?: boolean;
-  details_submitted?: boolean;
-  requirements?: {
-    currently_due?: string[];
-    past_due?: string[];
-    pending_verification?: string[];
-    disabled_reason?: string | null;
-  };
-};
-
 function stripeId(value: unknown) {
   if (typeof value === 'string') return value;
   if (value && typeof value === 'object' && typeof (value as { id?: unknown }).id === 'string') return (value as { id: string }).id;
   return null;
-}
-
-function stripePayoutState(account: StripeConnectAccount) {
-  const transferActive = account.capabilities?.transfers === 'active';
-  const payoutsEnabled = account.payouts_enabled === true;
-  const currentlyDue = account.requirements?.currently_due ?? [];
-  const pastDue = account.requirements?.past_due ?? [];
-  const disabledReason = account.requirements?.disabled_reason || '';
-  const requirementsDue = new Set([...currentlyDue, ...pastDue]).size;
-  const ready = transferActive && payoutsEnabled;
-  const status = ready
-    ? 'READY'
-    : pastDue.length > 0 || disabledReason.includes('past_due')
-      ? 'RESTRICTED'
-      : currentlyDue.length > 0 || account.details_submitted === false
-        ? 'ACTION_REQUIRED'
-        : 'UNDER_REVIEW';
-
-  return { ready, status, requirementsDue };
 }
 
 export async function POST(request: Request) {
@@ -130,13 +100,9 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (!payoutAccount?.stripe_account_id) throw new Error('PAYOUT_NOT_READY');
 
-    // Re-check the connected account with Stripe's stable v1 Account endpoint
-    // immediately before a transfer so a stale Aspire status cannot block or
-    // incorrectly allow release.
-    const stripeAccount = await stripeGet<StripeConnectAccount>(
-      `/v1/accounts/${encodeURIComponent(payoutAccount.stripe_account_id)}`
-    );
-    const payoutState = stripePayoutState(stripeAccount);
+    // Re-check Stripe immediately before transfer. The cached Aspire status
+    // cannot authorize a payout; Accounts v2 recipient capability must be active.
+    const payoutState = await getStripeRecipientPayoutState(payoutAccount.stripe_account_id);
 
     await supabase.from('payment_accounts').update({
       status: payoutState.status,
