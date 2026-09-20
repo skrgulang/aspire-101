@@ -58,6 +58,24 @@ function safetyContext(category: string, kind: RequestKind) {
   return { title: 'Keep the connection clear.', note: 'Choose who you want to connect with, keep expectations clear, and use Report or Block if someone misuses Aspire.' };
 }
 
+async function requireSellerPayoutReady() {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sign in again to verify your seller payout account.');
+
+  const response = await fetch('/api/stripe/connect/status', {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({})) as { status?: string; error?: string };
+  if (!response.ok) throw new Error(payload.error || 'Could not verify your seller payout account.');
+  if (payload.status !== 'READY') {
+    throw new Error('Finish your Stripe seller payout setup in Profile before publishing with Aspire Protected.');
+  }
+}
+
 export default function PostRequestForm() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -242,6 +260,9 @@ export default function PostRequestForm() {
     setPublishing(true);
     setError('');
     try {
+      if (isMarket && marketIntent === 'sell' && paymentMethod === 'aspire') {
+        await requireSellerPayoutReady();
+      }
       const amountCents = amount ? Math.round(Number(amount) * 100) : undefined;
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
       const scheduledStartAt = scheduleMode === 'scheduled' && startLocal ? new Date(startLocal).toISOString() : undefined;
@@ -357,7 +378,7 @@ export default function PostRequestForm() {
 
       {moneyInvolved && !isMarket && <><div className="postMoney postMoneyFresh"><label className="postField"><span>{kind === 'paid_help' ? 'What are you offering?' : 'Amount / share'}</span><div className="moneyInput"><b>$</b><input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="25" /></div></label><label className="postField"><span>Payment plan</span><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as 'none' | 'in_person' | 'aspire')}><option value="none">Agree after you connect</option><option value="aspire">Pay with Aspire</option><option value="in_person">Pay in person</option></select><small>{paymentMethod === 'aspire' ? 'After a mutual connection, Stripe secures the agreed amount. Release happens after both people mark complete.' : 'Off-platform payments are not processed or protected as Aspire payments.'}</small></label></div>{paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}</>}
 
-      {isMarket && <section className="marketPaymentChoice"><div><span>PAYMENT</span><strong>Choose how the order is protected.</strong></div><label className={paymentMethod === 'aspire' ? 'active' : ''}><input type="radio" name="market-payment" checked={paymentMethod === 'aspire'} onChange={() => setPaymentMethod('aspire')} /><span><b>Aspire Protected</b><small>Buyer pays through Stripe. Seller transfer waits for receipt confirmation.</small></span></label><label className={paymentMethod === 'in_person' ? 'active offPlatform' : 'offPlatform'}><input type="radio" name="market-payment" checked={paymentMethod === 'in_person'} onChange={() => setPaymentMethod('in_person')} /><span><b>Pay in person</b><small>Not processed or protected by Aspire.</small></span></label>{paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}</section>}
+      {isMarket && <section className="marketPaymentChoice"><div><span>PAYMENT</span><strong>Choose how the order is protected.</strong></div><label className={paymentMethod === 'aspire' ? 'active' : ''}><input type="radio" name="market-payment" checked={paymentMethod === 'aspire'} onChange={() => setPaymentMethod('aspire')} /><span><b>Aspire Protected</b><small>Buyer pays through Stripe. Seller transfer waits for receipt confirmation.</small></span></label><label className={paymentMethod === 'in_person' ? 'active offPlatform' : 'offPlatform'}><input type="radio" name="market-payment" checked={paymentMethod === 'in_person'} onChange={() => setPaymentMethod('in_person')} /><span><b>Pay in person</b><small>Not processed or protected by Aspire.</small></span></label>{marketIntent === 'sell' && paymentMethod === 'aspire' && <div className="marketProtectionNote"><i>$</i><div><strong>Seller payout account required</strong><p>Add and verify your bank account securely with Stripe before publishing. Aspire never receives or stores your bank details. <a href="/profile">Set up seller payouts →</a></p></div></div>}{paymentMethod === 'aspire' && <PaymentFeePreview amount={amount} campusId={campusId} />}</section>}
 
       <label className="postField postDetailsField"><span>{isMarket ? 'Description' : 'Anything else?'} <em>optional</em></span><textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} placeholder={isMarket ? 'Model, size, included accessories, defects, approximate pickup area, or anything a buyer should know.' : 'What to bring, access notes, or anything that helps someone decide. Keep exact private addresses for the connection chat.'} /></label>
       <div className="postContextCard"><div><span>SAFETY FOR THIS REQUEST</span><strong>{context.title}</strong></div><p>{context.note}</p><a href="/safety">Safety center ↗</a></div>{error && <p className="postError" role="alert">{error}</p>}
