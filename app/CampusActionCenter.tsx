@@ -27,6 +27,7 @@ function profileName(profile?: PublicProfile) {
 
 export default function CampusActionCenter() {
   const [items, setItems] = useState<ActionItem[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
 
@@ -75,7 +76,7 @@ export default function CampusActionCenter() {
 
       const pendingByRequest = new Map<string, number>();
       inbox.responses
-        .filter((response) => response.status === 'pending')
+        .filter((response) => response.status === 'pending' && inboxRequestMap.get(response.request_id)?.status === 'open')
         .forEach((response) => pendingByRequest.set(response.request_id, (pendingByRequest.get(response.request_id) || 0) + 1));
 
       Array.from(pendingByRequest.entries()).slice(0, 2).forEach(([requestId, count]) => {
@@ -132,6 +133,7 @@ export default function CampusActionCenter() {
         });
       }
 
+      setTotalItems(next.length);
       setItems(next.slice(0, 4));
     } catch {
       setUnavailable(true);
@@ -162,7 +164,7 @@ export default function CampusActionCenter() {
           <span>YOUR NEXT STEP</span>
           <h2 id="action-center-title">Needs your attention</h2>
         </div>
-        {items.length > 0 && <b>{items.length}</b>}
+        {items.length > 0 && <b aria-label={`${totalItems} items need attention`}>{totalItems}</b>}
       </header>
 
       {unavailable ? (
