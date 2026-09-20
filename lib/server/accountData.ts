@@ -135,6 +135,28 @@ async function deleteOwnedStorage(supabase: ServiceClient, userId: string) {
   const { error: mediaRowDeleteError } = await supabase.from('request_media').delete().eq('uploader_id', userId);
   if (mediaRowDeleteError) throw new Error(`ACCOUNT_DELETE:request_media_rows:${mediaRowDeleteError.message}`);
 
+  const { data: requestDraftMedia, error: requestDraftMediaError } = await supabase
+    .from('request_draft_media')
+    .select('storage_path')
+    .eq('user_id', userId);
+  if (requestDraftMediaError) throw new Error(`ACCOUNT_DELETE:request_drafts_list:${requestDraftMediaError.message}`);
+  const requestDraftPaths = (requestDraftMedia || []).map((row) => String(row.storage_path || '')).filter(Boolean);
+  for (let index = 0; index < requestDraftPaths.length; index += 100) {
+    const { error } = await supabase.storage.from('request-drafts').remove(requestDraftPaths.slice(index, index + 100));
+    if (error) throw new Error(`ACCOUNT_DELETE:request_drafts_storage:${error.message}`);
+  }
+
+  const { data: marketplaceDraftRows, error: marketplaceDraftError } = await supabase
+    .from('marketplace_listing_drafts')
+    .select('photo_storage_path')
+    .eq('user_id', userId);
+  if (marketplaceDraftError) throw new Error(`ACCOUNT_DELETE:marketplace_drafts_list:${marketplaceDraftError.message}`);
+  const marketplaceDraftPaths = (marketplaceDraftRows || []).map((row) => String(row.photo_storage_path || '')).filter(Boolean);
+  for (let index = 0; index < marketplaceDraftPaths.length; index += 100) {
+    const { error } = await supabase.storage.from('marketplace-drafts').remove(marketplaceDraftPaths.slice(index, index + 100));
+    if (error) throw new Error(`ACCOUNT_DELETE:marketplace_drafts_storage:${error.message}`);
+  }
+
   const { data: avatarFiles, error: avatarListError } = await supabase.storage.from('avatars').list(userId, { limit: 1000 });
   if (avatarListError) throw new Error(`ACCOUNT_DELETE:avatar_list:${avatarListError.message}`);
   const avatarPaths = (avatarFiles || []).filter((file) => file.name).map((file) => `${userId}/${file.name}`);
@@ -193,6 +215,8 @@ export async function eraseDirectAccountData(supabase: ServiceClient, userId: st
     ['avatar_moderation_reviews', 'user_id'],
     ['safety_acknowledgements', 'user_id'],
     ['user_daily_activity', 'user_id'],
+    ['request_drafts', 'user_id'],
+    ['marketplace_listing_drafts', 'user_id'],
     ['user_roles', 'user_id'],
     ['user_trust_profiles', 'user_id'],
     ['connection_circle_choices', 'user_id'],
