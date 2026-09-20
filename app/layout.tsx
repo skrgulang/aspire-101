@@ -75,6 +75,7 @@ import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
 import GoogleAnalytics from './GoogleAnalytics';
+import { DatadogAppRouter } from '@datadog/browser-rum-nextjs';
 import { aspireLogo } from './logo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -146,6 +147,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" data-aspire-theme="dark">
       <body className={`${inter.variable} ${display.variable}`}>
+        <DatadogAppRouter />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteStructuredData) }}
