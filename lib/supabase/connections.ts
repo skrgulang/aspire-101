@@ -243,6 +243,35 @@ export function subscribeToConnectionMessages(onMessage: (message: ConnectionMes
   };
 }
 
+const connectionActivityKinds = new Set([
+  'connection_chosen',
+  'connection_confirmed',
+  'connection_completed',
+  'connection_cancelled',
+  'connection_coordination',
+  'circle_mutual',
+  'resolution_case'
+]);
+
+export function subscribeToMyConnectionActivity(userId: string, onActivity: () => void) {
+  const supabase = getSupabaseBrowserClient();
+  const channel = supabase
+    .channel(`aspire-connection-activity-${userId}-${Math.random().toString(36).slice(2)}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+      (payload) => {
+        const row = payload.new as { kind?: string };
+        if (row.kind && connectionActivityKinds.has(row.kind)) onActivity();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
 export async function markConnectionRead(connectionId: string, lastMessageId?: number) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('mark_connection_read', {
