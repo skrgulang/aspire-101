@@ -104,7 +104,19 @@ export const metadata: Metadata = {
     url: 'https://aspires101.com/',
     siteName: 'Aspire 101',
     title: 'Aspire 101 — Ask campus. Feel at home.',
-    description: siteDescription
+    description: siteDescription,
+    images: [{
+      url: '/og-image.png',
+      width: 1200,
+      height: 630,
+      alt: 'Aspire 101 — Ask campus. Feel at home.'
+    }]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Aspire 101 — Ask campus. Feel at home.',
+    description: siteDescription,
+    images: ['/og-image.png']
   }
 };
 
@@ -118,7 +130,17 @@ const siteStructuredData = {
       url: 'https://aspires101.com/',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://aspires101.com/favicon.png'
+        url: 'https://aspires101.com/logo-512.png',
+        width: 512,
+        height: 512
+      },
+      sameAs: [
+        'https://www.instagram.com/aspire.101/',
+        'https://www.linkedin.com/company/108901932/'
+      ],
+      parentOrganization: {
+        '@type': 'Organization',
+        name: 'Cloudora Labs, Inc.'
       },
       description: siteDescription
     },

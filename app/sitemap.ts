@@ -5,6 +5,7 @@ const baseUrl = 'https://aspires101.com';
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     '/',
+    '/about',
     '/ambassadors',
     '/guidelines',
     '/how-it-works',

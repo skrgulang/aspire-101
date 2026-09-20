@@ -42,6 +42,7 @@ export default function SiteFooter() {
         <section className="footerColumn">
           <h4>Company</h4>
           <nav>
+            <a href="/about">About Aspire</a>
             <a href="/updates">Product updates</a>
             <a href="/#work-with-us">Work with Aspire</a>
             <a href="/safety">Safety Center</a>
