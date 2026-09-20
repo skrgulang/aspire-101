@@ -55,6 +55,14 @@ async function fetchSellerPayoutStatus(): Promise<SellerPayoutStatus> {
   return payload.status || 'NOT_STARTED';
 }
 
+function sellerPayoutNotice(status: SellerPayoutStatus) {
+  if (status === 'READY') return 'Stripe payout setup is ready. You can now submit this item for review.';
+  if (status === 'ACTION_REQUIRED') return 'Stripe needs more identity or bank information. Select Continue setup to finish it securely.';
+  if (status === 'RESTRICTED') return 'Stripe paused payouts until required information is updated. Select Continue setup to resolve it.';
+  if (status === 'UNDER_REVIEW') return 'Stripe is still reviewing your payout account. This page will update automatically.';
+  return 'Set up Stripe payouts before publishing. You can keep saving private drafts meanwhile.';
+}
+
 export default function MarketplaceSellerComposer() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -127,9 +135,7 @@ export default function MarketplaceSellerComposer() {
         if (typeof window !== 'undefined') {
           const paymentReturn = new URLSearchParams(window.location.search).get('payments');
           if (paymentReturn === 'return') {
-            setNotice(payoutResult.status === 'READY'
-              ? 'Stripe payout setup complete. You can now submit this item for review.'
-              : 'Welcome back from Stripe. Your payout status is still updating; check it again in a moment.');
+            setNotice(sellerPayoutNotice(payoutResult.status));
           } else if (paymentReturn === 'refresh') {
             setNotice('That Stripe setup link expired. Select Continue setup to open a fresh secure link.');
           }
@@ -144,6 +150,27 @@ export default function MarketplaceSellerComposer() {
   }, [router]);
 
   useEffect(() => () => { revokeLocalPhoto(photoUrl); }, [photoUrl]);
+
+  useEffect(() => {
+    if (payoutStatus !== 'UNDER_REVIEW') return;
+    let active = true;
+    const timer = window.setInterval(() => {
+      void fetchSellerPayoutStatus()
+        .then((nextStatus) => {
+          if (!active || nextStatus === 'UNDER_REVIEW') return;
+          setPayoutStatus(nextStatus);
+          setPayoutStatusError('');
+          setNotice(sellerPayoutNotice(nextStatus));
+        })
+        .catch((cause) => {
+          if (active) setPayoutStatusError(cause instanceof Error ? cause.message : 'Could not refresh Stripe payout status.');
+        });
+    }, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [payoutStatus]);
 
   const methods = useMemo<MarketplaceDeliveryMethod[]>(() => {
     const result: MarketplaceDeliveryMethod[] = [];
@@ -245,9 +272,7 @@ export default function MarketplaceSellerComposer() {
       if (payoutStatus === 'UNDER_REVIEW') {
         const nextStatus = await fetchSellerPayoutStatus();
         setPayoutStatus(nextStatus);
-        setNotice(nextStatus === 'READY'
-          ? 'Stripe payout setup is ready. You can now submit this item for review.'
-          : 'Stripe is still reviewing your payout account. No additional action is needed right now.');
+        setNotice(sellerPayoutNotice(nextStatus));
         return;
       }
 
