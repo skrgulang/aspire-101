@@ -35,7 +35,7 @@ const faqStructuredData = {
       name: 'What changes when money is involved?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Aspire clearly labels paid help, split-cost requests, and buying or selling. Before the interaction is marked in progress, both sides confirm important details such as amount, scope, timing, and meetup expectations.'
+        text: 'Aspire should clearly label paid help, split-cost requests, and buying or selling. Before the interaction is marked in progress, both sides should confirm the important details such as amount, scope, timing, and meetup expectations.'
       }
     },
     {
@@ -43,7 +43,7 @@ const faqStructuredData = {
       name: 'Does everyone get one star rating?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'No. Aspire uses contextual trust information instead of one giant score, including completed connections, whether people would connect again, useful behavior tags, and the types of interactions that created that reputation.'
+        text: 'No. We are moving toward a contextual Trust Passport instead of one giant score. It can show completed connections, whether people would connect again, useful behavior tags, and the types of interactions that created that reputation. New members simply show New to Aspire.'
       }
     },
     {
@@ -51,7 +51,7 @@ const faqStructuredData = {
       name: 'What if something is unsafe or illegal?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Harassment, threats, scams, violence, illegal activity, or serious misconduct should go through reporting and moderation. Emergencies should be handled by campus or local emergency services.'
+        text: 'That is a safety issue, not a rating issue. Harassment, threats, scams, violence, illegal activity, or serious misconduct should go through reporting and moderation. Emergencies should be handled by campus or local emergency services.'
       }
     },
     {
@@ -59,7 +59,7 @@ const faqStructuredData = {
       name: 'Why does Aspire ask for my location?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Location is optional and helps make nearby requests more relevant. Students can deny it and choose a campus manually. Precise location is not exposed publicly just because someone browsed or posted.'
+        text: 'Location is optional and helps make nearby requests more relevant. You can deny it and choose a campus manually. Precise location should not be exposed publicly just because you browsed or posted.'
       }
     },
     {
