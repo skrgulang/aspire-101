@@ -205,6 +205,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This shipping rate leaves no seller proceeds. Choose another rate or have the buyer cover shipping.', code: 'SHIPPING_EXCEEDS_SELLER_PROCEEDS' }, { status: 409 });
     }
 
+    // Separate charges and transfers must leave only the booked Aspire fee on the
+    // platform after the seller proceeds and carrier liability are accounted for.
+    // Fail closed before creating Checkout if a future fee/shipping change breaks
+    // that invariant; otherwise company revenue could be transferred to the seller.
+    const companyFeeCents = customerTotalCents - providerNetCents - (shippingOrder ? shippingRateCents : 0);
+    if (
+      !Number.isInteger(companyFeeCents) ||
+      companyFeeCents < 0 ||
+      companyFeeCents !== quote.platform_fee_revenue_cents
+    ) {
+      console.error('Payment fee invariant failed before checkout', {
+        connectionId: connection.id,
+        companyFeeCents,
+        quotedPlatformFeeCents: quote.platform_fee_revenue_cents,
+        shippingRateCents: shippingOrder ? shippingRateCents : 0
+      });
+      return NextResponse.json({
+        error: 'Aspire could not safely verify the payment split. No charge was created.',
+        code: 'PAYMENT_FEE_INVARIANT_FAILED'
+      }, { status: 503 });
+    }
+
     // Lock the marketplace price before any Stripe Checkout Session can be created.
     // The amount predicate makes this atomic with mutual price acceptance: either the
     // accepted price wins first and this update returns no row, or checkout wins first
@@ -244,7 +266,8 @@ export async function POST(request: Request) {
       shipping_carrier: shippingOrder ? marketOrder?.shipping_carrier || null : null,
       shipping_service: shippingOrder ? marketOrder?.shipping_service || null : null,
       customer_total_cents: customerTotalCents,
-      provider_net_cents: providerNetCents
+      provider_net_cents: providerNetCents,
+      platform_fee_cents: companyFeeCents
     };
 
     let payment = paymentSeed;
