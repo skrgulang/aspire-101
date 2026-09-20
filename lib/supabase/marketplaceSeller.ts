@@ -88,7 +88,7 @@ function friendlyError(error: { message?: string; details?: string; hint?: strin
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little and try again.');
   if (/ACCOUNT_SUSPENDED/i.test(detail)) return new Error('This Aspire account is suspended from new posts.');
   if (/ACCOUNT_RESTRICTED/i.test(detail)) return new Error('This Aspire account is temporarily restricted from new posts.');
-  if (/row-level security|policy/i.test(detail)) return new Error('Your seller session could not publish this item. Refresh and sign in again.');
+  if (/row-level security|policy/i.test(detail)) return new Error('Aspire could not attach that photo to this draft. Please try again.');
   return new Error(error.message || fallback);
 }
 
@@ -183,7 +183,7 @@ export async function uploadMarketplaceDraftPhoto(draftId: string, file: File) {
   const { error: uploadError } = await supabase.storage
     .from(draftBucket)
     .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
-  if (uploadError) throw uploadError;
+  if (uploadError) throw friendlyError(uploadError, 'Could not upload this draft photo.');
 
   const { data: updated, error: updateError } = await supabase
     .from('marketplace_listing_drafts')
