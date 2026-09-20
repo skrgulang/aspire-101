@@ -1,62 +1,157 @@
-.card{display:grid;gap:18px;padding:24px;border:1px solid rgba(255,255,255,.08);border-radius:24px;background:linear-gradient(145deg,rgba(255,194,28,.045),rgba(255,255,255,.018))}.heading{display:flex;align-items:flex-end;justify-content:space-between;gap:22px}.heading>div{display:grid;gap:5px}.heading span{color:#e0bb50;font-size:10px;font-weight:900;letter-spacing:.14em}.heading h2{margin:0;font-size:24px;letter-spacing:-.04em}.heading p{max-width:430px;margin:0;color:#8f887d;font-size:12px;line-height:1.55}.modeRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}.modeRow button{display:grid;gap:5px;padding:15px 16px;text-align:left;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:#0d0d0b;color:#eee7dc;cursor:pointer}.modeRow button strong{font-size:14px}.modeRow button span{color:#7f786f;font-size:11px;line-height:1.45}.modeRow button.active{border-color:rgba(235,191,70,.55);background:rgba(235,191,70,.09);box-shadow:0 0 0 2px rgba(235,191,70,.05)}.modeRow button.active span{color:#b6a57b}.timeGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.timeGrid label,.placeField{display:grid;gap:7px}.timeGrid label>span,.placeField>span{color:#aaa296;font-size:11px;font-weight:800}.timeGrid input,.placeField input{width:100%;min-height:48px;padding:0 13px;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:#090907;color:#f5efe5;font:inherit;font-size:14px;outline:none}.timeGrid input:focus,.placeField input:focus{border-color:rgba(235,191,70,.55);box-shadow:0 0 0 3px rgba(235,191,70,.06)}.placeField small{color:#706a62;font-size:11px;line-height:1.5}.reminders{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-top:2px}.reminders b{margin-right:4px;color:#a69d90;font-size:10px;letter-spacing:.08em;text-transform:uppercase}.reminders span{padding:6px 9px;border:1px solid rgba(255,255,255,.07);border-radius:999px;background:rgba(255,255,255,.025);color:#817a70;font-size:10px}@media(max-width:680px){.card{padding:18px;border-radius:20px}.heading{align-items:flex-start;flex-direction:column;gap:8px}.modeRow,.timeGrid{grid-template-columns:1fr}.modeRow button{padding:14px}.heading h2{font-size:21px}.timeGrid input,.placeField input{font-size:16px}}
+.card{
+  display:grid;
+  gap:16px;
+  padding:20px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  background:linear-gradient(145deg,rgba(255,199,44,.045),rgba(255,255,255,.012));
+}
+.heading{display:flex;align-items:flex-end;justify-content:space-between;gap:22px}
+.heading>div{display:grid;gap:4px}
+.heading span{color:#d7ad37;font-size:9px;font-weight:950;letter-spacing:.14em}
+.heading h2{margin:0;font-size:21px;letter-spacing:-.035em}
+.heading p{max-width:430px;margin:0;color:#827d75;font-size:10px;line-height:1.5}
 
+.modeRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modeRow button{
+  min-height:64px;
+  padding:12px 13px;
+  display:grid;
+  grid-template-columns:26px 1fr;
+  grid-template-rows:auto auto;
+  column-gap:9px;
+  text-align:left;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  background:#0d0e0d;
+  color:#eeeae2;
+  cursor:pointer;
+}
+.modeRow button i{
+  grid-row:1/3;
+  width:26px;height:26px;
+  display:grid;place-items:center;
+  align-self:center;
+  border-radius:9px;
+  background:rgba(255,255,255,.045);
+  color:#8a867f;
+  font-style:normal;
+  font-size:13px;
+}
+.modeRow button strong{align-self:end;font-size:12px}
+.modeRow button span{color:#746f67;font-size:9px}
+.modeRow button.active{
+  border-color:rgba(255,199,44,.5);
+  background:rgba(255,199,44,.08);
+  box-shadow:0 0 0 2px rgba(255,199,44,.035);
+}
+.modeRow button.active i{background:#ffc72c;color:#171209}
+.modeRow button.active span{color:#ad9a68}
+
+.scheduleShell{
+  padding:12px;
+  border:1px solid rgba(255,255,255,.065);
+  border-radius:16px;
+  background:rgba(0,0,0,.18);
+}
+.quickDates{display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.quickDates>span{margin-right:2px;color:#69655e;font-size:7px;font-weight:950;letter-spacing:.12em}
+.quickDates button{
+  padding:5px 9px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;
+  background:rgba(255,255,255,.025);
+  color:#918b82;
+  font:inherit;
+  font-size:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+.quickDates button:hover{border-color:rgba(255,199,44,.25);color:#e7c75f}
+
+.timeGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.timeCard{
+  min-width:0;
+  padding:12px;
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:14px;
+  background:#0b0c0b;
+}
+.timeCardHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.timeCardHead>span{color:#d3b452;font-size:8px;font-weight:950;letter-spacing:.12em}
+.timeCardHead>b{
+  padding:3px 6px;
+  border-radius:999px;
+  background:rgba(255,199,44,.09);
+  color:#ae9142;
+  font-size:7px;
+  text-transform:uppercase;
+}
+.timeCardHead>b.optional{background:rgba(255,255,255,.045);color:#77736c}
+.timeInputs{display:grid;grid-template-columns:1.15fr .85fr;gap:7px}
+.timeInputs label{display:grid;gap:5px;min-width:0}
+.timeInputs label>span{color:#706c65;font-size:7px;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
+.timeInputs input{
+  width:100%;
+  min-width:0;
+  min-height:42px;
+  padding:0 10px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:10px;
+  background:#080908;
+  color:#f3eee5;
+  color-scheme:dark;
+  font:inherit;
+  font-size:11px;
+  outline:none;
+}
+.timeInputs input:focus{border-color:rgba(255,199,44,.5);box-shadow:0 0 0 3px rgba(255,199,44,.055)}
+.clearEnd{
+  margin-top:8px;padding:0;border:0;background:none;color:#69655f;
+  font:inherit;font-size:7px;font-weight:800;cursor:pointer
+}
+.clearEnd:hover{color:#c9aa4c}
+
+.placeField{display:grid;gap:7px}
+.placeField>div{display:flex;align-items:center;justify-content:space-between}
+.placeField>div span{color:#aaa296;font-size:9px;font-weight:900;letter-spacing:.08em}
+.placeField>div b{color:#6d6962;font-size:7px;text-transform:uppercase}
+.placeField input{
+  width:100%;min-height:46px;padding:0 13px;
+  border:1px solid rgba(255,255,255,.09);border-radius:12px;
+  background:#090a09;color:#f5efe5;font:inherit;font-size:12px;outline:none
+}
+.placeField input:focus{border-color:rgba(255,199,44,.5);box-shadow:0 0 0 3px rgba(255,199,44,.055)}
+.placeField small{color:#66625c;font-size:8px;line-height:1.4}
+.reminders{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.reminders b{margin-right:2px;color:#817c74;font-size:8px;letter-spacing:.08em;text-transform:uppercase}
+.reminders span{padding:5px 7px;border:1px solid rgba(255,255,255,.06);border-radius:999px;background:rgba(255,255,255,.02);color:#716d66;font-size:8px}
+
+:global(html[data-aspire-theme='light']) .card{border-color:#e4e3dc;background:linear-gradient(145deg,#fffaf0,#fff)}
+:global(html[data-aspire-theme='light']) .modeRow button,
+:global(html[data-aspire-theme='light']) .timeCard{border-color:#e6e4dc;background:#fff}
+:global(html[data-aspire-theme='light']) .modeRow button{color:#22211e}
+:global(html[data-aspire-theme='light']) .modeRow button.active{border-color:#d6ae36;background:#fff8dd}
+:global(html[data-aspire-theme='light']) .scheduleShell{border-color:#e9e7df;background:#faf9f5}
+:global(html[data-aspire-theme='light']) .timeInputs input,
+:global(html[data-aspire-theme='light']) .placeField input{border-color:#dfddd5;background:#fff;color:#24231f;color-scheme:light}
 
 @media(max-width:680px){
-  .card{
-    gap:12px;
-    padding:14px;
-    border-radius:14px;
-  }
-  .heading{
-    gap:4px;
-  }
-  .heading span{font-size:8px}
-  .heading h2{font-size:15px}
-  .heading p{
-    max-width:320px;
-    font-size:9px;
-    line-height:1.4;
-  }
-  .modeRow{
-    grid-template-columns:1fr 1fr;
-    gap:7px;
-  }
-  .modeRow button{
-    min-height:58px;
-    padding:10px;
-    border-radius:12px;
-  }
-  .modeRow button strong{font-size:11px}
-  .modeRow button span{
-    margin-top:1px;
-    font-size:8px;
-    line-height:1.3;
-  }
-  .timeGrid{gap:8px}
-  .timeGrid label>span,.placeField>span{font-size:9px}
-  .timeGrid input,.placeField input{
-    min-height:44px;
-    border-radius:11px;
-    font-size:16px;
-  }
-  .placeField small{
-    font-size:8px;
-    line-height:1.35;
-  }
-  .reminders{
-    gap:5px;
-    overflow-x:auto;
-    flex-wrap:nowrap;
-    scrollbar-width:none;
-  }
+  .card{gap:12px;padding:14px;border-radius:15px}
+  .heading{align-items:flex-start;flex-direction:column;gap:5px}
+  .heading h2{font-size:16px}
+  .heading p{max-width:330px;font-size:8px}
+  .modeRow{gap:6px}
+  .modeRow button{min-height:58px;padding:9px;grid-template-columns:23px 1fr;column-gap:7px;border-radius:11px}
+  .modeRow button i{width:23px;height:23px;border-radius:7px;font-size:11px}
+  .modeRow button strong{font-size:10px}
+  .modeRow button span{font-size:7px}
+  .scheduleShell{padding:9px;border-radius:12px}
+  .timeGrid{grid-template-columns:1fr;gap:7px}
+  .timeCard{padding:10px;border-radius:11px}
+  .timeInputs input{min-height:40px;font-size:12px}
+  .placeField input{min-height:42px;font-size:14px}
+  .reminders{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
   .reminders::-webkit-scrollbar{display:none}
-  .reminders b,.reminders span{
-    flex:0 0 auto;
-    white-space:nowrap;
-  }
-  .reminders b{font-size:8px}
-  .reminders span{
-    padding:5px 7px;
-    font-size:8px;
-  }
+  .reminders b,.reminders span{flex:0 0 auto;white-space:nowrap}
 }
