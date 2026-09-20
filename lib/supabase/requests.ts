@@ -24,9 +24,10 @@ export type AiModerationStatus = 'not_scanned' | 'scanning' | 'complete' | 'erro
 export type AiRiskLevel = 'unknown' | 'low' | 'medium' | 'high' | 'critical';
 export type AiRecommendedAction = 'approve' | 'review' | 'block';
 export type TrustBand = 'restricted' | 'caution' | 'new' | 'established' | 'trusted';
-export type RequestLanguageCode = 'en' | 'zh' | 'es' | 'ko' | 'ja' | 'fr' | 'hi' | 'ar' | 'vi' | 'other';
+export type RequestLanguageCode = 'any' | 'en' | 'zh' | 'es' | 'ko' | 'ja' | 'fr' | 'hi' | 'ar' | 'vi' | 'other';
 
 export const requestLanguages: { value: RequestLanguageCode; label: string; shortLabel: string }[] = [
+  { value: 'any', label: 'Any language', shortLabel: 'Any language' },
   { value: 'en', label: 'English', shortLabel: 'English' },
   { value: 'zh', label: '中文 / Chinese', shortLabel: '中文' },
   { value: 'es', label: 'Español / Spanish', shortLabel: 'Español' },
