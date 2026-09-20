@@ -21,6 +21,9 @@ export type AspireConnection = {
   status: 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled';
   agreed_amount_cents: number | null;
   payment_method: 'none' | 'in_person' | 'aspire';
+  scheduled_start_at: string | null;
+  scheduled_end_at: string | null;
+  coordination_status: 'planning' | 'scheduled' | 'on_the_way' | 'arrived' | 'in_progress';
 };
 
 export type ConnectionMessage = {
@@ -75,7 +78,7 @@ export type PublicProfile = {
 };
 
 const requestResponseSelect = 'id,request_id,responder_id,message,status,created_at' as const;
-const connectionSelect = 'id,request_id,requester_id,responder_id,requester_confirmed,responder_confirmed,status,agreed_amount_cents,payment_method' as const;
+const connectionSelect = 'id,request_id,requester_id,responder_id,requester_confirmed,responder_confirmed,status,agreed_amount_cents,payment_method,scheduled_start_at,scheduled_end_at,coordination_status' as const;
 const connectionMessageSelect = 'id,connection_id,sender_id,body,created_at' as const;
 
 export async function fetchMyRequestInbox() {

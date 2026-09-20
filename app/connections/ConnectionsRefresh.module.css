@@ -1772,3 +1772,290 @@
     max-width:145px
   }
 }
+
+
+/* 2026-09-19 Inbox cleanup: one person header, separate task rows, obvious completion. */
+.page :global(.connectionsTabTools .notificationDot){
+  width:6px;
+  height:6px;
+  display:inline-block;
+  margin-left:5px;
+  border-radius:50%;
+  background:#ffc72c;
+  box-shadow:0 0 0 3px rgba(255,199,44,.08)
+}
+
+.page :global(.connectionPersonGroup){
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:19px;
+  background:#111212
+}
+.page :global(.connectionPersonGroup.hasUnread){
+  border-color:rgba(255,199,44,.22)
+}
+.page :global(.connectionPersonGroupHead){
+  min-height:68px;
+  padding:12px 15px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  background:
+    linear-gradient(110deg,rgba(255,199,44,.045),transparent 36%),
+    #111212
+}
+.page :global(.connectionGroupIdentity){
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:10px
+}
+.page :global(.connectionGroupIdentity>i){
+  width:38px;
+  height:38px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,199,44,.25);
+  border-radius:50%;
+  background:rgba(255,199,44,.06);
+  color:#ffc72c;
+  font-style:normal;
+  font-size:12px;
+  font-weight:950
+}
+.page :global(.connectionGroupIdentity>div){
+  min-width:0;
+  display:grid;
+  gap:1px
+}
+.page :global(.connectionGroupIdentity span){
+  color:#8b7541;
+  font-size:6px;
+  font-weight:900;
+  letter-spacing:.12em
+}
+.page :global(.connectionGroupIdentity strong){
+  overflow:hidden;
+  color:#efede6;
+  font-size:12px;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
+.page :global(.connectionGroupIdentity small){
+  color:#73746f;
+  font-size:8px
+}
+.page :global(.connectionGroupCount){
+  flex:none;
+  display:flex;
+  align-items:baseline;
+  gap:5px;
+  color:#8b8c87
+}
+.page :global(.connectionGroupCount strong){
+  color:#d9d6ce;
+  font-size:14px
+}
+.page :global(.connectionGroupCount span){
+  font-size:8px
+}
+.page :global(.connectionGroupTasks){
+  display:grid
+}
+.page :global(.connectionTaskCard){
+  position:relative;
+  padding:14px 15px 13px;
+  background:#0f1010
+}
+.page :global(.connectionTaskCard + .connectionTaskCard){
+  border-top:1px solid rgba(255,255,255,.065)
+}
+.page :global(.connectionTaskCard.hasUnread::before){
+  content:'';
+  position:absolute;
+  top:15px;
+  left:0;
+  width:2px;
+  height:28px;
+  border-radius:0 2px 2px 0;
+  background:#ffc72c
+}
+.page :global(.connectionTaskMain){
+  display:grid;
+  gap:4px
+}
+.page :global(.connectionTaskTopline){
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px
+}
+.page :global(.connectionTaskTopline span){
+  color:#9e7b16;
+  font-size:7px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase
+}
+.page :global(.connectionTaskTopline b){
+  padding:3px 6px;
+  border-radius:999px;
+  background:rgba(255,199,44,.10);
+  color:#d6b74f;
+  font-size:7px
+}
+.page :global(.connectionTaskCard h2){
+  margin:0;
+  color:#eceae3;
+  font-size:15px;
+  line-height:1.25
+}
+.page :global(.connectionTaskState){
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:20px;
+  color:#7c7d77
+}
+.page :global(.connectionTaskState>i){
+  width:6px;
+  height:6px;
+  flex:none;
+  border-radius:50%;
+  background:#777870
+}
+.page :global(.connectionTaskState.live>i){
+  background:#67d68d;
+  box-shadow:0 0 0 3px rgba(103,214,141,.08)
+}
+.page :global(.connectionTaskState strong){
+  color:#9a9b95;
+  font-size:8px
+}
+.page :global(.connectionTaskState span){
+  color:#686963;
+  font-size:7px
+}
+.page :global(.connectionTaskActions){
+  margin-top:10px;
+  padding-top:10px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  border-top:1px solid rgba(255,255,255,.055)
+}
+.page :global(.connectionTaskActions .button){
+  min-width:112px;
+  min-height:38px
+}
+.page :global(.connectionStartAction),
+.page :global(.connectionCompleteAction){
+  min-height:38px;
+  padding:0 12px;
+  border-radius:11px;
+  font:inherit;
+  font-size:8px;
+  font-weight:900;
+  cursor:pointer
+}
+.page :global(.connectionStartAction){
+  border:1px solid rgba(255,255,255,.11);
+  background:rgba(255,255,255,.025);
+  color:#b9b9b3
+}
+.page :global(.connectionStartAction:hover:not(:disabled)){
+  border-color:rgba(255,199,44,.26);
+  color:#e0c768
+}
+.page :global(.connectionCompleteAction){
+  border:1px solid rgba(255,199,44,.50);
+  background:rgba(255,199,44,.11);
+  color:#f1cf59
+}
+.page :global(.connectionCompleteAction:hover:not(:disabled)){
+  background:#ffc72c;
+  color:#17120a
+}
+.page :global(.connectionStartAction:disabled),
+.page :global(.connectionCompleteAction:disabled){
+  opacity:.48;
+  cursor:not-allowed
+}
+.page :global(.connectionTaskActions .connectionCancel){
+  min-height:38px
+}
+.page :global(.connectionTaskActions>a){
+  margin-left:auto;
+  color:#777872;
+  font-size:8px;
+  font-weight:800
+}
+.page :global(.connectionCompleteHint){
+  margin:7px 0 0;
+  color:#696a65;
+  font-size:7px;
+  line-height:1.4
+}
+
+:global(html[data-aspire-theme='light']) .page :global(.connectionPersonGroup){
+  border-color:#e5e5de;
+  background:#fff
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionPersonGroupHead){
+  border-color:#ecece5;
+  background:linear-gradient(110deg,#fff8e5,transparent 36%),#fff
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionGroupIdentity strong),
+:global(html[data-aspire-theme='light']) .page :global(.connectionTaskCard h2){
+  color:#1d1d1a
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionTaskCard){
+  background:#fff
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionTaskCard + .connectionTaskCard),
+:global(html[data-aspire-theme='light']) .page :global(.connectionTaskActions){
+  border-color:#ecece5
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionStartAction){
+  border-color:#dfdfd8;
+  background:#fafaf7;
+  color:#55554f
+}
+:global(html[data-aspire-theme='light']) .page :global(.connectionCompleteAction){
+  border-color:#d6ad25;
+  background:#fff7db;
+  color:#775d00
+}
+
+@media(max-width:700px){
+  .page :global(.connectionPersonGroupHead){
+    min-height:62px;
+    padding:11px 12px
+  }
+  .page :global(.connectionGroupCount span){
+    display:none
+  }
+  .page :global(.connectionTaskCard){
+    padding:13px 12px 12px
+  }
+  .page :global(.connectionTaskActions){
+    display:grid;
+    grid-template-columns:1fr 1fr
+  }
+  .page :global(.connectionTaskActions .button),
+  .page :global(.connectionStartAction),
+  .page :global(.connectionCompleteAction),
+  .page :global(.connectionTaskActions .connectionCancel){
+    width:100%;
+    min-width:0
+  }
+  .page :global(.connectionTaskActions>a){
+    display:none
+  }
+  .page :global(.connectionTaskActions .responseState){
+    grid-column:1/-1
+  }
+}

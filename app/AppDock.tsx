@@ -47,6 +47,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
     [unreadNotifications]
   );
   const inboxHasPriority = inviteUnread > 0 || connectedUnread > 0;
+  const inboxBadgeCount = inviteUnread > 0 ? inviteUnread : connectedUnread > 0 ? connectedUnread : inboxUnread;
 
   useEffect(() => {
     const stored = window.localStorage.getItem('aspire-theme');
@@ -95,7 +96,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
       >
         <i className={styles.iconWrap}>
           <UiIcon name={item.icon} />
-          {isInbox && inboxUnread > 0 && <b className={`${styles.unreadBadge} ${inboxHasPriority ? styles.priorityBadge : ''}`}>{inboxUnread > 99 ? '99+' : inboxUnread}</b>}
+          {isInbox && inboxBadgeCount > 0 && <b className={`${styles.unreadBadge} ${inboxHasPriority ? styles.priorityBadge : ''}`}>{inboxBadgeCount > 99 ? '99+' : inboxBadgeCount}</b>}
         </i>
         <span>{item.label}</span>
         {isInbox && priorityLabel && <em className={styles.inboxMeta}>{priorityLabel}</em>}
