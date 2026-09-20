@@ -66,6 +66,40 @@ export async function POST(request: Request) {
     }
 
     const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+    const customerTotal = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
+    const bookedPlatformFee = Number(payment.platform_fee_cents ?? 0);
+    const feeSnapshot = payment.fee_snapshot && typeof payment.fee_snapshot === 'object'
+      ? payment.fee_snapshot as Record<string, unknown>
+      : {};
+    const shippingRateCents = Number(feeSnapshot.shipping_rate_cents ?? 0);
+    const expectedPlatformFee = customerTotal - providerNet - shippingRateCents;
+
+    // The seller transfer may contain seller proceeds only. The platform fee belongs
+    // to Cloudora Labs / Aspire and remains on the platform Stripe balance; carrier
+    // shipping is tracked separately and must never be mislabeled as company revenue.
+    if (
+      !Number.isInteger(customerTotal) ||
+      !Number.isInteger(providerNet) ||
+      !Number.isInteger(bookedPlatformFee) ||
+      !Number.isInteger(shippingRateCents) ||
+      shippingRateCents < 0 ||
+      expectedPlatformFee < 0 ||
+      expectedPlatformFee !== bookedPlatformFee
+    ) {
+      console.error('Payment fee invariant failed before seller transfer', {
+        paymentId: payment.id,
+        customerTotal,
+        providerNet,
+        bookedPlatformFee,
+        shippingRateCents,
+        expectedPlatformFee
+      });
+      return NextResponse.json({
+        error: 'Aspire could not safely verify the seller payout split. No transfer was created.',
+        code: 'PAYMENT_FEE_INVARIANT_FAILED'
+      }, { status: 409 });
+    }
+
     if (payment.status === 'released' && payment.stripe_transfer_id) {
       const { error: reconcileError } = await supabase.rpc('finalize_connection_payment_release', {
         p_payment_id: payment.id,
@@ -230,7 +264,9 @@ export async function POST(request: Request) {
         'metadata[connection_id]': connection.id,
         'metadata[request_id]': payment.request_id,
         'metadata[transaction_type]': marketOrder ? 'marketplace' : 'connection',
-        'metadata[fee_policy_version]': payment.fee_policy_version || 'legacy_v0'
+        'metadata[fee_policy_version]': payment.fee_policy_version || 'legacy_v0',
+        'metadata[platform_fee_cents]': bookedPlatformFee,
+        'metadata[shipping_liability_cents]': shippingRateCents
       }, { idempotencyKey: `aspire_release_${payment.id}` });
     } catch (error) {
       if (claimedAt) {
