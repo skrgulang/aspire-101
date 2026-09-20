@@ -37,6 +37,7 @@ function friendlyRequestMediaError(error: { message?: string; details?: string; 
   if (/REQUEST_MEDIA_UNSUPPORTED_FORMAT/i.test(detail)) return new Error('Request photos must be JPG, PNG, or WebP so Aspire can review every image before publishing.');
   if (/REQUEST_MEDIA_REQUIRES_OPEN_REQUEST/i.test(detail)) return new Error('Photos can only be changed while the post is still open and editable.');
   if (/REQUEST_MEDIA_UPLOADER_MISMATCH|REQUEST_MEDIA_INVALID_PATH/i.test(detail)) return new Error('This photo could not be attached to that post. Refresh and try again.');
+  if (/row-level security|policy/i.test(detail)) return new Error('Aspire could not attach that photo to this post. Please try again.');
   return error instanceof Error ? error : new Error(error.message || 'Could not attach this photo.');
 }
 
