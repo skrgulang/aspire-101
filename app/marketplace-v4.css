@@ -342,3 +342,28 @@
   border-color:#cce6d6;
   background:#f6fcf8
 }
+
+
+/* 2026-09-19 Seller visibility: show approved own listings without allowing self-purchase. */
+.marketV4OwnProduct{
+  border-color:rgba(255,199,44,.22);
+}
+.marketV4OwnProduct .marketV4MediaTop span{
+  background:#ffc72c;
+  color:#17120a;
+}
+.marketV4Manage{
+  border:1px solid rgba(255,199,44,.32);
+  background:rgba(255,199,44,.08);
+  color:#e8c55c;
+}
+.marketV4Manage:hover{
+  background:rgba(255,199,44,.14);
+}
+html[data-aspire-theme='light'] .marketV4OwnProduct{
+  border-color:#e3c35d;
+}
+html[data-aspire-theme='light'] .marketV4Manage{
+  background:#fff7d8;
+  color:#6f5500;
+}
