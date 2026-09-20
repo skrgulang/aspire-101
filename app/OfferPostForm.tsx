@@ -3,9 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
-import { createRequest } from '../lib/supabase/requests';
+import { createRequest, type RequestLanguageCode } from '../lib/supabase/requests';
+import { deleteRequestDraft, getRequestDraft, saveRequestDraft } from '../lib/supabase/requestDrafts';
 import { fetchActiveUniversities, type University } from '../lib/supabase/universities';
 import RequestScheduleFields, { type RequestScheduleMode } from './RequestScheduleFields';
+import PostLanguagePicker from './PostLanguagePicker';
 import styles from './OfferPostForm.module.css';
 
 type OfferCategory = {
@@ -90,6 +92,11 @@ export default function OfferPostForm() {
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
   const [meetingLabel, setMeetingLabel] = useState('');
+  const [language, setLanguage] = useState<RequestLanguageCode>('any');
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [draftNotice, setDraftNotice] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
   const [posted, setPosted] = useState<{ id: string; title: string } | null>(null);
@@ -125,6 +132,52 @@ export default function OfferPostForm() {
     });
     return () => { alive = false; };
   }, [router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem('aspire:post-language') as RequestLanguageCode | null;
+    setLanguage(stored || 'any');
+  }, []);
+
+  useEffect(() => {
+    if (loading || draftLoaded || typeof window === 'undefined') return;
+    const draftId = new URLSearchParams(window.location.search).get('draft')?.trim() || '';
+    if (!draftId) {
+      setDraftLoaded(true);
+      return;
+    }
+    let active = true;
+    void getRequestDraft(draftId).then((draft) => {
+      if (!active) return;
+      if (!draft || draft.composer_mode !== 'offer') {
+        setDraftNotice('That offer draft is no longer available.');
+        setDraftLoaded(true);
+        return;
+      }
+      setCurrentDraftId(draft.id);
+      if (draft.campus_id) setCampusId(draft.campus_id);
+      setCategory(draft.category || 'Other');
+      setTitle(draft.title || '');
+      setDetails(draft.details || '');
+      setLanguage(draft.language_code || 'any');
+      setScheduleMode(draft.schedule_mode || 'flexible');
+      setStartLocal(draft.start_local || '');
+      setEndLocal(draft.end_local || '');
+      setMeetingLabel(draft.meeting_label || '');
+      setOrigin(draft.origin || '');
+      setDestination(draft.destination || '');
+      setSeats(String(draft.seats || 2));
+      setDraftNotice('Draft restored. Keep editing, or post it when you are ready.');
+      setDraftLoaded(true);
+    }).catch((cause) => {
+      if (active) {
+        setDraftNotice(cause instanceof Error ? cause.message : 'Could not open this offer draft.');
+        setDraftLoaded(true);
+      }
+    });
+    return () => { active = false; };
+  }, [loading, draftLoaded]);
+
 
   const selectedCampus = useMemo(() => universities.find((item) => item.id === campusId) || null, [universities, campusId]);
   const homeCampus = useMemo(() => universities.find((item) => item.id === homeCampusId) || null, [universities, homeCampusId]);
@@ -164,8 +217,44 @@ export default function OfferPostForm() {
     setStartLocal('');
     setEndLocal('');
     setMeetingLabel('');
+    setLanguage('any');
+    setCurrentDraftId(null);
+    setDraftNotice('');
     setError('');
     setPosted(null);
+  }
+
+  async function saveDraft() {
+    setError('');
+    setDraftNotice('');
+    if (!campusId) return setError('Choose a campus before saving this draft.');
+    setSavingDraft(true);
+    try {
+      const saved = await saveRequestDraft({
+        id: currentDraftId,
+        composerMode: 'offer',
+        campusId,
+        category,
+        kind: 'community',
+        title,
+        details,
+        languageCode: language,
+        scheduleMode,
+        startLocal: scheduleMode === 'scheduled' ? startLocal : null,
+        endLocal: scheduleMode === 'scheduled' ? endLocal : null,
+        timezone: scheduleMode === 'scheduled' ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' : null,
+        meetingLabel,
+        origin: isRide ? origin : null,
+        destination: isRide ? destination : null,
+        seats: isRide ? Math.max(1, Math.min(8, Number(seats) || 1)) : null
+      });
+      setCurrentDraftId(saved.id);
+      setDraftNotice('Draft saved privately. You can reopen it from My Activity.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Could not save this offer draft.');
+    } finally {
+      setSavingDraft(false);
+    }
   }
 
   async function publish(event: FormEvent<HTMLFormElement>) {
@@ -206,8 +295,13 @@ export default function OfferPostForm() {
         scheduled_start_at: scheduledStartAt,
         scheduled_end_at: scheduledEndAt,
         timezone: scheduledStartAt ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' : undefined,
-        meeting_label: (isRide ? `${origin.trim()} → ${destination.trim()}` : meetingLabel.trim()) || undefined
+        meeting_label: (isRide ? `${origin.trim()} → ${destination.trim()}` : meetingLabel.trim()) || undefined,
+        language_code: language
       });
+      if (currentDraftId) {
+        await deleteRequestDraft(currentDraftId).catch(() => undefined);
+        setCurrentDraftId(null);
+      }
       setPosted({ id: request.id, title: request.title });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not post your offer.');
@@ -280,16 +374,22 @@ export default function OfferPostForm() {
         onMeetingLabelChange={setMeetingLabel}
       />
 
+      <PostLanguagePicker value={language} onChange={setLanguage} />
+
       <section className={styles.preview}>
         <div><span>HOW IT WILL WORK</span><strong>You offer → someone is interested → you choose whether to connect.</strong></div>
         <p>Your campus context helps Aspire show the offer to the right community, but the route itself stays flexible. You can type any city, airport, neighborhood, or campus in From and To.</p>
       </section>
 
+      {draftNotice && <div className={styles.draftNotice} role="status">{draftNotice}</div>}
       {error && <div className={styles.error} role="alert">{error}</div>}
 
       <div className={styles.actions}>
-        <div><strong>Ready to offer this?</strong><span>It will appear in Browse at {selectedCampus?.short_name || 'your campus'}.</span></div>
-        <button type="submit" disabled={publishing}>{publishing ? 'Posting…' : 'Post offer →'}</button>
+        <div><strong>Ready to offer this?</strong><span>Save it privately for later, or post it to Browse when it is ready.</span></div>
+        <div className={styles.actionButtons}>
+          <button type="button" className={styles.saveDraft} onClick={() => void saveDraft()} disabled={savingDraft || publishing}>{savingDraft ? 'Saving…' : currentDraftId ? 'Save changes' : 'Save draft'}</button>
+          <button type="submit" disabled={publishing || savingDraft}>{publishing ? 'Posting…' : 'Post offer →'}</button>
+        </div>
       </div>
     </form>
   );
