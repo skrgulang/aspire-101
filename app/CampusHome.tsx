@@ -10,6 +10,7 @@ import AppDock from './AppDock';
 import AppLoader from './AppLoader';
 import UiIcon, { UiIconName } from './UiIcon';
 import CampusFeedCard, { campusFeedCardStyles } from './CampusFeedCard';
+import CampusActionCenter from './CampusActionCenter';
 import { campusFeedHref } from './campusFeedPresentation';
 import { buildDemoDiscoverRequests, isPreviewDemoEnabled } from './demoPreviewPosts';
 import { CAMPUS_FEED_REFRESH_EVENT, CAMPUS_FEED_REFRESH_STORAGE_KEY } from './campusFeedSync';
@@ -293,6 +294,8 @@ export default function CampusHome() {
                 </div>
               </div>
             </section>
+
+            <CampusActionCenter />
 
             <section className={styles.sectionCard}>
               <div className={styles.sectionHead}>
