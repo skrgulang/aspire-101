@@ -87,7 +87,7 @@ export const metadata: Metadata = {
   description: siteDescription,
   applicationName: 'Aspire 101',
   alternates: { canonical: '/' },
-  icons: { icon: '/favicon.webp', shortcut: '/favicon.webp', apple: '/favicon.webp' },
+  icons: { icon: '/favicon.png', shortcut: '/favicon.png', apple: '/favicon.png' },
   robots: {
     index: true,
     follow: true,
@@ -118,7 +118,7 @@ const siteStructuredData = {
       url: 'https://aspires101.com/',
       logo: {
         '@type': 'ImageObject',
-        url: 'https://aspires101.com/favicon.webp'
+        url: 'https://aspires101.com/favicon.png'
       },
       description: siteDescription
     },
