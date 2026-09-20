@@ -10,7 +10,6 @@ import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
 import SchoolVerificationCard from '../SchoolVerificationCard';
 import PhoneVerificationCard from '../PhoneVerificationCard';
-import IdentityVerificationCard from '../IdentityVerificationCard';
 import MfaSecurityCard from '../MfaSecurityCard';
 import ProfileAvatar from '../ProfileAvatar';
 import UiIcon from '../UiIcon';
@@ -25,7 +24,6 @@ type ProfileView = {
   schoolVerified: boolean;
   phone: string;
   phoneVerified: boolean;
-  idVerified: boolean;
   avatarUrl: string;
   major: string;
   graduationYear: number | null;
@@ -87,10 +85,9 @@ export default function ProfilePage() {
         return;
       }
 
-      const [{ data: profileRows, error: profileError }, { data: schoolVerificationRows }, { data: identityVerificationRows }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
+      const [{ data: profileRows, error: profileError }, { data: schoolVerificationRows }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
         supabase.rpc('get_my_profile_details'),
         supabase.rpc('get_my_school_verification'),
-        supabase.rpc('get_my_identity_verification'),
         supabase.from('user_preferences').select('profile_visibility').eq('user_id', user.id).maybeSingle(),
         supabase.from('connections').select('id', { count: 'exact', head: true }).eq('status', 'completed').or(`requester_id.eq.${user.id},responder_id.eq.${user.id}`),
         fetchMyRole().catch(() => 'member' as AppRole)
@@ -98,7 +95,6 @@ export default function ProfilePage() {
       if (profileError) throw profileError;
       const profileRow = ((profileRows ?? [])[0] ?? null) as MyProfileDetailsRow | null;
       const schoolVerification = ((schoolVerificationRows ?? [])[0] ?? null);
-      const identityVerification = ((identityVerificationRows ?? [])[0] ?? null);
 
       const metadata = user.user_metadata ?? {};
       const backendName = profileRow?.display_name || profileRow?.full_name || profileRow?.name;
@@ -137,7 +133,6 @@ export default function ProfilePage() {
         schoolVerified: schoolVerification?.status === 'verified',
         phone: user.phone || '',
         phoneVerified: Boolean(user.phone_confirmed_at),
-        idVerified: identityVerification?.status === 'verified',
         avatarUrl: profileRow?.avatar_url || profileRow?.image_url || '',
         major: typeof profileRow?.major === 'string' ? profileRow.major : '',
         graduationYear: typeof profileRow?.graduation_year === 'number' ? profileRow.graduation_year : null,
@@ -222,7 +217,7 @@ export default function ProfilePage() {
   if (!profile) return <AppLoader label="Opening your profile…" detail="Campus identity" />;
 
   const initials = profile.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'A';
-  const verifiedSignals = [profile.schoolVerified, profile.idVerified, profile.phoneVerified, profile.emailVerified].filter(Boolean).length;
+  const verifiedSignals = [profile.schoolVerified, profile.phoneVerified, profile.emailVerified].filter(Boolean).length;
   const identityLine = [profile.major || null, profile.graduationYear ? `Class of ${profile.graduationYear}` : null].filter(Boolean).join(' · ');
 
   return (
@@ -280,9 +275,9 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className="profileSetupCard" aria-label={`${verifiedSignals} of 4 trust signals complete`}>
+          <div className="profileSetupCard" aria-label={`${verifiedSignals} of 3 trust signals complete`}>
             <div className="profileSetupTop">
-              <div><span>TRUST SETUP</span><strong>{verifiedSignals} of 4</strong></div>
+              <div><span>TRUST SETUP</span><strong>{verifiedSignals} of 3</strong></div>
               <div className="profileSetupBadge"><UiIcon name="check" /></div>
             </div>
             <p>Verification supports safer campus connections without turning students into a public score.</p>
@@ -300,7 +295,6 @@ export default function ProfilePage() {
 
             <div className="profileTrustCards profileTrustCardsExpanded">
               <SchoolVerificationCard school={profile.school} />
-              <IdentityVerificationCard />
               <MfaSecurityCard />
               <PhoneVerificationCard initialPhone={profile.phone} initiallyVerified={profile.phoneVerified} />
             </div>
