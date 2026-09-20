@@ -1,42 +1,53 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { detectRequestLanguage, requestLanguages, type RequestLanguageCode } from '../lib/supabase/requests';
+import { useEffect } from 'react';
+import { requestLanguages, type RequestLanguageCode } from '../lib/supabase/requests';
+import styles from './PostLanguagePicker.module.css';
+
+type Props = {
+  value: RequestLanguageCode;
+  onChange: (value: RequestLanguageCode) => void;
+  compact?: boolean;
+};
 
 const storageKey = 'aspire:post-language';
 
-export default function PostLanguagePicker() {
-  const [language, setLanguage] = useState<RequestLanguageCode>('en');
-
+export default function PostLanguagePicker({ value, onChange, compact = false }: Props) {
   useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey) as RequestLanguageCode | null;
-    const validStored = requestLanguages.some((item) => item.value === stored);
-    const next = validStored ? stored! : detectRequestLanguage(window.navigator.language);
-    setLanguage(next);
-    window.localStorage.setItem(storageKey, next);
-  }, []);
+    if (typeof window === 'undefined') return;
+    try { window.localStorage.setItem(storageKey, value); } catch { /* ignore storage errors */ }
+  }, [value]);
 
-  function choose(next: RequestLanguageCode) {
-    setLanguage(next);
-    window.localStorage.setItem(storageKey, next);
-  }
+  const languages = requestLanguages.filter((item) => item.value !== 'any');
 
   return (
-    <section style={{ marginBottom: 18, padding: '16px 18px', border: '1px solid rgba(255,190,30,.28)', borderRadius: 18, background: 'rgba(255,190,30,.045)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div>
-          <span style={{ display: 'block', color: '#f7b916', fontSize: 11, fontWeight: 900, letterSpacing: '.1em', marginBottom: 4 }}>POST LANGUAGE</span>
-          <strong style={{ display: 'block', fontSize: 16 }}>Who should this post reach?</strong>
-          <small style={{ opacity: .65 }}>Students can filter Browse by language.</small>
-        </div>
-        <select
-          value={language}
-          onChange={(event) => choose(event.target.value as RequestLanguageCode)}
-          aria-label="Choose post language"
-          style={{ minWidth: 190, background: '#171714', color: 'inherit', border: '1px solid rgba(255,255,255,.14)', borderRadius: 12, padding: '10px 34px 10px 12px', fontWeight: 800 }}
-        >
-          {requestLanguages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-        </select>
+    <section className={`${styles.root} ${compact ? styles.compact : ''}`} aria-label="Post language">
+      <div className={styles.heading}>
+        <div><span>WHO CAN SEE THIS?</span><strong>Language reach</strong></div>
+        <small>You can target one language, or leave it open to everyone.</small>
+      </div>
+
+      <button
+        className={`${styles.anyOption} ${value === 'any' ? styles.active : ''}`}
+        type="button"
+        onClick={() => onChange('any')}
+      >
+        <i>∞</i>
+        <div><strong>Doesn’t matter</strong><span>Any language · show this post in every language feed.</span></div>
+        <b>{value === 'any' ? '✓' : ''}</b>
+      </button>
+
+      <div className={styles.chips} role="group" aria-label="Choose one post language">
+        {languages.map((item) => (
+          <button
+            type="button"
+            key={item.value}
+            className={value === item.value ? styles.selected : ''}
+            onClick={() => onChange(item.value)}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
     </section>
   );
