@@ -20,6 +20,9 @@ type MoneyTransaction = {
   requesterFeeCents: number;
   providerFeeCents: number;
   transferReference: string | null;
+  transferRecoveryStatus: string;
+  transferRecoveryReason: string | null;
+  transferReversalReference: string | null;
   paidAt: string | null;
   releasedAt: string | null;
   refundedAt: string | null;
@@ -53,6 +56,21 @@ function money(cents: number, currency = 'USD') {
 function when(value: string | null) {
   if (!value) return '—';
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value));
+}
+
+function recoveryCopy(item: MoneyTransaction) {
+  if (item.transferRecoveryStatus === 'reversed') {
+    return item.transferRecoveryReason === 'refund'
+      ? 'Seller payout reversed for refund'
+      : 'Seller payout reversed during review';
+  }
+  if (item.transferRecoveryStatus === 'pending') return 'Seller payout recovery in progress';
+  if (item.transferRecoveryStatus === 'manual_required') {
+    return item.role === 'payee'
+      ? 'Payout recovery needs Aspire review'
+      : 'Refund recorded; payout reconciliation is open';
+  }
+  return '';
 }
 
 function statusCopy(status: string, role: 'payer' | 'payee') {
@@ -166,7 +184,7 @@ export default function AspireMoneyDashboard() {
                   <i>{isIncoming ? '↓' : '↑'}</i>
                   <div><span>{item.category.toUpperCase()} · {isIncoming ? 'INCOMING' : 'OUTGOING'}</span><strong>{item.title}</strong><small>{item.campus || 'Aspire campus'} · updated {when(item.updatedAt)}</small></div>
                 </div>
-                <div className="aspireMoneyTxnStatus"><b className={`moneyStatus status-${item.status}`}>{statusCopy(item.status, item.role)}</b>{item.transferReference && <small>Transfer ·••{item.transferReference}</small>}</div>
+                <div className="aspireMoneyTxnStatus"><b className={`moneyStatus status-${item.status}`}>{statusCopy(item.status, item.role)}</b>{item.transferReference && <small>Transfer ·••{item.transferReference}</small>}{recoveryCopy(item) && <small>{recoveryCopy(item)}{item.transferReversalReference ? ` ·••${item.transferReversalReference}` : ''}</small>}</div>
                 <div className={`aspireMoneyTxnAmount ${isIncoming ? 'incoming' : 'outgoing'}`}><strong>{isIncoming ? '+' : '−'}{money(amount, item.currency)}</strong><small>{isIncoming ? `Net after ${money(item.providerFeeCents, item.currency)} Aspire fee` : `Includes ${money(item.requesterFeeCents, item.currency)} Aspire fee`}</small></div>
               </article>;
             })}
