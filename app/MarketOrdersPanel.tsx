@@ -71,9 +71,18 @@ export default function MarketOrdersPanel() {
       const marketConnections = nextBase.connections.filter((connection) => requestMap.get(connection.request_id)?.kind === 'buy_sell');
       const ids = marketConnections.map((connection) => connection.id);
       const nextOrders = await fetchMarketOrders(ids);
+      const quoteConnectionIds = new Set(
+        nextOrders
+          .filter((order) => ['awaiting_payment', 'payment_processing'].includes(order.status))
+          .map((order) => order.connection_id)
+      );
       const [nextPayments, nextQuotes, nextDisputes] = await Promise.all([
         fetchConnectionPayments(ids),
-        Promise.all(marketConnections.map((connection) => fetchAspireFeeQuote(connection.id).catch(() => null))),
+        Promise.all(
+          marketConnections
+            .filter((connection) => quoteConnectionIds.has(connection.id))
+            .map((connection) => fetchAspireFeeQuote(connection.id).catch(() => null))
+        ),
         fetchMarketDisputes(nextOrders.map((order) => order.id))
       ]);
       setBase({ ...nextBase, connections: marketConnections });
