@@ -447,6 +447,50 @@ export default function ConnectionsHub() {
     }
   }
 
+  async function removeCirclePerson(otherUserId: string, otherName: string) {
+    const confirmed = window.confirm(
+      `Remove ${otherName} from My Circle? Your ongoing Circle chat will close and become read-only. Your previous request history will stay available.`
+    );
+    if (!confirmed) return;
+
+    const relatedConnectionIds = [...new Set([
+      ...connectionData.connections
+        .filter((connection) => {
+          if (connection.status !== 'completed') return false;
+          const otherId = connectionData.userId === connection.requester_id
+            ? connection.responder_id
+            : connection.requester_id;
+          return otherId === otherUserId;
+        })
+        .map((connection) => connection.id),
+      ...circle
+        .filter((entry) => entry.other_user_id === otherUserId)
+        .map((entry) => entry.connection_id)
+    ])];
+
+    if (!relatedConnectionIds.length) {
+      setNotice('This Circle connection is no longer available.');
+      await reload(true);
+      return;
+    }
+
+    setBusyId(`circle-remove-${otherUserId}`);
+    setNotice('');
+    try {
+      await Promise.all(relatedConnectionIds.map((connectionId) => setCircleChoice(connectionId, false)));
+      if (activeChatOtherId === otherUserId && activeChatConnection?.status === 'completed') {
+        closeChat();
+      }
+      setNotice(`${otherName} was removed from My Circle. The Circle chat is now read-only; your request history is still available.`);
+      await reload(true);
+      setTab('circle');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not remove this person from My Circle.');
+    } finally {
+      setBusyId('');
+    }
+  }
+
   function setReviewChoice(connectionId: string, choice: boolean) {
     setReviewDrafts((current) => ({
       ...current,
@@ -869,6 +913,14 @@ export default function ConnectionsHub() {
                 <div className="circleActions">
                   <button type="button" className="button buttonGold" onClick={() => openChat(group.chatConnectionId, 'circle')}>Message {unreadCount > 0 && <b>{unreadCount}</b>}</button>
                   <a href="/post">Post another request →</a>
+                  <button
+                    type="button"
+                    className="circleRemove"
+                    onClick={() => removeCirclePerson(group.otherUserId, profileName(other))}
+                    disabled={busyId === `circle-remove-${group.otherUserId}`}
+                  >
+                    {busyId === `circle-remove-${group.otherUserId}` ? 'Removing…' : 'Remove from My Circle'}
+                  </button>
                 </div>
               </article>
             );
