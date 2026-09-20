@@ -356,82 +356,22 @@ export default function MyActivityManager() {
           <div className={styles.draftList}>
             {draftItems.map((draft) => (
               <article className={styles.draftCard} key={`${draft.deleteKind}-${draft.id}`}>
-                <div className={styles.draftIcon}>{draft.mode === 'SELL' ? '
-        <div className={styles.empty}>
-          <strong>{filter === 'action' ? 'Nothing needs your attention.' : filter === 'review' ? 'No posts are under review.' : filter === 'closed' ? 'No closed posts yet.' : 'No posts here yet.'}</strong>
-          <span>{filter === 'action' ? 'Blocked or rejected posts will appear here when you need to edit and resubmit them.' : filter === 'review' ? 'Posts waiting on automated or human review will appear here.' : filter === 'closed' ? 'Posts you close or finish will stay here as history.' : 'Create a post and it will show up here for you to manage.'}</span>
-          {(filter === 'all' || filter === 'open') && <a href="/post">Post something →</a>}
-        </div>
-      ) : (
-        <div className={styles.list}>
-          {visible.map((request) => {
-            const protectedHistory = hasActiveConnection(request.id);
-            const preview = isDemoPreviewPostId(request.id);
-            const review = preview ? null : userReviewState(request);
-            const lanes = (['post', 'language', 'market'] as const).filter((lane) => lane !== 'market' || request.kind === 'buy_sell');
-            return (
-              <article className={styles.card} key={request.id}>
-                <div className={styles.cardMain}>
-                  <div className={styles.category}>{preview ? 'Preview · ' : ''}{request.category}</div>
-                  <h2>{request.title}</h2>
-                  <p>{request.details || 'No description added.'}</p>
-                  <div className={styles.meta}>
-                    <span>{money(request)}</span>
-                    <span>{request.campus || 'Campus'}</span>
-                    <span>{relativeTime(request.created_at)}</span>
-                  </div>
-
-                  {review && (
-                    <section className={`${styles.reviewPanel} ${styles[`review_${review.key}`] || ''}`} aria-label="Post review status">
-                      <div className={styles.reviewHead}>
-                        <div><span>REVIEW STATUS</span><strong>{review.title}</strong><p>{review.description}</p></div>
-                        <b>{review.label}</b>
-                      </div>
-                      <div className={styles.reviewLanes}>
-                        {lanes.map((lane) => {
-                          const status = laneStatus(request, lane);
-                          const name = lane === 'post' ? 'Post' : lane === 'language' ? 'Language' : 'Market';
-                          return <div className={styles.reviewLane} key={lane}><span>{name}</span><b className={styles[`lane_${status}`] || ''}>{status === 'not_applicable' ? 'N/A' : status}</b><small>{laneMessage(request, lane)}</small></div>;
-                        })}
-                      </div>
-                      {request.moderation_status === 'pending' && <small className={styles.autoRefresh}>Status refreshes automatically while this post is under review.</small>}
-                      {(review.key === 'changes' || review.key === 'rejected') && <div className={styles.reviewActions}><a className={styles.primaryReviewAction} href={`/post?edit=${encodeURIComponent(request.id)}`}>Edit &amp; resubmit →</a>{request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}</div>}
-                    </section>
-                  )}
-                </div>
-
-                <div className={styles.cardSide}>
-                  <span className={`${styles.status} ${styles[`status_${request.status}`] || ''}`}>{request.status.replace('_', ' ')}</span>
-                  {preview && <small>Posted by your current preview account</small>}
-                  {protectedHistory && <small><UiIcon name="shield" /> Activity history protected</small>}
-                  <div className={styles.actions}>
-                    {request.status === 'open' && (
-                      <button type="button" onClick={() => closePost(request)} disabled={busyId === request.id}>Close post</button>
-                    )}
-                    {!protectedHistory && (
-                      <button type="button" className={styles.delete} onClick={() => deletePost(request)} disabled={busyId === request.id}>
-                        {busyId === request.id ? 'Working…' : 'Delete'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </section>
-  );
-}
- : draft.mode === 'OFFER' ? '↑' : '+'}</div>
+                <div className={styles.draftIcon}>{draft.mode === 'SELL' ? '$' : draft.mode === 'OFFER' ? '↑' : '+'}</div>
                 <div className={styles.draftCopy}>
-                  <div><span>{draft.mode} DRAFT</span><small>Updated {relativeTime(draft.updatedAt)}</small></div>
+                  <div>
+                    <span>{draft.mode} DRAFT</span>
+                    <small>Updated {relativeTime(draft.updatedAt)}</small>
+                  </div>
                   <h2>{draft.title}</h2>
                   <p>{draft.detail}</p>
                 </div>
                 <div className={styles.draftActions}>
                   <a href={draft.href}>Continue →</a>
-                  <button type="button" onClick={() => void deleteDraft(draft.id, draft.deleteKind, draft.title)} disabled={busyId === `draft-${draft.id}`}>
+                  <button
+                    type="button"
+                    onClick={() => void deleteDraft(draft.id, draft.deleteKind, draft.title)}
+                    disabled={busyId === `draft-${draft.id}`}
+                  >
                     {busyId === `draft-${draft.id}` ? 'Deleting…' : 'Delete'}
                   </button>
                 </div>
@@ -480,11 +420,22 @@ export default function MyActivityManager() {
                         {lanes.map((lane) => {
                           const status = laneStatus(request, lane);
                           const name = lane === 'post' ? 'Post' : lane === 'language' ? 'Language' : 'Market';
-                          return <div className={styles.reviewLane} key={lane}><span>{name}</span><b className={styles[`lane_${status}`] || ''}>{status === 'not_applicable' ? 'N/A' : status}</b><small>{laneMessage(request, lane)}</small></div>;
+                          return (
+                            <div className={styles.reviewLane} key={lane}>
+                              <span>{name}</span>
+                              <b className={styles[`lane_${status}`] || ''}>{status === 'not_applicable' ? 'N/A' : status}</b>
+                              <small>{laneMessage(request, lane)}</small>
+                            </div>
+                          );
                         })}
                       </div>
                       {request.moderation_status === 'pending' && <small className={styles.autoRefresh}>Status refreshes automatically while this post is under review.</small>}
-                      {(review.key === 'changes' || review.key === 'rejected') && <div className={styles.reviewActions}><a className={styles.primaryReviewAction} href={`/post?edit=${encodeURIComponent(request.id)}`}>Edit &amp; resubmit →</a>{request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}</div>}
+                      {(review.key === 'changes' || review.key === 'rejected') && (
+                        <div className={styles.reviewActions}>
+                          <a className={styles.primaryReviewAction} href={`/post?edit=${encodeURIComponent(request.id)}`}>Edit &amp; resubmit →</a>
+                          {request.kind === 'buy_sell' && <a href="/marketplace-rules">Marketplace rules</a>}
+                        </div>
+                      )}
                     </section>
                   )}
                 </div>
