@@ -14,7 +14,7 @@ import {
   shareConnectionLocation,
   stopConnectionLocationShare
 } from '../lib/supabase/liveConnections';
-import { cancelConnection } from '../lib/supabase/connections';
+import { cancelConnection, subscribeToMyConnectionActivity } from '../lib/supabase/connections';
 import {
   confirmConnectionCompletion,
   fetchCompletionConfirmations,
@@ -114,6 +114,10 @@ export default function LiveConnectionStrip() {
   }, []);
 
   useEffect(() => { void reload(); }, [reload]);
+  useEffect(() => {
+    if (!data.userId) return;
+    return subscribeToMyConnectionActivity(data.userId, () => void reload(true));
+  }, [data.userId, reload]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
     const refresh = window.setInterval(() => void reload(true), 45_000);
