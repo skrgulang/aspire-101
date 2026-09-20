@@ -32,7 +32,7 @@ export default function SiteFooter() {
           <h4>Explore</h4>
           <nav>
             <a href="/discover">Discover requests</a>
-            <a href="/#features">What Aspire does</a>
+            <a href="/how-it-works">How Aspire works</a>
             <a href="/#why-aspire">Why Aspire</a>
             <a href="/#campuses">Campus network</a>
             <a href="/signup">Get started</a>

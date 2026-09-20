@@ -7,6 +7,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/',
     '/ambassadors',
     '/guidelines',
+    '/how-it-works',
     '/marketplace',
     '/marketplace-rules',
     '/privacy',
