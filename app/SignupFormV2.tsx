@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { trackGa4Event } from '../lib/analytics/ga4';
 import { findNearbyUniversities, NearbyUniversity, resolveUniversityByEmail, University } from '../lib/supabase/universities';
 import { aspireLogo } from './logo';
 import AppLoader from './AppLoader';
@@ -148,6 +149,10 @@ export default function SignupFormV2() {
       });
       if (error) throw error;
       setDetectedCampus(campus);
+      trackGa4Event('sign_up', {
+        method: 'school_email',
+        confirmation_required: !data.session
+      });
       if (data.session) enter(nextPath);
       else {
         setPendingConfirmation(true);
