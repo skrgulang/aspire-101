@@ -2,6 +2,7 @@
 
 import * as amplitude from '@amplitude/analytics-browser';
 import { datadogRum } from '@datadog/browser-rum';
+import { nextjsPlugin } from '@datadog/browser-rum-nextjs';
 import { getSupabaseBrowserClient } from '../supabase/client';
 
 export type ProductEventName =
@@ -106,7 +107,8 @@ export async function initializeProductObservability() {
       trackUserInteractions: false,
       trackResources: true,
       trackLongTasks: true,
-      defaultPrivacyLevel: 'mask'
+      defaultPrivacyLevel: 'mask',
+      plugins: [nextjsPlugin()]
     });
     datadogReady = true;
   }
