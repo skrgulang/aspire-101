@@ -21,7 +21,7 @@ const discoverItems: DockItem[] = [
 const personalItems: DockItem[] = [
   { key: 'connections', label: 'Inbox', href: '/connections', icon: 'message', mobile: true },
   { key: 'delivery', label: 'Delivery', href: '/delivery', icon: 'car' },
-  { key: 'activity', label: 'My Activity', href: '/activity', icon: 'activity' },
+  { key: 'activity', label: 'My Posts', href: '/activity', icon: 'activity' },
   { key: 'saved', label: 'Saved', href: '/saved', icon: 'bookmark' },
   { key: 'transactions', label: 'Orders', href: '/transactions', icon: 'wallet' },
   { key: 'resolution', label: 'Resolution', href: '/resolution', icon: 'shield' }
