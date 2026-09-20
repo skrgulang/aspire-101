@@ -130,7 +130,7 @@ export default function NotificationCenter({
         onClick={() => setOpen(true)}
         aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
       >
-        Alerts {unread > 0 && <b className="unreadPill">{unread > 99 ? '99+' : unread}</b>}
+        Activity {unread > 0 && <i className="notificationDot" aria-hidden="true" />}
       </button>
       {drawer}
     </>
