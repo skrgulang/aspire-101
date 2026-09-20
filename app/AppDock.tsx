@@ -79,7 +79,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
   function renderItem(item: DockItem) {
     const isInbox = item.key === 'connections';
     const priorityLabel = inviteUnread > 0
-      ? inviteUnread + ' ' + (inviteUnread === 1 ? 'invite' : 'invites')
+      ? inviteUnread + ' connection ' + (inviteUnread === 1 ? 'update' : 'updates')
       : connectedUnread > 0
         ? connectedUnread + ' new ' + (connectedUnread === 1 ? 'match' : 'matches')
         : '';

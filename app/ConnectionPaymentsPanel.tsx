@@ -146,7 +146,7 @@ export default function ConnectionPaymentsPanel() {
               <div className="connectionPaymentActions">
                 {!payWithAspire && isRequester && canWork && Number(base || 0) > 0 && <button type="button" className="button buttonGold" onClick={() => chooseAspire(connection.id)} disabled={busy === `method-${connection.id}`}>Use Pay with Aspire →</button>}
                 {payWithAspire && isRequester && canWork && (!payment || ['failed','checkout_created'].includes(payment.status)) && <button type="button" className="button buttonGold" onClick={() => checkout(connection.id)} disabled={busy === `pay-${connection.id}`}>{busy === `pay-${connection.id}` ? 'Opening Stripe…' : `Secure ${money(total, request.currency)} →`}</button>}
-                {payWithAspire && isResponder && canWork && !payment && <a href="/profile">Set up payouts →</a>}
+                {payWithAspire && isResponder && canWork && !payment && <a href="/profile">Review payout account →</a>}
                 {secured && !selfComplete && <a className="button buttonGold" href="/connections#connection-closeout">Finish activity in Connections →</a>}
                 {secured && selfComplete && !bothComplete && <span className="paymentWaiting">You marked complete · waiting for the other person in Close the Loop</span>}
                 {secured && bothComplete && <button type="button" className="button buttonGold" onClick={() => retryRelease(connection.id)} disabled={busy === `release-${connection.id}`}>{busy === `release-${connection.id}` ? 'Releasing…' : 'Retry payout release →'}</button>}
