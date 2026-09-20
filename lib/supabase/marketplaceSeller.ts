@@ -88,7 +88,7 @@ function friendlyError(error: { message?: string; details?: string; hint?: strin
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little and try again.');
   if (/ACCOUNT_SUSPENDED/i.test(detail)) return new Error('This Aspire account is suspended from new posts.');
   if (/ACCOUNT_RESTRICTED/i.test(detail)) return new Error('This Aspire account is temporarily restricted from new posts.');
-  if (/row-level security|policy/i.test(detail)) return new Error('Aspire could not attach that photo to this draft. Please try again.');
+  if (/row-level security|permission denied for function can_upload_|policy/i.test(detail)) return new Error('Aspire could not attach that photo to this draft. Please try again.');
   return new Error(error.message || fallback);
 }
 
