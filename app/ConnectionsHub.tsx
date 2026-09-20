@@ -28,6 +28,7 @@ import {
 } from '../lib/supabase/connections';
 import { useConnectionRealtimeRoom } from '../lib/supabase/connection-realtime';
 import { confirmConnectionCompletion } from '../lib/supabase/payments';
+import { setConnectionCoordinationStatus } from '../lib/supabase/liveConnections';
 import type { AspireRequest } from '../lib/supabase/requests';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { blockUser, reportSafety, type SafetyReason } from '../lib/supabase/safety';
@@ -167,6 +168,19 @@ export default function ConnectionsHub() {
     () => connectionData.connections.filter((connection) => ['pending', 'confirmed', 'active'].includes(connection.status)),
     [connectionData.connections]
   );
+  const activeConnectionGroups = useMemo(() => {
+    const grouped = new Map<string, AspireConnection[]>();
+    activeConnections.forEach((connection) => {
+      const otherId = connectionData.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
+      const current = grouped.get(otherId) || [];
+      current.push(connection);
+      grouped.set(otherId, current);
+    });
+    return Array.from(grouped.entries()).map(([otherId, connections]) => ({
+      otherId,
+      connections
+    }));
+  }, [activeConnections, connectionData.userId]);
   const pendingInvites = useMemo(
     () => activeConnections.filter((connection) =>
       connection.status === 'pending'
@@ -265,6 +279,44 @@ export default function ConnectionsHub() {
     } finally {
       setBusyId('');
     }
+  }
+
+  async function startActivity(connectionId: string) {
+    setBusyId(`start-${connectionId}`);
+    setNotice('');
+    try {
+      await setConnectionCoordinationStatus(connectionId, 'in_progress');
+      setNotice('Activity started. When you are done, use Mark complete.');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not start this activity.');
+    } finally {
+      setBusyId('');
+    }
+  }
+
+  function completionReady(connection: AspireConnection, state?: ConnectionLifecycleState) {
+    if (state?.other_completed) return true;
+    if (connection.coordination_status === 'in_progress') return true;
+    const now = Date.now();
+    if (connection.scheduled_end_at) return now >= new Date(connection.scheduled_end_at).getTime();
+    if (connection.scheduled_start_at) return now >= new Date(connection.scheduled_start_at).getTime();
+    return false;
+  }
+
+  function startIsFuture(connection: AspireConnection) {
+    return Boolean(connection.scheduled_start_at && Date.now() < new Date(connection.scheduled_start_at).getTime());
+  }
+
+  function taskStateLabel(connection: AspireConnection, state?: ConnectionLifecycleState) {
+    if (connection.status === 'pending') return 'Waiting for confirmation';
+    if (state?.viewer_completed && !state.other_completed) return 'You finished · waiting on them';
+    if (state?.other_completed && !state.viewer_completed) return 'They finished · confirm yours';
+    if (connection.coordination_status === 'in_progress') return 'In progress';
+    if (connection.coordination_status === 'arrived') return 'Arrived';
+    if (connection.coordination_status === 'on_the_way') return 'On the way';
+    if (connection.coordination_status === 'scheduled') return 'Scheduled';
+    return 'Connected · ready to coordinate';
   }
 
   async function openChat(connectionId: string, preferredTab?: Tab) {
@@ -614,75 +666,118 @@ export default function ConnectionsHub() {
               <a className="button buttonGold" href="/discover">Discover requests</a>
             </div>
           )}
-          {activeConnections.map((connection) => {
-            const request = requestMap.get(connection.request_id);
-            const otherId = connectionData.userId === connection.requester_id ? connection.responder_id : connection.requester_id;
-            const other = connectionProfiles.get(otherId);
-            const isResponder = connectionData.userId === connection.responder_id;
-            const state = lifecycleMap.get(connection.id);
-            const unreadCount = unread[connection.id] || 0;
-            const mutualConfirmed = Boolean(connection.requester_confirmed && connection.responder_confirmed);
-            const completionCount = Number(Boolean(state?.viewer_completed)) + Number(Boolean(state?.other_completed));
-
+          {activeConnectionGroups.map((group) => {
+            const other = connectionProfiles.get(group.otherId);
+            const groupUnread = group.connections.reduce((sum, connection) => sum + (unread[connection.id] || 0), 0);
+            const firstRequest = requestMap.get(group.connections[0]?.request_id || '');
             return (
-              <article className={`connectionCard ${unreadCount ? 'hasUnread' : ''}`} key={connection.id}>
-                <div className="connectionCardTop">
-                  <span>{connection.status === 'pending' ? 'WAITING FOR MUTUAL CONFIRMATION' : 'ACTIVE CONNECTION'}</span>
-                  <small>{request?.category || 'Request'}</small>
-                </div>
-                <h2>{request?.title || 'Aspire connection'}</h2>
-                <div className="connectionPerson">
-                  <i>{profileName(other).slice(0, 1).toUpperCase()}</i>
-                  <div><strong>{profileName(other)}</strong><span>{other?.school || request?.campus || 'Campus'}</span></div>
-                </div>
-                <div className="connectionProgress" aria-label="Connection status">
-                  <div className={connection.requester_confirmed ? 'done' : ''}>
-                    <i>{connection.requester_confirmed ? '✓' : '1'}</i>
-                    <span>Chosen</span>
+              <section className={`connectionPersonGroup ${groupUnread ? 'hasUnread' : ''}`} key={group.otherId}>
+                <header className="connectionPersonGroupHead">
+                  <div className="connectionGroupIdentity">
+                    <i>{profileName(other).slice(0, 1).toUpperCase()}</i>
+                    <div>
+                      <span>CONNECTED WITH</span>
+                      <strong>{profileName(other)}</strong>
+                      <small>{other?.school || firstRequest?.campus || 'Campus'}</small>
+                    </div>
                   </div>
-                  <div className={connection.responder_confirmed ? 'done' : ''}>
-                    <i>{connection.responder_confirmed ? '✓' : '2'}</i>
-                    <span>Confirmed</span>
+                  <div className="connectionGroupCount">
+                    <strong>{group.connections.length}</strong>
+                    <span>{group.connections.length === 1 ? 'active request' : 'active requests'}</span>
                   </div>
-                  <div className={mutualConfirmed && completionCount < 2 ? 'active' : mutualConfirmed ? 'done' : ''}>
-                    <i>{mutualConfirmed ? '✓' : '3'}</i>
-                    <span>Coordinate</span>
-                  </div>
-                  <div className={completionCount >= 2 ? 'done' : completionCount === 1 ? 'active' : ''}>
-                    <i>{completionCount >= 2 ? '✓' : '4'}</i>
-                    <span>Complete</span>
-                  </div>
-                </div>
+                </header>
 
-                {connection.status === 'pending' && (
-                  <p className="connectionPendingNote">
-                    {isResponder
-                      ? 'You were chosen for this request. Confirm to unlock private chat and coordination.'
-                      : 'You chose this person. Private chat opens as soon as they confirm.'}
-                  </p>
-                )}
+                <div className="connectionGroupTasks">
+                  {group.connections.map((connection) => {
+                    const request = requestMap.get(connection.request_id);
+                    const isResponder = connectionData.userId === connection.responder_id;
+                    const state = lifecycleMap.get(connection.id);
+                    const unreadCount = unread[connection.id] || 0;
+                    const mutualConfirmed = Boolean(connection.requester_confirmed && connection.responder_confirmed);
+                    const readyToComplete = completionReady(connection, state);
+                    const futureStart = startIsFuture(connection);
 
-                <div className="connectionActions">
-                  {isResponder && connection.status === 'pending' && (
-                    <button type="button" className="button buttonGold" onClick={() => confirm(connection.id)} disabled={busyId === connection.id}>Confirm & connect</button>
-                  )}
-                  {['confirmed', 'active'].includes(connection.status) && (
-                    <button type="button" className="button buttonGold chatButton" onClick={() => openChat(connection.id, 'connections')}>
-                      Message {unreadCount > 0 && <b>{unreadCount}</b>}
-                    </button>
-                  )}
-                  {['confirmed', 'active'].includes(connection.status) && connection.payment_method !== 'aspire' && !state?.viewer_completed && (
-                    <button type="button" className="connectionCancel" onClick={() => markNonAspireComplete(connection.id)} disabled={busyId === `complete-${connection.id}`}>
-                      {busyId === `complete-${connection.id}` ? 'Saving…' : state?.other_completed ? 'They finished · confirm' : 'Finish request'}
-                    </button>
-                  )}
-                  {state?.viewer_completed && !state?.other_completed && <span className="responseState">Waiting for them to finish…</span>}
-                  {!['completed', 'cancelled'].includes(connection.status) && (
-                    <button type="button" className="connectionCancel" onClick={() => cancel(connection.id)} disabled={busyId === connection.id}>Cancel</button>
-                  )}
-                  <a href="/safety">Safety ↗</a>
+                    return (
+                      <article className={`connectionTaskCard ${unreadCount ? 'hasUnread' : ''}`} key={connection.id}>
+                        <div className="connectionTaskMain">
+                          <div className="connectionTaskTopline">
+                            <span>{request?.category || 'Request'}</span>
+                            {unreadCount > 0 && <b>{unreadCount} new</b>}
+                          </div>
+                          <h2>{request?.title || 'Aspire connection'}</h2>
+                          <div className={`connectionTaskState ${connection.coordination_status === 'in_progress' ? 'live' : ''}`}>
+                            <i />
+                            <strong>{taskStateLabel(connection, state)}</strong>
+                            {state?.viewer_completed && state?.other_completed && <span>Both confirmed</span>}
+                          </div>
+                        </div>
+
+                        {connection.status === 'pending' && (
+                          <p className="connectionPendingNote">
+                            {isResponder
+                              ? 'You were chosen for this request. Confirm to unlock private chat.'
+                              : 'You chose this person. Chat opens as soon as they confirm.'}
+                          </p>
+                        )}
+
+                        <div className="connectionTaskActions">
+                          {isResponder && connection.status === 'pending' && (
+                            <button type="button" className="button buttonGold" onClick={() => confirm(connection.id)} disabled={busyId === connection.id}>Confirm & connect</button>
+                          )}
+
+                          {['confirmed', 'active'].includes(connection.status) && (
+                            <button type="button" className="button buttonGold chatButton" onClick={() => openChat(connection.id, 'connections')}>
+                              Message {unreadCount > 0 && <b>{unreadCount}</b>}
+                            </button>
+                          )}
+
+                          {['confirmed', 'active'].includes(connection.status) && connection.payment_method !== 'aspire' && !state?.viewer_completed && (
+                            readyToComplete ? (
+                              <button
+                                type="button"
+                                className="connectionCompleteAction"
+                                onClick={() => markNonAspireComplete(connection.id)}
+                                disabled={busyId === `complete-${connection.id}`}
+                              >
+                                {busyId === `complete-${connection.id}`
+                                  ? 'Saving…'
+                                  : state?.other_completed
+                                    ? 'Confirm complete'
+                                    : 'Mark complete'}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="connectionStartAction"
+                                onClick={() => startActivity(connection.id)}
+                                disabled={busyId === `start-${connection.id}` || futureStart}
+                                title={futureStart && connection.scheduled_start_at ? `Starts ${new Date(connection.scheduled_start_at).toLocaleString()}` : undefined}
+                              >
+                                {busyId === `start-${connection.id}`
+                                  ? 'Starting…'
+                                  : futureStart && connection.scheduled_start_at
+                                    ? `Starts ${new Date(connection.scheduled_start_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+                                    : 'Start activity'}
+                              </button>
+                            )
+                          )}
+
+                          {state?.viewer_completed && !state?.other_completed && <span className="responseState">Waiting for them…</span>}
+
+                          {!['completed', 'cancelled'].includes(connection.status) && (
+                            <button type="button" className="connectionCancel" onClick={() => cancel(connection.id)} disabled={busyId === connection.id}>Cancel</button>
+                          )}
+                          <a href="/safety">Safety ↗</a>
+                        </div>
+
+                        {mutualConfirmed && connection.payment_method !== 'aspire' && !state?.viewer_completed && !readyToComplete && !futureStart && (
+                          <p className="connectionCompleteHint">Start the activity when you begin. Then “Mark complete” appears here when you’re done.</p>
+                        )}
+                      </article>
+                    );
+                  })}
                 </div>
-              </article>
+              </section>
             );
           })}
         </div>
