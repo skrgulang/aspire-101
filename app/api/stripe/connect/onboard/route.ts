@@ -7,6 +7,8 @@ type StripeAccountLink = { url: string };
 export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
+    const body = await request.json().catch(() => ({})) as { returnTo?: unknown };
+    const returnToSeller = body.returnTo === 'seller';
     if (!user.phone_confirmed_at) throw new Error('PHONE_REQUIRED');
 
     const supabase = getSupabaseServiceClient();
@@ -66,6 +68,8 @@ export async function POST(request: Request) {
 
     const origin = publicOrigin(request);
     if (!origin.startsWith('https://')) throw new Error('MISSING_ENV:NEXT_PUBLIC_SITE_URL');
+    const returnPath = returnToSeller ? '/post?mode=sell' : '/profile';
+    const queryJoiner = returnPath.includes('?') ? '&' : '?';
 
     const accountLink = await stripeRequest<StripeAccountLink>('/v2/core/account_links', {
       method: 'POST',
@@ -75,8 +79,8 @@ export async function POST(request: Request) {
           type: 'account_onboarding',
           account_onboarding: {
             configurations: ['recipient'],
-            refresh_url: `${origin}/profile?payments=refresh`,
-            return_url: `${origin}/profile?payments=return`,
+            refresh_url: `${origin}${returnPath}${queryJoiner}payments=refresh`,
+            return_url: `${origin}${returnPath}${queryJoiner}payments=return`,
             collection_options: { fields: 'eventually_due' }
           }
         }
