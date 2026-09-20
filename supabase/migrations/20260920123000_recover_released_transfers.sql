@@ -204,7 +204,7 @@ begin
     values (
       v_payment.connection_id,
       null,
-      case when p_reason = 'refund' then 'payment_refunded' else 'payment_disputed' end,
+      'issue_reviewing',
       case
         when p_reason = 'refund' and p_outcome = 'reversed'
           then 'Stripe confirmed the customer refund and Aspire reversed the seller payout.'
