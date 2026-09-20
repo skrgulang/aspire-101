@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { aspireLogo } from '../logo';
 
 const pageDescription =
   'Learn what Aspire 101 is, why it exists, how it helps college students connect around campus needs, and how it relates to Cloudora Labs, Inc.';
@@ -12,8 +11,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://aspires101.com/about',
     title: 'About Aspire 101',
-    description: pageDescription,
-    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Aspire 101' }]
+    description: pageDescription
   }
 };
 
@@ -27,8 +25,6 @@ const structuredData = {
   isPartOf: { '@id': 'https://aspires101.com/#website' },
   about: { '@id': 'https://aspires101.com/#organization' }
 };
-
-const logoStyle = { width: 42, height: 42, borderRadius: 12, objectFit: 'cover' as const };
 
 export default function AboutPage() {
   return (
