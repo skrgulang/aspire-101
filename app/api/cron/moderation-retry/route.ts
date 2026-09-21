@@ -57,24 +57,25 @@ export async function GET(request: Request) {
         body: JSON.stringify({ requestId: id }),
         cache: 'no-store'
       });
-      return { id, ok: response.ok, status: response.status };
+      return { ok: response.ok, status: response.status };
     } catch {
-      return { id, ok: false, status: 0 };
+      return { ok: false, status: 0 };
     }
   }));
 
   const failed = results.filter((result) => !result.ok);
+  const failedStatuses = [...new Set(failed.map((result) => result.status))].sort((a, b) => a - b);
   const body = {
+    ok: failed.length === 0,
     queued: results.length,
     completed: results.length - failed.length,
     failed: failed.length,
-    failedStatuses: failed.map((result) => ({ id: result.id, status: result.status }))
+    failedStatuses
   };
 
-  // A 2xx here makes Vercel treat the cron invocation as healthy even when every
-  // moderation retry failed. Surface partial/total downstream failure as non-2xx
-  // so production monitoring can detect it instead of relying on someone reading
-  // the JSON response body.
+  // A 2xx here makes Vercel treat the cron invocation as healthy even when
+  // moderation retries fail. Surface downstream failure as non-2xx so production
+  // monitoring can detect it without exposing request IDs in the cron response.
   return NextResponse.json(body, {
     status: failed.length ? 502 : 200,
     headers: { 'Cache-Control': 'no-store' }
