@@ -21,7 +21,8 @@ import {
   openMarketDispute,
   proposeMarketPrice,
   requestMarketRefund,
-  respondMarketPrice
+  respondMarketPrice,
+  subscribeToMarketplaceOrderChanges
 } from '../lib/supabase/marketplace';
 
 function money(cents: number | null | undefined, currency = 'USD') {
@@ -139,6 +140,29 @@ export default function MarketOrdersPanel() {
     });
     window.sessionStorage.setItem(dedupeKey, '1');
   }, [payments]);
+
+  useEffect(() => {
+    let reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleReload = () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => void reload(true), 250);
+    };
+    const unsubscribe = subscribeToMarketplaceOrderChanges(scheduleReload);
+    const refreshVisibleOrders = () => {
+      if (document.visibilityState === 'visible') void reload(true);
+    };
+    window.addEventListener('focus', refreshVisibleOrders);
+    document.addEventListener('visibilitychange', refreshVisibleOrders);
+    const fallback = window.setInterval(refreshVisibleOrders, 15000);
+
+    return () => {
+      unsubscribe();
+      if (reloadTimer) clearTimeout(reloadTimer);
+      window.clearInterval(fallback);
+      window.removeEventListener('focus', refreshVisibleOrders);
+      document.removeEventListener('visibilitychange', refreshVisibleOrders);
+    };
+  }, [reload]);
 
   const requestMap = useMemo(() => new Map((base?.requests ?? []).map((request) => [request.id, request])), [base]);
   const connectionMap = useMemo(() => new Map((base?.connections ?? []).map((connection) => [connection.id, connection])), [base]);
