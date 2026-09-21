@@ -3,6 +3,7 @@ import {
   getAuthenticatedUser,
   getSupabaseServiceClient,
   publicOrigin,
+  requireAal2,
   stripeLivemode,
   stripeRequest
 } from '../../../../../../lib/server/aspireServer';
@@ -13,7 +14,7 @@ export const dynamic = 'force-dynamic';
 type StripeAccountLink = { url: string };
 
 async function requireAdmin(request: Request) {
-  const { user } = await getAuthenticatedUser(request);
+  const { user, accessToken } = await getAuthenticatedUser(request);
   const supabase = getSupabaseServiceClient();
   const { data, error } = await supabase
     .from('user_roles')
@@ -22,6 +23,7 @@ async function requireAdmin(request: Request) {
     .maybeSingle();
   if (error) throw error;
   if (data?.role !== 'admin') throw new Error('ADMIN_REQUIRED');
+  await requireAal2(accessToken);
   return { supabase };
 }
 
@@ -34,6 +36,7 @@ function errorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : '';
   if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to continue.' }, { status: 401 });
   if (message === 'ADMIN_REQUIRED') return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
+  if (message === 'MFA_REQUIRED') return NextResponse.json({ error: 'Complete two-step verification to continue.', code: 'MFA_REQUIRED' }, { status: 403 });
   if (message === 'TEST_MODE_REQUIRED') return NextResponse.json({ error: 'This support tool is available only in Stripe sandbox mode.' }, { status: 409 });
   if (message === 'PAYMENT_ACCOUNT_NOT_FOUND') return NextResponse.json({ error: 'Sandbox payout account not found.' }, { status: 404 });
   if (message.startsWith('MISSING_ENV:')) return NextResponse.json({ error: 'Stripe sandbox is not configured for this deployment.' }, { status: 503 });
