@@ -1,4 +1,5 @@
 import { getSupabaseBrowserClient } from './client';
+import { trackProductEvent } from '../analytics/client';
 
 export type ConnectionPaymentStatus =
   | 'not_started'
@@ -121,7 +122,9 @@ export async function confirmConnectionCompletion(connectionId: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('confirm_connection_completion', { p_connection_id: connectionId });
   if (error) throw error;
-  return Number(data || 0);
+  const confirmationCount = Number(data || 0);
+  void trackProductEvent('connection_completion_marked', { confirmation_count: confirmationCount });
+  return confirmationCount;
 }
 
 export async function setConnectionPaymentMethod(connectionId: string, method: 'none' | 'in_person' | 'aspire') {
@@ -147,7 +150,7 @@ export async function createAspireCheckout(connectionId: string) {
     error.code = payload?.code;
     throw error;
   }
-  return payload as {
+  const result = payload as {
     url: string;
     status: string;
     feePolicyVersion: string;
@@ -160,6 +163,12 @@ export async function createAspireCheckout(connectionId: string) {
     shippingRateCents?: number;
     shippingPaidBy?: 'buyer' | 'seller' | null;
   };
+  void trackProductEvent('checkout_started', {
+    fee_policy_version: result.feePolicyVersion,
+    shipping_enabled: Boolean(result.shippingPaidBy),
+    shipping_paid_by: result.shippingPaidBy ?? null
+  });
+  return result;
 }
 
 export async function releaseAspirePayment(connectionId: string) {
@@ -175,5 +184,11 @@ export async function releaseAspirePayment(connectionId: string) {
     error.code = payload?.code;
     throw error;
   }
-  return payload as { status: 'released'; providerNetCents: number; feePolicyVersion: string; duplicate?: boolean; transactionType?: 'marketplace' | 'connection' };
+  const result = payload as { status: 'released'; providerNetCents: number; feePolicyVersion: string; duplicate?: boolean; transactionType?: 'marketplace' | 'connection' };
+  void trackProductEvent('payout_released', {
+    fee_policy_version: result.feePolicyVersion,
+    transaction_type: result.transactionType ?? null,
+    duplicate: Boolean(result.duplicate)
+  });
+  return result;
 }
