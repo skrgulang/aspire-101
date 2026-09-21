@@ -16,8 +16,18 @@ function authorized(request: Request) {
 }
 
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET) return NextResponse.json({ error: 'Moderation retry is not configured.' }, { status: 503 });
-  if (!authorized(request)) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json(
+      { error: 'Moderation retry is not configured.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+  if (!authorized(request)) {
+    return NextResponse.json(
+      { error: 'Unauthorized.' },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
 
   const supabase = getSupabaseServiceClient();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -30,7 +40,13 @@ export async function GET(request: Request) {
     .order('created_at', { ascending: true })
     .limit(8);
 
-  if (error) return NextResponse.json({ error: 'Could not load the moderation retry queue.' }, { status: 500 });
+  if (error) {
+    return NextResponse.json(
+      { error: 'Could not load the moderation retry queue.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+
   const secret = process.env.CRON_SECRET;
   const endpoint = new URL('/api/moderation/request', request.url);
   const results = await Promise.all((data ?? []).map(async ({ id }) => {
@@ -47,9 +63,20 @@ export async function GET(request: Request) {
     }
   }));
 
-  return NextResponse.json({
+  const failed = results.filter((result) => !result.ok);
+  const body = {
     queued: results.length,
-    completed: results.filter((result) => result.ok).length,
-    failed: results.filter((result) => !result.ok).length
+    completed: results.length - failed.length,
+    failed: failed.length,
+    failedStatuses: failed.map((result) => ({ id: result.id, status: result.status }))
+  };
+
+  // A 2xx here makes Vercel treat the cron invocation as healthy even when every
+  // moderation retry failed. Surface partial/total downstream failure as non-2xx
+  // so production monitoring can detect it instead of relying on someone reading
+  // the JSON response body.
+  return NextResponse.json(body, {
+    status: failed.length ? 502 : 200,
+    headers: { 'Cache-Control': 'no-store' }
   });
 }
