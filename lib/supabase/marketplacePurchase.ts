@@ -38,6 +38,27 @@ async function requireSignedIn() {
   return supabase;
 }
 
+async function requireSellerPayoutReady(requestId: string, paymentMethod: MarketplacePaymentMethod) {
+  if (paymentMethod !== 'aspire') return;
+
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Sign in again to continue.');
+
+  const response = await fetch('/api/marketplace/purchase-ready', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requestId, paymentMethod }),
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.error || 'The seller is not ready to receive an Aspire payout yet.');
+  }
+}
+
 export async function purchaseMarketplaceListingWithOptions(input: {
   requestId: string;
   fulfillmentMethod: MarketplaceFulfillmentMethod;
@@ -45,10 +66,13 @@ export async function purchaseMarketplaceListingWithOptions(input: {
   shippingPaidBy?: ShippingPaidBy | null;
 }) {
   const supabase = await requireSignedIn();
+  const paymentMethod = input.paymentMethod || 'aspire';
+  await requireSellerPayoutReady(input.requestId, paymentMethod);
+
   const { data, error } = await supabase.rpc('purchase_marketplace_listing', {
     p_request_id: input.requestId,
     p_fulfillment_method: input.fulfillmentMethod,
-    p_payment_method: input.paymentMethod || 'aspire',
+    p_payment_method: paymentMethod,
     p_shipping_paid_by: input.shippingPaidBy || null
   });
 
@@ -66,6 +90,7 @@ export async function purchaseMarketplaceWithAspirerDelivery(input: {
   dropoffArea: string;
 }) {
   const supabase = await requireSignedIn();
+  await requireSellerPayoutReady(input.requestId, 'aspire');
   const { data, error } = await supabase.rpc('purchase_marketplace_with_aspirer_delivery', {
     p_request_id: input.requestId,
     p_delivery_address: input.address,
