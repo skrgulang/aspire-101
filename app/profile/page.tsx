@@ -257,7 +257,6 @@ export default function ProfilePage() {
             <div className="profileHeroActions">
               <button type="button" onClick={beginEdit}>Edit profile</button>
               <a href="/connections"><UiIcon name="message" />Messages</a>
-              <a href="/settings"><UiIcon name="settings" />Settings</a>
             </div>
             {saveMessage && <p className="authMessage" role="status">{saveMessage}</p>}
 
@@ -278,7 +277,7 @@ export default function ProfilePage() {
           <div className="profileSetupCard" aria-label={`${verifiedSignals} of 3 trust signals complete`}>
             <div className="profileSetupTop">
               <div><span>TRUST SETUP</span><strong>{verifiedSignals} of 3</strong></div>
-              <div className="profileSetupBadge"><UiIcon name="check" /></div>
+              <div className="profileSetupBadge"><UiIcon name={verifiedSignals === 3 ? 'check' : 'shield'} /></div>
             </div>
             <p>Verification supports safer campus connections without turning students into a public score.</p>
             <div className={`profileSetupMeter level${verifiedSignals}`}><i /></div>
