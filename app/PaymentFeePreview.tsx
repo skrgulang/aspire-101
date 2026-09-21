@@ -63,7 +63,7 @@ export default function PaymentFeePreview({ amount, campusId }: { amount: string
     <div className={`paymentFeePreview${belowMinimum ? ' warning' : ''}`}>
       <div className="paymentFeePreviewHead"><span>PAY WITH ASPIRE</span><small>{quote.fee_policy_version}</small></div>
       <div><span>Service</span><strong>{money(quote.base_amount_cents)}</strong></div>
-      <div><span>Aspire 101 Service Fee</span><strong>{money(quote.requester_fee_cents)}</strong></div>
+      <div><span>Aspire Protect Fee</span><strong>{money(quote.requester_fee_cents)}</strong></div>
       <div className="total"><span>You would pay</span><strong>{money(quote.customer_total_cents)}</strong></div>
       {belowMinimum ? (
         <p>Protected payments currently start at {money(quote.minimum_paid_order_cents)}. Raise the amount to continue; free Community posts do not create a payment.</p>
