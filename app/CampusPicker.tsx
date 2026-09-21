@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { findNearbyUniversities, NearbyUniversity, University } from '../lib/supabase/universities';
+import { getSupabaseBrowserClient } from '../lib/supabase/client';
 
 type Props = {
   universities: University[];
@@ -31,11 +32,45 @@ export default function CampusPicker({
   const [nearby, setNearby] = useState<NearbyUniversity[]>([]);
   const [locating, setLocating] = useState(false);
   const [locationMessage, setLocationMessage] = useState('');
+  const [locationMode, setLocationMode] = useState<'off' | 'approximate' | 'precise_on_request'>('off');
+  const [locationPreferenceLoaded, setLocationPreferenceLoaded] = useState(false);
   const pickerRef = useRef<HTMLDivElement | null>(null);
   const autoLocateStarted = useRef(false);
 
   const selected = universities.find((item) => item.id === value) ?? universities[0] ?? null;
-  const shouldAutoDetect = autoDetectNearby ?? !compact;
+  const shouldAutoDetect = autoDetectNearby ?? (!compact && locationPreferenceLoaded && locationMode === 'approximate');
+
+  useEffect(() => {
+    let alive = true;
+    const supabase = getSupabaseBrowserClient();
+
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!alive) return;
+      if (!data.user) {
+        setLocationPreferenceLoaded(true);
+        return;
+      }
+
+      const { data: preferenceRow } = await supabase
+        .from('user_preferences')
+        .select('location_mode')
+        .eq('user_id', data.user.id)
+        .maybeSingle();
+
+      if (!alive) return;
+      const nextMode = preferenceRow?.location_mode;
+      setLocationMode(
+        nextMode === 'approximate' || nextMode === 'precise_on_request'
+          ? nextMode
+          : 'off'
+      );
+      setLocationPreferenceLoaded(true);
+    }).catch(() => {
+      if (alive) setLocationPreferenceLoaded(true);
+    });
+
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -94,9 +129,9 @@ export default function CampusPicker({
     if (!shouldAutoDetect || !universities.length || autoLocateStarted.current) return;
     autoLocateStarted.current = true;
 
-    // Signed-in campus pickers automatically resolve nearby supported campuses.
-    // The browser still controls location permission, and Aspire never stores
-    // the user's precise coordinates here.
+    // Auto-detection is opt-in. Browser permission and Aspire's own location
+    // preference are separate: an already-allowed browser permission must not
+    // override "Off" in Aspire Settings.
     requestNearbyLocation(false);
   }, [shouldAutoDetect, universities.length]);
 

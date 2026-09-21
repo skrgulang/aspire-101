@@ -230,13 +230,13 @@ export default function SettingsPage() {
               </div>
 
               <div className="settingsChoiceGroup">
-                <strong>Location permission preference</strong>
+                <strong>Aspire location preference</strong>
                 <div className="settingsLocationChoices">
-                  <button type="button" className={prefs.location_mode === 'off' ? 'active' : ''} onClick={() => patch('location_mode','off')}><UiIcon name="mapPin" /><span><b>Off</b><small>Do not use device location.</small></span></button>
-                  <button type="button" className={prefs.location_mode === 'approximate' ? 'active' : ''} onClick={() => patch('location_mode','approximate')}><UiIcon name="compass" /><span><b>Approximate</b><small>Ask when nearby campus or distance features need it.</small></span></button>
-                  <button type="button" className={prefs.location_mode === 'precise_on_request' ? 'active' : ''} onClick={() => patch('location_mode','precise_on_request')}><UiIcon name="mapPin" /><span><b>Ask for precise</b><small>Only for a specific ride, pickup, or meetup. Never always-on.</small></span></button>
+                  <button type="button" className={prefs.location_mode === 'off' ? 'active' : ''} onClick={() => patch('location_mode','off')}><UiIcon name="mapPin" /><span><b>Off</b><small>Never use device location automatically.</small></span></button>
+                  <button type="button" className={prefs.location_mode === 'approximate' ? 'active' : ''} onClick={() => patch('location_mode','approximate')}><UiIcon name="compass" /><span><b>Approximate</b><small>Allow nearby-campus detection when it helps.</small></span></button>
+                  <button type="button" className={prefs.location_mode === 'precise_on_request' ? 'active' : ''} onClick={() => patch('location_mode','precise_on_request')}><UiIcon name="mapPin" /><span><b>Ask for precise</b><small>Only after you start a specific ride, pickup, or meetup.</small></span></button>
                 </div>
-                <small>Choosing a preference does not grant browser permission by itself. Your browser will still ask you before location is shared.</small>
+                <small>Browser permission is separate. Even if your browser says location is allowed, Aspire will not auto-use it while this is Off. Choosing “Nearby campuses” is an explicit one-time request.</small>
               </div>
 
               <div className="settingsToggleStack">
