@@ -98,8 +98,9 @@ export async function initializeProductObservability() {
 
   const datadogApplicationId = process.env.NEXT_PUBLIC_DATADOG_APPLICATION_ID?.trim();
   const datadogClientToken = process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN?.trim();
+  const productionHosts = new Set(['aspires101.com', 'www.aspires101.com']);
   const observedEnvironment =
-    typeof window !== 'undefined' && window.location.hostname === 'aspires101.com'
+    typeof window !== 'undefined' && productionHosts.has(window.location.hostname)
       ? 'production'
       : 'preview';
   if (datadogApplicationId && datadogClientToken && !datadogReady) {
