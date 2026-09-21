@@ -1,3 +1,5 @@
+export const metadata = { robots: { index: false, follow: false } };
+
 import ModeratorConsole from '../ModeratorConsole';
 import DisputeIntelligenceLauncher from '../DisputeIntelligenceLauncher';
 import ResolutionCaseConsole from '../ResolutionCaseConsole';

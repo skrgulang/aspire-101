@@ -1,3 +1,5 @@
+export const metadata = { robots: { index: false, follow: false } };
+
 import { aspireLogo } from '../logo';
 import AppDock from '../AppDock';
 import UiIcon, { UiIconName } from '../UiIcon';

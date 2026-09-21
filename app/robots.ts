@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/api/', '/admin/', '/moderator/', '/ui-preview/']
+      disallow: ['/api/', '/admin/', '/moderator', '/founder', '/ui-preview']
     },
     sitemap: 'https://aspires101.com/sitemap.xml',
     host: 'https://aspires101.com'
