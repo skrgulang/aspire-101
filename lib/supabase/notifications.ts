@@ -13,7 +13,8 @@ export type AspireNotification = {
     | 'connection_reminder'
     | 'connection_coordination'
     | 'resolution_case'
-    | 'post_review';
+    | 'post_review'
+    | 'market_order';
   connection_id: string | null;
   title: string;
   body: string | null;

@@ -6,6 +6,7 @@ import { fetchCampusFeedRequests, DiscoverCategory, DiscoverRequest } from '../l
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
 import { respondToRequest } from '../lib/supabase/requests';
 import { blockUser, reportSafety, SafetyReason } from '../lib/supabase/safety';
+import { fetchMyRole, removeRequestAsModerator, type AppRole } from '../lib/supabase/trust';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import DiscoverLanguageFilter from './DiscoverLanguageFilter';
 import CampusFeedCard, { campusFeedCardStyles } from './CampusFeedCard';
@@ -48,6 +49,7 @@ export default function DiscoverRequestsV2() {
   const router = useRouter();
   const [bootLoading,setBootLoading] = useState(true);
   const [currentUserId,setCurrentUserId] = useState<string|null>(null);
+  const [currentRole,setCurrentRole] = useState<AppRole>('member');
   const [homeCampusId,setHomeCampusId] = useState<string|null>(null);
   const [activeCampusId,setActiveCampusId] = useState<string|null>(null);
   const [universities,setUniversities] = useState<University[]>([]);
@@ -79,9 +81,10 @@ export default function DiscoverRequestsV2() {
         router.replace('/login?next=%2Fdiscover');
         return;
       }
-      const [{ data: profile }, campusList] = await Promise.all([
+      const [{ data: profile }, campusList, role] = await Promise.all([
         supabase.from('profiles').select('home_campus_id,current_campus_id').eq('id', data.user.id).maybeSingle(),
-        fetchActiveUniversities()
+        fetchActiveUniversities(),
+        fetchMyRole().catch(() => 'member' as AppRole)
       ]);
       if (!alive) return;
       const homeId = typeof profile?.home_campus_id === 'string' ? profile.home_campus_id : null;
@@ -100,6 +103,7 @@ export default function DiscoverRequestsV2() {
             : homeId;
       if (requestedCategory && categories.includes(requestedCategory as DiscoverCategory)) setCategory(requestedCategory as DiscoverCategory);
       setCurrentUserId(data.user.id);
+      setCurrentRole(role);
       setUniversities(campusList);
       setHomeCampusId(homeId);
       setActiveCampusId(nextActive);
@@ -189,6 +193,25 @@ export default function DiscoverRequestsV2() {
     }
   }
 
+  async function adminRemove(item: DiscoverRequest) {
+    if (currentRole !== 'admin') return;
+    const reason = window.prompt('Admin removal reason:', 'Violates Aspire Community Guidelines');
+    if (!reason?.trim()) return;
+    if (!window.confirm(`Remove “${item.title}” from Aspire? The action is audited and the post will disappear from campus feeds.`)) return;
+
+    setBusyId(`admin-remove:${item.id}`);
+    setMessage('');
+    try {
+      await removeRequestAsModerator(item.id, reason);
+      setItems((current) => current.filter((entry) => entry.id !== item.id));
+      setMessage('Post removed from campus feeds. The moderation action was recorded.');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not remove this post.');
+    } finally {
+      setBusyId('');
+    }
+  }
+
   async function submitReport() {
     if (!safetyItem) return;
     setBusyId(`report:${safetyItem.id}`);
@@ -249,7 +272,12 @@ export default function DiscoverRequestsV2() {
             fallbackImage={activeCampus.cover_image || undefined}
             footerLeft={mine
               ? <span className={campusFeedCardStyles.secondaryAction}>{pending ? 'Pending review' : 'Your post'}</span>
-              : <button className={campusFeedCardStyles.secondaryAction} type="button" onClick={() => setSafetyItem(item)}>Safety</button>}
+              : currentRole === 'admin'
+                ? <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                    <button className={campusFeedCardStyles.secondaryAction} type="button" onClick={() => setSafetyItem(item)}>Safety</button>
+                    <button className={campusFeedCardStyles.secondaryAction} type="button" onClick={() => adminRemove(item)} disabled={busyId === `admin-remove:${item.id}`}>{busyId === `admin-remove:${item.id}` ? 'Removing…' : 'Admin remove'}</button>
+                  </span>
+                : <button className={campusFeedCardStyles.secondaryAction} type="button" onClick={() => setSafetyItem(item)}>Safety</button>}
             footerRight={mine
               ? <a className={campusFeedCardStyles.primaryAction} href="/activity">{demo ? 'Manage preview →' : 'Manage post →'}</a>
               : <button className={campusFeedCardStyles.primaryAction} type="button" onClick={() => respond(item)} disabled={busyId === item.id}>{busyId === item.id ? 'Sending…' : marketActionLabel(item)}</button>}

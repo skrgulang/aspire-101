@@ -347,6 +347,11 @@ export default function MarketOrdersPanel() {
           const secured = payment?.status === 'secured' || ['paid','handoff_confirmed','release_ready'].includes(order.status);
           const state = statusCopy[order.status] ?? statusCopy.awaiting_payment;
           const buyerTotal = payment?.customer_total_cents ?? quote?.customerTotalCents;
+          const stateNote = order.status === 'awaiting_payment' && payWithAspire
+            ? isBuyer
+              ? 'Your item is reserved. Pay here in Orders by tapping the gold Secure payment button below.'
+              : 'The item is reserved. Wait for the buyer to complete Aspire Protected payment in Orders before handoff.'
+            : state.note;
           const sellerNet = payment?.provider_net_cents ?? quote?.providerNetCents;
           const requesterFee = payment?.requester_fee_cents ?? quote?.requesterFeeCents;
           const providerFee = payment?.provider_fee_cents ?? quote?.providerFeeCents;
@@ -396,7 +401,7 @@ export default function MarketOrdersPanel() {
                   <strong>{nextAction} →</strong>
                 </summary>
                 <div className="marketOrderDetailsBody">
-              <div className={`marketOrderState ${order.status}`}><i>{order.status === 'disputed' ? '!' : order.status === 'released' ? '✓' : '○'}</i><div><strong>{state.label}</strong><p>{state.note}</p>{dispute && <small>Report: {disputeReasons.find((item) => item.value === dispute.reason)?.label || dispute.reason} · {dispute.status.replace('_', ' ')}</small>}</div></div>
+              <div className={`marketOrderState ${order.status}`}><i>{order.status === 'disputed' ? '!' : order.status === 'released' ? '✓' : '○'}</i><div><strong>{state.label}</strong><p>{stateNote}</p>{dispute && <small>Report: {disputeReasons.find((item) => item.value === dispute.reason)?.label || dispute.reason} · {dispute.status.replace('_', ' ')}</small>}</div></div>
 
 
 
