@@ -19,9 +19,23 @@ export async function POST(request: Request) {
     if (user.id !== order.seller_id) return NextResponse.json({ error: 'Only the seller can purchase the shipping label.' }, { status: 403 });
     if (order.fulfillment_method !== 'shipping') return NextResponse.json({ error: 'This order is set up for campus pickup.', code: 'NOT_SHIPPING_ORDER' }, { status: 409 });
     if (!order.shipping_shipment_id) return NextResponse.json({ error: 'Get a shipping quote before buying a label.', code: 'SHIPPING_RATES_REQUIRED' }, { status: 409 });
+    if (!order.shipping_rate_id || rateId !== order.shipping_rate_id) {
+      return NextResponse.json({ error: 'Use the carrier rate the buyer selected before payment.', code: 'SHIPPING_RATE_LOCKED' }, { status: 409 });
+    }
     if (!['paid', 'handoff_confirmed'].includes(order.status)) return NextResponse.json({ error: 'The buyer payment must be secured before purchasing a label.', code: 'PAYMENT_NOT_SECURED' }, { status: 409 });
-    if (order.shipping_status === 'label_purchased' && order.shipping_label_url) {
-      return NextResponse.json({ status: 'label_purchased', transactionId: order.shipping_transaction_id, labelUrl: order.shipping_label_url, trackingNumber: order.shipping_tracking_number, trackingUrl: order.shipping_tracking_url, duplicate: true });
+    if (
+      order.shipping_transaction_id
+      && order.shipping_label_url
+      && ['label_purchased', 'in_transit', 'delivered', 'exception'].includes(String(order.shipping_status))
+    ) {
+      return NextResponse.json({
+        status: order.shipping_status,
+        transactionId: order.shipping_transaction_id,
+        labelUrl: order.shipping_label_url,
+        trackingNumber: order.shipping_tracking_number,
+        trackingUrl: order.shipping_tracking_url,
+        duplicate: true
+      });
     }
 
     const shipment = await getShippoShipment(order.shipping_shipment_id);
@@ -29,12 +43,22 @@ export async function POST(request: Request) {
     const rate = (shipment.rates || []).find((candidate) => candidate.object_id === rateId);
     if (!rate || String(rate.object_status || '').toUpperCase() !== 'VALID') return NextResponse.json({ error: 'That shipping rate expired. Request a fresh quote.', code: 'SHIPPING_RATE_EXPIRED' }, { status: 409 });
 
+    const liveRateCents = Math.round(Number(rate.amount || 0) * 100);
+    const liveRateCurrency = String(rate.currency || 'USD').toUpperCase();
+    const lockedRateCents = Number(order.shipping_rate_cents ?? -1);
+    const lockedRateCurrency = String(order.shipping_currency || order.currency || 'USD').toUpperCase();
+    if (!Number.isInteger(liveRateCents) || liveRateCents < 0 || liveRateCents !== lockedRateCents || liveRateCurrency !== lockedRateCurrency) {
+      return NextResponse.json({
+        error: 'The carrier rate changed after payment. Contact support instead of purchasing a different label.',
+        code: 'SHIPPING_RATE_SNAPSHOT_MISMATCH'
+      }, { status: 409 });
+    }
+
     const claimTime = new Date().toISOString();
     const { data: claimed, error: claimError } = await supabase.from('market_orders').update({
-      shipping_status: 'label_purchasing', shipping_rate_id: rate.object_id,
-      shipping_rate_cents: Math.round(Number(rate.amount || 0) * 100), shipping_currency: rate.currency || 'USD',
-      shipping_carrier: rate.provider || 'FedEx', shipping_service: rate.servicelevel?.name || rate.servicelevel?.token || 'Standard',
-      shipping_last_event_at: claimTime, updated_at: claimTime
+      shipping_status: 'label_purchasing',
+      shipping_last_event_at: claimTime,
+      updated_at: claimTime
     }).eq('id', order.id).in('shipping_status', ['rates_ready', 'label_failed']).select('*').maybeSingle();
     if (claimError) throw claimError;
     if (!claimed) return NextResponse.json({ error: 'A shipping label is already being purchased. Refresh in a moment.', code: 'LABEL_IN_PROGRESS' }, { status: 409 });
