@@ -26,14 +26,17 @@ export default function ConnectionCopilotPanel() {
   const [options, setOptions] = useState<Option[]>([]);
   const [connectionId, setConnectionId] = useState('');
   const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<CopilotResult | null>(null);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
+    if (!expanded || loaded || loading) return;
     let alive = true;
+    setLoading(true);
     fetchMyConnections().then(({ userId, connections, requests, profiles }) => {
       if (!alive) return;
       const requestMap = new Map(requests.map((request) => [request.id, request]));
@@ -49,11 +52,12 @@ export default function ConnectionCopilotPanel() {
         });
       setOptions(next);
       if (next[0]) setConnectionId(next[0].id);
+      setLoaded(true);
     }).catch((err) => {
       if (alive) setError(err instanceof Error ? err.message : 'Could not load your connections.');
     }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, []);
+  }, [expanded, loaded, loading]);
 
   const selected = useMemo(() => options.find((option) => option.id === connectionId) ?? null, [options, connectionId]);
 
@@ -94,8 +98,6 @@ export default function ConnectionCopilotPanel() {
     }
   }
 
-  if (loading) return null;
-
   const open = expanded || Boolean(result) || Boolean(error);
 
   return (
@@ -114,7 +116,7 @@ export default function ConnectionCopilotPanel() {
 
       {open && (
         <div className="connectionCopilotBody">
-          {!options.length ? <p className="connectionCopilotEmpty">Copilot becomes available after a connection is confirmed.</p> : <>
+          {loading ? <p className="connectionCopilotEmpty">Loading your connections…</p> : !options.length ? <p className="connectionCopilotEmpty">Copilot becomes available after a connection is confirmed.</p> : <>
             <div className="connectionCopilotControls">
               <label><span>CONNECTION</span><select value={connectionId} onChange={(event) => { setConnectionId(event.target.value); setResult(null); }}>{options.map((option) => <option value={option.id} key={option.id}>{option.label}</option>)}</select></label>
               <button className="button buttonGold" type="button" onClick={run} disabled={busy}>{busy ? 'Summarizing…' : 'Summarize chat ✦'}</button>
