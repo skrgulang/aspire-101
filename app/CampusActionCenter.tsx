@@ -39,22 +39,45 @@ export default function CampusActionCenter() {
     setUnavailable(false);
 
     try {
-      const inboxPromise = fetchMyRequestInbox();
-      const connectionsPromise = fetchMyConnections();
-      const unreadPromise = fetchConnectionUnreadCounts();
-      const resolutionPromise = fetchMyResolutionHistory();
-      const livePromise = fetchLiveConnections();
-      const [inbox, connectionData, unreadRows, resolutionHistory, liveData] = await Promise.all([
-        inboxPromise,
-        connectionsPromise,
-        unreadPromise,
-        resolutionPromise,
-        livePromise
-      ]);
+      // The connection identity is the only hard dependency for this panel.
+      // Optional activity sources are allowed to fail independently so an empty
+      // account still renders “all caught up” instead of the global error state.
+      const connectionData = await fetchMyConnections();
       setCurrentUserId(connectionData.userId);
 
-      const orders = await fetchMarketOrders(connectionData.connections.map((connection) => connection.id));
-      const priceProposals = await fetchMarketPriceProposals(orders.map((order) => order.id));
+      const [inboxResult, unreadResult, resolutionResult, liveResult] = await Promise.allSettled([
+        fetchMyRequestInbox(),
+        fetchConnectionUnreadCounts(),
+        fetchMyResolutionHistory(),
+        fetchLiveConnections()
+      ]);
+
+      const inbox = inboxResult.status === 'fulfilled'
+        ? inboxResult.value
+        : { requests: [], responses: [], profiles: [] };
+      const unreadRows = unreadResult.status === 'fulfilled' ? unreadResult.value : [];
+      const resolutionHistory = resolutionResult.status === 'fulfilled'
+        ? resolutionResult.value
+        : { userId: connectionData.userId, cases: [], requests: [] };
+      const liveData = liveResult.status === 'fulfilled'
+        ? liveResult.value
+        : {
+            userId: connectionData.userId,
+            connections: [],
+            requests: [],
+            profiles: [],
+            locations: [],
+            scheduleProposals: []
+          };
+
+      const connectionIds = connectionData.connections.map((connection) => connection.id);
+      const orders = connectionIds.length
+        ? await fetchMarketOrders(connectionIds).catch(() => [])
+        : [];
+      const orderIds = orders.map((order) => order.id);
+      const priceProposals = orderIds.length
+        ? await fetchMarketPriceProposals(orderIds).catch(() => [])
+        : [];
       const requestMap = new Map(connectionData.requests.map((request) => [request.id, request]));
       const inboxRequestMap = new Map(inbox.requests.map((request) => [request.id, request]));
       const connectionProfileMap = new Map(connectionData.profiles.map((profile) => [profile.id, profile]));
