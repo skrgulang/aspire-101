@@ -300,7 +300,10 @@ export default function ModeratorConsole() {
             <div className="moderatorTitleRow"><h1>Trust &amp; Safety</h1><b>{role.toUpperCase()}</b></div>
             <p>Every post stays private until a reviewer approves it. Safety Intelligence checks content; Scam Intelligence adds posting velocity, duplicate behavior, price anomalies, prior enforcement, and an internal trust history. Account restrictions always require a human action.</p>
           </div>
-          <a href="/profile">Back to profile →</a>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {role === 'admin' && <a href="/founder">Founder Ops →</a>}
+            <a href="/profile">Back to profile →</a>
+          </div>
         </header>
 
         <section className="moderatorOverview" aria-label="Moderation overview">
