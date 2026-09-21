@@ -9,19 +9,13 @@ type Props = {
   name: string;
 };
 
-function ownedAvatarPath(publicUrl: string, expectedOrigin: string, userId: string) {
-  if (!publicUrl) return null;
-  try {
-    const parsed = new URL(publicUrl);
-    if (parsed.origin !== expectedOrigin) return null;
-    const prefix = '/storage/v1/object/public/avatars/';
-    if (!parsed.pathname.startsWith(prefix)) return null;
-    const path = decodeURIComponent(parsed.pathname.slice(prefix.length));
-    return path.startsWith(`${userId}/`) ? path : null;
-  } catch {
-    return null;
-  }
-}
+type UploadPayload = {
+  ok?: boolean;
+  status?: 'approved' | 'review' | 'rejected';
+  avatarUrl?: string;
+  message?: string;
+  error?: string;
+};
 
 export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
   const [url, setUrl] = useState(initialUrl || '');
@@ -33,8 +27,8 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (!['image/jpeg','image/png','image/webp','image/heic','image/heif'].includes(file.type)) {
-      setMessage('Choose a JPG, PNG, WebP, HEIC, or HEIF image.');
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
+      setMessage('Use a JPG, PNG, or WebP image. Profile photos are checked before they become public.');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -43,33 +37,25 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
     }
 
     setBusy(true);
-    setMessage('');
+    setMessage('Checking photo before it becomes public…');
     try {
       const supabase = getSupabaseBrowserClient();
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Sign in again before changing your photo.');
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${authData.user.id}/avatar-${Date.now()}.${ext.replace(/[^a-z0-9]/g, '')}`;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' });
-      if (uploadError) throw uploadError;
-      const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
-      const previousPath = ownedAvatarPath(url, new URL(publicData.publicUrl).origin, authData.user.id);
-      const { error: profileError } = await supabase.rpc('set_my_avatar_url', {
-        p_storage_path: path,
-        p_avatar_url: publicData.publicUrl
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session?.access_token) throw new Error('Sign in again before changing your photo.');
+
+      const form = new FormData();
+      form.append('avatar', file);
+      const response = await fetch('/api/profile/avatar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+        body: form,
+        cache: 'no-store'
       });
-      if (profileError) {
-        await supabase.storage.from('avatars').remove([path]).catch(() => undefined);
-        throw profileError;
-      }
+      const payload = await response.json().catch(() => ({})) as UploadPayload;
+      if (!response.ok) throw new Error(payload.error || 'Could not process your photo.');
 
-      if (previousPath && previousPath !== path) {
-        await supabase.storage.from('avatars').remove([previousPath]).catch(() => undefined);
-      }
-
-      setUrl(publicData.publicUrl);
-      setMessage('Profile photo updated.');
+      if (payload.status === 'approved' && payload.avatarUrl) setUrl(payload.avatarUrl);
+      setMessage(payload.message || (payload.status === 'approved' ? 'Profile photo updated.' : 'Photo is waiting for review. Your current photo stays visible.'));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not upload your photo.');
     } finally {
@@ -83,7 +69,7 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
         {url ? <img src={url} alt={`${name} profile`} /> : initials}
         <span>{busy ? '…' : '+'}</span>
       </button>
-      <input ref={inputRef} className="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={upload} />
+      <input ref={inputRef} className="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
       <small>{message || 'Add photo'}</small>
     </div>
   );

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { enforceAiRateLimit, getAuthenticatedUser, getSupabaseServiceClient, requireAal2, requireEnv } from '../../../../lib/server/aspireServer';
+import { classifyPublicPoliticalContent, publicPoliticalFlag } from '../../../../lib/server/publicContentPolicy';
 
 export const runtime = 'nodejs';
 
@@ -238,20 +239,38 @@ export async function POST(request: Request) {
 
     const text = [aspireRequest.title, aspireRequest.details, aspireRequest.category, aspireRequest.kind].filter(Boolean).join('\n');
     const ruleFlags = Array.isArray(aspireRequest.moderation_flags) ? aspireRequest.moderation_flags : [];
-    const platformFlags = platformPolicyFlags(text, aspireRequest.kind);
-    const { payload, result } = await callOpenAiModeration(text, imageUrls);
+    const basePlatformFlags = platformPolicyFlags(text, aspireRequest.kind);
+    const [{ payload, result }, political] = await Promise.all([
+      callOpenAiModeration(text, imageUrls),
+      classifyPublicPoliticalContent({ surface: aspireRequest.kind === 'buy_sell' ? 'marketplace' : 'post', text, imageUrls })
+    ]);
+    const politicalFlag = publicPoliticalFlag(political);
+    const platformFlags = [...basePlatformFlags, ...(politicalFlag ? [politicalFlag] : [])];
     const assessment = classifyRisk(result, platformFlags, ruleFlags, behavior);
     const combinedFlags = [...new Set([...platformFlags, ...ruleFlags, ...behavior.flags])];
-    const moderationStatus: 'pending' | 'approved' | 'blocked' = assessment.recommendedAction === 'approve' && assessment.riskLevel === 'low' && behavior.riskScore < 25 && combinedFlags.length === 0
+    const effectiveRiskLevel = political.decision === 'block' && assessment.riskLevel === 'low' ? 'medium' : assessment.riskLevel;
+    const effectiveRecommendedAction: 'approve' | 'review' | 'block' = political.decision === 'block'
+      ? 'block'
+      : political.decision === 'review'
+        ? 'review'
+        : assessment.recommendedAction;
+    const effectiveSummary = political.decision === 'allow'
+      ? assessment.summary
+      : political.decision === 'block'
+        ? 'Blocked by Aspire public-space policy. Public posts and listings cannot be used for political campaigning, partisan propaganda, or political-figure imagery.'
+        : 'Needs human review under Aspire public-space policy before it can become public.';
+    const moderationStatus: 'pending' | 'approved' | 'blocked' = effectiveRecommendedAction === 'approve' && effectiveRiskLevel === 'low' && behavior.riskScore < 25 && combinedFlags.length === 0
       ? 'approved'
-      : assessment.recommendedAction === 'block' || assessment.riskLevel === 'critical'
+      : effectiveRecommendedAction === 'block' || effectiveRiskLevel === 'critical'
         ? 'blocked'
         : 'pending';
     const moderatedAt = moderationStatus === 'pending' ? null : new Date().toISOString();
     const moderationReason = moderationStatus === 'approved'
       ? 'Automatically approved by Aspire Safety Intelligence (low risk).'
       : moderationStatus === 'blocked'
-        ? `Automatically blocked by Aspire Safety Intelligence: ${combinedFlags.slice(0, 6).join(', ') || assessment.summary}`
+        ? political.decision === 'block'
+          ? 'Automatically blocked by Aspire public-space policy. The rule is viewpoint-neutral and applies across countries, parties, candidates, and officeholders.'
+          : `Automatically blocked by Aspire Safety Intelligence: ${combinedFlags.slice(0, 6).join(', ') || assessment.summary}`
         : null;
 
     const { error: insertError } = await supabase.from('request_ai_assessments').insert({
@@ -259,9 +278,9 @@ export async function POST(request: Request) {
       provider: 'openai',
       model: payload.model || moderationModel,
       model_flagged: Boolean(result.flagged),
-      risk_level: assessment.riskLevel,
+      risk_level: effectiveRiskLevel,
       risk_score: assessment.riskScore,
-      recommended_action: assessment.recommendedAction,
+      recommended_action: effectiveRecommendedAction,
       categories: result.categories ?? {},
       category_scores: result.category_scores ?? {},
       platform_flags: platformFlags,
@@ -270,7 +289,11 @@ export async function POST(request: Request) {
       trust_score_snapshot: behavior.trustScore,
       trust_band_snapshot: behavior.trustBand,
       image_count: imageUrls.length,
-      summary: assessment.summary,
+      summary: effectiveSummary,
+      public_policy_decision: political.decision,
+      public_policy_reason_code: political.reasonCode,
+      public_policy_summary: political.summary,
+      public_policy_model: political.model,
       raw_response: payload
     });
     if (insertError) throw insertError;
@@ -282,11 +305,11 @@ export async function POST(request: Request) {
       moderated_at: moderatedAt,
       moderation_reason: moderationReason,
       ai_moderation_status: 'complete',
-      ai_risk_level: assessment.riskLevel,
+      ai_risk_level: effectiveRiskLevel,
       ai_risk_score: assessment.riskScore,
-      ai_recommended_action: assessment.recommendedAction,
+      ai_recommended_action: effectiveRecommendedAction,
       ai_policy_flags: combinedFlags,
-      ai_summary: assessment.summary,
+      ai_summary: effectiveSummary,
       ai_last_scanned_at: new Date().toISOString()
     }).eq('id', requestId);
     if (updateError) throw updateError;
@@ -296,9 +319,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ...publicResult,
-      riskLevel: assessment.riskLevel,
+      riskLevel: effectiveRiskLevel,
       riskScore: assessment.riskScore,
-      recommendedAction: assessment.recommendedAction,
+      recommendedAction: effectiveRecommendedAction,
       flags: combinedFlags,
       behaviorFlags: behavior.flags,
       trustScore: behavior.trustScore,
@@ -324,7 +347,7 @@ export async function POST(request: Request) {
     if (message === 'MFA_REQUIRED') return NextResponse.json({ error: 'Complete two-step verification to use staff moderation tools.', code: 'MFA_REQUIRED' }, { status: 403 });
     if (message === 'AI_RATE_LIMIT') return NextResponse.json({ error: 'Safety rescans are being requested too quickly. Try again later.', code: 'AI_RATE_LIMIT' }, { status: 429 });
     if (message.startsWith('MISSING_ENV:OPENAI_API_KEY')) return NextResponse.json({ error: 'Aspire Safety Intelligence is not connected to an API key yet. Behavioral scam checks still ran and the post remains pending.', code: 'AI_NOT_CONFIGURED' }, { status: 503 });
-    if (message.startsWith('OPENAI_MODERATION:')) return NextResponse.json({ error: 'The AI content scan could not complete. Behavioral scam checks still ran and the post remains pending.', code: 'AI_SCAN_FAILED' }, { status: 502 });
+    if (message.startsWith('OPENAI_MODERATION:') || message.startsWith('OPENAI_PUBLIC_POLICY:')) return NextResponse.json({ error: 'The AI content scan could not complete. Behavioral scam checks still ran and the post remains pending.', code: 'AI_SCAN_FAILED' }, { status: 502 });
     return NextResponse.json({ error: 'Could not complete the safety scan. The post remains pending for human review.' }, { status: 500 });
   }
 }
