@@ -10,7 +10,12 @@ const classificationCases = [
   ['Need help moving a desk tomorrow', { category: 'Moving / help', kind: 'paid_help' }],
   ['Looking for a teammate for a hackathon project', { category: 'Project / collab', kind: 'collaboration' }],
   ['WTB bike near campus', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted' }],
-  ['WTS textbook for $25', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 2500 }]
+  ['WTS textbook for $25', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 2500 }],
+  ['selling my math textbook', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell' }],
+  ['WTB physics textbook', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted' }],
+  ['Can someone buy groceries for me?', { category: 'Pickup / errand', kind: 'paid_help' }],
+  ['Could someone grab medicine for me tonight?', { category: 'Pickup / errand', kind: 'paid_help' }],
+  ['I want to buy a used bike', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted' }]
 ];
 
 for (const [input, expected] of classificationCases) {
@@ -19,6 +24,9 @@ for (const [input, expected] of classificationCases) {
     if (actual[key] !== value) throw new Error(`${input}: ${key}=${actual[key]} expected ${value}`);
   }
 }
+
+const ambiguousPurchase = inferIntentHints('Where can I buy groceries?');
+if (ambiguousPurchase.category !== 'Pickup / errand') throw new Error('grocery discovery should stay in the grocery/errand domain without becoming marketplace');
 
 const candidates = [
   { id: 'study', title: 'Math 110 study group', details: 'review linear algebra', category: 'Study', kind: 'community', market_intent: null },
@@ -87,4 +95,4 @@ for (const input of negativeNavigationCases) {
   if (inferNavigationIntent(input)) throw new Error(`${input}: should not be treated as direct navigation`);
 }
 
-console.log('Aspire Brain regression: 32/32 passed');
+console.log('Aspire Brain regression: 38/38 passed');
