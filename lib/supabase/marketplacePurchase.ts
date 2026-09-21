@@ -90,6 +90,7 @@ export async function purchaseMarketplaceWithAspirerDelivery(input: {
   dropoffArea: string;
 }) {
   const supabase = await requireSignedIn();
+  await requireSellerPayoutReady(input.requestId, 'aspire');
   const { data, error } = await supabase.rpc('purchase_marketplace_with_aspirer_delivery', {
     p_request_id: input.requestId,
     p_delivery_address: input.address,
