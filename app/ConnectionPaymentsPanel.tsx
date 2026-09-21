@@ -64,6 +64,24 @@ export default function ConnectionPaymentsPanel() {
     }
   }, [reload]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'success') return;
+    const connectionId = params.get('connection') || '';
+    if (!connectionId) return;
+    const payment = payments.find((item) => item.connection_id === connectionId);
+    if (!payment || !['secured', 'released'].includes(payment.status)) return;
+
+    const dedupeKey = `aspire-ga4-payment-completed:${payment.id}`;
+    if (window.sessionStorage.getItem(dedupeKey)) return;
+    trackGa4Event('payment_completed', {
+      payment_flow: 'service',
+      currency: payment.currency,
+      value: Number(((payment.customer_total_cents ?? payment.gross_amount_cents) / 100).toFixed(2))
+    });
+    window.sessionStorage.setItem(dedupeKey, '1');
+  }, [payments]);
+
   const requestMap = useMemo(() => new Map((data?.requests ?? []).map((request) => [request.id, request])), [data]);
   const paymentMap = useMemo(() => new Map(payments.map((payment) => [payment.connection_id, payment])), [payments]);
   const quoteMap = useMemo(() => new Map(quotes.map((quote) => [quote.connectionId, quote])), [quotes]);

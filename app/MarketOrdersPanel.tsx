@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchMyConnections, subscribeToMyConnectionActivity } from '../lib/supabase/connections';
+import { trackGa4Event } from '../lib/analytics/ga4';
 import {
   createAspireCheckout,
   fetchAspireFeeQuote,
@@ -121,6 +122,24 @@ export default function MarketOrdersPanel() {
     return subscribeToMyConnectionActivity(base.userId, () => void reload(true));
   }, [base?.userId, reload]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'success') return;
+    const connectionId = params.get('connection') || '';
+    if (!connectionId) return;
+    const payment = payments.find((item) => item.connection_id === connectionId);
+    if (!payment || !['secured', 'released'].includes(payment.status)) return;
+
+    const dedupeKey = `aspire-ga4-payment-completed:${payment.id}`;
+    if (window.sessionStorage.getItem(dedupeKey)) return;
+    trackGa4Event('payment_completed', {
+      payment_flow: 'marketplace',
+      currency: payment.currency,
+      value: Number(((payment.customer_total_cents ?? payment.gross_amount_cents) / 100).toFixed(2))
+    });
+    window.sessionStorage.setItem(dedupeKey, '1');
+  }, [payments]);
+
   const requestMap = useMemo(() => new Map((base?.requests ?? []).map((request) => [request.id, request])), [base]);
   const connectionMap = useMemo(() => new Map((base?.connections ?? []).map((connection) => [connection.id, connection])), [base]);
   const profileMap = useMemo(() => new Map((base?.profiles ?? []).map((profile) => [profile.id, profile])), [base]);
@@ -184,6 +203,9 @@ export default function MarketOrdersPanel() {
     setNotice('');
     try {
       const result = await createAspireCheckout(connectionId);
+      trackGa4Event('checkout_started', {
+        payment_flow: 'marketplace'
+      });
       window.location.assign(result.url);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not open Stripe checkout.');
