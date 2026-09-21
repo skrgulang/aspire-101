@@ -26,6 +26,23 @@ export type UserEnforcementState = {
   expires_at: string | null;
 };
 
+export type SupportFeedbackForModeration = {
+  id: string;
+  created_at: string;
+  type: 'feature' | 'bug' | 'feedback' | 'abuse' | 'collaboration';
+  subject: string;
+  details: string | null;
+  email: string | null;
+  page_url: string | null;
+  company: string | null;
+  contact: string | null;
+  website: string | null;
+  approved: boolean;
+  archived: boolean;
+  reason: string | null;
+  moderated_at: string | null;
+};
+
 export type SafetyReportForModeration = {
   id: string;
   reporter_id: string;
@@ -135,6 +152,28 @@ export async function reviewSafetyReport(reportId: string, status: 'reviewing' |
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase.rpc('moderator_review_safety_report', { p_report_id: reportId, p_status: status, p_note: note?.trim() || null });
   if (error) throw error;
+}
+
+export async function fetchSupportFeedbackForModeration(limit = 200) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('moderator_fetch_support_feedback', { p_limit: limit });
+  if (error) throw error;
+  return (data ?? []) as SupportFeedbackForModeration[];
+}
+
+export async function reviewSupportFeedback(
+  feedbackId: string,
+  action: 'publish' | 'archive' | 'reopen',
+  reason?: string
+) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('moderator_review_support_feedback', {
+    p_feedback_id: feedbackId,
+    p_action: action,
+    p_reason: reason?.trim() || null
+  });
+  if (error) throw error;
+  return data as SupportFeedbackForModeration;
 }
 
 export async function fetchRequestsForModeration(limit = 80) {
