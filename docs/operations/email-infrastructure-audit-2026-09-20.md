@@ -5,7 +5,7 @@
 - Human/team mail is hosted on **Namecheap Private Email** for `aspires101.com`.
 - The Namecheap Private Email subscription for `aspires101.com` predates June 2, 2026, so the Private Email DKIM selector to verify is **`default._domainkey`** (not the newer `privateemail._domainkey`).
 - The campus ambassador workflow sends through Namecheap SMTP using `mail.privateemail.com:465` with TLS and `team@aspires101.com` by default.
-- Supabase Auth is responsible for signup confirmation / recovery emails used by the app.
+- Supabase Auth is responsible for signup confirmation / recovery emails used by the app and is configured to use the verified Resend transactional subdomain.
 
 ## Verified application behavior
 
@@ -28,22 +28,17 @@ Because the domain uses Namecheap Private Email, verify the following records ex
 
 Do not create multiple SPF TXT records for `@`. If another sender is added later, merge authorized senders into one SPF policy.
 
-## Supabase Auth production requirement
+## Supabase Auth production configuration
 
-Supabase's built-in SMTP service is for development / limited testing. Before broad public launch, confirm **Authentication → Emails → SMTP Settings** is using a custom SMTP provider.
+Custom SMTP is already configured for Supabase Auth using the verified Resend transactional domain `auth.aspires101.com`. The Resend account has a dedicated API key named `Aspire Supabase Auth`, and the domain is verified with sending enabled.
 
-Early-stage options:
-
-- Keep Namecheap Private Email for human mail and use Namecheap SMTP for low-volume auth mail.
-- Prefer a dedicated transactional provider/domain such as `auth.aspires101.com` once volume grows or when bounce/delivery telemetry is needed.
-
-Do not mix bulk marketing mail with auth / password-reset email reputation.
+Keep human/team mail on Namecheap Private Email and keep auth/password-reset traffic on `auth.aspires101.com`. Do not mix bulk marketing mail with auth / password-reset email reputation.
 
 ## Operational gaps
 
-1. Public DNS authentication has not yet been independently verified from the repository or provider API; confirm the Cloudflare DNS records above.
-2. Confirm Supabase Auth custom SMTP configuration rather than relying on successful historic delivery alone.
-3. Namecheap SMTP does not provide the same programmatic bounce / complaint webhook workflow as a transactional-mail provider; maintain delivery-event auditing and migrate auth/transactional mail if operational visibility becomes important.
+1. Root-domain Namecheap mail DNS still needs a direct DNS-side review when convenient; the transactional `auth.aspires101.com` Resend domain itself is already verified.
+2. Resend currently has no webhooks configured, so delivery, bounce, complaint, delayed, failed, and suppression events are not yet pushed into Aspire operations automatically.
+3. Namecheap SMTP does not provide the same programmatic bounce / complaint webhook workflow as a transactional-mail provider; keep it for human/team mail rather than auth mail.
 4. Keep mailbox master passwords out of Vercel. Use a mailbox application password for SMTP when supported.
 5. Enable 2FA on the Namecheap / Private Email administrator account and maintain recovery access.
 
