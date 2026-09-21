@@ -63,3 +63,5 @@ The endpoint verifies Svix/Resend signatures against `RESEND_WEBHOOK_SIGNING_SEC
 Repeated webhook deliveries are idempotent because `webhook_message_id` is the primary key.
 
 Delivery failures, complaints, bounces, and suppressions also emit a structured server warning without full recipient addresses.
+
+Preview validation uses the same signed webhook flow before the endpoint is switched to the production domain.
