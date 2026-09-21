@@ -33,8 +33,8 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (!['image/jpeg','image/png','image/webp','image/heic','image/heif'].includes(file.type)) {
-      setMessage('Choose a JPG, PNG, WebP, HEIC, or HEIF image.');
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
+      setMessage('Choose a JPG, PNG, or WebP image so Aspire can review it before publishing.');
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
@@ -49,27 +49,28 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError) throw authError;
       if (!authData.user) throw new Error('Sign in again before changing your photo.');
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${authData.user.id}/avatar-${Date.now()}.${ext.replace(/[^a-z0-9]/g, '')}`;
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' });
+      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+      const path = `${authData.user.id}/pending-${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('avatar-pending').upload(path, file, { upsert: false, contentType: file.type, cacheControl: '3600' });
       if (uploadError) throw uploadError;
-      const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(path);
-      const previousPath = ownedAvatarPath(url, new URL(publicData.publicUrl).origin, authData.user.id);
-      const { error: profileError } = await supabase.rpc('set_my_avatar_url', {
-        p_storage_path: path,
-        p_avatar_url: publicData.publicUrl
+
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session?.access_token) throw sessionError || new Error('Sign in again before changing your photo.');
+
+      setMessage('Reviewing photo…');
+      const response = await fetch('/api/moderation/avatar', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ storagePath: path, mimeType: file.type }),
+        cache: 'no-store'
       });
-      if (profileError) {
-        await supabase.storage.from('avatars').remove([path]).catch(() => undefined);
-        throw profileError;
-      }
-
-      if (previousPath && previousPath !== path) {
-        await supabase.storage.from('avatars').remove([previousPath]).catch(() => undefined);
-      }
-
-      setUrl(publicData.publicUrl);
-      setMessage('Profile photo updated.');
+      const payload = await response.json().catch(() => ({})) as { status?: string; avatarUrl?: string; message?: string; error?: string };
+      if (!response.ok) throw new Error(payload.error || 'Aspire could not review this photo.');
+      if (payload.status === 'approved' && payload.avatarUrl) setUrl(payload.avatarUrl);
+      setMessage(payload.message || (payload.status === 'pending' ? 'Photo sent for review.' : payload.status === 'rejected' ? 'Photo was not allowed.' : 'Profile photo updated.'));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not upload your photo.');
     } finally {
@@ -83,7 +84,7 @@ export default function ProfileAvatar({ initialUrl, initials, name }: Props) {
         {url ? <img src={url} alt={`${name} profile`} /> : initials}
         <span>{busy ? '…' : '+'}</span>
       </button>
-      <input ref={inputRef} className="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" onChange={upload} />
+      <input ref={inputRef} className="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} />
       <small>{message || 'Add photo'}</small>
     </div>
   );
