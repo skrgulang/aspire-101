@@ -15,7 +15,11 @@ const classificationCases = [
   ['WTB physics textbook', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted' }],
   ['Can someone buy groceries for me?', { category: 'Pickup / errand', kind: 'paid_help' }],
   ['Could someone grab medicine for me tonight?', { category: 'Pickup / errand', kind: 'paid_help' }],
-  ['I want to buy a used bike', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted' }]
+  ['I want to buy a used bike', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'wanted' }],
+  ['WTS sealed monitor $80 OBO', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 8000, item_condition: 'new', price_negotiable: true }],
+  ['Selling laptop in like new condition, price firm', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', item_condition: 'like_new', price_negotiable: false }],
+  ['WTS broken phone for parts only $20', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', amount_cents: 2000, item_condition: 'for_parts' }],
+  ['Selling desk in good condition, open to offers', { category: 'Buy & sell', kind: 'buy_sell', market_intent: 'sell', item_condition: 'good', price_negotiable: true }]
 ];
 
 for (const [input, expected] of classificationCases) {
@@ -95,4 +99,4 @@ for (const input of negativeNavigationCases) {
   if (inferNavigationIntent(input)) throw new Error(`${input}: should not be treated as direct navigation`);
 }
 
-console.log('Aspire Brain regression: 38/38 passed');
+console.log('Aspire Brain regression: 42/42 passed');
