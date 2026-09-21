@@ -93,7 +93,7 @@ export default function MarketOrdersPanel() {
             .map((connection) => fetchAspireFeeQuote(connection.id).catch(() => null))
         ),
         fetchMarketDisputes(nextOrders.map((order) => order.id)),
-        fetchMarketPriceProposals(nextOrders.map((order) => order.id))
+        fetchMarketPriceProposals(nextOrders.map((order) => order.id)).catch(() => [] as MarketPriceProposal[])
       ]);
       setBase({ ...nextBase, connections: marketConnections });
       setOrders(nextOrders);
@@ -312,7 +312,10 @@ export default function MarketOrdersPanel() {
   }
 
   if (loading) return null;
-  if (!base?.connections.length) return null;
+  if (!base?.connections.length) {
+    if (!notice) return null;
+    return <section className="marketOrders" aria-label="Aspire campus marketplace orders"><div className="marketNotice" role="status">{notice}</div></section>;
+  }
 
   const legacyConnections = base.connections.filter((connection) => !orders.some((order) => order.connection_id === connection.id));
 

@@ -110,14 +110,11 @@ export async function fetchMarketOrders(connectionIds: string[]) {
 export async function fetchMarketPriceProposals(orderIds: string[]) {
   if (!orderIds.length) return [] as MarketPriceProposal[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from('market_price_proposals')
-    .select('id,market_order_id,connection_id,proposed_by,amount_cents,currency,status,responded_by,responded_at,created_at,updated_at')
-    .in('market_order_id', orderIds)
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_my_market_price_proposals', {
+    p_order_ids: orderIds
+  });
   if (error) {
-    if (error.code === '42P01' || error.code === 'PGRST205') return [] as MarketPriceProposal[];
+    if (error.code === '42P01' || error.code === 'PGRST202' || error.code === 'PGRST205') return [] as MarketPriceProposal[];
     throw error;
   }
   return (data ?? []) as MarketPriceProposal[];

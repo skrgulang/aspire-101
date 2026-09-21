@@ -156,20 +156,12 @@ export default function MarketplaceCheckoutV5() {
       setCampus(nextCampus);
 
       if (nextCampus) {
-        const [{ data: policies }, rows] = await Promise.all([
-          supabase.from('fee_policies')
-            .select('campus_id,requester_fee_bps,requester_fee_fixed_cents,requester_fee_min_cents,requester_fee_max_cents,provider_fee_bps,updated_at')
-            .eq('active', true)
-            .order('updated_at', { ascending: false }),
+        const [{ data: policyRows }, rows] = await Promise.all([
+          supabase.rpc('get_active_fee_policy', { p_campus_id: nextCampus.id }),
           fetchCampusFeedRequests({ campusId: nextCampus.id, category: 'Buy & sell', limit: 80 })
         ]);
 
-        const eligiblePolicies = (policies || []) as Array<FeePolicy & { updated_at?: string }>;
-        setFeePolicy(
-          eligiblePolicies.find((entry) => entry.campus_id === nextCampus.id)
-          || eligiblePolicies.find((entry) => entry.campus_id == null)
-          || null
-        );
+        setFeePolicy(((policyRows || [])[0] || null) as FeePolicy | null);
 
         const ids = rows.map((item) => item.id);
         let listingMeta = new Map<string, Partial<MarketplaceItem>>();
