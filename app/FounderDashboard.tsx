@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchMyRole } from '../lib/supabase/trust';
-import { fetchFounderActivityMetrics, FounderActivityMetrics } from '../lib/supabase/adminMetrics';
+import { fetchFounderActivityMetrics, fetchFounderLaunchReadinessMetrics, FounderActivityMetrics, FounderLaunchReadinessMetrics } from '../lib/supabase/adminMetrics';
 import AppLoader from './AppLoader';
 import styles from './founder-ops.module.css';
 
@@ -26,6 +26,7 @@ function day(value: string) {
 export default function FounderDashboard() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<FounderActivityMetrics | null>(null);
+  const [readiness, setReadiness] = useState<FounderLaunchReadinessMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
 
@@ -38,7 +39,12 @@ export default function FounderDashboard() {
         router.replace('/profile');
         return;
       }
-      setMetrics(await fetchFounderActivityMetrics(30));
+      const [activity, launchReadiness] = await Promise.all([
+        fetchFounderActivityMetrics(30),
+        fetchFounderLaunchReadinessMetrics()
+      ]);
+      setMetrics(activity);
+      setReadiness(launchReadiness);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load founder metrics.');
     } finally {
@@ -80,6 +86,24 @@ export default function FounderDashboard() {
             <article><span>GMV TODAY</span><strong>{money(metrics.gmvCentsToday)}</strong><small>{number(metrics.successfulTransactionsToday)} successful transactions</small></article>
             <article><span>PLATFORM FEES</span><strong>{money(metrics.platformFeeRevenueCentsToday)}</strong><small>{percent(metrics.takeRateBpsToday)} take rate today</small></article>
           </section>
+
+          {readiness && <section className={styles.readinessPanel} aria-label="Launch readiness">
+            <div className={styles.panelHead}>
+              <div><span>LAUNCH READINESS</span><h2>Operational gates</h2></div>
+              <small>Live payments remain behind the server-side pilot allowlist until controlled drills pass.</small>
+            </div>
+            <div className={styles.readinessGrid}>
+              <article><span>VERIFIED SCHOOL</span><strong>{number(readiness.schoolVerified)}</strong><small>{number(readiness.schoolPending)} pending review</small></article>
+              <article><span>VERIFIED PHONE</span><strong>{number(readiness.phoneVerified)}</strong><small>Required for Aspire payments</small></article>
+              <article><span>LIVE PAYOUT ACCOUNTS</span><strong>{number(readiness.livePayoutAccounts)}</strong><small>{number(readiness.sandboxPayoutAccounts)} sandbox accounts in Aspire</small></article>
+              <article><span>LIVE PAYMENTS</span><strong>{number(readiness.livePayments)}</strong><small>{number(readiness.sandboxPayments)} sandbox payment records</small></article>
+              <article className={readiness.pendingPosts ? styles.attention : ''}><span>PENDING POSTS</span><strong>{number(readiness.pendingPosts)}</strong><small>Needs moderation</small></article>
+              <article className={readiness.openSafetyReports ? styles.attention : ''}><span>OPEN SAFETY</span><strong>{number(readiness.openSafetyReports)}</strong><small>Human review required</small></article>
+              <article className={readiness.openResolutionCases ? styles.attention : ''}><span>RESOLUTION CASES</span><strong>{number(readiness.openResolutionCases)}</strong><small>Payment/release holds</small></article>
+              <article className={readiness.openSupportItems ? styles.attention : ''}><span>SUPPORT QUEUE</span><strong>{number(readiness.openSupportItems)}</strong><small>Needs review</small></article>
+              <article className={readiness.emailAttention24h ? styles.attention : ''}><span>EMAIL ATTENTION 24H</span><strong>{number(readiness.emailAttention24h)}</strong><small>Real failures excluding Resend test events</small></article>
+            </div>
+          </section>}
 
           <section className={styles.split}>
             <article className={styles.panel}>
