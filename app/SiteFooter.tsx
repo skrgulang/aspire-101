@@ -44,7 +44,7 @@ export default function SiteFooter() {
           <nav>
             <a href="/about">About Aspire</a>
             <a href="/updates">Product updates</a>
-            <a href="/#work-with-us">Work with Aspire</a>
+            <a href="/ambassadors">Work with Aspire</a>
             <a href="/safety">Safety Center</a>
             <a href="/privacy">Privacy</a>
             <a href="/terms">Terms</a>
