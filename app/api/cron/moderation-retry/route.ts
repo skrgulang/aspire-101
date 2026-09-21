@@ -16,8 +16,18 @@ function authorized(request: Request) {
 }
 
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET) return NextResponse.json({ error: 'Moderation retry is not configured.' }, { status: 503 });
-  if (!authorized(request)) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.json(
+      { error: 'Moderation retry is not configured.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+  if (!authorized(request)) {
+    return NextResponse.json(
+      { error: 'Unauthorized.' },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
 
   const supabase = getSupabaseServiceClient();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -30,7 +40,13 @@ export async function GET(request: Request) {
     .order('created_at', { ascending: true })
     .limit(8);
 
-  if (error) return NextResponse.json({ error: 'Could not load the moderation retry queue.' }, { status: 500 });
+  if (error) {
+    return NextResponse.json(
+      { error: 'Could not load the moderation retry queue.' },
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+    );
+  }
+
   const secret = process.env.CRON_SECRET;
   const endpoint = new URL('/api/moderation/request', request.url);
   const results = await Promise.all((data ?? []).map(async ({ id }) => {
@@ -47,9 +63,20 @@ export async function GET(request: Request) {
     }
   }));
 
-  return NextResponse.json({
-    queued: results.length,
-    completed: results.filter((result) => result.ok).length,
-    failed: results.filter((result) => !result.ok).length
-  });
+  const failedResults = results.filter((result) => !result.ok);
+  const failedStatuses = [...new Set(failedResults.map((result) => result.status))].sort((a, b) => a - b);
+
+  return NextResponse.json(
+    {
+      ok: failedResults.length === 0,
+      queued: results.length,
+      completed: results.length - failedResults.length,
+      failed: failedResults.length,
+      failedStatuses
+    },
+    {
+      status: failedResults.length ? 500 : 200,
+      headers: { 'Cache-Control': 'no-store' }
+    }
+  );
 }
