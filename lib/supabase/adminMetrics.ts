@@ -65,3 +65,27 @@ export async function fetchFounderActivityMetrics(days = 30) {
   if (error) throw error;
   return data as FounderActivityMetrics;
 }
+
+
+export type FounderLaunchReadinessMetrics = {
+  generatedAt: string;
+  schoolVerified: number;
+  schoolPending: number;
+  phoneVerified: number;
+  livePayoutAccounts: number;
+  sandboxPayoutAccounts: number;
+  livePayments: number;
+  sandboxPayments: number;
+  pendingPosts: number;
+  openSafetyReports: number;
+  openResolutionCases: number;
+  openSupportItems: number;
+  emailAttention24h: number;
+};
+
+export async function fetchFounderLaunchReadinessMetrics() {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('admin_launch_readiness_metrics');
+  if (error) throw error;
+  return data as FounderLaunchReadinessMetrics;
+}
