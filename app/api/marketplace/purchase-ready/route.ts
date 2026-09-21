@@ -84,6 +84,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ready: true, paymentMethod, livemode });
   } catch (error) {
-    return apiError(error);
+    const result = apiError(error);
+    return NextResponse.json(result.body, { status: result.status });
   }
 }
