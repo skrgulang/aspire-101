@@ -27,7 +27,8 @@ function iconFor(kind: AspireNotification['kind']) {
   if (kind === 'connection_cancelled') return '×';
   if (kind === 'post_review') return '◇';
   if (kind === 'resolution_case') return '§';
-  if (kind === 'market_order') return '
+  if (kind === 'market_order') return '$';
+  return '✓';
 }
 
 export default function NotificationCenter({
@@ -80,116 +81,6 @@ export default function NotificationCenter({
       window.location.assign(item.connection_id
         ? `/transactions?connection=${encodeURIComponent(item.connection_id)}`
         : '/transactions');
-      return;
-    }
-    if (item.kind === 'request_response') {
-      onShowRequests();
-      return;
-    }
-    if (item.kind === 'message' && item.connection_id) {
-      onOpenChat(item.connection_id);
-      return;
-    }
-    onShowConnections();
-  }
-
-  function readAll() {
-    const now = new Date().toISOString();
-    setItems((current) => current.map((item) => item.read_at ? item : { ...item, read_at: now }));
-    void markAllNotificationsRead().catch(() => undefined);
-  }
-
-  const drawer = open && typeof document !== 'undefined'
-    ? createPortal(
-        <div className="notificationOverlay" role="presentation" onMouseDown={() => setOpen(false)}>
-          <aside className="notificationPanel" role="dialog" aria-modal="true" aria-label="Notifications" onMouseDown={(event) => event.stopPropagation()}>
-            <header>
-              <div><span>ASPIRE ACTIVITY</span><h2>Notifications</h2></div>
-              <div className="notificationHeaderActions">
-                {unread > 0 && <button type="button" onClick={readAll}>Mark all read</button>}
-                <button type="button" className="notificationClose" onClick={() => setOpen(false)} aria-label="Close notifications">×</button>
-              </div>
-            </header>
-
-            <div className="notificationList">
-              {loading && !items.length && <p className="notificationEmpty">Loading activity…</p>}
-              {!loading && !items.length && <div className="notificationEmpty"><strong>All quiet for now.</strong><p>Post review updates, responses, connection changes, messages, and Circle activity will appear here.</p></div>}
-              {items.map((item) => (
-                <button type="button" className={`notificationItem ${item.read_at ? '' : 'unread'}`} key={item.id} onClick={() => read(item)}>
-                  <i>{iconFor(item.kind)}</i>
-                  <div><strong>{item.title}</strong>{item.body && <p>{item.body}</p>}<span>{timeAgo(item.created_at)}</span></div>
-                  {!item.read_at && <b aria-label="Unread" />}
-                </button>
-              ))}
-            </div>
-          </aside>
-        </div>,
-        document.body
-      )
-    : null;
-
-  return (
-    <>
-      <button
-        type="button"
-        className="notificationToggle"
-        onClick={() => setOpen(true)}
-        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
-      >
-        Activity {unread > 0 && <i className="notificationDot" aria-hidden="true" />}
-      </button>
-      {drawer}
-    </>
-  );
-}
-;
-  return '✓';
-}
-
-export default function NotificationCenter({
-  userId,
-  onShowRequests,
-  onShowConnections,
-  onOpenChat
-}: {
-  userId: string;
-  onShowRequests: () => void;
-  onShowConnections: () => void;
-  onOpenChat: (connectionId: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<AspireNotification[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!userId) return;
-    setLoading(true);
-
-    const unsubscribe = subscribeToNotifications(
-      userId,
-      (next) => {
-        setItems(next);
-        setLoading(false);
-      },
-      () => {
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId]);
-
-  const unread = useMemo(() => items.filter((item) => !item.read_at).length, [items]);
-
-  function read(item: AspireNotification) {
-    if (!item.read_at) {
-      setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read_at: new Date().toISOString() } : entry));
-      void markNotificationRead(item.id).catch(() => undefined);
-    }
-
-    setOpen(false);
-    if (item.kind === 'post_review') {
-      window.location.assign('/activity');
       return;
     }
     if (item.kind === 'request_response') {
