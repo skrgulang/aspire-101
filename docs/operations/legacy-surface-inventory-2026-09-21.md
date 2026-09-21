@@ -72,3 +72,14 @@ Do not delete those tables or policies until the static application is confirmed
 ## No destructive action taken
 
 This inventory intentionally does not delete files, tables, policies, or data.
+
+
+## Sampled production URL checks
+
+On 2026-09-21, the following legacy-style URLs returned HTTP 404 from the current production Next.js application:
+
+- `/tasks.html`
+- `/aspires%20101/tasks.html`
+- `/aspires%20101/support.html`
+
+This is evidence that the sampled static pages are not directly served by the current production deployment. It is not, by itself, proof that every legacy table or policy is unused.
