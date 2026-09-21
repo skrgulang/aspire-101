@@ -39,6 +39,7 @@ type FeePolicy = {
   requester_fee_min_cents: number;
   requester_fee_max_cents: number;
   provider_fee_bps: number;
+  minimum_paid_order_cents: number;
 };
 type AddressState = MarketplaceDeliveryAddress & { instructions: string };
 
@@ -398,6 +399,12 @@ export default function MarketplaceCheckoutV5() {
   const deliveryPaymentFee = deliveryChoice === 'aspirer' && fixedAspirerReward > 0 ? buyerFee(fixedAspirerReward, feePolicy) : 0;
   const estimatedAspirerTotal = itemCheckoutTotal + fixedAspirerReward + deliveryPaymentFee;
   const needsAddress = deliveryChoice === 'ship' || deliveryChoice === 'aspirer';
+  const belowProtectedMinimum = Boolean(
+    deliveryChoice !== 'seller' &&
+    protectedPayment &&
+    feePolicy &&
+    itemAmount < feePolicy.minimum_paid_order_cents
+  );
   const addressTitle = deliveryChoice === 'ship' ? 'Shipping address' : 'Delivery address (private)';
   const activeShippingPolicy = deliveryFor ? shippingPolicyFor(deliveryFor) : 'buyer';
 
@@ -549,6 +556,7 @@ export default function MarketplaceCheckoutV5() {
               {deliveryChoice === 'seller' && <div><span>Seller delivery</span><strong>{sellerDeliverySummary(deliveryFor)}</strong></div>}
               {deliveryChoice === 'aspirer' && <div><span>Aspirer delivery reward</span><strong>{aspirerReward === 'free' ? '$0.00' : aspirerReward === 'negotiable' ? 'Negotiable' : money(fixedAspirerReward)}</strong></div>}
               {protectedPayment && deliveryChoice !== 'seller' && <div><span>Aspire service fee on item</span><strong>{money(itemServiceFee)}</strong></div>}
+              {belowProtectedMinimum && feePolicy && <small>Pay with Aspire starts at {money(feePolicy.minimum_paid_order_cents)}. For meetup, choose Pay in person or use an item price at or above the protected-checkout minimum.</small>}
               {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 && <div><span>Estimated Aspire fee on delivery payment</span><strong>{money(deliveryPaymentFee)}</strong></div>}
               {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 ? <div className="marketV4Total"><span>Estimated all-in total</span><strong>{money(estimatedAspirerTotal)}</strong></div> : deliveryChoice === 'aspirer' && aspirerReward === 'negotiable' ? <div className="marketV4Total"><span>Item checkout now</span><strong>{money(itemCheckoutTotal)} + agreed delivery</strong></div> : deliveryChoice === 'ship' && shippingPaidBy === 'buyer' ? <div className="marketV4Total"><span>Estimated total</span><strong>{money(itemCheckoutTotal)} + shipping</strong></div> : deliveryChoice === 'seller' ? <div className="marketV4Total"><span>Item price</span><strong>{money(itemAmount)}{deliveryFor.seller_delivery_mode === 'fixed' && deliveryFor.seller_delivery_price_cents ? ` + ${money(deliveryFor.seller_delivery_price_cents)} delivery` : deliveryFor.seller_delivery_mode === 'free' ? ' + free delivery' : ' + agreed delivery'}</strong></div> : <div className="marketV4Total"><span>You pay</span><strong>{money(itemCheckoutTotal)}</strong></div>}
               {deliveryChoice === 'aspirer' && fixedAspirerReward > 0 && <small>Item checkout is {money(itemCheckoutTotal)} now. The helper reward is a separate payment after a helper is chosen.</small>}
@@ -556,7 +564,7 @@ export default function MarketplaceCheckoutV5() {
             </div>
 
             {modalError && <div className="marketV4ModalError" role="alert">{modalError}</div>}
-            <button className="marketV4Continue" type="button" disabled={busy !== ''} onClick={() => void reserve(deliveryFor)}>{busy ? 'Working…' : deliveryChoice === 'seller' ? 'Ask seller about delivery →' : deliveryChoice === 'ship' ? 'Continue to shipping setup →' : deliveryChoice === 'aspirer' ? 'Reserve item + post delivery request →' : meetPayment === 'in_person' ? 'Reserve for meetup →' : 'Continue to protected checkout →'}</button>
+            <button className="marketV4Continue" type="button" disabled={busy !== '' || belowProtectedMinimum} onClick={() => void reserve(deliveryFor)}>{busy ? 'Working…' : belowProtectedMinimum && feePolicy ? `Pay with Aspire starts at ${money(feePolicy.minimum_paid_order_cents)}` : deliveryChoice === 'seller' ? 'Ask seller about delivery →' : deliveryChoice === 'ship' ? 'Continue to shipping setup →' : deliveryChoice === 'aspirer' ? 'Reserve item + post delivery request →' : meetPayment === 'in_person' ? 'Reserve for meetup →' : 'Continue to protected checkout →'}</button>
           </section>
         </div>
       )}
