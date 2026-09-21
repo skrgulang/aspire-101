@@ -32,6 +32,7 @@ import { confirmConnectionCompletion } from '../lib/supabase/payments';
 import { setConnectionCoordinationStatus } from '../lib/supabase/liveConnections';
 import type { AspireRequest } from '../lib/supabase/requests';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { trackGa4Event } from '../lib/analytics/ga4';
 import { blockUser, reportSafety, type SafetyReason } from '../lib/supabase/safety';
 import NotificationCenter from './NotificationCenter';
 import ConnectionEventTimeline from './ConnectionEventTimeline';
@@ -262,7 +263,12 @@ export default function ConnectionsHub() {
     setBusyId(connectionId);
     setNotice('');
     try {
+      const connection = connectionData.connections.find((item) => item.id === connectionId);
       await confirmConnection(connectionId);
+      trackGa4Event('connection_created', {
+        source: 'request_response',
+        payment_method: connection?.payment_method || 'none'
+      });
       setNotice('Connected. You can message each other and coordinate the next step.');
       await reload(true);
       setTab('connections');
