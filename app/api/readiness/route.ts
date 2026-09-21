@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
+import { getSupabaseServiceClient } from '../../../lib/server/aspireServer';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
