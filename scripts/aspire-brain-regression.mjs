@@ -29,6 +29,20 @@ for (const [input, expected] of classificationCases) {
   }
 }
 
+const explicitEntityCases = [
+  ['Need a ride to SFO tomorrow', { time_text: 'tomorrow', place_text: 'SFO' }],
+  ['Study group near PMU tonight', { time_text: 'tonight', place_text: 'PMU' }],
+  ['Need moving help at WALC after 5 pm', { time_text: 'after 5 pm', place_text: 'WALC' }]
+];
+for (const [input, expected] of explicitEntityCases) {
+  const actual = inferIntentHints(input);
+  for (const [key, value] of Object.entries(expected)) {
+    if (actual[key] !== value) throw new Error(`${input}: ${key}=${actual[key]} expected ${value}`);
+  }
+}
+const noInventedEntities = inferIntentHints('Need a math study partner');
+if (noInventedEntities.time_text || noInventedEntities.place_text) throw new Error('Brain must not invent missing time/place hints');
+
 const ambiguousPurchase = inferIntentHints('Where can I buy groceries?');
 if (ambiguousPurchase.category !== 'Pickup / errand') throw new Error('grocery discovery should stay in the grocery/errand domain without becoming marketplace');
 
@@ -99,4 +113,4 @@ for (const input of negativeNavigationCases) {
   if (inferNavigationIntent(input)) throw new Error(`${input}: should not be treated as direct navigation`);
 }
 
-console.log('Aspire Brain regression: 42/42 passed');
+console.log('Aspire Brain regression: 46/46 passed');
