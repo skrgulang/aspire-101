@@ -8,14 +8,17 @@ import {
   fetchMyRole,
   fetchRequestsForModeration,
   fetchSafetyReportsForModeration,
+  fetchSupportFeedbackForModeration,
   fetchVerificationQueue,
   removeRequestAsModerator,
   reviewRequestModeration,
   reviewSafetyReport,
   reviewSchoolVerification,
+  reviewSupportFeedback,
   runModeratorRequestAiSafety,
   SafetyReportForModeration,
   SchoolVerification,
+  SupportFeedbackForModeration,
   setModeratorByEmail,
   setUserEnforcement,
   UserEnforcementState
@@ -25,7 +28,7 @@ import { fetchRequestMedia, RequestMedia } from '../lib/supabase/requestMedia';
 import AppDock from './AppDock';
 import AppLoader from './AppLoader';
 
-type Tab = 'ids' | 'reports' | 'requests' | 'team';
+type Tab = 'ids' | 'reports' | 'requests' | 'support' | 'team';
 
 function when(value: string) {
   return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -56,6 +59,7 @@ export default function ModeratorConsole() {
   const [tab, setTab] = useState<Tab>('requests');
   const [verifications, setVerifications] = useState<SchoolVerification[]>([]);
   const [reports, setReports] = useState<SafetyReportForModeration[]>([]);
+  const [supportFeedback, setSupportFeedback] = useState<SupportFeedbackForModeration[]>([]);
   const [requests, setRequests] = useState<AspireRequest[]>([]);
   const [requestMedia, setRequestMedia] = useState<RequestMedia[]>([]);
   const [enforcementStates, setEnforcementStates] = useState<UserEnforcementState[]>([]);
@@ -73,10 +77,11 @@ export default function ModeratorConsole() {
         router.replace('/profile');
         return;
       }
-      const [ids, safety, activeRequests] = await Promise.all([
+      const [ids, safety, activeRequests, support] = await Promise.all([
         fetchVerificationQueue(),
         fetchSafetyReportsForModeration(),
-        fetchRequestsForModeration()
+        fetchRequestsForModeration(),
+        fetchSupportFeedbackForModeration()
       ]);
       const userIds = [...new Set([
         ...activeRequests.map((request) => request.poster_id),
@@ -88,6 +93,7 @@ export default function ModeratorConsole() {
       ]);
       setVerifications(ids);
       setReports(safety);
+      setSupportFeedback(support);
       setRequests(activeRequests);
       setRequestMedia(media);
       setEnforcementStates(enforcements);
@@ -103,6 +109,7 @@ export default function ModeratorConsole() {
   const pendingIds = useMemo(() => verifications.filter((item) => item.status === 'pending'), [verifications]);
   const openReports = useMemo(() => reports.filter((item) => item.status === 'submitted' || item.status === 'reviewing'), [reports]);
   const pendingRequests = useMemo(() => requests.filter((request) => request.moderation_status === 'pending'), [requests]);
+  const pendingSupport = useMemo(() => supportFeedback.filter((item) => !item.approved && !item.archived), [supportFeedback]);
   const highRiskRequests = useMemo(() => pendingRequests.filter((request) =>
     request.ai_risk_level === 'high' || request.ai_risk_level === 'critical' || (request.behavior_risk_score ?? 0) >= 60
   ), [pendingRequests]);
@@ -172,6 +179,21 @@ export default function ModeratorConsole() {
       await reload();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not update the reported account.');
+    } finally { setBusy(''); }
+  }
+
+  async function changeSupportFeedback(item: SupportFeedbackForModeration, action: 'publish' | 'archive' | 'reopen') {
+    let reason = '';
+    if (action === 'archive') {
+      reason = window.prompt('Internal archive note (optional):', '') ?? '';
+    }
+    setBusy(`support-${item.id}`);
+    try {
+      await reviewSupportFeedback(item.id, action, reason);
+      setNotice(action === 'publish' ? 'Feedback published to the public ideas board.' : action === 'archive' ? 'Feedback archived.' : 'Feedback reopened for review.');
+      await reload();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update this support item.');
     } finally { setBusy(''); }
   }
 
@@ -292,6 +314,7 @@ export default function ModeratorConsole() {
           <button className={tab === 'requests' ? 'active' : ''} onClick={() => setTab('requests')} type="button">Posts <b>{pendingRequests.length}</b></button>
           <button className={tab === 'ids' ? 'active' : ''} onClick={() => setTab('ids')} type="button">School IDs <b>{pendingIds.length}</b></button>
           <button className={tab === 'reports' ? 'active' : ''} onClick={() => setTab('reports')} type="button">Safety <b>{openReports.length}</b></button>
+          <button className={tab === 'support' ? 'active' : ''} onClick={() => setTab('support')} type="button">Support <b>{pendingSupport.length}</b></button>
           {role === 'admin' && <button className={tab === 'team' ? 'active' : ''} onClick={() => setTab('team')} type="button">Team</button>}
         </nav>
 
@@ -415,6 +438,41 @@ export default function ModeratorConsole() {
                       <button type="button" onClick={() => updateReport(report, 'reviewing')} disabled={busy === `report-${report.id}`}>Reviewing</button>
                       <button type="button" className="moderatorReject" onClick={() => updateReport(report, 'dismissed')} disabled={busy === `report-${report.id}`}>Dismiss</button>
                       <button type="button" className="button buttonGold" onClick={() => updateReport(report, 'resolved')} disabled={busy === `report-${report.id}`}>Resolve</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+
+        {tab === 'support' && (
+          <section className="moderatorPanel">
+            <div className="moderatorPanelHead"><div><span>SUPPORT + FEEDBACK</span><h2>Support inbox</h2></div><p>Review bug reports, feature ideas, general feedback, safety messages, and collaboration requests. Only feature, bug, and general feedback items can be published to the public ideas board.</p></div>
+            <div className="moderatorList">
+              {!supportFeedback.length && <div className="moderatorEmpty"><i>✓</i><strong>Support inbox is clear.</strong><span>New feedback submissions will appear here.</span></div>}
+              {supportFeedback.map((item) => {
+                const publicEligible = ['feature', 'bug', 'feedback'].includes(item.type);
+                const state = item.archived ? 'ARCHIVED' : item.approved ? 'PUBLISHED' : 'NEEDS REVIEW';
+                return (
+                  <article className={`moderatorRow moderatorReportRow ${!item.archived && !item.approved ? 'attention' : ''}`} key={item.id}>
+                    <div className="moderatorRowMain">
+                      <span>{item.type.toUpperCase()} · {state}</span>
+                      <strong>{item.subject}</strong>
+                      {item.details && <p>{item.details}</p>}
+                      <small>
+                        {when(item.created_at)}
+                        {item.email ? ` · reply ${item.email}` : ' · no reply email'}
+                        {item.company ? ` · ${item.company}` : ''}
+                      </small>
+                      {item.page_url && <small>Page: {item.page_url}</small>}
+                      {item.reason && <small>Internal note: {item.reason}</small>}
+                    </div>
+                    <div className="moderatorRowActions">
+                      {!item.archived && !item.approved && publicEligible && <button type="button" className="button buttonGold" onClick={() => changeSupportFeedback(item, 'publish')} disabled={busy === `support-${item.id}`}>Publish idea</button>}
+                      {!item.archived && <button type="button" className="moderatorReject" onClick={() => changeSupportFeedback(item, 'archive')} disabled={busy === `support-${item.id}`}>Archive</button>}
+                      {item.archived && <button type="button" onClick={() => changeSupportFeedback(item, 'reopen')} disabled={busy === `support-${item.id}`}>Reopen</button>}
                     </div>
                   </article>
                 );
