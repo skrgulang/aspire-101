@@ -120,7 +120,7 @@ export async function POST(request: Request) {
   let pendingPath = '';
   try {
     const { user } = await getAuthenticatedUser(request);
-    await enforceAiRateLimit(supabase, user.id, 'avatar_moderation', 8);
+    await enforceAiRateLimit(supabase, user.id, 'moderation', 8);
     const body = await request.json().catch(() => ({})) as { storagePath?: string; mimeType?: string };
     pendingPath = String(body.storagePath || '').trim();
     const mimeType = String(body.mimeType || '').toLowerCase();
