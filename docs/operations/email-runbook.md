@@ -43,3 +43,23 @@ The SMTP password must remain server-side. Prefer a mailbox application password
 - DMARC exists and reports to a monitored mailbox.
 - No hard-coded SMTP credentials exist in source control.
 - Vercel production SMTP credentials use server-only variables.
+
+## Resend delivery webhooks
+
+Endpoint: `/api/resend/webhook`.
+
+Tracked events:
+
+- `email.sent`
+- `email.delivered`
+- `email.delivery_delayed`
+- `email.bounced`
+- `email.complained`
+- `email.failed`
+- `email.suppressed`
+
+The endpoint verifies Svix/Resend signatures against `RESEND_WEBHOOK_SIGNING_SECRET` before parsing the JSON payload. It stores a privacy-minimized operational event record in `public.resend_webhook_events`: webhook message ID, event type, Resend email ID, sender/recipient domains, event timestamp, and bounce category when provided. Full recipient addresses and message bodies are not stored.
+
+Repeated webhook deliveries are idempotent because `webhook_message_id` is the primary key.
+
+Delivery failures, complaints, bounces, and suppressions also emit a structured server warning without full recipient addresses.
