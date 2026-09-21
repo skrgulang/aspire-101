@@ -167,6 +167,20 @@ export async function fetchMarketDisputes(orderIds: string[]) {
   return (data ?? []) as MarketDispute[];
 }
 
+export function subscribeToMarketplaceOrderChanges(onChange: () => void) {
+  const supabase = getSupabaseBrowserClient();
+  const channel = supabase
+    .channel(`market-orders-${Math.random().toString(36).slice(2)}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'market_orders' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'connection_payments' }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'market_disputes' }, onChange)
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
 export async function markMarketHandoff(connectionId: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('market_mark_handoff_safe', { p_connection_id: connectionId });
