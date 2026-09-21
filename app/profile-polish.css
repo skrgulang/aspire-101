@@ -103,9 +103,51 @@ html[data-aspire-theme='dark'] body:has(.profilePagePolished) { background: #0b0
 .profileTrustChips span { padding: 7px 10px; border: 1px solid #e8e8e4; border-radius: 999px; background: #fafaf8; color: #85857f; font-size: 9px; font-weight: 750; }
 .profileTrustChips span.verified { border-color: #ead99d; background: #fff8df; color: #7a5c00; }
 .profileHeroActions { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px; }
-.profileHeroActions a { min-height: 38px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #e6e6e2; border-radius: 11px; color: #343431; font-size: 11px; font-weight: 750; }
-.profileHeroActions a:first-child { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+.profileHeroActions a,
+.profileHeroActions button { min-height: 38px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #e6e6e2; border-radius: 11px; background: #fff; color: #343431; font: inherit; font-size: 11px; font-weight: 750; cursor: pointer; }
+.profileHeroActions a:hover,
+.profileHeroActions button:hover { border-color: #d5d5cf; background: #fbfbf9; color: #111; }
+.profileHeroActions button:first-child { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
 .profileHeroActions svg { width: 15px; height: 15px; }
+
+
+.studentProfileMetaLine { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; color: #555550; font-size: 11px; font-weight: 700; }
+.studentProfileBio { max-width: 660px; margin-top: 12px !important; color: #4f4f4b !important; line-height: 1.55; }
+.studentProfileInterests { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.studentProfileInterests span { padding: 6px 9px; border: 1px solid #e8e8e3; border-radius: 999px; background: #fafaf8; color: #666660; font-size: 9px; font-weight: 750; }
+.studentProfileStats { margin-top: 15px; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; max-width: 620px; }
+.studentProfileStat { min-width: 0; padding: 10px 11px; border: 1px solid #ecece7; border-radius: 12px; background: #fbfbf9; }
+.studentProfileStat strong { display: block; overflow: hidden; text-overflow: ellipsis; color: #242421; font-size: 13px; line-height: 1.2; white-space: nowrap; }
+.studentProfileStat span { display: block; margin-top: 3px; color: #8b8b85; font-size: 8px; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; }
+
+.studentEditPanel { margin-top: 16px; padding-top: 16px; border-top: 1px solid #ecece7; }
+.studentEditGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 11px; }
+.studentEditGrid label { min-width: 0; display: grid; gap: 5px; }
+.studentEditGrid label > span,
+.studentEditInterests > span { color: #777772; font-size: 9px; font-weight: 800; }
+.studentEditGrid input,
+.studentEditGrid textarea { width: 100%; min-height: 42px; padding: 10px 11px; border: 1px solid #deded9; border-radius: 10px; background: #fff; color: #22221f; outline: none; font: inherit; font-size: 11px; }
+.studentEditGrid textarea { min-height: 86px; resize: vertical; line-height: 1.5; }
+.studentEditGrid input:focus,
+.studentEditGrid textarea:focus { border-color: #d1b74f; box-shadow: 0 0 0 3px rgba(255,199,44,.12); }
+.studentEditFull,
+.studentEditInterests,
+.studentEditActions { grid-column: 1 / -1; }
+.studentEditInterestGrid { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px; }
+.studentInterestButton { min-height: 32px; padding: 0 10px; border: 1px solid #e2e2dd; border-radius: 999px; background: #fff; color: #666660; font: inherit; font-size: 9px; font-weight: 750; cursor: pointer; }
+.studentInterestButton.active { border-color: #e3c961; background: #fff5cf; color: #725600; }
+.studentEditActions { display: flex; justify-content: flex-end; gap: 8px; }
+.studentEditActions button { min-height: 38px; padding: 0 13px; border: 1px solid #deded9; border-radius: 10px; background: #fff; color: #383834; font: inherit; font-size: 9px; font-weight: 800; cursor: pointer; }
+.studentEditActions button:last-child { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+.studentEditActions button:disabled { opacity: .55; cursor: wait; }
+
+.studentIdentityAside { display: grid; gap: 10px; }
+.studentIdentityAsideCard { padding: 17px; border: 1px solid #e7e7e3; border-radius: 18px; background: #fff; box-shadow: 0 8px 24px rgba(17,17,17,.025); }
+.studentIdentityAsideCard > span { color: #9a7400; font-size: 8px; font-weight: 850; letter-spacing: .10em; text-transform: uppercase; }
+.studentIdentityAsideCard h3 { margin: 6px 0 5px; color: #292926; font-size: 15px; line-height: 1.2; letter-spacing: -.02em; }
+.studentIdentityAsideCard p { margin: 0; color: #7f7f79; font-size: 9px; line-height: 1.5; }
+.studentIdentityAsideCard > a { margin-top: 11px; display: flex; align-items: center; justify-content: space-between; color: #4c4638; font-size: 9px; font-weight: 800; }
+.studentIdentityAsideCard > a svg { width: 13px; height: 13px; }
 
 .profileSetupCard { padding: 20px; border: 1px solid #eee4c0; border-radius: 20px; background: linear-gradient(145deg,#fffaf0,#fff1bf); box-shadow: inset 0 1px 0 rgba(255,255,255,.55); }
 .profileSetupTop { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
@@ -254,6 +296,10 @@ html[data-aspire-theme='dark'] .profileHeroPolished {
 }
 html[data-aspire-theme='dark'] .profileTrustChips span,
 html[data-aspire-theme='dark'] .profileHeroActions a,
+html[data-aspire-theme='dark'] .profileHeroActions button,
+html[data-aspire-theme='dark'] .studentProfileInterests span,
+html[data-aspire-theme='dark'] .studentProfileStat,
+html[data-aspire-theme='dark'] .studentIdentityAsideCard,
 html[data-aspire-theme='dark'] .profileTrustCards > .profileCard,
 html[data-aspire-theme='dark'] .profileTrustCards > .trustPassportCard,
 html[data-aspire-theme='dark'] .profileMenuRow { border-color: #2b2b28; background: #1b1b19; color: #eeeae2; }
@@ -264,6 +310,23 @@ html[data-aspire-theme='dark'] .profileMenuRow.moderator { border-color: rgba(25
 html[data-aspire-theme='dark'] .profileHeroActions a:first-child { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
 html[data-aspire-theme='dark'] .profileAvatar { border-color: rgba(255,199,44,.26); background: rgba(255,199,44,.10); color: #ffc72c; }
 html[data-aspire-theme='dark'] .profileAvatarEditable > span { border-color: #151514; }
+
+html[data-aspire-theme='dark'] .studentProfileMetaLine,
+html[data-aspire-theme='dark'] .studentProfileBio,
+html[data-aspire-theme='dark'] .studentProfileStat span,
+html[data-aspire-theme='dark'] .studentIdentityAsideCard p { color: #9b968d !important; }
+html[data-aspire-theme='dark'] .studentProfileStat strong,
+html[data-aspire-theme='dark'] .studentIdentityAsideCard h3 { color: #f1ede5; }
+html[data-aspire-theme='dark'] .studentIdentityAsideCard > span { color: #ffc72c; }
+html[data-aspire-theme='dark'] .studentEditPanel { border-color: #2b2b28; }
+html[data-aspire-theme='dark'] .studentEditGrid input,
+html[data-aspire-theme='dark'] .studentEditGrid textarea,
+html[data-aspire-theme='dark'] .studentInterestButton,
+html[data-aspire-theme='dark'] .studentEditActions button { border-color: #33332f; background: #242421; color: #ded9d0; }
+html[data-aspire-theme='dark'] .studentInterestButton.active,
+html[data-aspire-theme='dark'] .studentEditActions button:last-child,
+html[data-aspire-theme='dark'] .profileHeroActions button:first-child { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+
 html[data-aspire-theme='dark'] .profileSetupCard { border-color: rgba(255,199,44,.28); background: linear-gradient(145deg, rgba(255,199,44,.11), rgba(255,199,44,.045)); box-shadow: inset 0 1px 0 rgba(255,255,255,.035); }
 html[data-aspire-theme='dark'] .profileSetupBadge,
 html[data-aspire-theme='dark'] .profileSetupMeter i { background: #ffc72c; color: #18130a; }
@@ -323,6 +386,10 @@ html[data-aspire-theme='dark'] .profileAccountFoot strong { color: #aaa59b; }
   .profileTrustChips { margin-top: 10px; gap: 5px; }
   .profileTrustChips span { padding: 6px 8px; font-size: 8px; }
   .profileHeroActions { grid-column: 1 / -1; }
+  .studentProfileStats { grid-template-columns: 1fr 1fr; }
+  .studentProfileStat:last-child { grid-column: 1 / -1; }
+  .studentEditGrid { grid-template-columns: 1fr; }
+  .studentEditFull,.studentEditInterests,.studentEditActions { grid-column: 1; }
   .profileSetupCard { grid-column: 1 / -1; display: block; }
   .profileSetupMeter { margin-top: 0; }
   .profileTrustPanel,.profileQuickPanel { padding: 15px; border-radius: 19px; }
