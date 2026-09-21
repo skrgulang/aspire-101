@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchMyConnections } from '../lib/supabase/connections';
+import { trackGa4Event } from '../lib/analytics/ga4';
 import {
   createAspireCheckout,
   fetchAspireFeeQuote,
@@ -92,6 +93,9 @@ export default function ConnectionPaymentsPanel() {
     setNotice('');
     try {
       const result = await createAspireCheckout(connectionId);
+      trackGa4Event('checkout_started', {
+        payment_flow: 'aspire'
+      });
       window.location.assign(result.url);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not start payment.');
