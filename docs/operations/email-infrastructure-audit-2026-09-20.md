@@ -37,7 +37,7 @@ Keep human/team mail on Namecheap Private Email and keep auth/password-reset tra
 ## Operational gaps
 
 1. Root-domain Namecheap mail DNS still needs a direct DNS-side review when convenient; the transactional `auth.aspires101.com` Resend domain itself is already verified.
-2. Resend currently has no webhooks configured, so delivery, bounce, complaint, delayed, failed, and suppression events are not yet pushed into Aspire operations automatically.
+2. Resend delivery webhooks are now enabled in production at `/api/resend/webhook` for sent, delivered, delayed, bounced, complained, failed, and suppressed events.
 3. Namecheap SMTP does not provide the same programmatic bounce / complaint webhook workflow as a transactional-mail provider; keep it for human/team mail rather than auth mail.
 4. Keep mailbox master passwords out of Vercel. Use a mailbox application password for SMTP when supported.
 5. Enable 2FA on the Namecheap / Private Email administrator account and maintain recovery access.
@@ -53,3 +53,14 @@ Keep human/team mail on Namecheap Private Email and keep auth/password-reset tra
 - After any DNS or mail-provider change: verify MX, SPF, DKIM and DMARC after propagation.
 - Monthly during launch: review auth-email failures, ambassador email events and bounce reasons.
 - Before a major campus launch: validate signup confirmation and password recovery with Gmail plus at least one university mailbox.
+
+## Production webhook validation
+
+Validated on 2026-09-20 / 2026-09-21 UTC:
+
+- Production endpoint returned HTTP 200 to a signed Resend bounce event.
+- The event persisted in `public.resend_webhook_events`.
+- The stored record contained only operational metadata and domains, not full recipient addresses or message content.
+- A replay of the same webhook returned `duplicate: true`.
+- The database retained exactly one row for the repeated webhook message ID.
+- Vercel reported no runtime error cluster for `/api/resend/webhook` during validation.
