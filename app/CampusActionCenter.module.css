@@ -45,14 +45,25 @@
   border-top: 1px solid rgba(255, 255, 255, .075);
 }
 
-.item,
-.fallback {
+.item {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) 18px;
   align-items: center;
   gap: 14px;
   min-height: 76px;
   padding: 13px 22px;
+  color: inherit;
+  text-decoration: none;
+  transition: background .16s ease, transform .16s ease;
+}
+
+.fallback {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 16px 22px 18px;
   color: inherit;
   text-decoration: none;
   transition: background .16s ease, transform .16s ease;
@@ -167,6 +178,19 @@
 
 .fallback {
   border-top: 1px solid rgba(255, 255, 255, .075);
+  background: rgba(255, 255, 255, .015);
+}
+
+.fallback > span {
+  max-width: 680px;
+}
+
+.fallback strong {
+  line-height: 1.35;
+}
+
+.fallback small {
+  white-space: normal;
 }
 
 .loading {
@@ -211,10 +235,14 @@
     padding: 19px 18px 14px;
   }
 
-  .item,
-  .fallback {
+  .item {
     grid-template-columns: 40px minmax(0, 1fr) 16px;
     padding: 12px 17px;
+  }
+
+  .fallback {
+    grid-template-columns: minmax(0, 1fr) 16px;
+    padding: 14px 17px 16px;
   }
 
   .item > i {
