@@ -86,10 +86,10 @@ export default function MarketingExtras() {
             <div className="safetyShield">ID</div><small>02</small><strong>ID Verified</strong><span>Optional government-ID verification for higher-trust situations.</span>
           </a>
           <a href="/safety" className="safetyObject safetyMutual" data-reveal="pop">
-            <div className="safetyPolaroid" aria-hidden="true">⇄</div><small>03</small><strong>Mutual connect</strong><span>A response is not a deal. Both sides choose before private chat opens.</span>
+            <div className="safetyPolaroid safetyMutualIcon" aria-hidden="true">⇄</div><small>03</small><strong>Mutual connect</strong><span>A response is not a deal. Both sides choose.</span>
           </a>
           <a href="/profile" className="safetyObject safetyControl" data-reveal="right">
-            <div className="safetyShield safetyTwoFactor" aria-hidden="true">2FA</div><small>04</small><strong>Two-step security</strong><span>Optional MFA adds a second factor after your password.</span>
+            <div className="safetyShield">04</div><small>04</small><strong>Two-step security</strong><span>Optional MFA adds a second factor after your password.</span>
           </a>
         </div>
 
