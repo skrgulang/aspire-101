@@ -9,7 +9,7 @@ type Status = 'new' | 'reviewing' | 'interview' | 'accepted' | 'declined';
 type Filter = 'all' | Status;
 type EmailStatus = 'matched' | 'unmatched' | 'unreviewed';
 type EmailType = 'application_received' | 'admin_new_application' | 'interview_invite' | 'accepted' | 'declined' | 'follow_up';
-type DeliveryStatus = 'queued' | 'sent' | 'failed' | 'skipped';
+type DeliveryStatus = 'queued' | 'sent' | 'failed' | 'skipped' | 'bounced';
 
 type Application = {
   id: string;
@@ -46,6 +46,7 @@ type EmailEvent = {
   created_by: string | null;
   created_at: string;
   sent_at: string | null;
+  bounced_at: string | null;
 };
 
 const statusOrder: Status[] = ['new', 'reviewing', 'interview', 'accepted', 'declined'];
@@ -140,6 +141,10 @@ export default function AmbassadorAdminDashboard() {
   const selectedEmailEvents = useMemo(
     () => selected ? emailEvents.filter((event) => event.application_id === selected.id).slice(0, 6) : [],
     [emailEvents, selected]
+  );
+  const selectedHasBounce = useMemo(
+    () => selectedEmailEvents.some((event) => event.status === 'bounced'),
+    [selectedEmailEvents]
   );
 
   useEffect(() => { setNotesDraft(selected?.internal_notes || ''); }, [selected?.id, selected?.internal_notes]);
@@ -250,6 +255,12 @@ export default function AmbassadorAdminDashboard() {
               </div>
 
               <section className={styles.emailWorkflow}>
+                {selectedHasBounce && (
+                  <div className={styles.emailBounceWarning} role="alert">
+                    <strong>Email delivery bounced.</strong>
+                    <span>Verify the applicant’s address before relying on automated follow-up. The application itself is still saved.</span>
+                  </div>
+                )}
                 <div className={styles.emailWorkflowHead}>
                   <div><span>EMAIL WORKFLOW</span><strong>{emailConfigured ? 'Automated delivery ready' : 'Delivery provider not configured'}</strong></div>
                   <small>{emailConfigured ? (replyToConfigured ? 'Replies route back to the Aspire team.' : 'Add a reply-to address before sending interview emails.') : 'Manual mailto remains available above.'}</small>
@@ -263,7 +274,7 @@ export default function AmbassadorAdminDashboard() {
                 <div className={styles.emailHistory}>
                   {selectedEmailEvents.length ? selectedEmailEvents.map((event) => (
                     <div className={styles.emailEvent} key={event.id}>
-                      <span><strong>{emailLabels[event.email_type]}</strong><small>{formatDate(event.sent_at || event.created_at)}</small></span>
+                      <span><strong>{emailLabels[event.email_type]}</strong><small>{formatDate(event.bounced_at || event.sent_at || event.created_at)}</small></span>
                       <b data-delivery={event.status}>{event.status}</b>
                     </div>
                   )) : <small className={styles.emailEmpty}>No email activity recorded for this applicant yet.</small>}
