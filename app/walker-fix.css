@@ -178,6 +178,22 @@
   opacity: 1 !important;
 }
 
+/* Keep the story path out of the trust cards. The journey still runs on the
+   surrounding homepage chapters, but the Safety section gets a calm reading zone. */
+.journeyWorld .globalJourneyRoad,
+.journeyWorld .globalWalker,
+.journeyWorld .globalJourneyAtmosphere,
+.journeyWorld .globalJourneyGlow {
+  transition: opacity .32s ease !important;
+}
+
+.journeyWorld .globalJourney.chapter2 .globalJourneyRoad,
+.journeyWorld .globalJourney.chapter2 .globalWalker,
+.journeyWorld .globalJourney.chapter2 .globalJourneyAtmosphere,
+.journeyWorld .globalJourney.chapter2 .globalJourneyGlow {
+  opacity: 0 !important;
+}
+
 /* Keep only the journey navigation interactive. */
 .journeyWorld .globalJourneyNav,
 .journeyWorld .globalJourneyNav * {
