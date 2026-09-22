@@ -1,4 +1,5 @@
 import { aspireLogo } from './logo';
+import CookiePreferencesLink from './CookiePreferencesLink';
 
 export default function SiteFooter() {
   return (
@@ -73,6 +74,7 @@ export default function SiteFooter() {
           <a href="/privacy">Privacy Policy</a>
           <a href="/terms">Terms of Service</a>
           <a href="/guidelines">Guidelines</a>
+          <CookiePreferencesLink />
         </div>
         <div className="footerTagline"><i /> Post what you need. Find who can help.</div>
       </div>
