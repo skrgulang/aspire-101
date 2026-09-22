@@ -244,3 +244,38 @@
     transition: none !important;
   }
 }
+
+/* Stronger reading-guide behavior: actual active row + bottom safe lane. */
+.journeyWorld .globalJourney.isWhyChapter .globalWalker,
+.journeyWorld .globalJourney.isTrustChapter .globalWalker {
+  top: auto !important;
+  bottom: 6vh !important;
+  transform: translate(-50%, 0) !important;
+  opacity: .72 !important;
+}
+.journeyWorld .globalJourney.isWhyChapter .globalJourneyRoad,
+.journeyWorld .globalJourney.isTrustChapter .globalJourneyRoad {
+  opacity: .18 !important;
+}
+.marketingWhyRefined .whyAspireCard .whyRowActive {
+  background: linear-gradient(90deg, rgba(255,194,28,.18), rgba(255,194,28,.07) 68%, rgba(255,194,28,.02)) !important;
+  box-shadow: inset 4px 0 0 #ffc21c, 0 0 0 1px rgba(255,194,28,.20) !important;
+  transform: translateX(6px) !important;
+}
+.marketingWhyRefined .whyAspireCard .whyRowActive b {
+  color: #ffd75a !important;
+  text-shadow: 0 0 18px rgba(255,194,28,.30) !important;
+}
+.marketingWhyRefined .whyAspireCard .whyRowActive small {
+  color: #d7c49b !important;
+}
+.marketingWhyRefined .whyAspireCard .whyRowActive i {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 7px rgba(255,194,28,.10), 0 0 24px rgba(255,194,28,.32) !important;
+}
+@media (max-width: 700px) {
+  .journeyWorld .globalJourney.isWhyChapter .globalWalker,
+  .journeyWorld .globalJourney.isTrustChapter .globalWalker {
+    bottom: 12vh !important;
+  }
+}
