@@ -63,6 +63,7 @@ export type RequestAiSafetyPublicResult = {
   requestId: string;
   imageCount: number;
   moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked';
+  userMessage?: string;
 };
 
 export type RequestAiSafetyModeratorResult = RequestAiSafetyPublicResult & {
@@ -227,7 +228,8 @@ export async function runRequestAiSafety(requestId: string): Promise<RequestAiSa
     ok: payload.ok,
     requestId: payload.requestId,
     moderationStatus: payload.moderationStatus,
-    imageCount: payload.imageCount
+    imageCount: payload.imageCount,
+    userMessage: payload.userMessage
   };
 }
 
