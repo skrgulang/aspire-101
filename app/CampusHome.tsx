@@ -56,15 +56,15 @@ function buildCampusStarterPosts(campus: University): DiscoverRequest[] {
   const campusImage = campus.cover_image || campusImageFallback;
   const ideas = purdue ? [
     { title: 'Anyone heading to CoRec after class?', details: 'A simple example of how students can find someone to work out with.', category: 'People / community' as const, kind: 'community' as const, image: '/seeded/corec.webp?v=6' },
-    { title: 'Looking for a study partner on campus', details: 'Example post for finding classmates and study partners nearby.', category: 'Study / class' as const, kind: 'community' as const, image: campusImage },
     { title: 'Anyone want to game tonight?', details: 'Example post for finding campus gaming friends and teammates.', category: 'Gaming / duos' as const, kind: 'community' as const, image: '/seeded/gaming.webp?v=6' },
-    { title: 'Coffee or lunch after class?', details: 'Example post for casual campus plans and meeting new people.', category: 'People / community' as const, kind: 'community' as const, image: campusImage },
-    { title: 'Need one more person for a weekend project', details: 'Example post for finding collaborators and builders around campus.', category: 'Build something' as const, kind: 'collaboration' as const, image: campusImage }
+    { title: 'Looking for a study partner on campus', details: 'Example post for finding classmates and study partners nearby.', category: 'Study / class' as const, kind: 'community' as const, image: campusImage },
+    { title: 'Coffee or lunch after class?', details: 'Example post for casual campus plans and meeting new people.', category: 'People / community' as const, kind: 'community' as const, image: '' },
+    { title: 'Need one more person for a weekend project', details: 'Example post for finding collaborators and builders around campus.', category: 'Build something' as const, kind: 'collaboration' as const, image: '' }
   ] : [
     { title: 'Looking for a study partner on campus', details: 'Example post for finding classmates and study partners nearby.', category: 'Study / class' as const, kind: 'community' as const, image: campusImage },
-    { title: 'Coffee or lunch after class?', details: 'Example post for casual campus plans and meeting new people.', category: 'People / community' as const, kind: 'community' as const, image: campusImage },
-    { title: 'Need one more person for a weekend project', details: 'Example post for finding collaborators and builders around campus.', category: 'Build something' as const, kind: 'collaboration' as const, image: campusImage },
-    { title: 'Anyone free for a campus walk?', details: 'Example post for meeting people and making campus feel smaller.', category: 'People / community' as const, kind: 'community' as const, image: campusImage }
+    { title: 'Coffee or lunch after class?', details: 'Example post for casual campus plans and meeting new people.', category: 'People / community' as const, kind: 'community' as const, image: '' },
+    { title: 'Need one more person for a weekend project', details: 'Example post for finding collaborators and builders around campus.', category: 'Build something' as const, kind: 'collaboration' as const, image: '' },
+    { title: 'Anyone free for a campus walk?', details: 'Example post for meeting people and making campus feel smaller.', category: 'People / community' as const, kind: 'community' as const, image: '' }
   ];
 
   return ideas.map((idea, index) => {
@@ -91,7 +91,7 @@ function buildCampusStarterPosts(campus: University): DiscoverRequest[] {
       updated_at: created,
       author_label: 'Aspire starter',
       starter: true,
-      media: [{
+      media: idea.image ? [{
         id: `${id}-image`,
         request_id: id,
         uploader_id: 'aspire-starter',
@@ -100,7 +100,7 @@ function buildCampusStarterPosts(campus: University): DiscoverRequest[] {
         sort_order: 0,
         created_at: created,
         public_url: idea.image
-      }]
+      }] : []
     } satisfies DiscoverRequest;
   });
 }
@@ -226,18 +226,35 @@ export default function CampusHome() {
   }), [requests]);
 
   const feedEntries = useMemo(() => {
-    const real = [...requests].sort((a, b) => {
+    const score = (item: DiscoverRequest) => {
+      const hasImage = Boolean(item.media?.[0]?.public_url || item.cover_image_url);
+      const starterPenalty = item.starter ? 1 : 0;
+      return { hasImage, starterPenalty };
+    };
+
+    const sortFeed = (items: DiscoverRequest[]) => [...items].sort((a, b) => {
+      const sa = score(a);
+      const sb = score(b);
+
+      // Photo posts first; text-only posts naturally sit a little lower.
+      if (sa.hasImage !== sb.hasImage) return sa.hasImage ? -1 : 1;
+
+      // Real student posts stay ahead of starter/example content.
+      if (sa.starterPenalty !== sb.starterPenalty) return sa.starterPenalty - sb.starterPenalty;
+
       if (feedMode === 'popular') {
         const scoreA = feedClicks[a.id] || 0;
         const scoreB = feedClicks[b.id] || 0;
         if (scoreA !== scoreB) return scoreB - scoreA;
       }
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    }).slice(0, 8);
+    });
 
+    const real = sortFeed(requests).slice(0, 8);
     if (!selectedCampus || real.length >= 8) return real;
+
     const starters = buildCampusStarterPosts(selectedCampus).slice(0, 8 - real.length);
-    return [...real, ...starters];
+    return sortFeed([...real, ...starters]).slice(0, 8);
   }, [requests, feedMode, feedClicks, selectedCampus]);
 
   function chooseCampus(nextId: string) {
