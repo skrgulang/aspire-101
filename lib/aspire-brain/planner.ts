@@ -97,7 +97,8 @@ export function buildAspirePlan(message: string, intent: AspireIntent, entities:
     plan.kind = 'buy_sell';
     plan.market_intent = 'sell';
     plan.payment_method = entities.amountCents != null ? 'aspire' : 'none';
-    plan.price_negotiable = null;
+    plan.item_condition = entities.itemCondition;
+    plan.price_negotiable = entities.priceNegotiable;
     plan.title = limit(entities.item ? `Selling ${entities.item}` : 'Selling an item on campus', 180);
     plan.details = limit(
       `${entities.item ? `Selling ${entities.item}` : 'Selling an item'}${entities.amountCents != null ? ` for $${(entities.amountCents / 100).toFixed(entities.amountCents % 100 === 0 ? 0 : 2)}` : ''}.`,
@@ -114,6 +115,8 @@ export function buildAspirePlan(message: string, intent: AspireIntent, entities:
     plan.kind = 'buy_sell';
     plan.market_intent = 'wanted';
     plan.payment_method = entities.amountCents != null ? 'aspire' : 'none';
+    plan.item_condition = entities.itemCondition;
+    plan.price_negotiable = entities.priceNegotiable;
     plan.title = limit(entities.item ? `Looking for ${entities.item}` : 'Looking for an item on campus', 180);
     plan.details = limit(
       `${entities.item ? `Looking for ${entities.item}` : 'Looking for an item on campus'}${entities.amountCents != null ? ` with a budget around $${(entities.amountCents / 100).toFixed(entities.amountCents % 100 === 0 ? 0 : 2)}` : ''}.`,
