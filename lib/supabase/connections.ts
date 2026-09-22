@@ -152,7 +152,12 @@ export async function fetchMyConnections() {
 export async function acceptRequestResponse(responseId: string) {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.rpc('accept_request_response', { p_response_id: responseId });
-  if (error) throw error;
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+    if (/REQUEST_NOT_AVAILABLE/i.test(detail)) throw new Error('This request is still under review or is no longer available.');
+    if (/Request is no longer open/i.test(detail)) throw new Error('This request is no longer open.');
+    throw error;
+  }
   void trackProductEvent('connection_chosen');
   return data as string;
 }

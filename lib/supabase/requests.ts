@@ -138,6 +138,7 @@ function friendlyPolicyError(error: { message?: string; details?: string; hint?:
   if (/POST_RATE_LIMIT/i.test(detail)) return new Error('You are posting too quickly. Wait a little before submitting another request.');
   if (/SELLER_SERVER_REQUIRED/i.test(detail)) return new Error('Seller listings must use the verified Sell flow. Open List an item to continue.');
   if (/RESPONSE_RATE_LIMIT/i.test(detail)) return new Error('You are responding too quickly. Wait a little and try again.');
+  if (/REQUEST_NOT_AVAILABLE|REQUEST_NOT_FOUND|REQUEST_NOT_OPEN/i.test(detail)) return new Error('This request is still under review or is no longer available.');
   if (/request_responses_request_id_responder_id_key|duplicate key.*request_responses/i.test(detail)) return new Error('Your interest is already recorded on this post.');
   if (/ACCOUNT_SUSPENDED/i.test(detail)) return new Error('This Aspire account is suspended from new interactions. Check your account notice or contact support.');
   if (/ACCOUNT_RESTRICTED/i.test(detail)) return new Error('This Aspire account is temporarily restricted from creating new posts or responses. Check your account notice or contact support.');
