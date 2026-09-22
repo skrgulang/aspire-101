@@ -83,6 +83,15 @@ export function subscribeToNotifications(
   void refresh();
   timer = setInterval(() => { void refresh(); }, notificationPollMs);
 
+  const channel = supabase
+    .channel(`notifications-${userId}-${Math.random().toString(36).slice(2)}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+      () => { void refresh(); }
+    )
+    .subscribe();
+
   const onVisibility = () => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
       void refresh();
@@ -93,6 +102,7 @@ export function subscribeToNotifications(
   return () => {
     active = false;
     if (timer) clearInterval(timer);
+    void supabase.removeChannel(channel);
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVisibility);
   };
 }
