@@ -85,10 +85,14 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       if (claimedAt) {
-        await supabase.rpc('clear_connection_payment_refund_claim', {
-          p_payment_id: paymentId,
-          p_claimed_at: claimedAt
-        }).catch(() => undefined);
+        try {
+          await supabase.rpc('clear_connection_payment_refund_claim', {
+            p_payment_id: paymentId,
+            p_claimed_at: claimedAt
+          });
+        } catch {
+          // Keep the original Stripe error; a stale claim expires and is recoverable.
+        }
       }
       throw error;
     }
