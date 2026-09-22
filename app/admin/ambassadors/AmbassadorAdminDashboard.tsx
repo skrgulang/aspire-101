@@ -256,9 +256,9 @@ export default function AmbassadorAdminDashboard() {
 
               <section className={styles.emailWorkflow}>
                 {selectedHasBounce && (
-                  <div className={styles.emailBounceWarning} role="alert">
-                    <strong>Email delivery bounced.</strong>
-                    <span>Verify the applicant’s address before relying on automated follow-up. The application itself is still saved.</span>
+                  <div role="alert" style={{ marginBottom: 13, padding: '10px 12px', display: 'grid', gap: 3, border: '1px solid rgba(190,80,80,.22)', borderRadius: 10, background: 'rgba(190,80,80,.07)' }}>
+                    <strong style={{ color: '#dca0a0', fontSize: 9 }}>Email delivery bounced.</strong>
+                    <span style={{ color: '#9f8585', fontSize: 8, lineHeight: 1.5 }}>Verify the applicant’s address before relying on automated follow-up. The application itself is still saved.</span>
                   </div>
                 )}
                 <div className={styles.emailWorkflowHead}>
