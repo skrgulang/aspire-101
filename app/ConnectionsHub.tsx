@@ -17,14 +17,17 @@ import {
   fetchConnectionUnreadCounts,
   fetchMyCircle,
   fetchMyConnections,
+  fetchMyOutgoingRequestResponses,
   fetchMyRequestInbox,
   markConnectionRead,
+  OutgoingRequestResponse,
   PublicProfile,
   RequestResponse,
   sendConnectionMessage,
   setCircleChoice,
   submitConnectionReview,
   subscribeToConnectionMessages,
+  withdrawRequestResponse,
   subscribeToMyConnectionActivity
 } from '../lib/supabase/connections';
 import { useConnectionRealtimeRoom } from '../lib/supabase/connection-realtime';
@@ -37,7 +40,7 @@ import { blockUser, reportSafety, type SafetyReason } from '../lib/supabase/safe
 import NotificationCenter from './NotificationCenter';
 import ConnectionEventTimeline from './ConnectionEventTimeline';
 
-type Tab = 'requests' | 'connections' | 'history' | 'circle';
+type Tab = 'requests' | 'responses' | 'connections' | 'history' | 'circle';
 type ReviewDraft = { choice: boolean | null; tags: string[] };
 
 const reviewTags = [
@@ -72,6 +75,7 @@ export default function ConnectionsHub() {
   const [busyId, setBusyId] = useState('');
   const [notice, setNotice] = useState('');
   const [inbox, setInbox] = useState<{ requests: AspireRequest[]; responses: RequestResponse[]; profiles: PublicProfile[] }>({ requests: [], responses: [], profiles: [] });
+  const [outgoingResponses, setOutgoingResponses] = useState<OutgoingRequestResponse[]>([]);
   const [connectionData, setConnectionData] = useState<{ userId: string; connections: AspireConnection[]; requests: AspireRequest[]; profiles: PublicProfile[] }>({ userId: '', connections: [], requests: [], profiles: [] });
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [circle, setCircle] = useState<CircleEntry[]>([]);
@@ -96,7 +100,11 @@ export default function ConnectionsHub() {
         return;
       }
 
-      const [nextInbox, nextConnections] = await Promise.all([fetchMyRequestInbox(), fetchMyConnections()]);
+      const [nextInbox, nextOutgoingResponses, nextConnections] = await Promise.all([
+        fetchMyRequestInbox(),
+        fetchMyOutgoingRequestResponses(),
+        fetchMyConnections()
+      ]);
       const connectionIds = nextConnections.connections.map((connection) => connection.id);
       const [unreadRows, nextCircle, nextLifecycle, nextReviews] = await Promise.all([
         fetchConnectionUnreadCounts(),
@@ -106,6 +114,7 @@ export default function ConnectionsHub() {
       ]);
 
       setInbox(nextInbox);
+      setOutgoingResponses(nextOutgoingResponses);
       setConnectionData(nextConnections);
       setCircle(nextCircle);
       setLifecycle(nextLifecycle);
@@ -242,6 +251,22 @@ export default function ConnectionsHub() {
     if (!connection) return false;
     if (['confirmed', 'active'].includes(connection.status)) return true;
     return connection.status === 'completed' && circleMap.has(connection.id);
+  }
+
+  async function withdrawOutgoingResponse(responseId: string) {
+    if (!window.confirm('Withdraw this response? The requester will no longer be able to choose it unless you respond again later.')) return;
+    setBusyId(`withdraw-${responseId}`);
+    setNotice('');
+    try {
+      await withdrawRequestResponse(responseId);
+      setNotice('Response withdrawn. You can respond again later while the request remains available.');
+      await reload(true);
+      setTab('responses');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not withdraw this response.');
+    } finally {
+      setBusyId('');
+    }
   }
 
   async function accept(responseId: string) {
@@ -656,6 +681,7 @@ export default function ConnectionsHub() {
       <div className="connectionsTabs">
         <div className="connectionsTabPrimary">
           <button type="button" className={tab === 'requests' ? 'active' : ''} onClick={() => setTab('requests')}>My requests</button>
+          <button type="button" className={tab === 'responses' ? 'active' : ''} onClick={() => setTab('responses')}>My responses</button>
           <button type="button" className={tab === 'connections' ? 'active' : ''} onClick={() => setTab('connections')}>
             Connections {activeUnreadTotal > 0 && <b className="unreadPill">{activeUnreadTotal}</b>}
           </button>
@@ -722,6 +748,48 @@ export default function ConnectionsHub() {
               </article>
             );
           })}
+        </div>
+      )}
+
+
+      {tab === 'responses' && (
+        <div className="requestInbox">
+          {!outgoingResponses.length && (
+            <div className="connectionsEmpty">
+              <strong>No responses yet.</strong>
+              <p>When you offer to help with a request, you can track or withdraw it here until the requester chooses someone.</p>
+              <a className="button buttonGold" href="/discover">Discover requests</a>
+            </div>
+          )}
+          {outgoingResponses.map((response) => (
+            <article className="inboxRequest" key={response.response_id}>
+              <div className="inboxRequestHeader">
+                <div>
+                  <span>{response.request_category.toUpperCase()} · {response.request_kind.replace('_', ' ').toUpperCase()}</span>
+                  <h2>{response.request_title}</h2>
+                  <p>{response.moderation_status === 'approved'
+                    ? 'Your response is attached to this request.'
+                    : 'This request is not currently available in Discover.'}</p>
+                </div>
+                <strong className={`requestStatus status-${response.request_status}`}>{response.response_status}</strong>
+              </div>
+              <div className="responseList">
+                <div className="responseRow">
+                  <div className="responseAvatar">↗</div>
+                  <div className="responseCopy">
+                    <strong>Your response</strong>
+                    <span>{new Date(response.responded_at).toLocaleString()}</span>
+                    <p>{response.response_message || 'I’m interested in this request.'}</p>
+                  </div>
+                  {response.response_status === 'pending'
+                    ? <button type="button" onClick={() => withdrawOutgoingResponse(response.response_id)} disabled={busyId === `withdraw-${response.response_id}`}>
+                        {busyId === `withdraw-${response.response_id}` ? 'Withdrawing…' : 'Withdraw'}
+                      </button>
+                    : <span className="responseState">{response.response_status}</span>}
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       )}
 
