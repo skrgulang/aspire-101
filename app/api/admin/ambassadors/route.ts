@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthenticatedUser, getSupabaseServiceClient } from '../../../../lib/server/aspireServer';
+import { getAuthenticatedUser, getSupabaseServiceClient, requireAal2 } from '../../../../lib/server/aspireServer';
 import { ambassadorEmailConfigured, sendAmbassadorEmail, type AmbassadorEmailType } from '../../../../lib/server/ambassadorEmail';
 import { ambassadorBounceSyncConfigured, syncAmbassadorBounces } from '../../../../lib/server/ambassadorBounceSync';
 
@@ -11,7 +11,8 @@ const applicationSelect = 'id,full_name,school,school_email,school_email_domain,
 const emailEventSelect = 'id,application_id,email_type,recipient,status,provider,provider_message_id,error_message,created_by,created_at,sent_at,bounced_at';
 
 async function requireAdmin(request: Request) {
-  const { user } = await getAuthenticatedUser(request);
+  const { user, accessToken } = await getAuthenticatedUser(request);
+  await requireAal2(accessToken);
   const supabase = getSupabaseServiceClient();
   const { data, error } = await supabase
     .from('user_roles')
@@ -27,6 +28,7 @@ function errorResponse(error: unknown) {
   const message = error instanceof Error ? error.message : '';
   if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again to continue.' }, { status: 401 });
   if (message === 'ADMIN_REQUIRED') return NextResponse.json({ error: 'Admin access required.' }, { status: 403 });
+  if (message === 'MFA_REQUIRED') return NextResponse.json({ error: 'Complete two-step verification to continue.', code: 'MFA_REQUIRED' }, { status: 403 });
   console.error('ambassador admin error', error);
   return NextResponse.json({ error: 'Could not load ambassador applications.' }, { status: 500 });
 }
