@@ -34,6 +34,7 @@ function CampusWalkerBand() {
 
 export default function MarketingExtras() {
   const whyRef = useRef<HTMLElement | null>(null);
+  const whyRowRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [activeWhyRow, setActiveWhyRow] = useState(-1);
 
   useEffect(() => {
@@ -42,14 +43,28 @@ export default function MarketingExtras() {
       frame = 0;
       const section = whyRef.current;
       if (!section) return;
-      const rect = section.getBoundingClientRect();
+      const sectionRect = section.getBoundingClientRect();
       const viewportFocus = window.innerHeight * 0.52;
-      const local = viewportFocus - rect.top;
-      const start = Math.max(0, rect.height * 0.33);
-      const end = Math.max(start + 1, rect.height * 0.82);
-      const progress = Math.max(0, Math.min(0.999, (local - start) / (end - start)));
-      const inRange = rect.top < viewportFocus && rect.bottom > viewportFocus;
-      setActiveWhyRow(inRange ? Math.min(whyRows.length - 1, Math.floor(progress * whyRows.length)) : -1);
+      const inRange = sectionRect.top < window.innerHeight * 0.82 && sectionRect.bottom > window.innerHeight * 0.18;
+
+      if (!inRange) {
+        setActiveWhyRow(-1);
+        return;
+      }
+
+      let closestIndex = -1;
+      let closestDistance = Number.POSITIVE_INFINITY;
+      whyRowRefs.current.forEach((row, index) => {
+        if (!row) return;
+        const rect = row.getBoundingClientRect();
+        const center = rect.top + rect.height / 2;
+        const distance = Math.abs(center - viewportFocus);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+      setActiveWhyRow(closestIndex);
     };
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
     update();
@@ -90,7 +105,7 @@ export default function MarketingExtras() {
           <div className="whyAspireCard" data-reveal="right">
             <div className="whyPanelHead"><small>ON ASPIRE</small><span>ONE CLEAR FLOW</span></div>
             {whyRows.map((row, index) => (
-              <div className={`whyRow revealDelay${index} ${activeWhyRow === index ? "whyRowActive" : ""}`} key={row.aspire}>
+              <div ref={(node) => { whyRowRefs.current[index] = node; }} className={`whyRow revealDelay${index} ${activeWhyRow === index ? "whyRowActive" : ""}`} key={row.aspire}>
                 <i>{row.icon}</i>
                 <span><del>{row.old}</del><b>{row.aspire}</b><small>{row.note}</small></span>
               </div>
