@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
+
 const whyRows = [
   { old: 'Scattered group chats', aspire: 'One campus network', icon: '◎', note: 'Requests + people + context' },
   { old: 'Anyone on the internet', aspire: 'Verified campus identity', icon: '✓', note: 'Home campus stays attached' },
@@ -31,9 +33,38 @@ function CampusWalkerBand() {
 }
 
 export default function MarketingExtras() {
+  const whyRef = useRef<HTMLElement | null>(null);
+  const [activeWhyRow, setActiveWhyRow] = useState(-1);
+
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const section = whyRef.current;
+      if (!section) return;
+      const rect = section.getBoundingClientRect();
+      const viewportFocus = window.innerHeight * 0.52;
+      const local = viewportFocus - rect.top;
+      const start = Math.max(0, rect.height * 0.33);
+      const end = Math.max(start + 1, rect.height * 0.82);
+      const progress = Math.max(0, Math.min(0.999, (local - start) / (end - start)));
+      const inRange = rect.top < viewportFocus && rect.bottom > viewportFocus;
+      setActiveWhyRow(inRange ? Math.min(whyRows.length - 1, Math.floor(progress * whyRows.length)) : -1);
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
     <>
-      <section className="marketingWhy marketingWhyRefined" id="why-aspire">
+      <section ref={whyRef} className="marketingWhy marketingWhyRefined" id="why-aspire">
         <div className="whyIntro" data-reveal="left">
           <div className="whyIntroTop"><p>LESS ASKING AROUND</p><span className="whySticker">WHY ASPIRE? ↗</span></div>
           <h2>Campus already helps itself.<br /><em>Aspire gives it one place.</em></h2>
@@ -59,7 +90,7 @@ export default function MarketingExtras() {
           <div className="whyAspireCard" data-reveal="right">
             <div className="whyPanelHead"><small>ON ASPIRE</small><span>ONE CLEAR FLOW</span></div>
             {whyRows.map((row, index) => (
-              <div className={`whyRow revealDelay${index}`} key={row.aspire}>
+              <div className={`whyRow revealDelay${index} ${activeWhyRow === index ? "whyRowActive" : ""}`} key={row.aspire}>
                 <i>{row.icon}</i>
                 <span><del>{row.old}</del><b>{row.aspire}</b><small>{row.note}</small></span>
               </div>
