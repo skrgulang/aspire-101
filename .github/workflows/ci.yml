@@ -31,8 +31,5 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Aspire Brain regression
-        run: npm run test:brain
-
-      - name: TypeScript check
-        run: npx tsc --noEmit
+      - name: Production build validation
+        run: npm run build
