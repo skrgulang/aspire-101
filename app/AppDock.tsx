@@ -106,7 +106,7 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
 
   return (
     <nav className={`${styles.dock} signedInDock`} aria-label="Aspire app navigation">
-      <a className={styles.brand} href={preview ? '/ui-preview' : '/campus'} aria-label="Aspire 101 home">
+      <a className={styles.brand} href={preview ? '/ui-preview' : '/'} aria-label="Back to Aspire 101 main page" title="Back to Aspire 101">
         <img src={aspireLogo} alt="" />
         <span>Aspire 101</span>
       </a>
