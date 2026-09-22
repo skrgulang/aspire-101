@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       supabase.from('connection_payments').select('*').eq('connection_id', connection.id).maybeSingle(),
       supabase
         .from('market_orders')
-        .select('id,buyer_id,seller_id,status,agreed_amount_cents,price_locked_at,fulfillment_method,shipping_rate_id,shipping_rate_cents,shipping_currency,shipping_paid_by,shipping_carrier,shipping_service')
+        .select('id,buyer_id,seller_id,status,agreed_amount_cents,price_locked_at,reservation_expires_at,fulfillment_method,shipping_rate_id,shipping_rate_cents,shipping_currency,shipping_paid_by,shipping_carrier,shipping_service')
         .eq('connection_id', connection.id)
         .maybeSingle()
     ]);
@@ -95,6 +95,12 @@ export async function POST(request: Request) {
     }
     if (isMarket && ['disputed', 'released', 'refunded', 'cancelled'].includes(String(marketOrder!.status))) {
       return NextResponse.json({ error: 'This marketplace order can no longer accept a new payment.', code: 'MARKET_ORDER_CLOSED' }, { status: 409 });
+    }
+    if (isMarket && new Date(String(marketOrder!.reservation_expires_at)).getTime() <= Date.now()) {
+      return NextResponse.json({
+        error: 'The 30-minute reservation expired. This item is available to other buyers again.',
+        code: 'MARKET_RESERVATION_EXPIRED'
+      }, { status: 409 });
     }
 
     const { data: payoutAccount } = await supabase

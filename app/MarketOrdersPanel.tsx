@@ -11,6 +11,7 @@ import {
 } from '../lib/supabase/payments';
 import type { AspireFeeQuote, ConnectionPayment } from '../lib/supabase/payments';
 import {
+  cancelMarketReservation,
   confirmMarketReceipt,
   fetchMarketDisputes,
   fetchMarketOrders,
@@ -32,6 +33,16 @@ function money(cents: number | null | undefined, currency = 'USD') {
 
 function profileName(profile: any) {
   return profile?.display_name || profile?.full_name || profile?.name || 'Aspire student';
+}
+
+function reservationTimeLeft(deadline: string, now: number | null) {
+  if (now === null) return '--:--';
+  const remaining = Math.max(0, new Date(deadline).getTime() - now);
+  if (!Number.isFinite(remaining) || remaining <= 0) return 'Release pending';
+  const totalSeconds = Math.ceil(remaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
 const statusCopy: Record<string, { label: string; note: string }> = {
@@ -71,6 +82,7 @@ export default function MarketOrdersPanel() {
   const [disputeReason, setDisputeReason] = useState<MarketDispute['reason']>('item_not_as_described');
   const [disputeDetails, setDisputeDetails] = useState('');
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState<number | null>(null);
 
   const reload = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -117,6 +129,13 @@ export default function MarketOrdersPanel() {
       return () => { clearTimeout(first); clearTimeout(second); };
     }
   }, [reload]);
+
+  useEffect(() => {
+    setNow(Date.now());
+    if (!orders.some((order) => order.status === 'awaiting_payment')) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [orders]);
 
   useEffect(() => {
     if (!base?.userId) return;
@@ -293,6 +312,21 @@ export default function MarketOrdersPanel() {
     } finally { setBusy(''); }
   }
 
+  async function cancelReservation(connectionId: string) {
+    if (!window.confirm('Cancel this unpaid reservation? The listing will immediately reopen for other buyers.')) return;
+    setBusy(`cancel-reservation-${connectionId}`);
+    setNotice('');
+    try {
+      await cancelMarketReservation(connectionId);
+      setNotice('Reservation cancelled. The listing is available to other buyers again.');
+      await reload(true);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not cancel this reservation.');
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function submitDispute(connectionId: string) {
     if (disputeDetails.trim().length < 10) {
       setNotice('Add a little more detail so the issue can be reviewed.');
@@ -346,6 +380,9 @@ export default function MarketOrdersPanel() {
           const payWithAspire = connection.payment_method === 'aspire' && order.status !== 'off_platform';
           const secured = payment?.status === 'secured' || ['paid','handoff_confirmed','release_ready'].includes(order.status);
           const state = statusCopy[order.status] ?? statusCopy.awaiting_payment;
+          const reservationCountdown = order.status === 'awaiting_payment'
+            ? reservationTimeLeft(order.reservation_expires_at, now)
+            : null;
           const buyerTotal = payment?.customer_total_cents ?? quote?.customerTotalCents;
           const stateNote = order.status === 'awaiting_payment' && payWithAspire
             ? isBuyer
@@ -403,6 +440,8 @@ export default function MarketOrdersPanel() {
                 <div className="marketOrderDetailsBody">
               <div className={`marketOrderState ${order.status}`}><i>{order.status === 'disputed' ? '!' : order.status === 'released' ? '✓' : '○'}</i><div><strong>{state.label}</strong><p>{stateNote}</p>{dispute && <small>Report: {disputeReasons.find((item) => item.value === dispute.reason)?.label || dispute.reason} · {dispute.status.replace('_', ' ')}</small>}</div></div>
 
+              {reservationCountdown && <div className="marketReservationTimer" role="timer" aria-live="off"><span>PAYMENT WINDOW</span><strong>{reservationCountdown}</strong><small>{reservationCountdown === 'Release pending' ? 'Payment time ended. The listing will reopen automatically.' : 'remaining before the reservation is released'}</small></div>}
+
 
 
               {payWithAspire && (quote || payment) && <div className="marketMoneySummary">{isBuyer ? <><div><span>Item</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div>{shippingOrder && shippingRate > 0 && <div><span>{carrierName || 'Carrier shipping'}</span><strong>{shippingPaidBy === 'buyer' ? money(shippingRate, order.shipping_currency || order.currency) : 'Seller covers'}</strong></div>}<div><span>Aspire Protect fee</span><strong>{money(requesterFee, order.currency)}</strong></div><div className="total"><span>You pay</span><strong>{money(buyerTotal, order.currency)}</strong></div></> : <><div><span>Sale price</span><strong>{money(order.agreed_amount_cents, order.currency)}</strong></div><div><span>Aspire platform fee</span><strong>−{money(providerFee, order.currency)}</strong></div>{shippingOrder && shippingRate > 0 && <div><span>{carrierName || 'Carrier shipping'}</span><strong>{shippingPaidBy === 'seller' ? `−${money(shippingRate, order.shipping_currency || order.currency)}` : 'Buyer pays'}</strong></div>}<div className="total"><span>You receive</span><strong>{money(sellerNet, order.currency)}</strong></div></>}</div>}
@@ -424,6 +463,7 @@ export default function MarketOrdersPanel() {
                 {priceIsUnlocked && !priceProposal && priceFor !== order.id && <button className="marketSecondary" type="button" onClick={() => beginPriceProposal(order.id, order.agreed_amount_cents)}>Propose different price</button>}
                 {shippingOrder && !shippingReady && ['awaiting_payment','payment_processing'].includes(order.status) && <a className="button buttonGold" href={shippingSetupHref}>{isSeller ? 'Prepare live shipping rates →' : 'Choose carrier rate →'}</a>}
                 {payWithAspire && isBuyer && shippingReady && typeof buyerTotal === 'number' && ['awaiting_payment','payment_processing'].includes(order.status) && (!payment || ['not_started','failed','checkout_created'].includes(payment.status)) && <button className="button buttonGold" type="button" onClick={() => pay(order.connection_id)} disabled={busy === `pay-${order.connection_id}`}>{busy === `pay-${order.connection_id}` ? 'Opening Stripe…' : `Secure ${money(buyerTotal, order.currency)} →`}</button>}
+                {payWithAspire && isBuyer && order.status === 'awaiting_payment' && (!payment || ['not_started','failed','checkout_created','cancelled'].includes(payment.status)) && <button className="marketSecondary" type="button" onClick={() => cancelReservation(order.connection_id)} disabled={busy === `cancel-reservation-${order.connection_id}`}>{busy === `cancel-reservation-${order.connection_id}` ? 'Cancelling…' : 'Cancel reservation'}</button>}
                 {shippingOrder && shippingReady && !secured && <a className="marketSecondary" href={shippingSetupHref}>Review carrier selection</a>}
                 {payWithAspire && isSeller && !secured && <span className="marketWaiting">Waiting for buyer payment. Make sure payouts are ready in <a href="/profile">Profile</a>.</span>}
                 {payWithAspire && isSeller && order.status === 'paid' && !order.seller_handed_off_at && <button className="button buttonGold" type="button" onClick={() => handoff(order.connection_id)} disabled={busy === `handoff-${order.connection_id}`}>I handed over the item ✓</button>}

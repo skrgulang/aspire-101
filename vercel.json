@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/moderation-retry",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/marketplace-reservations",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
