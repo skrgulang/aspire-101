@@ -81,7 +81,8 @@ const posterFlagHelp: Record<string, string> = {
   off_platform_payment_or_evasion: 'Payment or checkout should stay inside Aspire.',
   scam_pressure: 'The payment wording may look unusually high-pressure and needs review.',
   price_anomaly: 'The price needs an additional Marketplace review.',
-  duplicate_listing: 'A similar recent listing needs additional review.'
+  duplicate_listing: 'A similar recent listing needs additional review.',
+  explicit_sexual_content: 'Explicit sexual or pornographic content is not allowed on Aspire.'
 };
 
 function posterReviewMessage(row: ReviewResultRow, result: ModerationResult, imageCount: number) {
@@ -95,11 +96,27 @@ function posterReviewMessage(row: ReviewResultRow, result: ModerationResult, ima
     ...(row.market_review_flags ?? [])
   ];
   const reasons = [...new Set(flags.map((flag) => posterFlagHelp[flag]).filter(Boolean))].slice(0, 2);
+  const flaggedCategories = Object.entries(result.categories ?? {}).filter(([, flagged]) => flagged).map(([key]) => key);
+
+  if (row.moderation_status === 'blocked') {
+    if (reasons.length) {
+      return `This post cannot be published. ${reasons.join(' ')} Remove the prohibited content before trying again.`;
+    }
+    if (flaggedCategories.some((key) => key.startsWith('sexual'))) {
+      return 'This post cannot be published because explicit sexual or pornographic content is not allowed on Aspire.';
+    }
+    if (flaggedCategories.some((key) => key.startsWith('violence') || key.startsWith('self-harm') || key.startsWith('hate') || key.startsWith('harassment') || key.startsWith('illicit'))) {
+      return 'This post cannot be published because it triggered a serious Aspire safety category.';
+    }
+    if (imageCount > 0 && result.flagged) {
+      return 'This post cannot be published because one or more submitted images triggered a serious safety check.';
+    }
+    return 'This post cannot be published because it triggered a serious Aspire safety rule.';
+  }
+
   if (reasons.length) {
     return `Pending human review. ${reasons.join(' ')} Your post stays private until a moderator decides.`;
   }
-
-  const flaggedCategories = Object.entries(result.categories ?? {}).filter(([, flagged]) => flagged).map(([key]) => key);
   if (flaggedCategories.some((key) => key.startsWith('sexual'))) {
     return 'Pending human review. Some text or image content may be sexual or otherwise inappropriate for Aspire. Your post stays private until a moderator decides.';
   }
@@ -123,6 +140,7 @@ function platformPolicyFlags(text: string, kind: string) {
   if (/(cheaper|discount|better price).{0,40}(telegram|zelle|venmo|cash\s?app|outside aspire|off[- ]platform)/i.test(text)) flags.add('off_platform_evasion');
   if (/(social security|\bssn\b|credit card number|bank account number|routing number|passport number)/i.test(text)) flags.add('sensitive_personal_data');
   if (kind === 'buy_sell' && /(counterfeit|fake designer|replica|stolen|hot item|gift[ -]?card|account for sale|game account)/i.test(text)) flags.add('marketplace_prohibited_listing');
+  if (/\b(porn|pornographic|hardcore porn|explicit sexual content)\b/i.test(text)) flags.add('explicit_sexual_content');
   return [...flags];
 }
 
@@ -197,12 +215,13 @@ function classifyRisk(result: ModerationResult, platformFlags: string[], ruleFla
   const scores = result.category_scores ?? {};
   const ranked = Object.entries(scores).filter(([, score]) => Number.isFinite(score)).sort((a, b) => b[1] - a[1]);
   const maxScore = ranked[0]?.[1] ?? 0;
-  const severeKeys = new Set(['sexual/minors', 'hate/threatening', 'self-harm/instructions', 'self-harm/intent', 'violence/graphic', 'illicit/violent']);
+  const severeKeys = new Set(['sexual', 'sexual/minors', 'hate/threatening', 'self-harm/instructions', 'self-harm/intent', 'violence/graphic', 'illicit/violent']);
   const severeScore = ranked.filter(([key]) => severeKeys.has(key)).reduce((max, [, score]) => Math.max(max, score), 0);
   const highPlatform = platformFlags.some((flag) => ['regulated_or_prohibited_item', 'credential_trade', 'marketplace_prohibited_listing', 'off_platform_evasion', 'sensitive_personal_data'].includes(flag));
+  const hardPlatform = platformFlags.includes('explicit_sexual_content');
 
   let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low';
-  if (severeScore >= 0.5 || (Boolean(result.flagged) && severeScore >= 0.25)) riskLevel = 'critical';
+  if (hardPlatform || severeScore >= 0.5 || (Boolean(result.flagged) && severeScore >= 0.25)) riskLevel = 'critical';
   else if (Boolean(result.flagged) || maxScore >= 0.7 || highPlatform || ruleFlags.includes('restricted_market_term') || behavior.riskScore >= 60) riskLevel = 'high';
   else if (maxScore >= 0.25 || platformFlags.length > 0 || ruleFlags.length > 0 || behavior.riskScore >= 25) riskLevel = 'medium';
 
@@ -310,13 +329,17 @@ export async function POST(request: Request) {
     const { payload, result } = await callOpenAiModeration(text, imageUrls);
     const assessment = classifyRisk(result, platformFlags, ruleFlags, behavior);
     const combinedFlags = [...new Set([...platformFlags, ...ruleFlags, ...behavior.flags])];
-    const moderationStatus: 'pending' | 'approved' = assessment.recommendedAction === 'approve' && assessment.riskLevel === 'low' && behavior.riskScore < 25 && combinedFlags.length === 0
+    const moderationStatus: 'pending' | 'approved' | 'blocked' = assessment.recommendedAction === 'approve' && assessment.riskLevel === 'low' && behavior.riskScore < 25 && combinedFlags.length === 0
       ? 'approved'
-      : 'pending';
-    const moderatedAt = moderationStatus === 'approved' ? new Date().toISOString() : null;
+      : assessment.recommendedAction === 'block' || assessment.riskLevel === 'critical'
+        ? 'blocked'
+        : 'pending';
+    const moderatedAt = moderationStatus === 'pending' ? null : new Date().toISOString();
     const moderationReason = moderationStatus === 'approved'
       ? 'Automatically approved by Aspire Safety Intelligence (low risk).'
-      : null;
+      : moderationStatus === 'blocked'
+        ? `Automatically blocked by Aspire Safety Intelligence: ${combinedFlags.slice(0, 6).join(', ') || assessment.summary}`
+        : null;
 
     const { error: insertError } = await supabase.from('request_ai_assessments').insert({
       request_id: requestId,
