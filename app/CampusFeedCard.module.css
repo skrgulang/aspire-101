@@ -107,3 +107,34 @@
   .secondaryAction, .primaryAction { min-height:29px; padding-inline:8px; }
   .saveButton { width:30px; height:30px; top:8px; right:8px; }
 }
+
+.textOnly { padding-top: 0; }
+.inlineCategory {
+  width: max-content;
+  margin: 13px 13px 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff1a8;
+  color: #302600;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+}
+.inlineCategory[data-tone='events']{background:#ead7ff;color:#4e2375}
+.inlineCategory[data-tone='people']{background:#ffd8d0;color:#6c2f25}
+.inlineCategory[data-tone='gaming']{background:#dcd6ff;color:#342870}
+.inlineCategory[data-tone='rides']{background:#d7e5ff;color:#193e72}
+.inlineCategory[data-tone='housing']{background:#ded8ff;color:#3f3379}
+.inlineCategory[data-tone='market']{background:#ffe9a8;color:#644c00}
+.inlineCategory[data-tone='study']{background:#d5f1d5;color:#285c2b}
+.inlineCategory[data-tone='projects']{background:#d6e4ff;color:#254a7b}
+.inlineCategory[data-tone='services']{background:#d8eaff;color:#28577e}
+.textOnly .copy { padding-top: 9px; }
+.textOnly .copy h3 { min-height: 0; font-size: 14px; }
+:global(html[data-aspire-theme='dark']) .textOnly { background:#181816; }
+@media (max-width: 640px) {
+  .textOnly { display:flex; min-height:0; }
+  .textOnly .inlineCategory { margin-bottom:0; }
+  .textOnly .copy { padding:9px 13px 6px; }
+  .textOnly .footer { min-height:38px; padding:0 10px 9px; border-top:1px solid #2a2a27; }
+}
