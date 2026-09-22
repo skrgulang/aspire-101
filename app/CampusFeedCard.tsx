@@ -19,7 +19,7 @@ type Props = {
 };
 
 function initialFor(name: string) {
-  return name.trim().charAt(0).toUpperCase() || 'A';
+  return name.trim().replace(/^@/, '').charAt(0).toUpperCase() || 'A';
 }
 
 export default function CampusFeedCard({
