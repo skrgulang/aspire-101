@@ -1,3 +1,24 @@
+
+.profileLoadError {
+  width: min(620px, 100%);
+  margin: 12vh auto 0;
+  padding: 28px;
+  border: 1px solid #e7e7e3;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 10px 32px rgba(17,17,17,.04);
+}
+.profileLoadError strong { display: block; color: #22221f; font-size: 20px; letter-spacing: -.025em; }
+.profileLoadError p { margin: 8px 0 18px; color: #7d7d77; font-size: 11px; line-height: 1.55; }
+.profileLoadError > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.profileLoadError button,
+.profileLoadError a { min-height: 40px; padding: 0 13px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #deded9; border-radius: 10px; background: #fff; color: #343431; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
+.profileLoadError button { border-color: #ffc72c; background: #ffc72c; color: #18130a; }
+html[data-aspire-theme='dark'] .profileLoadError { border-color: #292927; background: #151514; box-shadow: none; }
+html[data-aspire-theme='dark'] .profileLoadError strong { color: #f1ede5; }
+html[data-aspire-theme='dark'] .profileLoadError p { color: #9b968d; }
+html[data-aspire-theme='dark'] .profileLoadError a { border-color: #33332f; background: #242421; color: #ded9d0; }
+
 /* Signed-in profile: same clean product language as the campus dashboard. */
 body:has(.profilePagePolished) { background: #f7f7f5; }
 html[data-aspire-theme='dark'] body:has(.profilePagePolished) { background: #0b0b0a; }
