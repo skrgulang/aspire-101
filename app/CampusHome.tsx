@@ -51,6 +51,60 @@ function mergeRequests(primary: DiscoverRequest[], extra: DiscoverRequest[]) {
   return Array.from(merged.values()).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
 
+function buildCampusStarterPosts(campus: University): DiscoverRequest[] {
+  const purdue = /\bpurdue\b/i.test(campus.name);
+  const campusImage = campus.cover_image || campusImageFallback;
+  const ideas = purdue ? [
+    { title: 'Anyone heading to CoRec after class?', details: 'A simple example of how students can find someone to work out with.', category: 'People / community' as const, kind: 'community' as const, image: '/seeded/corec.webp?v=6' },
+    { title: 'Looking for a study partner on campus', details: 'Example post for finding classmates and study partners nearby.', category: 'Study / class' as const, kind: 'community' as const, image: campusImage },
+    { title: 'Anyone want to game tonight?', details: 'Example post for finding campus gaming friends and teammates.', category: 'Gaming / duos' as const, kind: 'community' as const, image: '/seeded/gaming.webp?v=6' },
+    { title: 'Coffee or lunch after class?', details: 'Example post for casual campus plans and meeting new people.', category: 'People / community' as const, kind: 'community' as const, image: campusImage },
+    { title: 'Need one more person for a weekend project', details: 'Example post for finding collaborators and builders around campus.', category: 'Build something' as const, kind: 'collaboration' as const, image: campusImage }
+  ] : [
+    { title: 'Looking for a study partner on campus', details: 'Example post for finding classmates and study partners nearby.', category: 'Study / class' as const, kind: 'community' as const, image: campusImage },
+    { title: 'Coffee or lunch after class?', details: 'Example post for casual campus plans and meeting new people.', category: 'People / community' as const, kind: 'community' as const, image: campusImage },
+    { title: 'Need one more person for a weekend project', details: 'Example post for finding collaborators and builders around campus.', category: 'Build something' as const, kind: 'collaboration' as const, image: campusImage },
+    { title: 'Anyone free for a campus walk?', details: 'Example post for meeting people and making campus feel smaller.', category: 'People / community' as const, kind: 'community' as const, image: campusImage }
+  ];
+
+  return ideas.map((idea, index) => {
+    const created = new Date(Date.now() - (index + 1) * 75 * 60 * 1000).toISOString();
+    const id = `starter-${campus.id}-${index + 1}`;
+    return {
+      id,
+      poster_id: 'aspire-starter',
+      kind: idea.kind,
+      category: idea.category,
+      title: idea.title,
+      details: idea.details,
+      campus: campus.name,
+      campus_id: campus.id,
+      city: null,
+      latitude: null,
+      longitude: null,
+      amount_cents: null,
+      currency: 'USD',
+      payment_method: 'none',
+      status: 'open',
+      moderation_status: 'approved',
+      created_at: created,
+      updated_at: created,
+      author_label: 'Aspire starter',
+      starter: true,
+      media: [{
+        id: `${id}-image`,
+        request_id: id,
+        uploader_id: 'aspire-starter',
+        storage_path: '',
+        mime_type: 'image/webp',
+        sort_order: 0,
+        created_at: created,
+        public_url: idea.image
+      }]
+    } satisfies DiscoverRequest;
+  });
+}
+
 export default function CampusHome() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -171,14 +225,20 @@ export default function CampusHome() {
     return { deck, count: matches.length };
   }), [requests]);
 
-  const feedEntries = useMemo(() => [...requests].sort((a, b) => {
-    if (feedMode === 'popular') {
-      const scoreA = feedClicks[a.id] || 0;
-      const scoreB = feedClicks[b.id] || 0;
-      if (scoreA !== scoreB) return scoreB - scoreA;
-    }
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  }).slice(0, 8), [requests, feedMode, feedClicks]);
+  const feedEntries = useMemo(() => {
+    const real = [...requests].sort((a, b) => {
+      if (feedMode === 'popular') {
+        const scoreA = feedClicks[a.id] || 0;
+        const scoreB = feedClicks[b.id] || 0;
+        if (scoreA !== scoreB) return scoreB - scoreA;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }).slice(0, 8);
+
+    if (!selectedCampus || real.length >= 8) return real;
+    const starters = buildCampusStarterPosts(selectedCampus).slice(0, 8 - real.length);
+    return [...real, ...starters];
+  }, [requests, feedMode, feedClicks, selectedCampus]);
 
   function chooseCampus(nextId: string) {
     if (nextId === activeCampusId) return;
@@ -337,8 +397,10 @@ export default function CampusHome() {
                     currentUserId={currentUserId}
                     authorName={authorName}
                     fallbackImage={campusCardImage}
-                    footerLeft={<span className={campusFeedCardStyles.secondaryAction}>{mine ? 'Your post' : 'Campus post'}</span>}
-                    footerRight={<a className={campusFeedCardStyles.primaryAction} href={campusFeedHref(item, selectedCampus.id)} onClick={() => recordFeedClick(item.id)}>Open →</a>}
+                    footerLeft={<span className={campusFeedCardStyles.secondaryAction}>{item.starter ? 'Example · Aspire starter' : mine ? 'Your post' : 'Campus post'}</span>}
+                    footerRight={item.starter
+                      ? <a className={campusFeedCardStyles.primaryAction} href="/post">Post something →</a>
+                      : <a className={campusFeedCardStyles.primaryAction} href={campusFeedHref(item, selectedCampus.id)} onClick={() => recordFeedClick(item.id)}>Open →</a>}
                   />;
                 })}
                 {!feedEntries.length && (
