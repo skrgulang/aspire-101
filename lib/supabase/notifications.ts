@@ -68,6 +68,7 @@ export function subscribeToNotifications(
 ) {
   if (!userId) return () => undefined;
 
+  const supabase = getSupabaseBrowserClient();
   let active = true;
   let timer: ReturnType<typeof setInterval> | null = null;
 
