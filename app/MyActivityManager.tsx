@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import type { AspireRequest } from '../lib/supabase/requests';
+import { fetchRequestMedia } from '../lib/supabase/requestMedia';
 import UiIcon from './UiIcon';
 import { buildDemoAspireRequests, isDemoPreviewPostId, isPreviewDemoEnabled, setDemoPreviewPostStatus } from './demoPreviewPosts';
 import styles from './MyActivityManager.module.css';
@@ -27,6 +28,7 @@ function relativeTime(value: string) {
 export default function MyActivityManager() {
   const [requests, setRequests] = useState<AspireRequest[]>([]);
   const [connections, setConnections] = useState<ConnectionRow[]>([]);
+  const [mediaByRequest, setMediaByRequest] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
@@ -54,6 +56,13 @@ export default function MyActivityManager() {
       const realRequests = (rows ?? []) as AspireRequest[];
       const previewRequests = isPreviewDemoEnabled() ? buildDemoAspireRequests(auth.user.id, 'Purdue University') : [];
       setRequests([...previewRequests, ...realRequests].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+
+      const media = realRequests.length ? await fetchRequestMedia(realRequests.map((request) => request.id)).catch(() => []) : [];
+      const coverMap: Record<string, string> = {};
+      media.forEach((item) => {
+        if (!coverMap[item.request_id] && item.public_url) coverMap[item.request_id] = item.public_url;
+      });
+      setMediaByRequest(coverMap);
 
       if (!realRequests.length) {
         setConnections([]);
@@ -186,6 +195,11 @@ export default function MyActivityManager() {
             const preview = isDemoPreviewPostId(request.id);
             return (
               <article className={styles.card} key={request.id}>
+                <div className={styles.cardMedia}>
+                  {mediaByRequest[request.id]
+                    ? <img src={mediaByRequest[request.id]} alt="" />
+                    : <div className={styles.mediaPlaceholder}><UiIcon name="activity" /></div>}
+                </div>
                 <div className={styles.cardMain}>
                   <div className={styles.category}>{preview ? 'Preview · ' : ''}{request.category}</div>
                   <h2>{request.title}</h2>
