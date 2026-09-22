@@ -104,6 +104,17 @@ export type AspireRequest = {
   behavior_flags?: string[];
   trust_score_snapshot?: number | null;
   trust_band_snapshot?: TrustBand | null;
+  post_review_status?: 'pending' | 'pass' | 'review' | 'block';
+  post_review_flags?: string[];
+  post_review_summary?: string | null;
+  language_review_status?: 'pending' | 'pass' | 'review' | 'block';
+  language_review_flags?: string[];
+  language_review_summary?: string | null;
+  language_detected?: string | null;
+  market_review_status?: 'pending' | 'pass' | 'review' | 'block' | 'not_applicable';
+  market_review_flags?: string[];
+  market_review_summary?: string | null;
+  layered_reviewed_at?: string | null;
   status: 'open' | 'matched' | 'in_progress' | 'completed' | 'cancelled' | 'expired';
   created_at: string;
   updated_at: string;

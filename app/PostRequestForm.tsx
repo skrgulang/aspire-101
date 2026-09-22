@@ -86,7 +86,7 @@ export default function PostRequestForm() {
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
-  const [posted, setPosted] = useState<{ id: string; title: string; campus: string; moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked'; warning?: string } | null>(null);
+  const [posted, setPosted] = useState<{ id: string; title: string; campus: string; moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked'; reviewMessage?: string; warning?: string } | null>(null);
   const [agentPrepared, setAgentPrepared] = useState(false);
   const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
@@ -388,9 +388,11 @@ export default function PostRequestForm() {
         }
       }
       let moderationStatus: 'pending' | 'approved' | 'rejected' | 'blocked' = 'pending';
+      let reviewMessage = '';
       try {
         const safetyResult = await runRequestAiSafety(request.id);
         moderationStatus = safetyResult.moderationStatus;
+        reviewMessage = safetyResult.userMessage || '';
       } catch (scanError) {
         const scanWarning = scanError instanceof Error ? scanError.message : 'The automated safety scan could not finish.';
         warning = [warning, `${scanWarning} Your post remains private and queued for review.`].filter(Boolean).join(' ');
@@ -420,7 +422,7 @@ export default function PostRequestForm() {
         payment_involved: moneyInvolved,
         language_code: language
       });
-      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, moderationStatus, warning });
+      setPosted({ id: request.id, title: request.title, campus: request.campus || selectedCampus.name, moderationStatus, reviewMessage, warning });
       setConfirming(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit this request. Try again.');
@@ -438,8 +440,9 @@ export default function PostRequestForm() {
       <h1>{posted.moderationStatus === 'approved' ? 'You’re live.' : posted.moderationStatus === 'pending' ? 'Almost there.' : 'Safety check required.'}</h1>
       <article><span>{isMarket ? (marketIntent === 'sell' ? 'FOR SALE' : 'WANTED') : selectedCategory.label.toUpperCase()}</span><strong>{posted.title}</strong><small>{posted.campus} · {schedulePreview} · {requestLanguageLabel(language)} · #{posted.id.slice(0, 8)} · {posted.moderationStatus === 'approved' ? 'published' : posted.moderationStatus === 'pending' ? 'pending review' : 'blocked by safety review'}</small></article>
       {posted.warning && <p className="postError">{posted.warning}</p>}
-      <p className="postSuccessNote">{posted.moderationStatus === 'approved' ? (isMarket ? 'Your listing passed the automated review and is now visible in Aspire Market.' : 'Your post passed the automated review and is now visible in the campus feed.') : posted.moderationStatus === 'pending' ? (isMarket ? 'Your marketplace listing is saved but stays private until the remaining review is complete.' : 'Your request is saved but stays private until the remaining review is complete.') : 'This post was not published because the automated safety review found a serious policy concern. Contact Aspire Safety if you believe this was a mistake.'}</p>
-      <div className="postSuccessActions"><a className="button buttonGold" href="/activity">View my posts <span>↗</span></a><button className="quietPostButton" type="button" onClick={resetPost}>Submit another</button></div>
+      <p className="postSuccessNote">{posted.moderationStatus === 'approved' ? (isMarket ? 'Your listing passed the automated review and is now visible in Aspire Market.' : 'Your post passed the automated review and is now visible in the campus feed.') : posted.moderationStatus === 'pending' ? (isMarket ? 'Your marketplace listing is saved but stays private until a moderator finishes the review.' : 'Your request is saved but stays private until a moderator finishes the review.') : 'This post was not published because a safety review found a serious policy concern. Open My Posts to review the status and next steps.'}</p>
+      {posted.moderationStatus !== 'approved' && posted.reviewMessage && <div className="postReviewReason"><strong>Why it needs review</strong><p>{posted.reviewMessage}</p><span>You can track the exact review lane and any changes needed in My Posts.</span></div>}
+      <div className="postSuccessActions"><a className="button buttonGold" href="/activity">View review details <span>↗</span></a><button className="quietPostButton" type="button" onClick={resetPost}>Submit another</button></div>
     </section>
   );
 

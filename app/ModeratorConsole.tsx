@@ -247,7 +247,7 @@ export default function ModeratorConsole() {
       if (!window.confirm(`${warning} Approve anyway? This override is audited.`)) return;
     }
     const defaultNote = decision === 'rejected' ? 'Does not meet Aspire Community Guidelines.' : '';
-    const note = decision === 'rejected' ? window.prompt('Why are you rejecting this post?', defaultNote) ?? '' : '';
+    const note = decision === 'rejected' ? window.prompt('Reason shown to the student:', defaultNote) ?? '' : '';
     if (decision === 'rejected' && !note.trim()) return;
     setBusy(`moderate-${request.id}`);
     try {
@@ -260,15 +260,16 @@ export default function ModeratorConsole() {
   }
 
   async function removeRequest(request: AspireRequest) {
-    const reason = window.prompt('Why are you removing this request?', 'Violates Community Guidelines');
+    const reason = window.prompt('Reason shown to the student:', 'Violates Community Guidelines');
     if (!reason?.trim()) return;
+    if (!window.confirm(`Remove “${request.title}” from Aspire? The post will be taken out of active feeds, the action will be audited, and the poster will be notified.`)) return;
     setBusy(`request-${request.id}`);
     try {
       await removeRequestAsModerator(request.id, reason);
-      setNotice('Request removed from active campus feeds.');
+      setNotice('Post removed from Aspire and the poster was notified.');
       await reload();
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not remove this request.');
+      setNotice(error instanceof Error ? error.message : 'Could not remove this post.');
     } finally { setBusy(''); }
   }
 
@@ -339,6 +340,7 @@ export default function ModeratorConsole() {
                 })
                 .map((request) => {
                   const pending = request.moderation_status === 'pending';
+                  const needsDecision = request.moderation_status === 'pending' || request.moderation_status === 'blocked';
                   const ruleFlags = request.moderation_flags ?? [];
                   const aiFlags = request.ai_policy_flags ?? [];
                   const behaviorFlags = request.behavior_flags ?? [];
@@ -368,6 +370,21 @@ export default function ModeratorConsole() {
                           <p>{request.ai_summary || 'No AI assessment yet. Scam rules and human review can still continue.'}</p>
                           {allSignals.length > 0 && <small>Signals: {allSignals.join(' · ')}</small>}
                         </div>
+                        <div className="moderatorReviewLanes" aria-label="Layered moderation review">
+                          <span>REVIEW LANES</span>
+                          <div>
+                            <b>Post · {(request.post_review_status || 'pending').toUpperCase()}</b>
+                            <small>{request.post_review_summary || 'Waiting for post safety review.'}</small>
+                          </div>
+                          <div>
+                            <b>Language · {(request.language_review_status || 'pending').toUpperCase()}</b>
+                            <small>{request.language_review_summary || 'Waiting for language review.'}</small>
+                          </div>
+                          {request.kind === 'buy_sell' && <div>
+                            <b>Market · {(request.market_review_status || 'pending').toUpperCase()}</b>
+                            <small>{request.market_review_summary || 'Waiting for marketplace review.'}</small>
+                          </div>}
+                        </div>
                         <div className="enforcementBar">
                           <div><span>HUMAN ENFORCEMENT</span><strong>{enforcementState === 'active' ? 'No account restriction' : enforcement?.reason || enforcementState}</strong>{enforcement?.expires_at && enforcementState !== 'active' && <small>Expires {when(enforcement.expires_at)}</small>}</div>
                           <div>
@@ -384,12 +401,13 @@ export default function ModeratorConsole() {
                       </div>
                       <div className="moderatorRowActions moderatorAiActions">
                         <button type="button" onClick={() => scanRequest(request)} disabled={busy === `ai-${request.id}`}>{busy === `ai-${request.id}` ? 'Scanning…' : request.ai_moderation_status === 'complete' ? 'Rescan AI' : 'Run AI scan'}</button>
-                        {pending ? <>
+                        {needsDecision ? <>
                           <button type="button" className="moderatorReject" onClick={() => decideRequest(request, 'rejected')} disabled={busy === `moderate-${request.id}`}>Reject</button>
                           <button type="button" className="button buttonGold" onClick={() => decideRequest(request, 'approved')} disabled={busy === `moderate-${request.id}`}>{busy === `moderate-${request.id}` ? 'Saving…' : 'Approve ✓'}</button>
+                          <button type="button" className="moderatorDanger" onClick={() => removeRequest(request)} disabled={busy === `request-${request.id}`}>{busy === `request-${request.id}` ? 'Removing…' : 'Remove post'}</button>
                         </> : <>
-                          <a href="/discover" target="_blank" rel="noreferrer">Open</a>
-                          {request.moderation_status === 'approved' && <button type="button" className="moderatorReject" onClick={() => removeRequest(request)} disabled={busy === `request-${request.id}`}>Remove</button>}
+                          {request.moderation_status === 'approved' && <a href="/discover" target="_blank" rel="noreferrer">Open</a>}
+                          <button type="button" className="moderatorDanger" onClick={() => removeRequest(request)} disabled={busy === `request-${request.id}`}>{busy === `request-${request.id}` ? 'Removing…' : 'Remove post'}</button>
                         </>}
                       </div>
                     </article>

@@ -111,7 +111,7 @@ export default function CampusFeedCard({
         <span className={styles.price} data-paid={paid ? 'true' : 'false'}>{price}</span>
         <span className={styles.author}><b className={styles.avatar}>{initialFor(displayAuthor)}</b>{mine ? 'Posted by you' : displayAuthor}</span>
         <span className={styles.meta}>{campusLabel} · {language} · {campusFeedRelativeTime(item.created_at)}</span>
-        {pending && <span className={styles.pending}>Pending review · visible to you</span>}
+        {pending && <div className={styles.pendingRow}><span className={styles.pending}>Pending human review · visible only to you</span><a className={styles.pendingDetails} href="/activity">Review details →</a></div>}
       </div>
 
       {(footerLeft || footerRight) && (

@@ -45,6 +45,74 @@ type ScanAccess = {
   staff: boolean;
 };
 
+type ReviewResultRow = {
+  moderation_status?: 'pending' | 'approved' | 'rejected' | 'blocked' | null;
+  post_review_status?: string | null;
+  post_review_flags?: string[] | null;
+  language_review_status?: string | null;
+  language_review_flags?: string[] | null;
+  market_review_status?: string | null;
+  market_review_flags?: string[] | null;
+};
+
+const posterFlagHelp: Record<string, string> = {
+  profanity: 'Some wording may violate Aspire community language rules.',
+  hate_slur: 'Some wording may violate Aspire rules on hateful or abusive content.',
+  threat_or_abuse: 'Some wording may be interpreted as threatening or abusive.',
+  hidden_unicode: 'The text contains unusual or hidden formatting that needs review.',
+  link_spam: 'The post contains link patterns that need a closer review.',
+  contact_information: 'Contact information should stay inside Aspire until a connection is chosen.',
+  off_platform_contact: 'Off-platform contact information or messaging language needs review.',
+  excessive_punctuation: 'The text formatting looks spam-like and needs review.',
+  declared_language_mismatch: 'The selected language may not match the post text.',
+  missing_item_photo: 'A marketplace listing may be missing a required item photo.',
+  missing_public_seller_area: 'A marketplace listing needs a public selling area without an exact private address.',
+  missing_price: 'A marketplace listing needs a valid price or budget.',
+  missing_condition: 'A marketplace listing needs an item condition.',
+  missing_fulfillment_method: 'A marketplace listing needs at least one fulfillment option.',
+  regulated_or_prohibited_item: 'The item or request may be restricted under Aspire rules.',
+  regulated_item_needs_review: 'The item needs a Marketplace policy review before it can go live.',
+  marketplace_prohibited_listing: 'This listing type may not be allowed in Aspire Market.',
+  prohibited_listing_type: 'This listing type may not be allowed in Aspire Market.',
+  credential_trade: 'Account credentials, verification codes, or account sales are not allowed.',
+  sensitive_personal_data: 'The post may include sensitive personal information.',
+  off_platform_payment: 'Payment language may move the transaction outside Aspire.',
+  off_platform_evasion: 'The post may be trying to move payment or checkout outside Aspire.',
+  off_platform_payment_or_evasion: 'Payment or checkout should stay inside Aspire.',
+  scam_pressure: 'The payment wording may look unusually high-pressure and needs review.',
+  price_anomaly: 'The price needs an additional Marketplace review.',
+  duplicate_listing: 'A similar recent listing needs additional review.'
+};
+
+function posterReviewMessage(row: ReviewResultRow, result: ModerationResult, imageCount: number) {
+  if (row.moderation_status === 'approved') {
+    return 'Your post passed the automated review and is now live.';
+  }
+
+  const flags = [
+    ...(row.post_review_flags ?? []),
+    ...(row.language_review_flags ?? []),
+    ...(row.market_review_flags ?? [])
+  ];
+  const reasons = [...new Set(flags.map((flag) => posterFlagHelp[flag]).filter(Boolean))].slice(0, 2);
+  if (reasons.length) {
+    return `Pending human review. ${reasons.join(' ')} Your post stays private until a moderator decides.`;
+  }
+
+  const flaggedCategories = Object.entries(result.categories ?? {}).filter(([, flagged]) => flagged).map(([key]) => key);
+  if (flaggedCategories.some((key) => key.startsWith('sexual'))) {
+    return 'Pending human review. Some text or image content may be sexual or otherwise inappropriate for Aspire. Your post stays private until a moderator decides.';
+  }
+  if (flaggedCategories.some((key) => key.startsWith('violence') || key.startsWith('self-harm') || key.startsWith('hate') || key.startsWith('harassment') || key.startsWith('illicit'))) {
+    return 'Pending human review. A safety category was triggered by the post content. Your post stays private until a moderator decides.';
+  }
+  if (imageCount > 0 && result.flagged) {
+    return 'Pending human review. One or more submitted images need a closer safety review. Your post stays private until a moderator decides.';
+  }
+
+  return 'Pending human review. Aspire could not safely auto-approve this post, so it stays private until a moderator checks it.';
+}
+
 function platformPolicyFlags(text: string, kind: string) {
   const flags = new Set<string>();
   if (/(telegram|whats\s?app|signal|wechat|snapchat|instagram|discord|dm me|text me|call me)/i.test(text) || /\b\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}\b/.test(text)) flags.add('off_platform_contact');
@@ -242,17 +310,13 @@ export async function POST(request: Request) {
     const { payload, result } = await callOpenAiModeration(text, imageUrls);
     const assessment = classifyRisk(result, platformFlags, ruleFlags, behavior);
     const combinedFlags = [...new Set([...platformFlags, ...ruleFlags, ...behavior.flags])];
-    const moderationStatus: 'pending' | 'approved' | 'blocked' = assessment.recommendedAction === 'approve' && assessment.riskLevel === 'low' && behavior.riskScore < 25 && combinedFlags.length === 0
+    const moderationStatus: 'pending' | 'approved' = assessment.recommendedAction === 'approve' && assessment.riskLevel === 'low' && behavior.riskScore < 25 && combinedFlags.length === 0
       ? 'approved'
-      : assessment.recommendedAction === 'block' || assessment.riskLevel === 'critical'
-        ? 'blocked'
-        : 'pending';
-    const moderatedAt = moderationStatus === 'pending' ? null : new Date().toISOString();
+      : 'pending';
+    const moderatedAt = moderationStatus === 'approved' ? new Date().toISOString() : null;
     const moderationReason = moderationStatus === 'approved'
       ? 'Automatically approved by Aspire Safety Intelligence (low risk).'
-      : moderationStatus === 'blocked'
-        ? `Automatically blocked by Aspire Safety Intelligence: ${combinedFlags.slice(0, 6).join(', ') || assessment.summary}`
-        : null;
+      : null;
 
     const { error: insertError } = await supabase.from('request_ai_assessments').insert({
       request_id: requestId,
@@ -275,7 +339,7 @@ export async function POST(request: Request) {
     });
     if (insertError) throw insertError;
 
-    const { error: updateError } = await supabase.from('requests').update({
+    const { data: updatedRequest, error: updateError } = await supabase.from('requests').update({
       moderation_status: moderationStatus,
       moderation_version: 'ai_v2',
       moderated_by: null,
@@ -288,10 +352,12 @@ export async function POST(request: Request) {
       ai_policy_flags: combinedFlags,
       ai_summary: assessment.summary,
       ai_last_scanned_at: new Date().toISOString()
-    }).eq('id', requestId);
+    }).eq('id', requestId).select('moderation_status,post_review_status,post_review_flags,language_review_status,language_review_flags,market_review_status,market_review_flags').single();
     if (updateError) throw updateError;
 
-    const publicResult = { ok: true, requestId, moderationStatus, imageCount: imageUrls.length };
+    const actualStatus = (updatedRequest?.moderation_status || moderationStatus) as 'pending' | 'approved' | 'rejected' | 'blocked';
+    const userMessage = posterReviewMessage((updatedRequest ?? {}) as ReviewResultRow, result, imageUrls.length);
+    const publicResult = { ok: true, requestId, moderationStatus: actualStatus, imageCount: imageUrls.length, userMessage };
     if (!cronAuthorized && !staffCanViewInternals) return NextResponse.json(publicResult);
 
     return NextResponse.json({
