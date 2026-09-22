@@ -19,6 +19,8 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
   latitude: null;
   longitude: null;
   media: RequestMedia[];
+  author_label?: string;
+  starter?: boolean;
 };
 
 const discoverLanguageKey = 'aspire:discover-language';
@@ -87,6 +89,21 @@ function matchesLocalFilters(item: DiscoverRequest, query?: string, category?: D
   const needle = query?.trim().toLowerCase();
   if (!needle) return true;
   return `${item.title} ${item.details || ''} ${item.category || ''}`.toLowerCase().includes(needle);
+}
+
+async function attachAuthorLabels(items: DiscoverRequest[]) {
+  if (!items.length) return items;
+  const supabase = getSupabaseBrowserClient();
+  const ids = Array.from(new Set(items.map((item) => item.poster_id).filter((id) => /^[0-9a-f-]{36}$/i.test(id))));
+  if (!ids.length) return items;
+  try {
+    const { data, error } = await supabase.rpc('get_feed_author_labels', { p_user_ids: ids });
+    if (error) throw error;
+    const labels = new Map<string, string>((data ?? []).map((row: { user_id: string; author_label: string }) => [row.user_id, row.author_label]));
+    return items.map((item) => ({ ...item, author_label: labels.get(item.poster_id) || item.author_label || 'Campus student' }));
+  } catch {
+    return items;
+  }
 }
 
 function applySurfaceRules(items: DiscoverRequest[]) {
@@ -162,7 +179,8 @@ export async function fetchCampusFeedRequests(input: {
   publicItems.forEach((item) => merged.set(item.id, item));
   ownItems.forEach((item) => merged.set(item.id, item));
 
-  return applySurfaceRules(Array.from(merged.values())
+  const sorted = applySurfaceRules(Array.from(merged.values())
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()))
     .slice(0, limit);
+  return attachAuthorLabels(sorted);
 }
