@@ -281,6 +281,16 @@ export default function ConnectionsHub() {
   }
 
   async function cancel(connectionId: string) {
+    const connection = connectionData.connections.find((item) => item.id === connectionId);
+    const freePending = connection?.payment_method === 'none' && connection.status === 'pending';
+    if (freePending) {
+      const isResponder = connectionData.userId === connection.responder_id;
+      const confirmed = window.confirm(isResponder
+        ? 'Decline this connection? The request will reopen so the requester can choose someone else.'
+        : 'Choose someone else? This pending choice will be cleared and the request will reopen with its previous responses available.');
+      if (!confirmed) return;
+    }
+
     setBusyId(connectionId);
     setNotice('');
     try {
@@ -823,7 +833,11 @@ export default function ConnectionsHub() {
                           {state?.viewer_completed && !state?.other_completed && <span className="responseState">Waiting for them…</span>}
 
                           {!['completed', 'cancelled'].includes(connection.status) && (
-                            <button type="button" className="connectionCancel" onClick={() => cancel(connection.id)} disabled={busyId === connection.id}>Cancel</button>
+                            <button type="button" className="connectionCancel" onClick={() => cancel(connection.id)} disabled={busyId === connection.id}>
+                              {connection.payment_method === 'none' && connection.status === 'pending'
+                                ? (isResponder ? 'Decline' : 'Choose someone else')
+                                : 'Cancel'}
+                            </button>
                           )}
                           <a href="/safety">Safety ↗</a>
                         </div>
