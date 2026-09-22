@@ -100,7 +100,7 @@ export default function CampusFeedCard({
           campus: campusLabel,
           meta: `${price} · ${campusFeedRelativeTime(item.created_at)}`,
           image: image || undefined,
-          href: saveHref || '/saved'
+          href: saveHref || `${window.location.pathname}${window.location.search}`
         }];
     try {
       window.localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(next));
