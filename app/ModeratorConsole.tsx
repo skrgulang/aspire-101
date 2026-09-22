@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   AppRole,
   fetchEnforcementStates,
+  fetchModerationHistory,
   fetchMyRole,
   fetchRequestsForModeration,
   fetchSafetyReportsForModeration,
@@ -16,6 +17,7 @@ import {
   reviewSchoolVerification,
   reviewSupportFeedback,
   runModeratorRequestAiSafety,
+  ModerationActionHistory,
   SafetyReportForModeration,
   SchoolVerification,
   SupportFeedbackForModeration,
@@ -28,7 +30,8 @@ import { fetchRequestMedia, RequestMedia } from '../lib/supabase/requestMedia';
 import AppDock from './AppDock';
 import AppLoader from './AppLoader';
 
-type Tab = 'ids' | 'reports' | 'requests' | 'support' | 'team';
+type Tab = 'ids' | 'reports' | 'requests' | 'support' | 'history' | 'team';
+type PostFilter = 'review' | 'blocked' | 'high_risk' | 'approved' | 'all';
 
 function when(value: string) {
   return new Date(value).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -52,6 +55,25 @@ function effectiveEnforcement(item?: UserEnforcementState) {
   return item.state;
 }
 
+function actionLabel(action: string) {
+  const labels: Record<string, string> = {
+    approve_request: 'Approved post',
+    approve_request_ai_override: 'Approved AI override',
+    reject_request: 'Rejected post',
+    remove_request: 'Removed post',
+    verify_school_id: 'Verified school ID',
+    reject_school_id: 'Rejected school ID',
+    resolve_report: 'Resolved safety report',
+    dismiss_report: 'Dismissed safety report',
+    restrict_user: 'Restricted account',
+    suspend_user: 'Suspended account',
+    restore_user: 'Restored account',
+    grant_moderator: 'Granted moderator',
+    revoke_moderator: 'Removed moderator'
+  };
+  return labels[action] || action.replaceAll('_', ' ');
+}
+
 export default function ModeratorConsole() {
   const router = useRouter();
   const [role, setRole] = useState<AppRole>('member');
@@ -61,8 +83,11 @@ export default function ModeratorConsole() {
   const [reports, setReports] = useState<SafetyReportForModeration[]>([]);
   const [supportFeedback, setSupportFeedback] = useState<SupportFeedbackForModeration[]>([]);
   const [requests, setRequests] = useState<AspireRequest[]>([]);
+  const [history, setHistory] = useState<ModerationActionHistory[]>([]);
   const [requestMedia, setRequestMedia] = useState<RequestMedia[]>([]);
   const [enforcementStates, setEnforcementStates] = useState<UserEnforcementState[]>([]);
+  const [postFilter, setPostFilter] = useState<PostFilter>('review');
+  const [postSearch, setPostSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState('');
   const [teamEmail, setTeamEmail] = useState('');
@@ -77,11 +102,12 @@ export default function ModeratorConsole() {
         router.replace('/profile');
         return;
       }
-      const [ids, safety, activeRequests, support] = await Promise.all([
+      const [ids, safety, activeRequests, support, auditHistory] = await Promise.all([
         fetchVerificationQueue(),
         fetchSafetyReportsForModeration(),
         fetchRequestsForModeration(),
-        fetchSupportFeedbackForModeration()
+        fetchSupportFeedbackForModeration(),
+        fetchModerationHistory()
       ]);
       const userIds = [...new Set([
         ...activeRequests.map((request) => request.poster_id),
@@ -95,6 +121,7 @@ export default function ModeratorConsole() {
       setReports(safety);
       setSupportFeedback(support);
       setRequests(activeRequests);
+      setHistory(auditHistory);
       setRequestMedia(media);
       setEnforcementStates(enforcements);
     } catch (error) {
@@ -114,6 +141,29 @@ export default function ModeratorConsole() {
     request.ai_risk_level === 'high' || request.ai_risk_level === 'critical' || (request.behavior_risk_score ?? 0) >= 60
   ), [pendingRequests]);
   const activeRequests = useMemo(() => requests.filter((request) => ['open', 'matched', 'in_progress'].includes(request.status)), [requests]);
+  const filteredRequests = useMemo(() => {
+    const q = postSearch.trim().toLowerCase();
+    return activeRequests.filter((request) => {
+      const highRisk = request.ai_risk_level === 'high' || request.ai_risk_level === 'critical' || (request.behavior_risk_score ?? 0) >= 60;
+      const statusMatch =
+        postFilter === 'all' ? true :
+        postFilter === 'review' ? request.moderation_status === 'pending' :
+        postFilter === 'blocked' ? request.moderation_status === 'blocked' :
+        postFilter === 'high_risk' ? highRisk :
+        request.moderation_status === 'approved';
+      if (!statusMatch) return false;
+      if (!q) return true;
+      return [
+        request.title,
+        request.details,
+        request.category,
+        request.kind,
+        request.campus,
+        request.poster_id,
+        request.id
+      ].some((value) => String(value || '').toLowerCase().includes(q));
+    });
+  }, [activeRequests, postFilter, postSearch]);
   const mediaMap = useMemo(() => {
     const map = new Map<string, RequestMedia[]>();
     requestMedia.forEach((media) => {
@@ -319,6 +369,7 @@ export default function ModeratorConsole() {
           <button className={tab === 'ids' ? 'active' : ''} onClick={() => setTab('ids')} type="button">School IDs <b>{pendingIds.length}</b></button>
           <button className={tab === 'reports' ? 'active' : ''} onClick={() => setTab('reports')} type="button">Safety <b>{openReports.length}</b></button>
           <button className={tab === 'support' ? 'active' : ''} onClick={() => setTab('support')} type="button">Support <b>{pendingSupport.length}</b></button>
+          <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')} type="button">History <b>{history.length}</b></button>
           {role === 'admin' && <button className={tab === 'team' ? 'active' : ''} onClick={() => setTab('team')} type="button">Team</button>}
         </nav>
 
@@ -327,9 +378,21 @@ export default function ModeratorConsole() {
         {tab === 'requests' && (
           <section className="moderatorPanel">
             <div className="moderatorPanelHead"><div><span>ASPIRE SAFETY + SCAM INTELLIGENCE</span><h2>Posts</h2></div><p>AI scores text and images. Aspire-specific checks add scam language, off-platform payment, duplicate/burst posting, price anomalies, and internal trust context. Humans still make publication and account-enforcement decisions.</p></div>
+            <div className="moderatorQueueTools">
+              <div className="moderatorQueueFilters" aria-label="Post moderation filters">
+                {([
+                  ['review', 'Needs review', pendingRequests.length],
+                  ['blocked', 'Blocked', activeRequests.filter((item) => item.moderation_status === 'blocked').length],
+                  ['high_risk', 'High risk', activeRequests.filter((item) => item.ai_risk_level === 'high' || item.ai_risk_level === 'critical' || (item.behavior_risk_score ?? 0) >= 60).length],
+                  ['approved', 'Approved', activeRequests.filter((item) => item.moderation_status === 'approved').length],
+                  ['all', 'All active', activeRequests.length]
+                ] as [PostFilter, string, number][]).map(([value, label, count]) => <button type="button" className={postFilter === value ? 'active' : ''} onClick={() => setPostFilter(value)} key={value}>{label} <b>{count}</b></button>)}
+              </div>
+              <input className="moderatorQueueSearch" value={postSearch} onChange={(event) => setPostSearch(event.target.value)} placeholder="Search title, campus, category, user or post ID" aria-label="Search moderation queue" />
+            </div>
             <div className="moderatorList">
-              {!activeRequests.length && <div className="moderatorEmpty"><i>✓</i><strong>Post queue is clear.</strong><span>New submissions will appear here before they can go public.</span></div>}
-              {activeRequests
+              {!filteredRequests.length && <div className="moderatorEmpty"><i>✓</i><strong>No posts match this view.</strong><span>Try another filter or clear the search.</span></div>}
+              {filteredRequests
                 .slice()
                 .sort((a, b) => {
                   const priority = (item: AspireRequest) => {
@@ -498,6 +561,25 @@ export default function ModeratorConsole() {
                   </article>
                 );
               })}
+            </div>
+          </section>
+        )}
+
+        {tab === 'history' && (
+          <section className="moderatorPanel">
+            <div className="moderatorPanelHead"><div><span>AUDIT TRAIL</span><h2>Moderator history</h2></div><p>Human Trust &amp; Safety actions are recorded here for operational review. Automated scans remain on each post; this log focuses on moderator decisions and enforcement.</p></div>
+            <div className="moderatorList moderatorHistoryList">
+              {!history.length && <div className="moderatorEmpty"><i>✓</i><strong>No moderator actions yet.</strong><span>Approve, reject, remove, report, ID, and enforcement actions will appear here.</span></div>}
+              {history.map((item) => (
+                <article className="moderatorRow moderatorHistoryRow" key={item.id}>
+                  <div className="moderatorRowMain">
+                    <span>{actionLabel(item.action).toUpperCase()} · {when(item.created_at)}</span>
+                    <strong>{item.request_title || (item.request_id ? `Post ${item.request_id.slice(0, 8)}` : item.report_id ? `Report ${item.report_id.slice(0, 8)}` : item.target_user_id ? `Account ${item.target_user_id.slice(0, 8)}` : 'Trust & Safety action')}</strong>
+                    {item.note && <p>{item.note}</p>}
+                    <small>Moderator {item.moderator_email || item.moderator_id.slice(0, 8)}{item.target_user_id ? ` · target ${item.target_user_id.slice(0, 8)}` : ''}{item.request_id ? ` · post ${item.request_id.slice(0, 8)}` : ''}</small>
+                  </div>
+                </article>
+              ))}
             </div>
           </section>
         )}
