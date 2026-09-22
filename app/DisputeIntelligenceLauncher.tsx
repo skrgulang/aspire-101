@@ -55,6 +55,36 @@ export default function DisputeIntelligenceLauncher() {
     return () => { alive = false; };
   }, []);
 
+  async function resolveCase(action: 'refund_buyer' | 'resume_seller') {
+    if (!selectedId || busy) return;
+    const actionLabel = action === 'refund_buyer' ? 'refund the buyer in full' : 'resolve for the seller and resume the protected payout flow';
+    const note = window.prompt(`Reviewer note required — why are you choosing to ${actionLabel}?`, '');
+    if (!note?.trim()) return;
+    if (!window.confirm(`Confirm: ${actionLabel}? This decision is audited.`)) return;
+
+    setBusy(true);
+    setError('');
+    try {
+      const accessToken = await token();
+      const response = await fetch('/api/market/dispute/resolve', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ disputeId: selectedId, action, note: note.trim() })
+      });
+      const payload = await response.json().catch(() => ({})) as { ok?: boolean; error?: string };
+      if (!response.ok || !payload.ok) throw new Error(payload.error || 'Could not resolve this dispute.');
+
+      const remaining = queue.filter((item) => item.id !== selectedId);
+      setQueue(remaining);
+      setSelectedId(remaining[0]?.id || '');
+      setBrief(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not resolve this dispute.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function analyze() {
     if (!selectedId) return;
     setBusy(true);
@@ -101,6 +131,15 @@ export default function DisputeIntelligenceLauncher() {
           {brief.risk_signals.length > 0 && <article className="disputeAiList"><strong>Risk signals</strong>{brief.risk_signals.map((item) => <span key={item}>· {item}</span>)}</article>}
           <article className="disputeAiList next"><strong>Suggested reviewer next steps</strong>{brief.suggested_next_steps.map((item) => <span key={item}>· {item}</span>)}</article>
           <small>Internal decision support only. Platform records can show what happened inside Aspire, but they do not independently prove what happened offline.</small>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+            <button className="button" type="button" onClick={() => void resolveCase('resume_seller')} disabled={busy}>
+              Resolve for seller · resume payout flow
+            </button>
+            <button className="button buttonGold" type="button" onClick={() => void resolveCase('refund_buyer')} disabled={busy}>
+              Refund buyer in full
+            </button>
+          </div>
+          <small style={{ display: 'block', marginTop: 8 }}>These buttons require a reviewer note and two-step verification. “Resume payout” does not itself send money; it removes the dispute hold so the normal protected release checks can run.</small>
         </div>}
       </section>
     </div>}
