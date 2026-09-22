@@ -12,12 +12,38 @@ export default function CookieBanner() {
   useEffect(() => {
     const saved = window.localStorage.getItem('aspire-cookie-consent');
     if (!saved) setVisible(true);
+
+    const openPreferences = () => {
+      try {
+        const current = window.localStorage.getItem('aspire-cookie-consent');
+        const consent = current ? JSON.parse(current) as { analytics?: boolean } : null;
+        setAnalytics(consent?.analytics === true);
+      } catch {
+        setAnalytics(false);
+      }
+      setManaging(true);
+      setVisible(true);
+    };
+
+    window.addEventListener('aspire-cookie-preferences-open', openPreferences);
+    return () => window.removeEventListener('aspire-cookie-preferences-open', openPreferences);
   }, []);
 
   function save(choice: Choice) {
+    const previousRaw = window.localStorage.getItem('aspire-cookie-consent');
+    let previousAnalytics: boolean | null = null;
+    if (previousRaw) {
+      try {
+        previousAnalytics = (JSON.parse(previousRaw) as { analytics?: boolean }).analytics === true;
+      } catch {
+        previousAnalytics = false;
+      }
+    }
+
+    const nextAnalytics = choice === 'all';
     const consent = {
       choice,
-      analytics: choice === 'all' ? true : analytics,
+      analytics: nextAnalytics,
       savedAt: new Date().toISOString()
     };
 
@@ -25,6 +51,10 @@ export default function CookieBanner() {
     window.dispatchEvent(new CustomEvent('aspire-cookie-consent-changed', { detail: consent }));
     setVisible(false);
     setManaging(false);
+
+    if (previousAnalytics !== null && previousAnalytics !== nextAnalytics) {
+      window.location.reload();
+    }
   }
 
   if (!visible) return null;
@@ -45,7 +75,7 @@ export default function CookieBanner() {
 
       <div className="cookieActions">
         {managing ? (
-          <button type="button" className="cookieQuiet" onClick={() => save('essential')}>Save choices</button>
+          <button type="button" className="cookieQuiet" onClick={() => save(analytics ? 'all' : 'essential')}>Save choices</button>
         ) : (
           <button type="button" className="cookieQuiet" onClick={() => setManaging(true)}>Manage</button>
         )}
