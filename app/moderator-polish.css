@@ -49,6 +49,12 @@
 .aiSafetyPanel > div strong { color: #ddd3c4; font-size: 10px; letter-spacing: .08em; }
 .aiSafetyPanel p { margin: 6px 0 0; color: #9a9185; font-size: 9px; line-height: 1.5; }
 .aiSafetyPanel small { display: block; margin-top: 7px; color: #786f64; font-size: 8px; line-height: 1.45; }
+.moderatorReviewLanes { max-width: 820px; margin: 8px 0; padding: 10px 12px; border: 1px solid rgba(255,194,28,.12); border-radius: 14px; background: rgba(255,194,28,.025); }
+.moderatorReviewLanes > span { display:block; margin-bottom:7px; color:#8f7d45; font-size:7px; font-weight:900; letter-spacing:.12em; }
+.moderatorReviewLanes > div { display:grid; grid-template-columns:110px minmax(0,1fr); gap:10px; padding:7px 0; border-top:1px solid rgba(255,255,255,.05); }
+.moderatorReviewLanes > div:first-of-type { border-top:0; }
+.moderatorReviewLanes b { color:#d8cfc1; font-size:8px; letter-spacing:.04em; }
+.moderatorReviewLanes small { color:#857c70; font-size:8px; line-height:1.45; }
 .enforcementBar { max-width: 820px; margin: 8px 0 10px; padding: 10px 11px; border: 1px solid rgba(255,255,255,.065); border-radius: 13px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: rgba(255,255,255,.012); }
 .enforcementBar > div:first-child { min-width: 0; }
 .enforcementBar > div:first-child span { display: block; color: #625b52; font-size: 7px; font-weight: 900; letter-spacing: .11em; }
@@ -61,6 +67,8 @@
 .enforcementBar button:disabled { opacity: .45; cursor: default; }
 .moderatorAiActions { min-width: 122px; }
 .moderatorAiActions > button:first-child { border-color: rgba(255,194,28,.15); color: #b6a46b; }
+.moderatorAiActions .moderatorDanger { border-color: rgba(255,84,84,.32); color:#e59595; background:rgba(255,84,84,.045); }
+.moderatorAiActions .moderatorDanger:hover { border-color:rgba(255,84,84,.55); color:#ffc1c1; }
 .moderatorMediaStrip { display: flex; gap: 8px; margin: 12px 0 5px; overflow-x: auto; scrollbar-width: thin; }
 .moderatorMediaStrip a { flex: 0 0 auto; display: block; width: 108px; height: 88px; border: 1px solid rgba(255,255,255,.1); border-radius: 13px; overflow: hidden; background: #080806; }
 .moderatorMediaStrip img { width: 100%; height: 100%; display: block; object-fit: cover; }
@@ -79,6 +87,7 @@
   .moderatorMediaStrip a { width: 92px; height: 76px; }
   .moderatorContentMeta { align-items: flex-start; flex-direction: column; }
   .moderatorAiActions { min-width: 0; }
+  .moderatorReviewLanes > div { grid-template-columns:1fr; gap:3px; }
   .scamContextRow { display: grid; grid-template-columns: 1fr 1fr; }
   .enforcementBar { align-items: flex-start; flex-direction: column; }
   .enforcementBar > div:last-child { justify-content: flex-start; }
