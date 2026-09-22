@@ -438,6 +438,18 @@
 .postSuccess article strong { display: block; margin-top: 20px; font-size: 25px; line-height: 1.15; }
 .postSuccess article small { display: block; margin-top: 18px; color: rgba(0,0,0,.55); }
 .postSuccessNote { max-width: 480px; margin: 20px auto 0; color: #8c8477; font-size: 11px; line-height: 1.6; }
+.postReviewReason {
+  width: min(520px, 100%);
+  margin: 16px auto 0;
+  padding: 15px 17px;
+  border: 1px solid rgba(255,194,28,.24);
+  border-radius: 16px;
+  background: rgba(255,194,28,.07);
+  text-align: left;
+}
+.postReviewReason strong { color: var(--gold); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.postReviewReason p { margin: 7px 0 0; color: #d2cabc; font-size: 11px; line-height: 1.55; }
+.postReviewReason span { display: block; margin-top: 7px; color: #81796d; font-size: 9px; line-height: 1.45; }
 .postSuccessActions { margin-top: 27px; display: flex; justify-content: center; align-items: center; gap: 18px; }
 
 /* Discover */
