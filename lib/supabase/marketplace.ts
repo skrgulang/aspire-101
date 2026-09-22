@@ -80,7 +80,10 @@ export type ShippingRate = {
 export type MarketDispute = {
   id: string;
   market_order_id: string;
-  opened_by: string;
+  opened_by: string | null;
+  source?: 'user' | 'stripe_dispute' | 'stripe_radar';
+  stripe_status?: string | null;
+  stripe_outcome?: string | null;
   reason: 'item_not_as_described' | 'item_not_received' | 'counterfeit_or_prohibited' | 'payment_issue' | 'unsafe_handoff' | 'other';
   details: string;
   status: 'open' | 'under_review' | 'resolved_buyer' | 'resolved_seller' | 'closed';

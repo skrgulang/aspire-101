@@ -40,6 +40,173 @@ type RecoverablePayment = {
 
 type StripeTransferReversal = { id: string; amount?: number | null };
 
+
+async function syncStripeMarketplaceRiskCase(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  payment: RecoverablePayment & { connection_id: string },
+  eventType: 'charge.dispute.created' | 'radar.early_fraud_warning.created',
+  object: Record<string, any>,
+  stripeEventId: string
+) {
+  const { data: order, error: orderError } = await supabase
+    .from('market_orders')
+    .select('id,connection_id,request_id,buyer_id,seller_id,status')
+    .eq('connection_id', payment.connection_id)
+    .maybeSingle();
+  requireDatabaseWrite(orderError);
+  if (!order) return;
+
+  const now = new Date().toISOString();
+  const source = eventType === 'charge.dispute.created' ? 'stripe_dispute' : 'stripe_radar';
+  const stripeCaseId = `${source}:${String(object.id || stripeEventId)}`;
+  const details = eventType === 'charge.dispute.created'
+    ? 'Stripe opened a card-network payment dispute. Aspire paused the order and seller payout for human review.'
+    : 'Stripe Radar issued an early fraud warning. Aspire paused the order and seller payout for human review.';
+
+  const { error: orderUpdateError } = await supabase
+    .from('market_orders')
+    .update({
+      status: 'disputed',
+      dispute_opened_at: now,
+      updated_at: now
+    })
+    .eq('id', order.id)
+    .neq('status', 'refunded');
+  requireDatabaseWrite(orderUpdateError);
+
+  const { data: existing, error: existingError } = await supabase
+    .from('market_disputes')
+    .select('id')
+    .eq('stripe_case_id', stripeCaseId)
+    .maybeSingle();
+  requireDatabaseWrite(existingError);
+
+  if (existing) {
+    const { error } = await supabase
+      .from('market_disputes')
+      .update({
+        status: 'under_review',
+        details,
+        stripe_status: String(object.status || 'open'),
+        updated_at: now
+      })
+      .eq('id', existing.id);
+    requireDatabaseWrite(error);
+  } else {
+    const { error } = await supabase
+      .from('market_disputes')
+      .insert({
+        market_order_id: order.id,
+        opened_by: null,
+        reason: 'payment_issue',
+        details,
+        evidence: [{
+          source,
+          stripe_event_id: stripeEventId,
+          stripe_object_id: String(object.id || ''),
+          stripe_charge_id: objectId(object.charge)
+        }],
+        status: 'under_review',
+        source,
+        stripe_case_id: stripeCaseId,
+        stripe_status: String(object.status || 'open')
+      });
+    requireDatabaseWrite(error);
+  }
+
+  const { error: eventError } = await supabase.from('market_order_events').insert({
+    market_order_id: order.id,
+    actor_id: null,
+    event_type: eventType === 'charge.dispute.created' ? 'stripe_dispute_opened' : 'stripe_radar_warning',
+    payload: {
+      stripe_event_id: stripeEventId,
+      stripe_case_id: stripeCaseId,
+      stripe_status: String(object.status || 'open')
+    }
+  });
+  requireDatabaseWrite(eventError);
+
+  const title = eventType === 'charge.dispute.created'
+    ? 'Payment dispute under review'
+    : 'Payment flagged for review';
+  const body = eventType === 'charge.dispute.created'
+    ? 'Stripe reported a card-network dispute. Aspire paused this order while the payment issue is reviewed.'
+    : 'Stripe Radar flagged this payment. Aspire paused this order while the payment is reviewed.';
+
+  const { error: buyerNoticeError } = await supabase.rpc('push_notification', {
+    p_user_id: order.buyer_id,
+    p_kind: 'market_order',
+    p_event_key: `market-stripe-risk:${stripeCaseId}:${order.buyer_id}`,
+    p_title: title,
+    p_body: body,
+    p_actor_id: null,
+    p_request_id: order.request_id,
+    p_response_id: null,
+    p_connection_id: order.connection_id,
+    p_message_id: null
+  });
+  requireDatabaseWrite(buyerNoticeError);
+
+  const { error: sellerNoticeError } = await supabase.rpc('push_notification', {
+    p_user_id: order.seller_id,
+    p_kind: 'market_order',
+    p_event_key: `market-stripe-risk:${stripeCaseId}:${order.seller_id}`,
+    p_title: title,
+    p_body: body,
+    p_actor_id: null,
+    p_request_id: order.request_id,
+    p_response_id: null,
+    p_connection_id: order.connection_id,
+    p_message_id: null
+  });
+  requireDatabaseWrite(sellerNoticeError);
+}
+
+async function recordStripeDisputeClosure(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  object: Record<string, any>,
+  stripeEventId: string
+) {
+  const stripeCaseId = `stripe_dispute:${String(object.id || '')}`;
+  if (!object.id) return;
+
+  const { data: dispute, error: disputeError } = await supabase
+    .from('market_disputes')
+    .select('id,market_order_id,status')
+    .eq('stripe_case_id', stripeCaseId)
+    .maybeSingle();
+  requireDatabaseWrite(disputeError);
+  if (!dispute) return;
+
+  const outcome = String(object.status || 'closed');
+  const now = new Date().toISOString();
+  const { error: updateError } = await supabase
+    .from('market_disputes')
+    .update({
+      status: 'under_review',
+      stripe_status: outcome,
+      stripe_outcome: outcome,
+      stripe_status_updated_at: now,
+      resolution_note: `Stripe closed the card-network dispute with status “${outcome}”. Aspire still requires human financial reconciliation before changing the protected order state.`,
+      updated_at: now
+    })
+    .eq('id', dispute.id);
+  requireDatabaseWrite(updateError);
+
+  const { error: eventError } = await supabase.from('market_order_events').insert({
+    market_order_id: dispute.market_order_id,
+    actor_id: null,
+    event_type: 'stripe_dispute_closed',
+    payload: {
+      stripe_event_id: stripeEventId,
+      stripe_case_id: stripeCaseId,
+      stripe_outcome: outcome,
+      manual_reconciliation_required: true
+    }
+  });
+  requireDatabaseWrite(eventError);
+}
+
 async function recoverReleasedTransfer(
   supabase: ReturnType<typeof getSupabaseServiceClient>,
   payment: RecoverablePayment,
@@ -296,7 +463,7 @@ export async function POST(request: Request) {
       if (chargeId) {
         const { data: payment, error: paymentError } = await supabase
           .from('connection_payments')
-          .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+          .select('id,connection_id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
           .eq('stripe_charge_id', chargeId)
           .eq('stripe_livemode', eventLivemode)
           .maybeSingle();
@@ -315,6 +482,14 @@ export async function POST(request: Request) {
           }).eq('id', payment.id).neq('status', 'refunded');
           requireDatabaseWrite(error);
 
+          await syncStripeMarketplaceRiskCase(
+            supabase,
+            payment as RecoverablePayment & { connection_id: string },
+            event.type,
+            object,
+            event.id
+          );
+
           // An early warning pauses an unreleased payout but does not itself remove funds.
           // A real dispute after release immediately attempts to recover the seller transfer.
           if (event.type === 'charge.dispute.created' && payment.stripe_transfer_id) {
@@ -322,6 +497,10 @@ export async function POST(request: Request) {
           }
         }
       }
+    }
+
+    if (event.type === 'charge.dispute.closed') {
+      await recordStripeDisputeClosure(supabase, object, event.id);
     }
 
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {

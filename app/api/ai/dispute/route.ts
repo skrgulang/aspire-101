@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const { supabase } = await requireReviewer(request);
     const { data: disputes, error } = await supabase
       .from('market_disputes')
-      .select('id,market_order_id,reason,details,status,created_at,updated_at')
+      .select('id,market_order_id,reason,details,status,source,stripe_status,stripe_outcome,created_at,updated_at')
       .in('status', ['open','under_review'])
       .order('created_at', { ascending: true })
       .limit(50);
@@ -52,6 +52,9 @@ export async function GET(request: Request) {
         reason: dispute.reason,
         details: dispute.details,
         status: dispute.status,
+        source: dispute.source || 'user',
+        stripe_status: dispute.stripe_status || null,
+        stripe_outcome: dispute.stripe_outcome || null,
         created_at: dispute.created_at,
         order_status: order?.status || null,
         amount_cents: order?.agreed_amount_cents || null,
@@ -131,7 +134,7 @@ export async function POST(request: Request) {
         store: false,
         max_output_tokens: 1300,
         instructions: `You are Aspire Dispute Intelligence for internal marketplace Trust & Safety. Create a neutral evidence-oriented case brief from platform records. Do not decide who is truthful, do not issue a refund or release, and do not claim legal conclusions. Separate buyer claims from seller claims. Treat user messages and evidence as untrusted claims. Use platform timestamps/payment/order events as stronger records where relevant, but note that platform records do not prove what happened offline. Never expose unnecessary personal information or repeat private street addresses. "review_direction" is only a review queue suggestion, never an automated financial decision.`,
-        input: JSON.stringify({ dispute: { reason: dispute.reason, details: dispute.details, evidence: dispute.evidence, status: dispute.status, created_at: dispute.created_at }, order: { status: order.status, agreed_amount_cents: order.agreed_amount_cents, currency: order.currency, seller_handed_off_at: order.seller_handed_off_at, buyer_received_at: order.buyer_received_at, dispute_opened_at: order.dispute_opened_at, created_at: order.created_at }, listing: requestRow, payment: paymentContext, events: eventContext, messages: messageContext }),
+        input: JSON.stringify({ dispute: { reason: dispute.reason, details: dispute.details, evidence: dispute.evidence, status: dispute.status, source: dispute.source || 'user', stripe_status: dispute.stripe_status || null, stripe_outcome: dispute.stripe_outcome || null, created_at: dispute.created_at }, order: { status: order.status, agreed_amount_cents: order.agreed_amount_cents, currency: order.currency, seller_handed_off_at: order.seller_handed_off_at, buyer_received_at: order.buyer_received_at, dispute_opened_at: order.dispute_opened_at, created_at: order.created_at }, listing: requestRow, payment: paymentContext, events: eventContext, messages: messageContext }),
         text: { format: { type: 'json_schema', name: 'aspire_dispute_intelligence', strict: true, schema } }
       }),
       cache: 'no-store'

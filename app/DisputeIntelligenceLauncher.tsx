@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 
-type QueueItem = { id: string; title: string; reason: string; details: string; status: string; order_status: string | null; amount_cents: number | null; currency: string; created_at: string };
+type QueueItem = { id: string; title: string; reason: string; details: string; status: string; source: 'user' | 'stripe_dispute' | 'stripe_radar'; stripe_status: string | null; stripe_outcome: string | null; order_status: string | null; amount_cents: number | null; currency: string; created_at: string };
 type Brief = {
   summary: string;
   timeline: string[];
@@ -116,7 +116,7 @@ export default function DisputeIntelligenceLauncher() {
         <header><span>✦ ASPIRE DISPUTE INTELLIGENCE</span><h2>Evidence first. Human decision.</h2><p>AI prepares a neutral brief from Aspire records. It cannot refund a buyer, release a seller payout, or decide who is truthful.</p></header>
         {!queue.length ? <div className="disputeAiEmpty"><b>✓</b><strong>No open marketplace disputes.</strong></div> : <>
           <div className="disputeAiControls"><label><span>OPEN CASE</span><select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); setBrief(null); }}>{queue.map((item) => <option value={item.id} key={item.id}>{item.title} · {item.reason.replaceAll('_',' ')}</option>)}</select></label><button className="button buttonGold" type="button" onClick={analyze} disabled={busy}>{busy ? 'Reading evidence…' : 'Analyze case ✦'}</button></div>
-          {selected && <div className="disputeAiCaseMeta"><span><b>ORDER</b>{selected.order_status || '—'}</span><span><b>AMOUNT</b>{money(selected.amount_cents, selected.currency)}</span><span><b>REASON</b>{selected.reason.replaceAll('_',' ')}</span></div>}
+          {selected && <div className="disputeAiCaseMeta"><span><b>ORDER</b>{selected.order_status || '—'}</span><span><b>AMOUNT</b>{money(selected.amount_cents, selected.currency)}</span><span><b>REASON</b>{selected.reason.replaceAll('_',' ')}</span><span><b>SOURCE</b>{selected.source === 'user' ? 'Aspire report' : selected.source === 'stripe_dispute' ? 'Stripe card dispute' : 'Stripe Radar'}</span>{selected.stripe_outcome && <span><b>STRIPE OUTCOME</b>{selected.stripe_outcome}</span>}</div>}
         </>}
         {error && <p className="disputeAiError">{error}</p>}
         {brief && <div className="disputeAiBrief">
@@ -131,15 +131,17 @@ export default function DisputeIntelligenceLauncher() {
           {brief.risk_signals.length > 0 && <article className="disputeAiList"><strong>Risk signals</strong>{brief.risk_signals.map((item) => <span key={item}>· {item}</span>)}</article>}
           <article className="disputeAiList next"><strong>Suggested reviewer next steps</strong>{brief.suggested_next_steps.map((item) => <span key={item}>· {item}</span>)}</article>
           <small>Internal decision support only. Platform records can show what happened inside Aspire, but they do not independently prove what happened offline.</small>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
-            <button className="button" type="button" onClick={() => void resolveCase('resume_seller')} disabled={busy}>
-              Resolve for seller · resume payout flow
-            </button>
-            <button className="button buttonGold" type="button" onClick={() => void resolveCase('refund_buyer')} disabled={busy}>
-              Refund buyer in full
-            </button>
-          </div>
-          <small style={{ display: 'block', marginTop: 8 }}>These buttons require a reviewer note and two-step verification. “Resume payout” does not itself send money; it removes the dispute hold so the normal protected release checks can run.</small>
+          {selected?.source === 'user' ? <>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+              <button className="button" type="button" onClick={() => void resolveCase('resume_seller')} disabled={busy}>
+                Resolve for seller · resume payout flow
+              </button>
+              <button className="button buttonGold" type="button" onClick={() => void resolveCase('refund_buyer')} disabled={busy}>
+                Refund buyer in full
+              </button>
+            </div>
+            <small style={{ display: 'block', marginTop: 8 }}>These buttons require a reviewer note and two-step verification. “Resume payout” does not itself send money; it removes the dispute hold so the normal protected release checks can run.</small>
+          </> : <small style={{ display: 'block', marginTop: 12 }}>Stripe-originated payment risk case. Aspire keeps the order and payout paused. Financial reconciliation stays manual so a card-network outcome cannot accidentally trigger a duplicate refund or seller transfer.</small>}
         </div>}
       </section>
     </div>}
