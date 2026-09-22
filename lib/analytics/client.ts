@@ -10,6 +10,7 @@ export type ProductEventName =
   | 'signup_submitted'
   | 'request_created'
   | 'response_sent'
+  | 'response_withdrawn'
   | 'connection_chosen'
   | 'connection_confirmed'
   | 'connection_completion_marked'

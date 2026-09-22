@@ -12,6 +12,19 @@ export type RequestResponse = {
   created_at: string;
 };
 
+export type OutgoingRequestResponse = {
+  response_id: string;
+  request_id: string;
+  response_message: string | null;
+  response_status: 'pending' | 'accepted' | 'declined' | 'withdrawn';
+  responded_at: string;
+  request_title: string;
+  request_category: string;
+  request_kind: string;
+  request_status: string;
+  moderation_status: string;
+};
+
 export type AspireConnection = {
   id: string;
   request_id: string;
@@ -116,6 +129,27 @@ export async function fetchMyRequestInbox() {
   }
 
   return { requests: typedRequests, responses: typedResponses, profiles };
+}
+
+export async function fetchMyOutgoingRequestResponses() {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('get_my_outgoing_request_responses');
+  if (error) throw error;
+  return (data ?? []) as OutgoingRequestResponse[];
+}
+
+export async function withdrawRequestResponse(responseId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('withdraw_request_response', { p_response_id: responseId });
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''} ${error.hint || ''}`;
+    if (/RESPONSE_NOT_WITHDRAWABLE/i.test(detail)) throw new Error('This response has already been acted on and can no longer be withdrawn.');
+    if (/RESPONSE_NOT_FOUND/i.test(detail)) throw new Error('This response is no longer available.');
+    if (/AUTH_REQUIRED/i.test(detail)) throw new Error('Sign in again to continue.');
+    throw error;
+  }
+  void trackProductEvent('response_withdrawn');
+  return String(data || 'withdrawn');
 }
 
 export async function fetchMyConnections() {
