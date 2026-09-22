@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import type { AspireRequest } from '../lib/supabase/requests';
+import { fetchRequestMedia } from '../lib/supabase/requestMedia';
 import { deleteRequestDraft, listRequestDrafts, type RequestDraft } from '../lib/supabase/requestDrafts';
 import { deleteMarketplaceDraft, listMarketplaceDrafts, type MarketplaceDraft } from '../lib/supabase/marketplaceSeller';
 import UiIcon from './UiIcon';
@@ -129,6 +130,7 @@ export default function MyActivityManager() {
   const [requestDrafts, setRequestDrafts] = useState<RequestDraft[]>([]);
   const [sellerDrafts, setSellerDrafts] = useState<MarketplaceDraft[]>([]);
   const [connections, setConnections] = useState<ConnectionRow[]>([]);
+  const [mediaByRequest, setMediaByRequest] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<Filter>('all');
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
@@ -164,6 +166,15 @@ export default function MyActivityManager() {
         : 'Campus';
       const previewRequests = (isPreviewDemoEnabled() ? buildDemoAspireRequests(auth.user.id, previewCampus) : []) as ActivityRequest[];
       setRequests([...previewRequests, ...realRequests].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+
+      const media = realRequests.length
+        ? await fetchRequestMedia(realRequests.map((request) => request.id)).catch(() => [])
+        : [];
+      const coverMap: Record<string, string> = {};
+      media.forEach((item) => {
+        if (!coverMap[item.request_id] && item.public_url) coverMap[item.request_id] = item.public_url;
+      });
+      setMediaByRequest(coverMap);
 
       if (!realRequests.length) {
         setConnections([]);
@@ -427,6 +438,11 @@ export default function MyActivityManager() {
             const lanes = (['post', 'language', 'market'] as const).filter((lane) => lane !== 'market' || request.kind === 'buy_sell');
             return (
               <article className={styles.card} key={request.id}>
+                <div className={styles.cardMedia}>
+                  {mediaByRequest[request.id]
+                    ? <img src={mediaByRequest[request.id]} alt="" />
+                    : <div className={styles.mediaPlaceholder}><UiIcon name="activity" /></div>}
+                </div>
                 <div className={styles.cardMain}>
                   <div className={styles.category}>{preview ? 'Preview · ' : ''}{request.category}</div>
                   <h2>{request.title}</h2>
