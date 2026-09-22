@@ -20,6 +20,20 @@
 .moderatorPagePolished .moderatorPanel { margin-top: 12px; padding: 20px; }
 .moderatorPagePolished .moderatorPanelHead { align-items: center; }
 .moderatorPagePolished .moderatorPanelHead h2 { font-size: 30px; }
+.moderatorQueueTools { margin: 14px 0 12px; display:grid; grid-template-columns:minmax(0,1fr) minmax(240px,360px); gap:10px; align-items:center; }
+.moderatorQueueFilters { display:flex; flex-wrap:wrap; gap:7px; }
+.moderatorQueueFilters button { min-height:34px; padding:0 11px; border:1px solid rgba(255,255,255,.08); border-radius:999px; background:rgba(255,255,255,.02); color:#8f877c; font:inherit; font-size:8px; font-weight:850; cursor:pointer; }
+.moderatorQueueFilters button b { margin-left:5px; color:#665f56; font-size:7px; }
+.moderatorQueueFilters button:hover { border-color:rgba(255,194,28,.22); color:#d8cfc1; }
+.moderatorQueueFilters button.active { border-color:rgba(255,194,28,.38); background:rgba(255,194,28,.09); color:var(--gold); }
+.moderatorQueueFilters button.active b { color:#d8b84f; }
+.moderatorQueueSearch { width:100%; min-height:38px; padding:0 12px; border:1px solid rgba(255,255,255,.08); border-radius:12px; outline:none; background:rgba(0,0,0,.20); color:#eee5d8; font:inherit; font-size:9px; }
+.moderatorQueueSearch:focus { border-color:rgba(255,194,28,.35); box-shadow:0 0 0 3px rgba(255,194,28,.05); }
+.moderatorQueueSearch::placeholder { color:#5f594f; }
+.moderatorHistoryList { display:grid; gap:8px; }
+.moderatorHistoryRow { grid-template-columns:1fr !important; }
+.moderatorHistoryRow .moderatorRowMain > span { color:#8b806f; font-size:8px; font-weight:850; letter-spacing:.08em; }
+.moderatorHistoryRow .moderatorRowMain > strong { margin-top:5px; }
 .moderatorPagePolished .moderatorEmpty { min-height: 180px; display: grid; place-items: center; align-content: center; gap: 7px; }
 .moderatorEmpty i { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid rgba(255,194,28,.14); border-radius: 50%; color: #b59f54; background: rgba(255,194,28,.03); font-style: normal; }
 .moderatorEmpty strong { color: #a1988b; font-size: 13px; }
@@ -84,6 +98,8 @@
   .moderatorTitleRow { align-items: flex-start; flex-direction: column; }
   .moderatorOverview { grid-template-columns: 1fr 1fr; }
   .moderatorOverview article { min-height: 92px; padding: 13px; }
+  .moderatorQueueTools { grid-template-columns:1fr; }
+  .moderatorQueueSearch { min-height:42px; }
   .moderatorMediaStrip a { width: 92px; height: 76px; }
   .moderatorContentMeta { align-items: flex-start; flex-direction: column; }
   .moderatorAiActions { min-width: 0; }
