@@ -67,7 +67,10 @@
 .author { display:flex; align-items:center; gap:6px; min-width:0; color:#666660; font-size:9px; font-weight:750; }
 .avatar { width:19px; height:19px; flex:0 0 auto; display:grid; place-items:center; border-radius:50%; background:#ffc72c; color:#16120a; font-size:8px; font-weight:900; }
 .meta { color:#8c8c87; font-size:9px; line-height:1.35; }
+.pendingRow { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
 .pending { width:max-content; max-width:100%; padding:4px 7px; border-radius:999px; background:#fff4cf; color:#806000; font-size:8px; font-weight:850; }
+.pendingDetails { color:#806000; font-size:8px; font-weight:850; text-decoration:underline; text-underline-offset:2px; }
+.pendingDetails:hover { color:#4e3b00; }
 .footer { min-height:46px; margin-top:auto; padding:8px 10px 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-top:1px solid #efefeb; }
 .secondaryAction, .primaryAction {
   min-height:32px;
@@ -91,6 +94,8 @@
 :global(html[data-aspire-theme='dark']) .author, :global(html[data-aspire-theme='dark']) .meta { color:#a9a49b; }
 :global(html[data-aspire-theme='dark']) .footer { border-top-color:#2a2a27; }
 :global(html[data-aspire-theme='dark']) .pending { background:rgba(255,199,44,.12); color:#f0d16b; }
+:global(html[data-aspire-theme='dark']) .pendingDetails { color:#f0d16b; }
+:global(html[data-aspire-theme='dark']) .pendingDetails:hover { color:#ffe9a3; }
 
 @media (max-width: 640px) {
   .card { min-height:118px; display:grid; grid-template-columns:118px minmax(0,1fr); grid-template-rows:auto auto; }
