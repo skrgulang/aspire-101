@@ -276,6 +276,19 @@ html[data-aspire-theme='dark'] .marketEmpty h2 { color:#eeeae2; }
 .marketOrderState p { margin: 3px 0 0; color: #847c71; font-size: 10px; line-height: 1.45; }
 .marketOrderState small { display: block; margin-top: 6px; color: #f1a098; font-size: 9px; }
 .marketOrderState.disputed { background: rgba(255,70,60,.055); }
+.marketReservationTimer {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 10px 13px;
+  border: 1px solid rgba(255,194,28,.2);
+  border-radius: 13px;
+  background: rgba(255,194,28,.045);
+}
+.marketReservationTimer span { color: var(--gold); font-size: 8px; font-weight: 900; letter-spacing: .1em; }
+.marketReservationTimer strong { color: var(--gold); font-size: 15px; font-variant-numeric: tabular-nums; }
+.marketReservationTimer small { color: #847c71; font-size: 9px; }
 .marketMoneySummary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

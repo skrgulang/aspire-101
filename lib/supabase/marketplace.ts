@@ -23,6 +23,7 @@ export type MarketOrder = {
   currency: string;
   agreed_amount_cents: number;
   status: MarketOrderStatus;
+  reservation_expires_at: string;
   seller_handed_off_at: string | null;
   buyer_received_at: string | null;
   shipping_carrier?: string | null;
@@ -108,6 +109,17 @@ export async function fetchMarketOrders(connectionIds: string[]) {
   });
   if (error) throw error;
   return (data ?? []) as MarketOrder[];
+}
+
+export async function cancelMarketReservation(connectionId: string) {
+  const headers = await bearerHeaders();
+  const response = await fetch('/api/marketplace/reservation/cancel', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ connectionId })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'Could not cancel this reservation.');
 }
 
 export async function fetchMarketPriceProposals(orderIds: string[]) {
