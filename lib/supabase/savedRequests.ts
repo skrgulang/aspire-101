@@ -177,17 +177,23 @@ export async function saveRequest(snapshot: SavedRequestSnapshot) {
 
 export async function removeSavedRequest(requestId: string) {
   const userId = await currentUserId();
+
+  // Remove the local/offline copy and cached state first so the bookmark always
+  // behaves like a true toggle, even if cloud Saved is temporarily unavailable.
+  const local = readLocalItems(userId).filter((item) => item.id !== requestId);
+  writeLocalItems(userId, local);
+  if (cacheUserId === userId && cachedIds) cachedIds.delete(requestId);
+
   const supabase = getSupabaseBrowserClient();
   const { error } = await supabase
     .from('saved_requests')
     .delete()
     .eq('user_id', userId)
     .eq('request_id', requestId);
-  if (error) throw error;
 
-  const local = readLocalItems(userId).filter((item) => item.id !== requestId);
-  writeLocalItems(userId, local);
-  if (cacheUserId === userId && cachedIds) cachedIds.delete(requestId);
+  // Saving already supports a local fallback. Match that behavior on removal
+  // rather than leaving a yellow bookmark stuck because cloud sync failed.
+  return { synced: !error };
 }
 
 export async function fetchSavedRequests() {
