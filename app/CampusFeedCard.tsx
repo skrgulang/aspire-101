@@ -35,7 +35,7 @@ export default function CampusFeedCard({
   const category = campusFeedCategory(item);
   const image = item.media?.[0]?.public_url || item.cover_image_url || fallbackImage || '';
   const mine = Boolean(currentUserId && item.poster_id === currentUserId);
-  const displayAuthor = mine ? (authorName || 'You') : 'Campus student';
+  const displayAuthor = mine ? (authorName || 'You') : (item.author_label || 'Campus student');
   const price = campusFeedPrice(item);
   const paid = item.amount_cents != null;
   const pending = mine && item.moderation_status && item.moderation_status !== 'approved';
@@ -90,7 +90,7 @@ export default function CampusFeedCard({
       <div className={styles.media}>
         {image ? <img src={image} alt="" /> : <UiIcon name={category.icon} />}
         <span className={styles.category} data-tone={category.tone}>{category.label}</span>
-        {!mine && currentUserId && (
+        {!mine && currentUserId && !item.starter && (
           <button
             type="button"
             className={`${styles.saveButton} ${saved ? styles.saved : ''}`.trim()}
