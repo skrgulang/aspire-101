@@ -33,7 +33,7 @@ export default function CampusFeedCard({
 }: Props) {
   const previewHidden = item.id.startsWith('demo-preview-') && !/\bpurdue\b/i.test(campusLabel);
   const category = campusFeedCategory(item);
-  const image = item.media?.[0]?.public_url || item.cover_image_url || fallbackImage || '';
+  const image = item.media?.[0]?.public_url || item.cover_image_url || (item.starter ? '' : fallbackImage || '');
   const mine = Boolean(currentUserId && item.poster_id === currentUserId);
   const displayAuthor = mine ? (authorName || 'You') : (item.author_label || 'Campus student');
   const price = campusFeedPrice(item);
@@ -86,8 +86,8 @@ export default function CampusFeedCard({
   if (previewHidden) return null;
 
   return (
-    <article className={styles.card} data-request-id={item.id}>
-      <div className={styles.media}>
+    <article className={`${styles.card} ${!image ? styles.textOnly : ""}`.trim()} data-request-id={item.id}>
+      {image && <div className={styles.media}>
         {image ? <img src={image} alt="" /> : <UiIcon name={category.icon} />}
         <span className={styles.category} data-tone={category.tone}>{category.label}</span>
         {!mine && currentUserId && !item.starter && (
@@ -104,8 +104,9 @@ export default function CampusFeedCard({
           </button>
         )}
         {item.media?.length > 1 && <span className={styles.mediaCount}>+{item.media.length - 1}</span>}
-      </div>
+      </div>}
 
+      {!image && <span className={styles.inlineCategory} data-tone={category.tone}>{category.label}</span>}
       <div className={styles.copy}>
         <h3>{item.title}</h3>
         <span className={styles.price} data-paid={paid ? 'true' : 'false'}>{price}</span>
