@@ -572,3 +572,44 @@
     opacity: .42 !important;
   }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* SAFETY 03 — targeted cleanup only                                           */
+/* -------------------------------------------------------------------------- */
+.safetyObjectsEcosystem .safetyMutual {
+  position: relative;
+  z-index: 31 !important;
+  overflow: hidden;
+  background: rgba(10,9,7,.94) !important;
+  border-color: rgba(255,255,255,.10) !important;
+  box-shadow: 0 22px 60px rgba(0,0,0,.24) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+.safetyObjectsEcosystem .safetyMutual .safetyPolaroid {
+  width: 68px !important;
+  height: 68px !important;
+  min-height: 68px !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,194,28,.46) !important;
+  border-bottom-width: 1px !important;
+  border-radius: 20px !important;
+  background: rgba(255,194,28,.06) !important;
+  color: #f4cd55 !important;
+  box-shadow: inset 0 0 0 10px rgba(255,194,28,.025) !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  transform: none !important;
+}
+
+@media (max-width: 700px) {
+  .safetyObjectsEcosystem .safetyMutual .safetyPolaroid {
+    width: 56px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    border-radius: 18px !important;
+    font-size: 25px !important;
+  }
+}
