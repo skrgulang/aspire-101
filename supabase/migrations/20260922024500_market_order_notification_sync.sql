@@ -312,5 +312,5 @@ $function$;
 
 drop trigger if exists notify_market_order_status_change_tg on public.market_orders;
 create trigger notify_market_order_status_change_tg
-after insert or update of status on public.market_orders
+after insert or update on public.market_orders
 for each row execute function public.notify_market_order_status_change();
