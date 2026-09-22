@@ -135,8 +135,17 @@
   font-size: 11px;
 }
 .footerBottom > p { margin: 0; }
-.footerLegal { display: flex; gap: 24px; justify-content: center; }
+.footerLegal { display: flex; gap: 24px; justify-content: center; align-items: center; }
 .footerLegal a:hover { color: #d9d1c3; }
+.footerLegalButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.footerLegalButton:hover { color: #d9d1c3; }
 .footerTagline { justify-self: end; display: flex; align-items: center; gap: 8px; }
 .footerTagline i { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 18px rgba(255,194,28,.55); }
 
