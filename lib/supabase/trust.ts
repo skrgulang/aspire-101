@@ -26,6 +26,19 @@ export type UserEnforcementState = {
   expires_at: string | null;
 };
 
+export type ModerationActionHistory = {
+  id: string;
+  moderator_id: string;
+  moderator_email: string | null;
+  action: string;
+  target_user_id: string | null;
+  request_id: string | null;
+  request_title: string | null;
+  report_id: string | null;
+  note: string | null;
+  created_at: string;
+};
+
 export type SupportFeedbackForModeration = {
   id: string;
   created_at: string;
@@ -182,6 +195,13 @@ export async function fetchRequestsForModeration(limit = 80) {
   const { data, error } = await supabase.rpc('moderator_fetch_requests', { p_limit: limit });
   if (error) throw error;
   return (data ?? []) as AspireRequest[];
+}
+
+export async function fetchModerationHistory(limit = 150) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('moderator_fetch_action_history', { p_limit: limit });
+  if (error) throw error;
+  return (data ?? []) as ModerationActionHistory[];
 }
 
 export async function fetchEnforcementStates(userIds: string[]) {
