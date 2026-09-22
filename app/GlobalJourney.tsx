@@ -82,7 +82,7 @@ export default function GlobalJourney() {
   const secondFriend = chapter >= 3;
 
   return (
-    <div className={visible ? 'globalJourney isVisible' : 'globalJourney'} style={style} aria-hidden={!visible}>
+    <div className={`${visible ? 'globalJourney isVisible' : 'globalJourney'} ${chapter === 1 ? 'isWhyChapter' : ''}`.trim()} style={style} aria-hidden={!visible}>
       <div className="globalJourneyGlow" />
       <div className="globalJourneyAtmosphere" aria-hidden="true">
         <span>study together</span>
