@@ -42,7 +42,10 @@ try {
     ['looking for a Math 110 study partner', 'FIND_STUDY', 'Study'],
     ['Need help moving a desk tomorrow', 'GET_HELP', 'Moving / help'],
     ['Looking for a frontend teammate for a hackathon project', 'FIND_PROJECT', 'Project / collab'],
-    ['Can someone pick up my Target order?', 'RUN_ERRAND', 'Pickup / errand']
+    ['Can someone pick up my Target order?', 'RUN_ERRAND', 'Pickup / errand'],
+    ['Can someone buy groceries for me?', 'RUN_ERRAND', 'Pickup / errand'],
+    ['Where can I buy groceries?', 'RUN_ERRAND', 'Pickup / errand'],
+    ['I want to buy a used bike', 'FIND_ITEM', 'Buy & sell']
   ];
 
   for (const [input, expectedIntent, expectedCategory] of intentCases) {
@@ -62,6 +65,17 @@ try {
   check(compactSellEntities.item.toLowerCase() === 'monitor', `compact WTS item extraction failed: ${compactSellEntities.item}`);
   check(compactSellEntities.amountCents === 8000, `compact WTS amount failed: ${compactSellEntities.amountCents}`);
 
+  const conditionEntities = extractAspireEntities('WTS sealed monitor $80 OBO', 'SELL_ITEM');
+  check(conditionEntities.itemCondition === 'new', `sealed item condition failed: ${conditionEntities.itemCondition}`);
+  check(conditionEntities.priceNegotiable === true, `OBO negotiability failed: ${conditionEntities.priceNegotiable}`);
+
+  const firmEntities = extractAspireEntities('Selling laptop in like new condition, price firm', 'SELL_ITEM');
+  check(firmEntities.itemCondition === 'like_new', `like-new condition failed: ${firmEntities.itemCondition}`);
+  check(firmEntities.priceNegotiable === false, `firm-price extraction failed: ${firmEntities.priceNegotiable}`);
+
+  const partsEntities = extractAspireEntities('WTS broken phone for parts only $20', 'SELL_ITEM');
+  check(partsEntities.itemCondition === 'for_parts', `for-parts condition failed: ${partsEntities.itemCondition}`);
+
   const rideEntities = extractAspireEntities('Need a ride to IND, I can pay 25 dollars', 'FIND_OR_CREATE_RIDE');
   check(rideEntities.amountCents === 2500, `word amount failed: ${rideEntities.amountCents}`);
 
@@ -75,11 +89,13 @@ try {
   check(buyPlan.handled === true, 'WTB should be handled locally instead of reaching OpenAI fallback');
   check(buyPlan.matches[0]?.id === 'seller', `WTB should rank a seller first: ${buyPlan.matches.map((item) => item.id).join(',')}`);
 
-  const sellPlan = runAspireBrain('WTS bike for $80', 'Purdue', marketCandidates);
+  const sellPlan = runAspireBrain('WTS sealed bike for $80 OBO', 'Purdue', marketCandidates);
   check(sellPlan.handled === true, 'WTS should be handled locally instead of reaching OpenAI fallback');
   check(sellPlan.matches[0]?.id === 'buyer', `WTS should rank a wanted buyer first: ${sellPlan.matches.map((item) => item.id).join(',')}`);
   check(sellPlan.plan?.amount_cents === 8000, `WTS draft amount failed: ${sellPlan.plan?.amount_cents}`);
   check(sellPlan.plan?.payment_method === 'aspire', `WTS paid draft should use Aspire payment: ${sellPlan.plan?.payment_method}`);
+  check(sellPlan.plan?.item_condition === 'new', `WTS draft condition failed: ${sellPlan.plan?.item_condition}`);
+  check(sellPlan.plan?.price_negotiable === true, `WTS draft negotiability failed: ${sellPlan.plan?.price_negotiable}`);
 
   const studyCandidates = [
     { id: 'textbook', poster_id: 'u3', title: 'Math 110 textbook for sale', details: 'linear algebra book', category: 'Buy & sell', kind: 'buy_sell', amount_cents: 3000, market_intent: 'sell', item_condition: 'good', price_negotiable: false, fulfillment_method: 'campus_pickup', created_at: now },
