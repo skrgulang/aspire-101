@@ -41,7 +41,16 @@ export default function AmbassadorApplicationForm() {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload?.error || 'Could not submit your application.');
-      setSuccessNotice(typeof payload?.emailNotice === 'string' ? payload.emailNotice : '');
+      const notices: string[] = [];
+      if (typeof payload?.emailNotice === 'string' && payload.emailNotice.trim()) {
+        notices.push(payload.emailNotice.trim());
+      }
+      if (payload?.confirmationEmail === 'sent') {
+        notices.push('A confirmation email was sent to your school address.');
+      } else if (payload?.confirmationEmail === 'failed' || payload?.confirmationEmail === 'not_configured') {
+        notices.push('Your application is saved even though a confirmation email could not be sent right now. You do not need to submit again.');
+      }
+      setSuccessNotice(notices.join(' '));
       setSuccess(true);
       event.currentTarget.reset();
       setInterests([]);
@@ -58,7 +67,7 @@ export default function AmbassadorApplicationForm() {
         <div className={styles.cardIcon}>✓</div>
         <p className={styles.cardEyebrow}>APPLICATION RECEIVED</p>
         <h2>Thanks for raising your hand.</h2>
-        <p>We received your Campus Ambassador application. If there’s a fit, the Aspire 101 team will follow up using your school email.</p>
+        <p>We received your Campus Ambassador application. If there’s a fit, the Aspire 101 team will follow up using your school email. You do not need to submit again if the confirmation email is delayed.</p>
         {successNotice && <p style={{ marginTop: 14, padding: '10px 12px', border: '1px solid rgba(255,199,44,.24)', borderRadius: 10, background: 'rgba(255,199,44,.06)', color: '#d8c98f', fontSize: 10, lineHeight: 1.5 }}>{successNotice}</p>}
         <button type="button" className={styles.resetButton} onClick={() => { setSuccess(false); setSuccessNotice(''); }}>Submit another application</button>
       </aside>
