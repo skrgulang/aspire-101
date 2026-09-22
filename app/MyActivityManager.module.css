@@ -141,13 +141,32 @@
   min-height: 170px;
   padding: 20px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 156px minmax(0, 1fr) auto;
   gap: 24px;
   border: 1px solid #e7e7e2;
   border-radius: 18px;
   background: #fff;
   box-shadow: 0 6px 20px rgba(17,17,17,.035);
 }
+.cardMedia {
+  width: 156px;
+  height: 132px;
+  overflow: hidden;
+  align-self: start;
+  border-radius: 14px;
+  background: #f1efe8;
+}
+.cardMedia img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.mediaPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #f1efe8, #fff7d4);
+  color: #9c7d1f;
+}
+.mediaPlaceholder svg { width: 34px; height: 34px; }
+
 .category {
   width: max-content;
   max-width: 100%;
@@ -331,6 +350,8 @@
 :global(html[data-aspire-theme='dark']) .actionNotice strong,
 :global(html[data-aspire-theme='dark']) .actionNotice > b { color: #ef9a91; }
 :global(html[data-aspire-theme='dark']) .category { background: rgba(255,199,44,.13); color: #f2cf5d; }
+:global(html[data-aspire-theme='dark']) .cardMedia { background: #20201d; }
+:global(html[data-aspire-theme='dark']) .mediaPlaceholder { background: linear-gradient(145deg,#171716,#292313); color: #d8b94f; }
 :global(html[data-aspire-theme='dark']) .reviewPanel { border-color: rgba(255,255,255,.09); background: #11110f; }
 :global(html[data-aspire-theme='dark']) .reviewHead,
 :global(html[data-aspire-theme='dark']) .reviewLane,
@@ -368,6 +389,7 @@
   .tabs { width: 100%; overflow-x: auto; }
   .tabs button { flex: 1; min-width: max-content; padding-inline: 8px; }
   .card { grid-template-columns: 1fr; gap: 16px; padding: 17px; }
+  .cardMedia { width: 100%; height: 180px; }
   .cardSide { min-width: 0; align-items: flex-start; }
   .actions { width: 100%; }
   .actions button { flex: 1; }
