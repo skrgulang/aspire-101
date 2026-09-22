@@ -74,80 +74,97 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [draft, setDraft] = useState<ProfileDraft>({ name: '', major: '', graduationYear: '', bio: '', interests: [] });
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
-    supabase.auth.getUser().then(async ({ data }) => {
-      const user = data.user;
-      if (!user) {
-        router.replace('/login?next=%2Fprofile');
-        return;
+    let cancelled = false;
+    setLoadError('');
+
+    void (async () => {
+      try {
+        const { data, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        const user = data.user;
+        if (!user) {
+          router.replace('/login?next=%2Fprofile');
+          return;
+        }
+
+        const [{ data: profileRows, error: profileError }, { data: schoolVerificationRows }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
+          supabase.rpc('get_my_profile_details'),
+          supabase.rpc('get_my_school_verification'),
+          supabase.from('user_preferences').select('profile_visibility').eq('user_id', user.id).maybeSingle(),
+          supabase.from('connections').select('id', { count: 'exact', head: true }).eq('status', 'completed').or(`requester_id.eq.${user.id},responder_id.eq.${user.id}`),
+          fetchMyRole().catch(() => 'member' as AppRole)
+        ]);
+        if (profileError) throw profileError;
+        const profileRow = ((profileRows ?? [])[0] ?? null) as MyProfileDetailsRow | null;
+        const schoolVerification = ((schoolVerificationRows ?? [])[0] ?? null);
+
+        const metadata = user.user_metadata ?? {};
+        const backendName = profileRow?.display_name || profileRow?.full_name || profileRow?.name;
+        const backendSchool = typeof profileRow?.school === 'string' && profileRow.school.trim() ? profileRow.school.trim() : '';
+        const verifiedSchool = schoolVerification?.status === 'verified' && typeof schoolVerification.school === 'string' && schoolVerification.school.trim()
+          ? schoolVerification.school.trim()
+          : '';
+        const verifiedUniversityId = schoolVerification?.status === 'verified' && typeof schoolVerification.university_id === 'string' && schoolVerification.university_id.trim()
+          ? schoolVerification.university_id.trim()
+          : '';
+
+        let resolvedUniversity: Awaited<ReturnType<typeof resolveUniversityByEmail>> = null;
+        if (user.email && ((!profileRow?.home_campus_id && !verifiedUniversityId) || (!backendSchool && !verifiedSchool))) {
+          resolvedUniversity = await resolveUniversityByEmail(user.email).catch(() => null);
+        }
+
+        const metadataSchool = typeof metadata.school === 'string' && metadata.school.trim() ? metadata.school.trim() : '';
+        const resolvedSchool = verifiedSchool || backendSchool || resolvedUniversity?.name || metadataSchool || 'Campus not set';
+        const inferredUniversityId = verifiedUniversityId || resolvedUniversity?.id || '';
+
+        if (
+          inferredUniversityId
+          && (!profileRow?.home_campus_id || !profileRow?.current_campus_id || !backendSchool)
+        ) {
+          await supabase.rpc('repair_my_profile_campus');
+        }
+
+        const nextProfile: ProfileView = {
+          name: typeof backendName === 'string' && backendName.trim()
+            ? backendName.trim()
+            : typeof metadata.display_name === 'string' && metadata.display_name.trim()
+              ? metadata.display_name.trim()
+              : user.email?.split('@')[0] || 'Aspire student',
+          school: resolvedSchool,
+          emailVerified: Boolean(user.email_confirmed_at),
+          schoolVerified: schoolVerification?.status === 'verified',
+          phone: user.phone || '',
+          phoneVerified: Boolean(user.phone_confirmed_at),
+          avatarUrl: profileRow?.avatar_url || profileRow?.image_url || '',
+          major: typeof profileRow?.major === 'string' ? profileRow.major : '',
+          graduationYear: typeof profileRow?.graduation_year === 'number' ? profileRow.graduation_year : null,
+          bio: typeof profileRow?.bio === 'string' ? profileRow.bio : '',
+          interests: Array.isArray(profileRow?.interests) ? profileRow.interests.filter((item): item is string => typeof item === 'string') : [],
+          joinedAt: typeof profileRow?.created_at === 'string' ? profileRow.created_at : '',
+          completedCount: completedResult.count ?? 0,
+          profileVisibility: preferenceRow?.profile_visibility === 'private' || preferenceRow?.profile_visibility === 'campus' ? preferenceRow.profile_visibility : 'connections'
+        };
+
+        if (cancelled) return;
+        setProfile(nextProfile);
+        setDraft({ name: nextProfile.name, major: nextProfile.major, graduationYear: nextProfile.graduationYear?.toString() || '', bio: nextProfile.bio, interests: nextProfile.interests });
+        setRole(nextRole);
+      } catch (error) {
+        console.error('profile load failed', error);
+        if (!cancelled) setLoadError('We could not load your profile right now.');
       }
+    })();
 
-      const [{ data: profileRows, error: profileError }, { data: schoolVerificationRows }, { data: preferenceRow }, completedResult, nextRole] = await Promise.all([
-        supabase.rpc('get_my_profile_details'),
-        supabase.rpc('get_my_school_verification'),
-        supabase.from('user_preferences').select('profile_visibility').eq('user_id', user.id).maybeSingle(),
-        supabase.from('connections').select('id', { count: 'exact', head: true }).eq('status', 'completed').or(`requester_id.eq.${user.id},responder_id.eq.${user.id}`),
-        fetchMyRole().catch(() => 'member' as AppRole)
-      ]);
-      if (profileError) throw profileError;
-      const profileRow = ((profileRows ?? [])[0] ?? null) as MyProfileDetailsRow | null;
-      const schoolVerification = ((schoolVerificationRows ?? [])[0] ?? null);
-
-      const metadata = user.user_metadata ?? {};
-      const backendName = profileRow?.display_name || profileRow?.full_name || profileRow?.name;
-      const backendSchool = typeof profileRow?.school === 'string' && profileRow.school.trim() ? profileRow.school.trim() : '';
-      const verifiedSchool = schoolVerification?.status === 'verified' && typeof schoolVerification.school === 'string' && schoolVerification.school.trim()
-        ? schoolVerification.school.trim()
-        : '';
-      const verifiedUniversityId = schoolVerification?.status === 'verified' && typeof schoolVerification.university_id === 'string' && schoolVerification.university_id.trim()
-        ? schoolVerification.university_id.trim()
-        : '';
-
-      let resolvedUniversity: Awaited<ReturnType<typeof resolveUniversityByEmail>> = null;
-      if (user.email && ((!profileRow?.home_campus_id && !verifiedUniversityId) || (!backendSchool && !verifiedSchool))) {
-        resolvedUniversity = await resolveUniversityByEmail(user.email).catch(() => null);
-      }
-
-      const metadataSchool = typeof metadata.school === 'string' && metadata.school.trim() ? metadata.school.trim() : '';
-      const resolvedSchool = verifiedSchool || backendSchool || resolvedUniversity?.name || metadataSchool || 'Campus not set';
-      const inferredUniversityId = verifiedUniversityId || resolvedUniversity?.id || '';
-
-      if (
-        inferredUniversityId
-        && (!profileRow?.home_campus_id || !profileRow?.current_campus_id || !backendSchool)
-      ) {
-        await supabase.rpc('repair_my_profile_campus');
-      }
-
-      const nextProfile: ProfileView = {
-        name: typeof backendName === 'string' && backendName.trim()
-          ? backendName.trim()
-          : typeof metadata.display_name === 'string' && metadata.display_name.trim()
-            ? metadata.display_name.trim()
-            : user.email?.split('@')[0] || 'Aspire student',
-        school: resolvedSchool,
-        emailVerified: Boolean(user.email_confirmed_at),
-        schoolVerified: schoolVerification?.status === 'verified',
-        phone: user.phone || '',
-        phoneVerified: Boolean(user.phone_confirmed_at),
-        avatarUrl: profileRow?.avatar_url || profileRow?.image_url || '',
-        major: typeof profileRow?.major === 'string' ? profileRow.major : '',
-        graduationYear: typeof profileRow?.graduation_year === 'number' ? profileRow.graduation_year : null,
-        bio: typeof profileRow?.bio === 'string' ? profileRow.bio : '',
-        interests: Array.isArray(profileRow?.interests) ? profileRow.interests.filter((item): item is string => typeof item === 'string') : [],
-        joinedAt: typeof profileRow?.created_at === 'string' ? profileRow.created_at : '',
-        completedCount: completedResult.count ?? 0,
-        profileVisibility: preferenceRow?.profile_visibility === 'private' || preferenceRow?.profile_visibility === 'campus' ? preferenceRow.profile_visibility : 'connections'
-      };
-
-      setProfile(nextProfile);
-      setDraft({ name: nextProfile.name, major: nextProfile.major, graduationYear: nextProfile.graduationYear?.toString() || '', bio: nextProfile.bio, interests: nextProfile.interests });
-      setRole(nextRole);
-    });
-  }, [router]);
+    return () => {
+      cancelled = true;
+    };
+  }, [router, loadAttempt]);
 
   const audienceLabel = useMemo(() => {
     if (!profile) return '';
@@ -212,6 +229,22 @@ export default function ProfilePage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (!profile && loadError) {
+    return (
+      <main className="profilePage profilePagePolished">
+        <AppDock active="profile" />
+        <div className="profileLoadError" role="alert">
+          <strong>Could not open your profile.</strong>
+          <p>{loadError} Your saved profile data has not been changed.</p>
+          <div>
+            <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Try again</button>
+            <a href="/settings">Open Settings</a>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   if (!profile) return <AppLoader label="Opening your profile…" detail="Campus identity" />;
