@@ -12,6 +12,7 @@ import UiIcon from '../UiIcon';
 type LocationMode = 'off' | 'approximate' | 'precise_on_request';
 type ProfileVisibility = 'private' | 'connections' | 'campus';
 type ThemePreference = 'light' | 'dark';
+type PostIdentityMode = 'display_name' | 'username' | 'campus_user';
 
 type Preferences = {
   location_mode: LocationMode;
@@ -28,6 +29,7 @@ type Preferences = {
   notify_payments: boolean;
   notify_safety: boolean;
   notify_marketing: boolean;
+  post_identity_mode: PostIdentityMode;
 };
 
 const defaults: Preferences = {
@@ -44,7 +46,8 @@ const defaults: Preferences = {
   notify_post_updates: true,
   notify_payments: true,
   notify_safety: true,
-  notify_marketing: false
+  notify_marketing: false,
+  post_identity_mode: 'campus_user'
 };
 
 function Toggle({ checked, onChange, label, detail, locked = false }: { checked: boolean; onChange: (value: boolean) => void; label: string; detail: string; locked?: boolean }) {
@@ -64,6 +67,8 @@ export default function SettingsPage() {
   const [school, setSchool] = useState('Your campus');
   const [schoolVerified, setSchoolVerified] = useState(false);
   const [phoneVerified, setPhoneVerified] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [prefs, setPrefs] = useState<Preferences>(defaults);
   const [theme, setTheme] = useState<ThemePreference>('dark');
   const [loading, setLoading] = useState(true);
@@ -81,14 +86,16 @@ export default function SettingsPage() {
         return;
       }
       const [{ data: profile }, { data: preferenceRow }, { data: verification }] = await Promise.all([
-        supabase.from('profiles').select('school').eq('id', user.id).maybeSingle(),
-        supabase.from('user_preferences').select('location_mode,profile_visibility,show_major,show_graduation_year,show_interests,show_completed,show_joined,ai_personalization,notify_messages,notify_connections,notify_post_updates,notify_payments,notify_safety,notify_marketing').eq('user_id', user.id).maybeSingle(),
+        supabase.from('profiles').select('school,display_name,full_name,name,username').eq('id', user.id).maybeSingle(),
+        supabase.from('user_preferences').select('location_mode,profile_visibility,show_major,show_graduation_year,show_interests,show_completed,show_joined,ai_personalization,notify_messages,notify_connections,notify_post_updates,notify_payments,notify_safety,notify_marketing,post_identity_mode').eq('user_id', user.id).maybeSingle(),
         supabase.from('school_verifications').select('status').eq('user_id', user.id).maybeSingle()
       ]);
       if (!alive) return;
       setUserId(user.id);
       setEmail(user.email || '');
       setSchool(profile?.school || 'Your campus');
+      setDisplayName((profile?.display_name || profile?.full_name || profile?.name || '').trim());
+      setUsername((profile?.username || '').toString());
       setSchoolVerified(verification?.status === 'verified');
       setPhoneVerified(Boolean(user.phone_confirmed_at));
       if (preferenceRow) setPrefs({ ...defaults, ...(preferenceRow as Preferences) });
@@ -125,6 +132,26 @@ export default function SettingsPage() {
     setStatus('');
     try {
       const supabase = getSupabaseBrowserClient();
+      const cleanName = displayName.trim();
+      if (!cleanName) throw new Error('Add a display name.');
+      if (prefs.post_identity_mode === 'username' && !username.trim()) {
+        throw new Error('Add a username before choosing username for your posts.');
+      }
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          display_name: cleanName.slice(0, 80),
+          username: username.trim() ? username.trim() : null
+        })
+        .eq('id', userId);
+      if (profileError) {
+        const detail = profileError.message || '';
+        if (/duplicate|unique/i.test(detail)) throw new Error('That username is already taken.');
+        if (/blocked word|username/i.test(detail)) throw new Error(detail);
+        throw profileError;
+      }
+
       const { error } = await supabase.from('user_preferences').upsert({ user_id: userId, ...prefs }, { onConflict: 'user_id' });
       if (error) throw error;
       setStatus('Settings saved.');
@@ -204,6 +231,37 @@ export default function SettingsPage() {
             <section className="settingsCard" id="account">
               <div className="settingsCardHead"><i><UiIcon name="user" /></i><div><span>ACCOUNT & SECURITY</span><h2>Your private account</h2><p>These details are never part of your public student profile.</p></div></div>
               <div className="settingsInfoRow"><div><strong>Email</strong><span>{email}</span></div><b>Confirmed</b></div>
+
+              <div className="settingsIdentityEditor">
+                <div className="settingsIdentityFields">
+                  <label>
+                    <span>Display name</span>
+                    <input value={displayName} maxLength={80} onChange={(event) => { setDisplayName(event.target.value); setStatus(''); }} placeholder="Your name" />
+                  </label>
+                  <label>
+                    <span>Username</span>
+                    <input value={username} maxLength={24} onChange={(event) => { setUsername(event.target.value); setStatus(''); }} placeholder="yourusername" autoCapitalize="none" autoCorrect="off" />
+                    <small>3–24 characters. Starts with a letter; letters, numbers, and underscores only. Inappropriate words are blocked automatically.</small>
+                  </label>
+                </div>
+
+                <div className="settingsChoiceGroup">
+                  <strong>How should your name appear on posts?</strong>
+                  <div className="settingsSegmented">
+                    {([
+                      ['display_name','Name'],
+                      ['username','@username'],
+                      ['campus_user','Campus student']
+                    ] as [PostIdentityMode,string][]).map(([value,label]) => (
+                      <button type="button" key={value} className={prefs.post_identity_mode === value ? 'active' : ''} onClick={() => patch('post_identity_mode', value)}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <small>You can stay anonymous on the campus feed, use your username, or show your display name. Your verified identity stays private behind Aspire.</small>
+                </div>
+              </div>
+
               <MfaSecurityCard />
               <div className="settingsInlineLinks"><a href={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}>Change password</a><button type="button" onClick={signOut}>Log out</button></div>
             </section>
