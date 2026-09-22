@@ -110,7 +110,22 @@ export function parseAspireIntent(message: string): AspireIntent {
   {
     let score = 0;
     const signals: string[] = [];
-    if (hit(value, /\b(pick up|pickup|pick-up|errand|grab my|collect my|package pickup|target order|walmart order)\b/i)) { score += 90; signals.push('errand-language'); }
+    const asksAnotherPerson = hit(value, /\b(can|could|would|will)\s+(?:someone|somebody|anyone|you)\b|\b(?:someone|somebody|anyone)\s+(?:can|could|please)\b/i);
+    const errandObject = hit(value, /\b(groceries|grocery|food|medicine|meds|supplies|package|target order|walmart order)\b/i);
+    const errandAction = hit(value, /\b(buy|grab|get|pick up|pickup|pick-up|fetch|deliver|delivery|collect)\b/i);
+
+    if (hit(value, /\b(pick up|pickup|pick-up|errand|grab my|collect my|package pickup|target order|walmart order)\b/i)) {
+      score += 90;
+      signals.push('errand-language');
+    }
+    if (asksAnotherPerson && errandObject && errandAction) {
+      score += 110;
+      signals.push('delegated-errand');
+    } else if (errandObject && errandAction) {
+      score += 85;
+      signals.push('errand-goods');
+    }
+
     if (score > 0) results.push(candidate('RUN_ERRAND', 'Pickup / errand', 'paid_help', null, score, signals));
   }
 
