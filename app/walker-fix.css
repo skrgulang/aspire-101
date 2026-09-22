@@ -194,3 +194,53 @@
     width: min(300px, calc(100vw - 24px)) !important;
   }
 }
+
+/* WHY ASPIRE: keep the character lower and use it as a reading guide. */
+.journeyWorld .globalJourney.isWhyChapter .globalWalker {
+  transform: translateY(16vh) !important;
+}
+.journeyWorld .globalJourney.isWhyChapter .globalJourneyRoad {
+  opacity: .38 !important;
+}
+.marketingWhyRefined .whyAspireCard .whyRow {
+  position: relative;
+  transition: background .28s ease, border-color .28s ease, transform .28s ease, opacity .28s ease;
+}
+.marketingWhyRefined .whyAspireCard .whyRow::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: transparent;
+  transition: background .28s ease, box-shadow .28s ease;
+}
+.marketingWhyRefined .whyAspireCard .whyRowActive {
+  background: linear-gradient(90deg, rgba(255,194,28,.10), rgba(255,194,28,.025) 62%, transparent);
+  border-color: rgba(255,194,28,.25);
+  transform: translateX(4px);
+}
+.marketingWhyRefined .whyAspireCard .whyRowActive::after {
+  background: rgba(255,194,28,.55);
+  box-shadow: 0 0 16px rgba(255,194,28,.25);
+}
+.marketingWhyRefined .whyAspireCard .whyRowActive i {
+  box-shadow: 0 0 0 6px rgba(255,194,28,.08), 0 0 20px rgba(255,194,28,.22);
+}
+.marketingWhyRefined .whyAspireCard .whyRowActive b {
+  color: #fff7dd;
+  text-shadow: 0 0 18px rgba(255,194,28,.18);
+}
+@media (max-width: 700px) {
+  .journeyWorld .globalJourney.isWhyChapter .globalWalker {
+    transform: translateY(8vh) !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marketingWhyRefined .whyAspireCard .whyRow,
+  .marketingWhyRefined .whyAspireCard .whyRowActive {
+    transform: none !important;
+    transition: none !important;
+  }
+}
