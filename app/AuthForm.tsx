@@ -276,7 +276,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
     <main className={`authPage ${signup ? 'authSignup' : 'authLogin'}`}>
       <header className="authTopbar">
         <a className="authBrand" href="/" aria-label="Aspire 101 home"><img src={aspireLogo} alt="" /><span>Aspire 101</span></a>
-        <a className="authBack" href="/">Back to home ↗</a>
+        <a className="authBack" href="/">Back to home →</a>
       </header>
 
       <section className="authShell">
@@ -292,8 +292,8 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           </figure>
           <figure className="authPeoplePhoto"><img src={peopleImage} alt="College students together" onError={handleImageError} /><span className="authPhotoShade" /></figure>
           <div className="authSticker authStickerSchool">SAME CAMPUS.<br />REAL PEOPLE. ✓</div>
-          <div className="authSticker authStickerAsk">JUST POST IT<br />ON ASPIRE ↗</div>
-          <div className="authDoodle" aria-hidden="true">home campus verified<br />nearby campus optional ↗</div>
+          <div className="authSticker authStickerAsk">JUST POST IT<br />ON ASPIRE →</div>
+          <div className="authDoodle" aria-hidden="true">home campus verified<br />nearby campus optional →</div>
           <div className="authRequestBits" aria-hidden="true"><span>Ride to IND Friday?</span><span>Math 55 tonight?</span><span>Valorant duo?</span></div>
         </div>
 
@@ -317,7 +317,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
           <form className="authCard" onSubmit={submit}>
             <div className="authCardTop">
               <div><span>{signup ? 'JOIN ASPIRE' : 'SIGN IN'}</span><h2>{signup ? 'Find your campus.' : 'Good to see you.'}</h2></div>
-              <a href={switchHref}>{signup ? 'Sign in' : 'Sign up'} ↗</a>
+              <a href={switchHref}>{signup ? 'Sign in' : 'Sign up'} →</a>
             </div>
 
             {signup && <label><span>Name</span><input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" required /></label>}
