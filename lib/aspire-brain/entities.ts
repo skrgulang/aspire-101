@@ -8,6 +8,8 @@ export type AspireEntities = {
   amountCents: number | null;
   course: string;
   item: string;
+  itemCondition: 'new' | 'like_new' | 'good' | 'fair' | 'for_parts' | null;
+  priceNegotiable: boolean | null;
 };
 
 function normalizeSpaces(value: string) {
@@ -58,6 +60,25 @@ function trimItemCandidate(value: string) {
     .trim();
 }
 
+function extractItemCondition(message: string, intent: AspireIntentName): AspireEntities['itemCondition'] {
+  if (intent !== 'SELL_ITEM' && intent !== 'FIND_ITEM') return null;
+  const value = message.toLowerCase();
+  if (/\b(brand new|new in box|nib|sealed|unopened)\b/.test(value)) return 'new';
+  if (/\b(like new|lnib|mint)\b/.test(value)) return 'like_new';
+  if (/\b(for parts|parts only|not working|broken)\b/.test(value)) return 'for_parts';
+  if (/\bfair(?: condition)?\b/.test(value)) return 'fair';
+  if (/\bgood(?: condition)?\b/.test(value)) return 'good';
+  return null;
+}
+
+function extractPriceNegotiable(message: string, intent: AspireIntentName) {
+  if (intent !== 'SELL_ITEM' && intent !== 'FIND_ITEM') return null;
+  const value = message.toLowerCase();
+  if (/\b(obo|or best offer|negotiable|open to offers?)\b/.test(value)) return true;
+  if (/\b(firm price|price firm|firm on price|non[- ]negotiable|not negotiable)\b/.test(value)) return false;
+  return null;
+}
+
 function extractItem(message: string, intent: AspireIntentName) {
   const value = normalizeSpaces(message);
   if (intent === 'SELL_ITEM') {
@@ -79,6 +100,8 @@ export function extractAspireEntities(message: string, intent: AspireIntentName)
     timeText: extractTimeText(message),
     amountCents: extractAmountCents(message),
     course: extractCourse(message),
-    item: extractItem(message, intent)
+    item: extractItem(message, intent),
+    itemCondition: extractItemCondition(message, intent),
+    priceNegotiable: extractPriceNegotiable(message, intent)
   };
 }
