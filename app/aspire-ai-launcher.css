@@ -130,3 +130,41 @@
   .aspireBrainBrand > strong { font-size: 16px; }
   .aspireBrainBrand > i { font-size: 21px; }
 }
+
+/* Keep Aspire Brain available on mobile without covering feed/profile content. */
+@media (max-width: 760px) {
+  .aspireAgentLauncher {
+    right: 12px;
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    min-height: 40px;
+    padding: 6px 10px 6px 6px;
+    gap: 7px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.30);
+  }
+  .aspireAgentLauncher > i {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    font-size: 13px;
+  }
+  .aspireAgentLauncher b { font-size: 9px; }
+  .aspireAgentLauncher small { display: none; }
+}
+
+@media (max-width: 560px) {
+  .aspireAgentLauncher {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  .aspireAgentLauncher > i {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+  }
+  .aspireAgentLauncher > span { display: none; }
+}
