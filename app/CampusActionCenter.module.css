@@ -277,3 +277,61 @@
     animation: none;
   }
 }
+
+/* Phone density: keep the action center content-sized, closer to a native task
+   surface than a tall dashboard panel. */
+@media (max-width: 680px) {
+  .center {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    border-radius: 18px;
+  }
+  .head {
+    padding: 15px 16px 12px;
+  }
+  .head span { font-size: 9px; }
+  .head h2 {
+    margin-top: 3px;
+    font-size: 22px;
+  }
+  .head b {
+    min-width: 30px;
+    height: 30px;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+  .list {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+  .item {
+    grid-template-columns: 36px minmax(0,1fr) 15px;
+    min-height: 62px;
+    gap: 11px;
+    padding: 10px 15px;
+  }
+  .item > i {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+  .item > i svg,
+  .fallback > svg {
+    width: 16px;
+    height: 16px;
+  }
+  .item strong,
+  .fallback strong,
+  .clear strong {
+    font-size: 13.5px;
+  }
+  .item small,
+  .fallback small,
+  .clear small {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+  .fallback { min-height: 60px; }
+  .clear { padding: 14px 15px 17px; }
+}

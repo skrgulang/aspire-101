@@ -298,3 +298,79 @@ html[data-aspire-theme='dark'] .discoverPage .discoverV2CardTop b { background: 
   .discoverPage .discoverV2Card { min-height: 0; padding: 13px !important; }
   .discoverPage .discoverV2Card h2 { font-size: 18px; }
 }
+
+/* Mobile browse density only; desktop browse layout remains unchanged. */
+@media (max-width: 900px) {
+  .discoverPage .discoverShell {
+    padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .discoverPage .discoverShell {
+    padding: 14px 10px calc(94px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .discoverPage .discoverV2Header { gap: 10px; }
+  .discoverPage .discoverV2Header h1::before { font-size: 31px; }
+  .discoverPage .discoverV2Header > div:first-child > p:last-child {
+    margin-top: 7px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .discoverPage .discoverV2SearchBox {
+    min-height: 46px;
+    padding-inline: 13px;
+  }
+  .discoverPage .discoverV2Categories {
+    margin-top: 11px;
+    padding-bottom: 11px;
+  }
+  .discoverPage .discoverV2Categories button {
+    min-height: 37px;
+    padding-inline: 11px;
+  }
+  .discoverPage .discoverV2Card.hasMedia {
+    grid-template-columns: 90px minmax(0,1fr);
+    column-gap: 10px;
+  }
+  .discoverPage .discoverV2Card.hasMedia .discoverV2Media {
+    width: 90px;
+    height: 90px;
+  }
+  .discoverPage .discoverV2Card {
+    padding: 12px !important;
+    border-radius: 15px !important;
+  }
+  .discoverPage .discoverV2Card h2 {
+    margin-top: 7px;
+    font-size: 17px;
+  }
+  .discoverPage .discoverV2CardActions {
+    margin-top: 10px;
+    padding-top: 9px;
+  }
+  .discoverPage .discoverV2CardActions .button {
+    min-height: 36px;
+    padding-inline: 11px;
+    font-size: 9.5px;
+  }
+}
+
+/* 2026-09-23 mobile usability QA: stable Browse viewport and iOS search focus. */
+@media (max-width: 620px) {
+  .discoverPage,
+  .discoverPage .discoverShell,
+  .discoverPage .discoverV2Experience {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .discoverPage .discoverV2SearchBox input {
+    font-size: 16px !important;
+  }
+
+  .discoverPage .discoverV2SearchBox input,
+  .discoverPage .discoverV2CampusControl select {
+    scroll-margin-bottom: 100px;
+  }
+}

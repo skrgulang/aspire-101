@@ -2059,3 +2059,125 @@
     grid-column:1/-1
   }
 }
+
+/* 2026-09-23 concept pass: mobile Inbox behaves like a compact message hub. */
+@media (max-width: 700px) {
+  .page {
+    padding: 12px 9px calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .page :global(.connectionsHero) {
+    padding: 2px 1px 4px;
+    gap: 9px;
+  }
+  .page :global(.connectionsHero .eyebrow) {
+    display: none;
+  }
+  .page :global(.connectionsHero h1) {
+    font-size: 31px !important;
+    line-height: 1;
+  }
+  .page :global(.connectionsHero > div:first-child > p:last-child) {
+    max-width: 330px;
+    margin-top: 5px;
+    font-size: 10.5px;
+    line-height: 1.35;
+  }
+
+  .page :global(.connectionsStats) {
+    gap: 5px;
+  }
+  .page :global(.connectionsStats article) {
+    min-height: 48px;
+    padding: 7px 8px;
+    border-radius: 11px;
+  }
+  .page :global(.connectionsStats strong) {
+    font-size: 17px;
+  }
+  .page :global(.connectionsStats span) {
+    font-size: 6.5px;
+  }
+
+  .page :global(.connectionsTabs) {
+    min-height: 42px;
+    margin: 7px 0 10px;
+    padding: 4px;
+    gap: 4px;
+    overflow-x: auto;
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 13px;
+    background: rgba(255,255,255,.025);
+  }
+  .page :global(.connectionsTabs button) {
+    min-height: 34px;
+    padding: 0 11px;
+    border: 0;
+    border-radius: 10px;
+    font-size: 9.5px;
+  }
+  .page :global(.connectionsTabs button.active) {
+    border: 0;
+    background: #ffc72c;
+    color: #17130a;
+  }
+
+  .page :global(.requestInbox),
+  .page :global(.connectionList),
+  .page :global(.circleList) {
+    gap: 7px;
+  }
+  .page :global(.inboxRequest),
+  .page :global(.connectionCard),
+  .page :global(.circleCard),
+  .page :global(.connectionPersonGroup) {
+    border-radius: 14px;
+  }
+  .page :global(.connectionPersonGroupHead) {
+    min-height: 56px;
+    padding: 9px 10px;
+  }
+  .page :global(.connectionGroupIdentity > i) {
+    width: 34px;
+    height: 34px;
+  }
+  .page :global(.connectionTaskCard) {
+    padding: 11px 10px 10px;
+  }
+  .page :global(.connectionTaskCard h2) {
+    font-size: 13.5px;
+  }
+  .page :global(.connectionTaskActions) {
+    margin-top: 8px;
+    padding-top: 8px;
+    gap: 6px;
+  }
+}
+
+/* 2026-09-23 mobile usability QA: dynamic viewport and keyboard-safe chat. */
+@media (max-width: 700px) {
+  .page {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .page :global(.connectionChat) {
+    height: 100dvh;
+    min-height: 100dvh;
+    overscroll-behavior: contain;
+  }
+
+  .page :global(.chatMessages) {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page :global(.chatComposer input) {
+    font-size: 16px;
+    scroll-margin-bottom: 96px;
+  }
+
+  .page :global(.chatComposerStack) {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}

@@ -28,13 +28,25 @@ const personalItems: DockItem[] = [
 ];
 
 const accountItems: DockItem[] = [
-  { key: 'profile', label: 'Profile', href: '/profile', icon: 'user', mobile: true }
+  { key: 'profile', label: 'Profile', href: '/profile', icon: 'user' }
+];
+
+const mobileMoreItems: { key: string; label: string; href: string; icon: UiIconName; note: string }[] = [
+  { key: 'profile', label: 'Profile', href: '/profile', icon: 'user', note: 'Identity + trust' },
+  { key: 'activity', label: 'My Posts', href: '/activity', icon: 'activity', note: 'Requests + listings' },
+  { key: 'saved', label: 'Saved', href: '/saved', icon: 'bookmark', note: 'Things to revisit' },
+  { key: 'transactions', label: 'Orders', href: '/transactions', icon: 'wallet', note: 'Orders + payments' },
+  { key: 'delivery', label: 'Delivery', href: '/delivery', icon: 'car', note: 'Delivery activity' },
+  { key: 'resolution', label: 'Resolution', href: '/resolution', icon: 'shield', note: 'Get help with an issue' },
+  { key: 'safety', label: 'Safety & Help', href: '/safety', icon: 'shield', note: 'Safety resources' },
+  { key: 'settings', label: 'Settings', href: '/settings', icon: 'settings', note: 'Account preferences' }
 ];
 
 export default function AppDock({ active, preview = false }: { active: AppDockTab; preview?: boolean }) {
   const pathname = usePathname();
   const currentActive: AppDockTab = !preview && pathname.startsWith('/marketplace') ? 'market' : active;
   const [notifications, setNotifications] = useState<AspireNotification[]>([]);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
   const unreadNotifications = useMemo(() => notifications.filter((item) => !item.read_at), [notifications]);
   const inboxUnread = unreadNotifications.length;
@@ -54,6 +66,19 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
     const next = stored === 'light' || stored === 'dark' ? stored : 'dark';
     document.documentElement.dataset.aspireTheme = next;
   }, []);
+
+  useEffect(() => {
+    setMobileMoreOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileMoreOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMoreOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileMoreOpen]);
 
   useEffect(() => {
     if (preview) return;
@@ -104,7 +129,10 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
     );
   }
 
+  const mobileMoreActive = ['profile', 'delivery', 'activity', 'saved', 'transactions', 'resolution', 'settings'].includes(currentActive);
+
   return (
+    <>
     <nav className={`${styles.dock} signedInDock`} aria-label="Aspire app navigation">
       <a className={styles.brand} href={preview ? '/ui-preview' : '/'} aria-label="Back to Aspire 101 main page" title="Back to Aspire 101">
         <img src={aspireLogo} alt="" />
@@ -116,6 +144,17 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
 
       <div className={styles.groupLabel}>Your stuff</div>
       {personalItems.map(renderItem)}
+
+      <button
+        type="button"
+        className={`${styles.navItem} ${styles.mobileMoreButton} ${mobileMoreActive ? styles.active : ''}`.trim()}
+        aria-expanded={mobileMoreOpen}
+        aria-controls="aspire-mobile-more-menu"
+        onClick={() => setMobileMoreOpen((open) => !open)}
+      >
+        <i className={styles.iconWrap}><UiIcon name="sliders" /></i>
+        <span>More</span>
+      </button>
 
       <div className={styles.groupLabel}>Account</div>
       {accountItems.map(renderItem)}
@@ -131,5 +170,34 @@ export default function AppDock({ active, preview = false }: { active: AppDockTa
         <span>Settings</span>
       </a>
     </nav>
+
+    {mobileMoreOpen && (
+      <div className={styles.mobileMenuOverlay} role="presentation" onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setMobileMoreOpen(false);
+      }}>
+        <section id="aspire-mobile-more-menu" className={styles.mobileMenuSheet} role="dialog" aria-modal="true" aria-label="More Aspire features">
+          <div className={styles.mobileMenuHandle} aria-hidden="true" />
+          <header className={styles.mobileMenuHeader}>
+            <div><span>YOUR ASPIRE</span><strong>More</strong></div>
+            <button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Close more menu">×</button>
+          </header>
+          <div className={styles.mobileMenuGrid}>
+            {mobileMoreItems.map((item) => (
+              <a
+                key={item.key}
+                href={preview ? '/ui-preview' : item.href}
+                className={styles.mobileMenuItem}
+                onClick={preview ? (event) => event.preventDefault() : undefined}
+              >
+                <i><UiIcon name={item.icon} /></i>
+                <span><strong>{item.label}</strong><small>{item.note}</small></span>
+                <UiIcon name="chevron" />
+              </a>
+            ))}
+          </div>
+        </section>
+      </div>
+    )}
+    </>
   );
 }
