@@ -380,3 +380,36 @@
 @media(prefers-reduced-motion:reduce){
   .priorityBadge,.inboxAttention::after{animation:none}
 }
+
+/* Phone dock: compact touch targets plus iPhone safe-area clearance. */
+@media (max-width: 900px) {
+  .dock,
+  .dock:hover,
+  .dock:focus-within {
+    inset: auto 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
+    height: 64px;
+    padding: 6px 7px;
+    gap: 3px;
+    border-radius: 21px;
+  }
+  .navItem {
+    min-height: 50px;
+    border-radius: 15px;
+  }
+}
+
+@media (max-width: 430px) {
+  .dock,
+  .dock:hover,
+  .dock:focus-within {
+    inset: auto 6px calc(6px + env(safe-area-inset-bottom, 0px)) 6px;
+    height: 62px;
+    padding: 5px;
+    gap: 2px;
+    border-radius: 19px;
+  }
+  .navItem {
+    min-height: 50px;
+    border-radius: 13px;
+  }
+}
