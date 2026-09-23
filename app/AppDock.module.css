@@ -434,3 +434,222 @@
     pointer-events: none;
   }
 }
+
+/* 2026-09-23 mobile navigation parity:
+   keep six thumb-friendly dock slots, put the desktop-only destinations in More. */
+.mobileMoreButton,
+.mobileMenuOverlay {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobileMoreButton {
+    display: flex;
+    border: 0;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .mobileMenuOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 190;
+    display: flex;
+    align-items: flex-end;
+    padding: 14px 10px calc(82px + env(safe-area-inset-bottom, 0px));
+    background: rgba(0,0,0,.50);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .mobileMenuSheet {
+    width: min(520px, 100%);
+    max-height: min(70dvh, 620px);
+    margin: 0 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 24px;
+    background: #111210;
+    color: #f6f2e9;
+    box-shadow: 0 26px 80px rgba(0,0,0,.48);
+  }
+
+  .mobileMenuHandle {
+    width: 42px;
+    height: 4px;
+    margin: 9px auto 3px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.28);
+  }
+
+  .mobileMenuHeader {
+    min-height: 66px;
+    padding: 10px 14px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255,255,255,.075);
+  }
+
+  .mobileMenuHeader > div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .mobileMenuHeader span {
+    color: #b89a3d;
+    font-size: 7px;
+    font-weight: 900;
+    letter-spacing: .14em;
+  }
+
+  .mobileMenuHeader strong {
+    font-size: 21px;
+    letter-spacing: -.035em;
+  }
+
+  .mobileMenuHeader > button {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 50%;
+    background: rgba(255,255,255,.035);
+    color: #e6e1d8;
+    font: inherit;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .mobileMenuGrid {
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  .mobileMenuItem {
+    min-width: 0;
+    min-height: 68px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 34px minmax(0,1fr) 14px;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,.075);
+    border-radius: 14px;
+    background: #171817;
+    color: #efebe3;
+  }
+
+  .mobileMenuItem > i {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: rgba(255,199,44,.10);
+    color: #ffc72c;
+    font-style: normal;
+  }
+
+  .mobileMenuItem > i svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .mobileMenuItem > span {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .mobileMenuItem strong {
+    overflow: hidden;
+    font-size: 10.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobileMenuItem small {
+    overflow: hidden;
+    color: #85847e;
+    font-size: 7.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobileMenuItem > svg {
+    width: 13px;
+    height: 13px;
+    color: #777872;
+  }
+
+  :global(html[data-aspire-theme='light']) .mobileMenuSheet {
+    border-color: #e4e4df;
+    background: #fff;
+    color: #171717;
+    box-shadow: 0 26px 80px rgba(17,17,17,.20);
+  }
+
+  :global(html[data-aspire-theme='light']) .mobileMenuHandle {
+    background: #c9c9c3;
+  }
+
+  :global(html[data-aspire-theme='light']) .mobileMenuHeader {
+    border-bottom-color: #ecece6;
+  }
+
+  :global(html[data-aspire-theme='light']) .mobileMenuHeader > button {
+    border-color: #e4e4df;
+    background: #f7f7f4;
+    color: #33332f;
+  }
+
+  :global(html[data-aspire-theme='light']) .mobileMenuItem {
+    border-color: #e8e8e2;
+    background: #fafaf7;
+    color: #20201d;
+  }
+
+  :global(html[data-aspire-theme='light']) .mobileMenuItem > i {
+    background: #fff4cf;
+    color: #806000;
+  }
+}
+
+@media (max-width: 430px) {
+  .mobileMenuOverlay {
+    padding-inline: 6px;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobileMenuSheet {
+    max-height: min(72dvh, 610px);
+    border-radius: 22px;
+  }
+
+  .mobileMenuGrid {
+    grid-template-columns: 1fr 1fr;
+    padding-inline: 8px;
+    gap: 6px;
+  }
+
+  .mobileMenuItem {
+    min-height: 64px;
+    padding: 8px;
+    grid-template-columns: 31px minmax(0,1fr) 12px;
+    gap: 7px;
+    border-radius: 13px;
+  }
+
+  .mobileMenuItem > i {
+    width: 31px;
+    height: 31px;
+    border-radius: 10px;
+  }
+}
