@@ -1,0 +1,55 @@
+/* A quieter editorial voice for the public "Why Aspire" comparison. */
+.marketingWhyRefined .whyOld > strong {
+  display: block;
+  max-width: 14ch;
+  color: #f3eee3;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(43px, 4.2vw, 64px);
+  font-weight: 500;
+  line-height: .99;
+  letter-spacing: -.025em;
+}
+
+.marketingWhyRefined .whyOld > p {
+  max-width: 38ch;
+  color: #b6ad9e;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.marketingWhyRefined .whyPanelHead small,
+.marketingWhyRefined .whyPanelHead > span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow b,
+.marketingWhyRefined .whyAspireCard .whyRowActive b {
+  color: #eee6d8 !important;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(23px, 2vw, 29px) !important;
+  font-weight: 600;
+  letter-spacing: -.015em;
+  line-height: 1.05;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive b { color: #ffdb72 !important; }
+.marketingWhyRefined .whyAspireCard .whyRow del { color: #968b7c; font-size: 13px; }
+.marketingWhyRefined .whyAspireCard .whyRow small {
+  color: #aaa08f;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.marketingWhyRefined .whyIdentityStamp span,
+.marketingWhyRefined .whyIdentityStamp strong,
+.marketingWhyRefined .whyIdentityStamp small { font-size: 11px; letter-spacing: .025em; }
+
+@media (max-width: 700px) {
+  .marketingWhyRefined .whyOld > strong { font-size: clamp(40px, 10vw, 56px); }
+  .marketingWhyRefined .whyAspireCard .whyRow b,
+  .marketingWhyRefined .whyAspireCard .whyRowActive b { font-size: 24px !important; }
+}
