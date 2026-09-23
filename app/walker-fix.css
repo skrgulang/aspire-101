@@ -279,3 +279,94 @@
     bottom: 12vh !important;
   }
 }
+
+/* WHY ASPIRE local guide: the global road character gets out of the way here.
+   The small guide moves beside the currently highlighted sentence instead. */
+.journeyWorld .globalJourney.isWhyChapter .globalWalker,
+.journeyWorld .globalJourney.isWhyChapter .globalJourneyRoad {
+  opacity: 0 !important;
+}
+
+.marketingWhyRefined .whyAspireCard {
+  overflow: visible !important;
+}
+
+.marketingWhyRefined .whyGuideWalker {
+  position: absolute;
+  z-index: 8;
+  right: -20px;
+  width: 28px;
+  height: 42px;
+  transform: translateY(-50%) scale(.92);
+  opacity: 0;
+  pointer-events: none;
+  transition: top .42s cubic-bezier(.22,.8,.22,1), opacity .22s ease, transform .22s ease;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.4));
+}
+
+.marketingWhyRefined .whyGuideWalker.show {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+
+.whyGuideHead {
+  position:absolute;
+  left:9px;
+  top:1px;
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  background:#f3dfb4;
+  border:1px solid #0a0804;
+}
+
+.whyGuideBody {
+  position:absolute;
+  left:7px;
+  top:12px;
+  width:14px;
+  height:17px;
+  border-radius:6px 6px 5px 5px;
+  background:#ffc21c;
+  border:1px solid rgba(9,7,3,.9);
+}
+
+.whyGuideLeg {
+  position:absolute;
+  top:29px;
+  width:4px;
+  height:12px;
+  border-radius:6px;
+  background:#f3dfb4;
+  transform-origin:top;
+}
+
+.whyGuideLeg.a { left:8px; transform:rotate(13deg); }
+.whyGuideLeg.b { right:7px; transform:rotate(-13deg); }
+
+.marketingWhyRefined .whyAspireCard .whyRow {
+  opacity: .56;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive {
+  opacity: 1 !important;
+  background: rgba(255,194,28,.16) !important;
+  box-shadow: inset 4px 0 0 #ffc21c, 0 0 0 1px rgba(255,194,28,.28), 0 10px 30px rgba(255,194,28,.08) !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive del {
+  color: rgba(255,255,255,.42) !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive b {
+  color: #ffd75a !important;
+  font-size: 17px !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive small {
+  color: #e5d7b7 !important;
+}
+
+@media (max-width:700px) {
+  .marketingWhyRefined .whyGuideWalker { right: 6px; }
+}
