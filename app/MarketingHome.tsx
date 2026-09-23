@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { fetchActiveUniversities, University } from '../lib/supabase/universities';
@@ -61,6 +61,8 @@ export default function MarketingHome() {
   const [campusId, setCampusId] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const campusJourneyRef = useRef<HTMLElement | null>(null);
+  const [campusRevealIndex, setCampusRevealIndex] = useState(-1);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -120,6 +122,51 @@ export default function MarketingHome() {
     const extras = universities.filter((item) => !preferred.includes(item.slug));
     return [...ordered, ...extras].slice(0, 18);
   }, [universities]);
+
+  useEffect(() => {
+    let frame = 0;
+
+    const updateCampusJourney = () => {
+      frame = 0;
+      const section = campusJourneyRef.current;
+      if (!section || !featuredCampuses.length) return;
+
+      const rect = section.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      const startLine = viewportH * 0.78;
+      const endLine = viewportH * 0.24;
+      const travel = Math.max(1, rect.height + startLine - endLine);
+      const progress = Math.max(0, Math.min(0.999, (startLine - rect.top) / travel));
+
+      if (rect.top > startLine) {
+        setCampusRevealIndex(-1);
+        return;
+      }
+
+      if (rect.bottom < endLine) {
+        setCampusRevealIndex(featuredCampuses.length - 1);
+        return;
+      }
+
+      setCampusRevealIndex(
+        Math.min(featuredCampuses.length - 1, Math.floor(progress * featuredCampuses.length))
+      );
+    };
+
+    const onCampusScroll = () => {
+      if (!frame) frame = requestAnimationFrame(updateCampusJourney);
+    };
+
+    updateCampusJourney();
+    window.addEventListener('scroll', onCampusScroll, { passive: true });
+    window.addEventListener('resize', onCampusScroll);
+
+    return () => {
+      window.removeEventListener('scroll', onCampusScroll);
+      window.removeEventListener('resize', onCampusScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [featuredCampuses.length]);
 
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
     if (event.currentTarget.src !== imageFallback) event.currentTarget.src = imageFallback;
@@ -227,23 +274,31 @@ export default function MarketingHome() {
 
       <MarketingExtras />
 
-      <section id="campuses" className="marketingCampuses">
+      <section ref={campusJourneyRef} id="campuses" className="marketingCampuses campusJourneyReveal">
         <div className="marketingCampusesHead" data-reveal="left">
           <div><p>A GROWING CAMPUS NETWORK</p><h2>Explore nearby. <em>Stay verified at home.</em></h2></div>
           <a href="/ambassadors">Bring Aspire to your campus →</a>
         </div>
 
         <div className="marketingCampusRail">
-          {featuredCampuses.map((item, index) => (
-            <article className={`marketingCampusCard revealDelay${index % 5}`} data-reveal="pop" key={item.id}>
-              <img src={campusImage(item)} alt={`${item.short_name} campus`} onError={handleImageError} />
-              <span className="marketingCampusShade" />
-              <strong>{item.short_name}</strong>
-              <button className={`campusSticky sticky-${index % 4}`} type="button" onClick={() => { setCampusId(item.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                {item.launch_status === 'live' ? 'Explore live campus ↗' : 'Explore campus ↗'}
-              </button>
-            </article>
-          ))}
+          {featuredCampuses.map((item, index) => {
+            const revealed = index <= campusRevealIndex;
+            const active = index === campusRevealIndex;
+            return (
+              <article
+                className={`marketingCampusCard revealDelay${index % 5} ${revealed ? 'campusJourneyShown' : 'campusJourneyHidden'} ${active ? 'campusJourneyActive' : ''}`}
+                data-campus-step={index + 1}
+                key={item.id}
+              >
+                <img src={campusImage(item)} alt={`${item.short_name} campus`} onError={handleImageError} />
+                <span className="marketingCampusShade" />
+                <strong>{item.short_name}</strong>
+                <button className={`campusSticky sticky-${index % 4}`} type="button" onClick={() => { setCampusId(item.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                  {item.launch_status === 'live' ? 'Explore live campus ↗' : 'Explore campus ↗'}
+                </button>
+              </article>
+            );
+          })}
         </div>
         <div className="campusNetworkFoot" data-reveal="up">
           <span>{universities.length || '70+'}+ supported campus identities</span>
