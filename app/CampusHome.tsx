@@ -323,13 +323,13 @@ export default function CampusHome() {
 
       <div className={styles.shell}>
         <header className={styles.topbar}>
-          <div className={styles.brandLine}>
-            <img src={aspireLogo} alt="Aspire 101" />
+          <a className={styles.brandLine} href="/" aria-label="Back to Aspire 101 main page">
+            <img src={aspireLogo} alt="" />
             <div className={styles.brandText}>
               <strong>Aspire 101</strong>
               <span>{visiting ? `Visiting ${selectedCampus.short_name}` : `${selectedCampus.short_name} community`}</span>
             </div>
-          </div>
+          </a>
 
           <a className={styles.searchBox} href="/discover" aria-label="Search Aspire 101">
             <UiIcon name="search" />
