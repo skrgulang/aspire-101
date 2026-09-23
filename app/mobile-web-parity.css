@@ -1,0 +1,320 @@
+/* Mobile web parity layer.
+   Phone-only overrides that keep the public homepage readable without
+   horizontal-only discovery. Desktop composition remains untouched. */
+
+@media (max-width: 760px) {
+  .marketingHome {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  /* On a phone, content should read top-to-bottom rather than depend on the
+     desktop journey decoration or a hidden horizontal canvas. */
+  .journeyWorld .globalJourney {
+    display: none !important;
+  }
+
+  .howJourneySection .marketingHowFlow article.howJourneyCard,
+  .howJourneySection .marketingHowFlow article.howJourney-hidden,
+  .howJourneySection .marketingHowFlow article.howJourney-shown,
+  .howJourneySection .marketingHowFlow article.howJourney-active,
+  .safetyJourneyStage .safetyObjectsEcosystem .safetyObject,
+  .safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyJourney-hidden,
+  .safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyJourney-shown,
+  .safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyJourney-active {
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+
+  .marketingHero {
+    min-height: auto;
+    padding-inline: 14px;
+    padding-bottom: 34px;
+  }
+
+  .marketingHeroMedia {
+    inset: 0 0 auto 34%;
+    height: 330px;
+  }
+
+  .marketingHeroCopy {
+    padding-top: 28px;
+  }
+
+  .marketingHeroCopy h1 {
+    max-width: 500px;
+    font-size: clamp(42px, 12vw, 58px);
+    line-height: .92;
+  }
+
+  .marketingHeroCopy > p:last-child {
+    margin-top: 13px;
+    font-size: 12px;
+  }
+
+  .marketingHeroSticky {
+    position: relative;
+    top: auto;
+    right: auto;
+    display: inline-flex;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    line-height: 1;
+    transform: none;
+  }
+
+  /* The five primary use cases are all visible without sideways scrolling. */
+  .marketingFeatureRail {
+    margin-top: 18px;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    grid-auto-flow: row !important;
+    grid-auto-columns: auto !important;
+    gap: 8px;
+    overflow: visible !important;
+    padding: 0 !important;
+    scroll-snap-type: none !important;
+  }
+
+  .marketingFeatureCard,
+  .marketingFeatureCard:nth-child(n),
+  .marketingFeatureCard:nth-child(n+4) {
+    min-width: 0 !important;
+    min-height: 205px !important;
+    margin-top: 0 !important;
+    border-radius: 17px;
+    scroll-snap-align: none !important;
+  }
+
+  .marketingFeatureCard:nth-child(5) {
+    grid-column: 1 / -1;
+    min-height: 190px !important;
+  }
+
+  .marketingFeatureInfo {
+    left: 13px;
+    right: 13px;
+    bottom: 13px;
+  }
+
+  .marketingFeatureInfo i {
+    font-size: 20px;
+  }
+
+  .marketingFeatureInfo strong {
+    font-size: 17px;
+  }
+
+  .marketingFeatureInfo small {
+    max-width: calc(100% - 30px);
+    font-size: 8.5px;
+  }
+
+  .marketingFeatureArrow {
+    right: 11px;
+    bottom: 11px;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .marketingFeatureDoodle {
+    top: 12px;
+    left: 12px;
+    font-size: 8.5px;
+  }
+
+  /* Recent requests become a true phone list instead of a clipped carousel. */
+  .marketingRecent {
+    margin-top: 18px;
+  }
+
+  .marketingRecentRail {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-auto-flow: row !important;
+    grid-auto-columns: auto !important;
+    gap: 6px;
+    overflow: visible !important;
+  }
+
+  .marketingRecentRail > a {
+    min-width: 0;
+    min-height: 52px;
+    border-radius: 13px;
+  }
+
+  .marketingRecentRail > a:nth-child(n+4) {
+    display: flex !important;
+  }
+
+  /* Campus selector cards should also be discoverable without a hidden swipe. */
+  .marketingCampusRail {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    grid-auto-flow: row !important;
+    grid-auto-columns: auto !important;
+    gap: 8px;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .marketingCampusCard,
+  .marketingCampusCard[class*="campusJourney"] {
+    min-width: 0 !important;
+    min-height: 138px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: none !important;
+  }
+
+  .marketingCampusCard > strong {
+    left: 10px;
+    bottom: 10px;
+    font-size: 11px;
+  }
+
+  .campusSticky {
+    right: 7px;
+    top: 7px;
+    max-width: 86px;
+    padding: 6px 7px;
+    font-size: 8px;
+  }
+
+  /* Campus stories are content on web, not a gesture-only app carousel. */
+  .campusStories {
+    padding-top: 64px;
+    padding-bottom: 72px;
+  }
+
+  .campusStoriesTop h2 {
+    font-size: clamp(38px, 11vw, 54px);
+  }
+
+  .storiesLead {
+    margin-top: 16px;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .storyControls {
+    display: none;
+  }
+
+  .storyUseCases {
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    gap: 6px;
+  }
+
+  .storyUseCases button {
+    padding: 8px 10px;
+    font-size: 8px;
+  }
+
+  .campusStoryRail {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+    overflow: visible !important;
+    padding: 28px 14px 20px !important;
+    scroll-snap-type: none !important;
+    perspective: none;
+  }
+
+  .campusStoryCard,
+  .campusStoryCard:nth-child(even),
+  .campusStoryCard.active,
+  .campusStoryCard:focus-visible {
+    width: 100%;
+    min-width: 0;
+    min-height: 410px;
+    flex-basis: auto;
+    opacity: 1;
+    filter: none;
+    transform: none;
+    scroll-snap-align: none;
+    border-radius: 22px;
+  }
+
+  .storyQuote {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    padding: 15px;
+    border-radius: 17px;
+    transform: none !important;
+  }
+
+  .storyQuote strong {
+    font-size: 18px;
+  }
+
+  .campusStoriesBottom {
+    gap: 12px;
+  }
+
+  .campusStoriesBottom p {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  /* Consistent phone typography: no desktop-size section titles. */
+  .marketingExpandHead h2,
+  .whyIntro h2,
+  .safetyHeadline h2,
+  .rulesCopy h2,
+  .marketingCampusesHead h2 {
+    font-size: clamp(36px, 10vw, 48px) !important;
+    line-height: .96 !important;
+  }
+
+  .marketingHow,
+  .marketingProducts,
+  .marketingDataSection,
+  .marketingWhy,
+  .marketingSafetyStage,
+  .marketingDataMini,
+  .marketingCommunityRules,
+  .marketingCampuses {
+    padding-inline: 14px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .marketingFeatureRail {
+    gap: 7px;
+  }
+
+  .marketingFeatureCard,
+  .marketingFeatureCard:nth-child(n),
+  .marketingFeatureCard:nth-child(n+4) {
+    min-height: 188px !important;
+  }
+
+  .marketingFeatureCard:nth-child(5) {
+    min-height: 176px !important;
+  }
+
+  .marketingCampusRail {
+    gap: 7px;
+  }
+
+  .marketingCampusCard,
+  .marketingCampusCard[class*="campusJourney"] {
+    min-height: 126px !important;
+  }
+
+  .campusStoryCard,
+  .campusStoryCard:nth-child(even),
+  .campusStoryCard.active {
+    min-height: 380px;
+  }
+}
