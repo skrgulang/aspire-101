@@ -2153,3 +2153,31 @@
     gap: 6px;
   }
 }
+
+/* 2026-09-23 mobile usability QA: dynamic viewport and keyboard-safe chat. */
+@media (max-width: 700px) {
+  .page {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .page :global(.connectionChat) {
+    height: 100dvh;
+    min-height: 100dvh;
+    overscroll-behavior: contain;
+  }
+
+  .page :global(.chatMessages) {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .page :global(.chatComposer input) {
+    font-size: 16px;
+    scroll-margin-bottom: 96px;
+  }
+
+  .page :global(.chatComposerStack) {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
