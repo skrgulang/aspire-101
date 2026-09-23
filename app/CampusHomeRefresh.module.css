@@ -313,3 +313,81 @@
   .feedArrow { top: 9px; right: 9px; }
   .modalActions { display: grid; grid-template-columns: 1fr 1fr; }
 }
+
+/* 2026-09-23 mobile-only density polish.
+   Desktop/tablet rules above remain the source of truth; these overrides only
+   tighten the signed-in campus experience on phone-sized viewports. */
+@media (max-width: 900px) {
+  :global(.campusHome).page {
+    padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+  }
+  .topbar {
+    padding: 6px 0 8px;
+    gap: 7px;
+  }
+  .searchBox { height: 40px; }
+  .mainGrid { margin-top: 8px; }
+  .mainColumn { gap: 16px; }
+  .hero {
+    min-height: 222px;
+    padding: 20px 19px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  :global(.campusHome).page { padding-inline: 8px; }
+  .brandLine { gap: 8px; }
+  .brandLine img { width: 30px; height: 30px; border-radius: 9px; }
+  .brandText strong { font-size: 11px; }
+  .campusSelect {
+    width: 112px;
+    height: 36px;
+    padding-inline: 8px;
+    font-size: 9px;
+  }
+  .avatarButton { width: 36px; height: 36px; }
+  .searchBox {
+    height: 39px;
+    padding-inline: 13px;
+  }
+  .searchBox span { font-size: 12px; }
+
+  .hero {
+    min-height: 208px;
+    padding: 18px 16px;
+    border-radius: 15px;
+  }
+  .eyebrow { margin-bottom: 8px; font-size: 8px; }
+  .hero h1 {
+    max-width: 330px;
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: -.04em;
+  }
+  .heroText {
+    max-width: 330px;
+    margin-top: 10px;
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+  .heroActions { margin-top: 14px; gap: 7px; }
+  .primaryButton,
+  .secondaryButton {
+    min-height: 40px;
+    padding-inline: 12px;
+    border-radius: 10px;
+    font-size: 10.5px;
+  }
+
+  .mainColumn { gap: 14px; }
+  .sectionHead { margin-bottom: 10px; }
+  .sectionHead h2 { font-size: 18px; }
+  .categoryGrid { gap: 6px; }
+  .categoryCard { min-height: 82px; }
+  .feedItem {
+    min-height: 104px;
+    grid-template-columns: 104px minmax(0,1fr);
+  }
+  .feedIcon { width: 104px; min-height: 104px; }
+}
