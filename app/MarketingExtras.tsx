@@ -141,6 +141,7 @@ export default function MarketingExtras() {
 
         <div className="whyCompare whyCompareRefined">
           <div className="whyOld" data-reveal="left">
+            <img className="whyPhoto whyPhotoOld" src="https://images.pexels.com/photos/6147369/pexels-photo-6147369.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" loading="lazy" />
             <div className="whyPanelHead"><small>THE USUAL WAY</small></div>
             <strong>Too many places to ask.</strong>
             <div className="whyMess" aria-hidden="true">
@@ -150,6 +151,7 @@ export default function MarketingExtras() {
           </div>
 
           <div ref={whyCardRef} className="whyAspireCard" data-reveal="right">
+            <img className="whyPhoto whyPhotoAspire" src="https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" loading="lazy" />
             <div className="whyPanelHead"><small>ON ASPIRE</small></div>
             <div className={`whyGuideWalker ${activeWhyRow >= 0 ? "show" : ""}`} style={{ top: guideTop }} aria-hidden="true"><span className="whyGuideHead" /><span className="whyGuideBody" /><span className="whyGuideLeg a" /><span className="whyGuideLeg b" /></div>
             {whyRows.map((row, index) => (
