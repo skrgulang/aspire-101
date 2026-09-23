@@ -79,7 +79,21 @@
   min-width: 0;
 }
 .marketingWhyRefined .whyAspireCard .whyRow b { display: block; }
+.journeyWorld .globalJourney.isWhyChapter .globalJourneyRoad,
+.journeyWorld .globalJourney.isWhyChapter .globalWalker { opacity: 0 !important; }
 .marketingWhyRefined .whyCompareRefined .whyAspireCard { padding-right: 76px; }
+.marketingWhyRefined .whySideTrack {
+  position: absolute;
+  z-index: 2;
+  top: 80px;
+  right: 34px;
+  bottom: 32px;
+  width: 2px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, transparent, rgba(255,194,28,.58) 15%, rgba(255,194,28,.58) 85%, transparent);
+  box-shadow: 0 0 15px rgba(255,194,28,.25);
+  pointer-events: none;
+}
 .marketingWhyRefined .whyGuideWalker,
 .marketingWhyRefined .whyGuideWalker.show {
   left: auto;
@@ -91,6 +105,7 @@
   .marketingWhyRefined .whyCompareRefined .whyAspireCard { padding-right: 60px; }
   .marketingWhyRefined .whyGuideWalker,
   .marketingWhyRefined .whyGuideWalker.show { right: 13px; }
+  .marketingWhyRefined .whySideTrack { right: 27px; }
   .marketingWhyRefined .whyCompareRefined { margin-top: 42px; }
   .marketingWhyRefined .whyOld > strong { margin-top: 26px; }
   .marketingWhyRefined .whyCompareRefined .whyMess { margin-top: 36px; }
