@@ -34,8 +34,10 @@ function CampusWalkerBand() {
 
 export default function MarketingExtras() {
   const whyRef = useRef<HTMLElement | null>(null);
+  const whyCardRef = useRef<HTMLDivElement | null>(null);
   const whyRowRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [activeWhyRow, setActiveWhyRow] = useState(-1);
+  const [guideTop, setGuideTop] = useState(92);
 
   useEffect(() => {
     let frame = 0;
@@ -65,6 +67,13 @@ export default function MarketingExtras() {
         }
       });
       setActiveWhyRow(closestIndex);
+      const activeRow = closestIndex >= 0 ? whyRowRefs.current[closestIndex] : null;
+      const card = whyCardRef.current;
+      if (activeRow && card) {
+        const rowRect = activeRow.getBoundingClientRect();
+        const cardRect = card.getBoundingClientRect();
+        setGuideTop(rowRect.top - cardRect.top + rowRect.height / 2);
+      }
     };
     const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
     update();
@@ -102,8 +111,9 @@ export default function MarketingExtras() {
             <div className="whyScribble" aria-hidden="true">ASK → WAIT → ASK AGAIN</div>
           </div>
 
-          <div className="whyAspireCard" data-reveal="right">
+          <div ref={whyCardRef} className="whyAspireCard" data-reveal="right">
             <div className="whyPanelHead"><small>ON ASPIRE</small><span>ONE CLEAR FLOW</span></div>
+            <div className={`whyGuideWalker ${activeWhyRow >= 0 ? "show" : ""}`} style={{ top: guideTop }} aria-hidden="true"><span className="whyGuideHead" /><span className="whyGuideBody" /><span className="whyGuideLeg a" /><span className="whyGuideLeg b" /></div>
             {whyRows.map((row, index) => (
               <div ref={(node) => { whyRowRefs.current[index] = node; }} className={`whyRow revealDelay${index} ${activeWhyRow === index ? "whyRowActive" : ""}`} key={row.aspire}>
                 <i>{row.icon}</i>
