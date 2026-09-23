@@ -138,3 +138,11 @@
   .textOnly .copy { padding:9px 13px 6px; }
   .textOnly .footer { min-height:38px; padding:0 10px 9px; border-top:1px solid #2a2a27; }
 }
+
+@media (max-width: 640px) {
+  :global(.campusHome) .card,
+  :global(.campusHome) .textOnly { border-color: #393128; background: #211f1c; color: #f7f2e8; box-shadow: 0 12px 28px rgba(0,0,0,.16); }
+  :global(.campusHome) .author,
+  :global(.campusHome) .meta { color: #bdb3a3; }
+  :global(.campusHome) .footer { border-color: #393128; }
+}
