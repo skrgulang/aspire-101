@@ -80,6 +80,7 @@ export default function GlobalJourney() {
 
   const firstFriend = chapter >= 1;
   const secondFriend = chapter >= 3;
+  const dottedReveal = Math.min(1, progress + 0.085);
 
   return (
     <div className={`${visible ? 'globalJourney isVisible' : 'globalJourney'} ${chapter === 1 ? 'isWhyChapter' : ''} ${chapter === 2 ? 'isTrustChapter' : ''}`.trim()} style={style} aria-hidden={!visible}>
@@ -91,8 +92,21 @@ export default function GlobalJourney() {
       </div>
 
       <svg className="globalJourneyRoad" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <mask id="global-road-dotted-reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
+            <path
+              d={road}
+              pathLength="1"
+              fill="none"
+              stroke="white"
+              strokeWidth="34"
+              strokeLinecap="round"
+              style={{ strokeDasharray: 1, strokeDashoffset: 1 - dottedReveal }}
+            />
+          </mask>
+        </defs>
         <path className="globalRoadHalo" d={road} />
-        <path className="globalRoadBase" d={road} />
+        <path className="globalRoadBase" d={road} mask="url(#global-road-dotted-reveal)" />
         <path
           ref={pathRef}
           className="globalRoadActive"
