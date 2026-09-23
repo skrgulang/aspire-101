@@ -14,8 +14,8 @@ export default function FAQ() {
     <section id="faq" className="faqSection shell">
       <div className="faqIntro">
         <p className="eyebrow">QUESTIONS BEFORE YOU START?</p>
-        <h2>The last stop before your own request.</h2>
-        <p>By here, you’ve seen the journey. These are the product rules students should understand before jumping in.</p>
+        <h2>A few things you might be wondering.</h2>
+        <p>Quick answers before you find your people on campus.</p>
       </div>
       <div className="faqList">
         {faqs.map(([question, answer], index) => (
