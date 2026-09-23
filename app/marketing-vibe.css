@@ -158,3 +158,92 @@
   .marketingFeatureCard img,
   .marketingStoryCard img { transition: none; }
 }
+
+/* CAMPUS JOURNEY — reveal each campus as the global gold path moves through this chapter. */
+.campusJourneyReveal .marketingCampusCard {
+  will-change: opacity, transform, filter, border-color, box-shadow;
+  transition:
+    opacity .48s ease,
+    transform .58s cubic-bezier(.22,.8,.22,1),
+    filter .48s ease,
+    border-color .35s ease,
+    box-shadow .35s ease !important;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyHidden {
+  opacity: .08;
+  filter: saturate(.25) brightness(.55) blur(1.5px);
+  transform: translateY(18px) scale(.965) !important;
+  pointer-events: none;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyHidden .campusSticky {
+  opacity: 0;
+  transform: translateY(8px) rotate(0deg) scale(.88) !important;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyShown {
+  opacity: .72;
+  filter: saturate(.72) brightness(.82);
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyShown .campusSticky {
+  opacity: .76;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyActive {
+  opacity: 1;
+  filter: saturate(1) brightness(1);
+  transform: translateY(-7px) scale(1.015) rotate(0deg) !important;
+  border-color: rgba(255,194,28,.72) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,194,28,.18),
+    0 18px 46px rgba(0,0,0,.34),
+    0 0 28px rgba(255,194,28,.13);
+  z-index: 4;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyActive::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,194,28,.10), transparent 46%);
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyActive > strong,
+.campusJourneyReveal .marketingCampusCard.campusJourneyActive .campusSticky {
+  z-index: 3;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyActive .campusSticky {
+  opacity: 1;
+  animation: campusJourneyStickyPop .48s cubic-bezier(.22,.8,.22,1) both;
+}
+
+@keyframes campusJourneyStickyPop {
+  0% { transform: translateY(9px) rotate(0deg) scale(.82); opacity: 0; }
+  65% { transform: translateY(-2px) rotate(-2deg) scale(1.05); opacity: 1; }
+  100% { opacity: 1; }
+}
+
+@media (max-width: 760px) {
+  .campusJourneyReveal .marketingCampusCard.campusJourneyHidden {
+    opacity: .14;
+    transform: translateY(10px) scale(.98) !important;
+  }
+
+  .campusJourneyReveal .marketingCampusCard.campusJourneyActive {
+    transform: translateY(-3px) scale(1.01) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campusJourneyReveal .marketingCampusCard,
+  .campusJourneyReveal .marketingCampusCard .campusSticky {
+    transition: none !important;
+    animation: none !important;
+  }
+}
