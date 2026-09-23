@@ -153,6 +153,7 @@ export default function MarketingExtras() {
           <div ref={whyCardRef} className="whyAspireCard" data-reveal="right">
             <img className="whyPhoto whyPhotoAspire" src="https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" loading="lazy" />
             <div className="whyPanelHead"><small>ON ASPIRE</small></div>
+            <span className="whySideTrack" aria-hidden="true" />
             <div className={`whyGuideWalker ${activeWhyRow >= 0 ? "show" : ""}`} style={{ top: guideTop }} aria-hidden="true"><span className="whyGuideHead" /><span className="whyGuideBody" /><span className="whyGuideLeg a" /><span className="whyGuideLeg b" /></div>
             {whyRows.map((row, index) => (
               <div ref={(node) => { whyRowRefs.current[index] = node; }} className={`whyRow revealDelay${index} ${activeWhyRow === index ? "whyRowActive" : ""}`} key={row.aspire}>
