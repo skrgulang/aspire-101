@@ -363,8 +363,13 @@ export default function CampusHome() {
               <div className={styles.heroOverlay} aria-hidden="true" />
               <div className={styles.heroContent}>
                 <p className={styles.eyebrow}>{selectedCampus.short_name} · Community</p>
-                <h1>{firstName ? `Welcome back, ${firstName}.` : 'Find what you need on campus.'}</h1>
+                <h1 className={styles.desktopHeroTitle}>{firstName ? `Welcome back, ${firstName}.` : 'Find what you need on campus.'}</h1>
+                <div className={styles.mobileHeroIntro}>
+                  <span>{firstName ? `Good to see you, ${firstName}.` : 'Welcome to your campus.'}</span>
+                  <h1>What do you need <em>on campus?</em></h1>
+                </div>
                 <p className={styles.heroText}>Ask for help, find people, buy or sell nearby, join a ride, or start something with students around you.</p>
+                <a className={styles.mobileHeroSearch} href="/discover" aria-label="Browse campus requests"><UiIcon name="search" /><span>Search requests, people, rides...</span></a>
                 <div className={styles.heroActions}>
                   <a className={styles.primaryButton} href="/post"><UiIcon name="plus" />Post something</a>
                   <a className={styles.secondaryButton} href="/discover"><UiIcon name="compass" />Browse campus</a>
@@ -372,7 +377,7 @@ export default function CampusHome() {
               </div>
             </section>
 
-            <CampusActionCenter />
+            <div className={styles.actionPanel}><CampusActionCenter /></div>
 
             <section className={styles.sectionCard}>
               <div className={styles.sectionHead}>
