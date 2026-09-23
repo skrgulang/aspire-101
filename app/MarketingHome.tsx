@@ -61,8 +61,7 @@ export default function MarketingHome() {
   const [campusId, setCampusId] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const campusJourneyRef = useRef<HTMLElement | null>(null);
-  const [campusRevealIndex, setCampusRevealIndex] = useState(-1);
+  const [showAllCampuses, setShowAllCampuses] = useState(false);
   const howJourneyRef = useRef<HTMLElement | null>(null);
   const [howJourneyStep, setHowJourneyStep] = useState(-1);
 
@@ -112,68 +111,18 @@ export default function MarketingHome() {
           observer.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.12, rootMargin: '0px 0px -7% 0px' });
+    }, { threshold: 0.01, rootMargin: '160px 0px 160px 0px' });
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
-  }, [universities]);
+  }, [universities, showAllCampuses]);
 
   const campus = useMemo(() => universities.find((item) => item.id === campusId) ?? universities[0] ?? null, [universities, campusId]);
   const featuredCampuses = useMemo(() => {
     const preferred = ['purdue','uc-berkeley','ucla','stanford','uiuc','umich','nyu','boston-university','usc','ut-austin','georgia-tech','northwestern'];
     const ordered = preferred.map((slug) => universities.find((item) => item.slug === slug)).filter(Boolean) as University[];
     const extras = universities.filter((item) => !preferred.includes(item.slug));
-    return [...ordered, ...extras].slice(0, 18);
+    return [...ordered, ...extras];
   }, [universities]);
-
-  useEffect(() => {
-    let frame = 0;
-
-    const updateCampusJourney = () => {
-      frame = 0;
-      const section = campusJourneyRef.current;
-      if (!section || !featuredCampuses.length) return;
-
-      const rect = section.getBoundingClientRect();
-      const viewportH = window.innerHeight;
-      const startLine = viewportH * 0.78;
-      const endLine = viewportH * 0.24;
-      const travel = Math.max(1, rect.height + startLine - endLine);
-      const progress = Math.max(0, Math.min(0.999, (startLine - rect.top) / travel));
-
-      if (rect.top > startLine) {
-        setCampusRevealIndex(-1);
-        return;
-      }
-
-      const visibleSteps = Math.max(1, Math.min(featuredCampuses.length, window.innerWidth <= 760 ? 4 : 7));
-
-      if (rect.bottom < endLine) {
-        setCampusRevealIndex(visibleSteps - 1);
-        return;
-      }
-
-      // Pace only the cards that are actually visible on screen.
-      // Using all 18 campuses made the first seven appear almost immediately.
-      const eased = Math.max(0, Math.min(0.999, (progress - 0.08) / 0.84));
-      setCampusRevealIndex(
-        Math.min(visibleSteps - 1, Math.floor(eased * visibleSteps))
-      );
-    };
-
-    const onCampusScroll = () => {
-      if (!frame) frame = requestAnimationFrame(updateCampusJourney);
-    };
-
-    updateCampusJourney();
-    window.addEventListener('scroll', onCampusScroll, { passive: true });
-    window.addEventListener('resize', onCampusScroll);
-
-    return () => {
-      window.removeEventListener('scroll', onCampusScroll);
-      window.removeEventListener('resize', onCampusScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [featuredCampuses.length]);
 
   useEffect(() => {
     let frame = 0;
@@ -327,32 +276,25 @@ export default function MarketingHome() {
 
       <MarketingExtras />
 
-      <section ref={campusJourneyRef} id="campuses" className="marketingCampuses campusJourneyReveal">
+      <section id="campuses" className="marketingCampuses">
         <div className="marketingCampusesHead" data-reveal="left">
           <div><p>A GROWING CAMPUS NETWORK</p><h2>Explore nearby. <em>Stay verified at home.</em></h2></div>
           <a href="/ambassadors">Bring Aspire to your campus →</a>
         </div>
 
         <div className="marketingCampusRail">
-          {featuredCampuses.map((item, index) => {
-            const revealed = index <= campusRevealIndex;
-            const active = index === campusRevealIndex;
-            return (
-              <article
-                className={`marketingCampusCard revealDelay${index % 5} ${revealed ? 'campusJourneyShown' : 'campusJourneyHidden'} ${active ? 'campusJourneyActive' : ''}`}
-                data-campus-step={index + 1}
-                key={item.id}
-              >
-                <img src={campusImage(item)} alt={`${item.short_name} campus`} onError={handleImageError} />
-                <span className="marketingCampusShade" />
-                <strong>{item.short_name}</strong>
-                <button className={`campusSticky sticky-${index % 4}`} type="button" onClick={() => { setCampusId(item.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                  {item.launch_status === 'live' ? 'Explore live campus ↗' : 'Explore campus ↗'}
-                </button>
-              </article>
-            );
-          })}
+          {featuredCampuses.slice(0, showAllCampuses ? undefined : 8).map((item, index) => (
+            <article className={`marketingCampusCard revealDelay${index % 5}`} data-reveal="pop" key={item.id}>
+              <img src={campusImage(item)} alt={`${item.short_name} campus`} onError={handleImageError} />
+              <span className="marketingCampusShade" />
+              <strong>{item.short_name}</strong>
+              <button className={`campusSticky sticky-${index % 4}`} type="button" onClick={() => { setCampusId(item.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                {item.launch_status === 'live' ? 'Explore live campus ↗' : 'Explore campus ↗'}
+              </button>
+            </article>
+          ))}
         </div>
+        {featuredCampuses.length > 8 && <button className="marketingShowCampuses" type="button" onClick={() => setShowAllCampuses((current) => !current)}>{showAllCampuses ? 'Show fewer campuses ↑' : `See all ${featuredCampuses.length} campuses ↓`}</button>}
         <div className="campusNetworkFoot" data-reveal="up">
           <span>{universities.length || '70+'}+ supported campus identities</span>
           <p>Your verified home campus stays attached to your profile even when you explore or post while visiting another school.</p>
