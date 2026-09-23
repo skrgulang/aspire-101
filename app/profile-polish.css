@@ -429,3 +429,127 @@ html[data-aspire-theme='dark'] .profileAccountFoot strong { color: #aaa59b; }
   .profileMenuRow,
   .profileSetupMeter i { transition: none; }
 }
+
+/* Phone-only profile density polish; desktop profile composition is unchanged. */
+@media (max-width: 680px) {
+  .profilePagePolished {
+    padding: 14px 10px calc(94px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .profileTopPolished { margin-bottom: 13px; }
+  .profilePageHeading h1 { font-size: 28px; }
+  .profilePageHeading p {
+    max-width: 310px;
+    font-size: 10.5px;
+    line-height: 1.42;
+  }
+  .profileBack {
+    min-width: 40px;
+    width: 40px;
+    min-height: 40px;
+  }
+
+  .profileHeroPolished {
+    grid-template-columns: 68px minmax(0,1fr);
+    gap: 12px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+  .profileAvatar {
+    width: 68px;
+    height: 68px;
+    border-radius: 19px;
+    font-size: 21px;
+  }
+  .profileHeroMeta { gap: 6px; }
+  .profileHeroMeta > span { font-size: 8px; }
+  .profileHeroMeta b { padding: 4px 7px; font-size: 7px; }
+  .profileHeroPolished h2 {
+    margin-top: 5px;
+    font-size: 27px;
+    line-height: 1;
+  }
+  .profileHeroPolished .profileHeroCopy > p { font-size: 10.5px; }
+  .studentProfileMetaLine {
+    margin-top: 6px;
+    font-size: 9.5px;
+  }
+  .studentProfileBio {
+    margin-top: 8px !important;
+    font-size: 10.5px !important;
+    line-height: 1.45;
+  }
+  .studentProfileInterests {
+    margin-top: 8px;
+    gap: 5px;
+  }
+  .studentProfileInterests span {
+    padding: 5px 8px;
+    font-size: 8px;
+  }
+  .studentProfileStats {
+    margin-top: 10px;
+    gap: 6px;
+  }
+  .studentProfileStat {
+    padding: 8px 9px;
+    border-radius: 10px;
+  }
+  .studentProfileStat strong { font-size: 11.5px; }
+  .studentProfileStat span {
+    margin-top: 2px;
+    font-size: 7px;
+  }
+  .profileHeroActions {
+    margin-top: 10px;
+    gap: 6px;
+  }
+  .profileHeroActions a,
+  .profileHeroActions button {
+    min-height: 36px;
+    padding-inline: 10px;
+    border-radius: 10px;
+    font-size: 10px;
+  }
+
+  .profileSetupCard {
+    padding: 16px;
+    border-radius: 17px;
+  }
+  .profileSetupTop strong { font-size: 21px; }
+  .profileSetupBadge {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+  }
+  .profileSetupCard p {
+    margin: 9px 0;
+    font-size: 9px;
+    line-height: 1.45;
+  }
+  .profileSetupCard > a {
+    margin-top: 10px;
+    font-size: 9px;
+  }
+
+  .profileOverview { margin-top: 14px; gap: 14px; }
+  .profileTrustPanel,
+  .profileQuickPanel {
+    padding: 14px;
+    border-radius: 18px;
+  }
+  .profileSectionHeading h2 { font-size: 20px; }
+}
+
+@media (max-width: 430px) {
+  .profileHeroPolished {
+    grid-template-columns: 62px minmax(0,1fr);
+    gap: 10px;
+    padding: 13px;
+  }
+  .profileAvatar {
+    width: 62px;
+    height: 62px;
+    border-radius: 18px;
+  }
+  .profileHeroPolished h2 { font-size: 25px; }
+}
