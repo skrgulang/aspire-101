@@ -44,18 +44,26 @@
 }
 .marketV4HeroEditorial .marketV4HeroCopy>p{display:none}
 .marketV4HeroEditorial .marketV4HeroCopy h1{
-  max-width:820px;
+  max-width:900px;
   margin:0;
   color:#f6f3ec;
-  font-size:clamp(48px,6.4vw,92px);
-  font-weight:900;
-  line-height:.88;
-  letter-spacing:-.067em
+  font-size:clamp(46px,4.8vw,68px);
+  font-weight:700;
+  line-height:1;
+  letter-spacing:-.056em
 }
+.marketV4HeroEditorial .marketV4HeroCopy h1 span{display:block}
 .marketV4HeroEditorial .marketV4HeroCopy h1 em{
-  color:#c9c4b8;
-  font-style:normal;
-  font-weight:740
+  display:block;
+  max-width:900px;
+  margin-top:2px;
+  color:#e7c879;
+  font-family:var(--font-display),Georgia,serif;
+  font-size:clamp(52px,5.35vw,80px);
+  font-style:italic;
+  font-weight:500;
+  line-height:.98;
+  letter-spacing:-.036em
 }
 .marketV4HeroEditorial .marketV4HeroCopy>span{
   max-width:620px;
@@ -253,13 +261,15 @@
   .marketV4HeroEditorial{padding-top:18px}
   .marketV4HeroLead{align-items:flex-start;flex-direction:column}
   .marketV4HeroEditorial .marketV4HeroCopy h1{font-size:clamp(46px,11vw,72px)}
+  .marketV4HeroEditorial .marketV4HeroCopy h1 em{font-size:clamp(52px,9vw,76px)}
   .marketV4HeroActions{width:auto}
   .marketV4HeroActions a{flex:0 0 auto}
 }
 @media(max-width:640px){
   .marketV4HeroEditorial{gap:16px;padding-bottom:18px}
   .marketV4Kicker{margin-bottom:10px}
-  .marketV4HeroEditorial .marketV4HeroCopy h1{font-size:45px;line-height:.9}
+  .marketV4HeroEditorial .marketV4HeroCopy h1{font-size:45px;line-height:1}
+  .marketV4HeroEditorial .marketV4HeroCopy h1 em{font-size:clamp(42px,9vw,58px);line-height:1}
   .marketV4HeroEditorial .marketV4HeroCopy>span{margin-top:13px;font-size:11px}
   .marketV4HeroSearch{min-height:54px;padding:0 14px;border-radius:16px}
   .marketV4HeroSearch input{font-size:12px}
@@ -274,6 +284,7 @@
 }
 @media(max-width:420px){
   .marketV4HeroEditorial .marketV4HeroCopy h1{font-size:39px}
+  .marketV4HeroEditorial .marketV4HeroCopy h1 em{font-size:clamp(38px,9.5vw,44px)}
   .marketV4HeroActions{display:grid;width:100%;grid-template-columns:1fr 1fr}
   .marketV4HeroActions a{justify-content:center}
   .marketV4Grid{grid-template-columns:1fr 1fr}
