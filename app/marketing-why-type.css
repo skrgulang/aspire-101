@@ -79,8 +79,6 @@
   min-width: 0;
 }
 .marketingWhyRefined .whyAspireCard .whyRow b { display: block; }
-.journeyWorld .globalJourney.isWhyChapter .globalJourneyRoad,
-.journeyWorld .globalJourney.isWhyChapter .globalWalker { opacity: 0 !important; }
 .marketingWhyRefined .whyCompareRefined .whyAspireCard { padding-right: 76px; }
 .marketingWhyRefined .whySideTrack {
   position: absolute;
@@ -99,6 +97,8 @@
   left: auto;
   right: 20px;
 }
+.marketingWhyRefined .whySideTrack,
+.marketingWhyRefined .whyGuideWalker { display: none !important; }
 .marketingWhyRefined .whyAspireCard .whyRow { margin-right: 0; }
 
 @media (max-width: 700px) {
@@ -112,4 +112,37 @@
   .marketingWhyRefined .whyOld > strong { font-size: clamp(40px, 10vw, 56px); }
   .marketingWhyRefined .whyAspireCard .whyRow b,
   .marketingWhyRefined .whyAspireCard .whyRowActive b { font-size: 24px !important; }
+}
+
+/* Keep the page journey beside the content on every chapter. */
+.journeyWorld .globalJourneyRoad { display: none !important; }
+.journeyWorld .globalJourney::after {
+  content: '';
+  position: absolute;
+  top: 8%;
+  bottom: 8%;
+  right: 55px;
+  width: 2px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, transparent, rgba(255,194,28,.62) 14%, rgba(255,194,28,.62) 86%, transparent);
+  box-shadow: 0 0 13px rgba(255,194,28,.26);
+  pointer-events: none;
+}
+.journeyWorld .globalJourney .globalWalker,
+.journeyWorld .globalJourney.isWhyChapter .globalWalker,
+.journeyWorld .globalJourney.isTrustChapter .globalWalker {
+  left: auto !important;
+  right: 41px !important;
+  top: clamp(12%, var(--global-journey-progress), 88%) !important;
+  bottom: auto !important;
+  opacity: 1 !important;
+  transform: translate(-50%, -50%) !important;
+}
+.journeyWorld .globalJourney.isFaqChapter .globalWalker,
+.journeyWorld .globalJourney.isFaqChapter::after { opacity: 0 !important; }
+@media (max-width: 700px) {
+  .journeyWorld .globalJourney::after { right: 16px; }
+  .journeyWorld .globalJourney .globalWalker,
+  .journeyWorld .globalJourney.isWhyChapter .globalWalker,
+  .journeyWorld .globalJourney.isTrustChapter .globalWalker { right: 4px !important; }
 }
