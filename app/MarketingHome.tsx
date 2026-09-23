@@ -143,13 +143,18 @@ export default function MarketingHome() {
         return;
       }
 
+      const visibleSteps = Math.max(1, Math.min(featuredCampuses.length, window.innerWidth <= 760 ? 4 : 7));
+
       if (rect.bottom < endLine) {
-        setCampusRevealIndex(featuredCampuses.length - 1);
+        setCampusRevealIndex(visibleSteps - 1);
         return;
       }
 
+      // Pace only the cards that are actually visible on screen.
+      // Using all 18 campuses made the first seven appear almost immediately.
+      const eased = Math.max(0, Math.min(0.999, (progress - 0.08) / 0.84));
       setCampusRevealIndex(
-        Math.min(featuredCampuses.length - 1, Math.floor(progress * featuredCampuses.length))
+        Math.min(visibleSteps - 1, Math.floor(eased * visibleSteps))
       );
     };
 
