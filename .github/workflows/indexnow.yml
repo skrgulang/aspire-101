@@ -1,0 +1,76 @@
+name: IndexNow
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/indexnow.yml'
+      - 'scripts/indexnow-submit.mjs'
+      - 'app/page.tsx'
+      - 'app/layout.tsx'
+      - 'app/sitemap.ts'
+      - 'app/robots.ts'
+      - 'app/SiteFooter.tsx'
+      - 'app/MarketingHome.tsx'
+      - 'app/MarketingExtras.tsx'
+      - 'app/MarketingProductLife.tsx'
+      - 'app/GlobalJourney.tsx'
+      - 'app/FAQ.tsx'
+      - 'app/about/**'
+      - 'app/ambassadors/**'
+      - 'app/ambassadors.css'
+      - 'app/guidelines/**'
+      - 'app/how-it-works/**'
+      - 'app/marketplace/**'
+      - 'app/Marketplace.tsx'
+      - 'app/marketplace.css'
+      - 'app/marketplace-v4.css'
+      - 'app/marketplace-rules/**'
+      - 'app/privacy/**'
+      - 'app/resolution-policy/**'
+      - 'app/safety/**'
+      - 'app/safety-ui.css'
+      - 'app/terms/**'
+      - 'app/updates/**'
+      - 'app/updates.css'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: indexnow-main
+  cancel-in-progress: true
+
+jobs:
+  submit:
+    name: Notify search engines
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Allow production deployment to settle
+        if: github.event_name == 'push'
+        run: sleep 120
+
+      - name: Submit changed public URLs
+        if: github.event_name == 'push'
+        env:
+          INDEXNOW_BEFORE: ${{ github.event.before }}
+          INDEXNOW_AFTER: ${{ github.sha }}
+        run: node scripts/indexnow-submit.mjs --changed
+
+      - name: Submit full public sitemap
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/indexnow-submit.mjs --all

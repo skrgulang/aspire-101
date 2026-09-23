@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "npm run test:brain && next build",
     "start": "next start",
-    "test:brain": "node scripts/aspire-brain-regression.mjs"
+    "test:brain": "node scripts/aspire-brain-regression.mjs",
+    "seo:indexnow": "node scripts/indexnow-submit.mjs --all"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^2.45.10",
