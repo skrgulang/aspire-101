@@ -526,3 +526,163 @@
     transition: none !important;
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* FINAL Q&A — let the journey end cleanly instead of drawing through content */
+/* -------------------------------------------------------------------------- */
+.journeyWorld .globalJourneyRoad,
+.journeyWorld .globalWalker,
+.journeyWorld .globalJourneyNav {
+  transition: opacity .34s ease !important;
+}
+
+.journeyWorld .globalJourney.isFaqChapter .globalJourneyRoad,
+.journeyWorld .globalJourney.isFaqChapter .globalWalker,
+.journeyWorld .globalJourney.isFaqChapter .globalJourneyNav,
+.journeyWorld .globalJourney.isFaqChapter .globalJourneyGlow {
+  opacity: 0 !important;
+}
+
+/* FAQ gets its own calm surface after the journey ends. */
+.faqSection {
+  position: relative !important;
+  z-index: 50 !important;
+  width: 100% !important;
+  max-width: none !important;
+  box-sizing: border-box;
+  display: grid !important;
+  grid-template-columns: minmax(300px, .72fr) minmax(560px, 1.28fr) !important;
+  gap: clamp(48px, 6vw, 104px) !important;
+  align-items: start !important;
+  padding: clamp(78px, 8vw, 118px) max(42px, 5.6vw) 110px !important;
+  border-top: 1px solid rgba(255,255,255,.07) !important;
+  background:
+    radial-gradient(circle at 82% 14%, rgba(255,194,28,.045), transparent 25rem),
+    #090806 !important;
+  overflow: hidden !important;
+}
+
+.faqIntro {
+  position: sticky !important;
+  top: 84px !important;
+  max-width: 520px !important;
+}
+
+.faqIntro .eyebrow {
+  margin: 0 0 16px !important;
+  color: #8f877a !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  letter-spacing: .18em !important;
+}
+
+.faqIntro h2 {
+  margin: 0 !important;
+  max-width: 500px !important;
+  font-size: clamp(52px, 5vw, 82px) !important;
+  line-height: .92 !important;
+  letter-spacing: -.055em !important;
+  color: #f4efe7 !important;
+}
+
+.faqIntro > p:last-child {
+  margin: 24px 0 0 !important;
+  max-width: 440px !important;
+  color: #9b9388 !important;
+  font-size: 15px !important;
+  line-height: 1.65 !important;
+}
+
+.faqList {
+  min-width: 0;
+  border-top: 1px solid rgba(255,255,255,.09);
+}
+
+.faqList details {
+  margin: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,.09) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  transition: background .22s ease !important;
+}
+
+.faqList details[open] {
+  background: linear-gradient(90deg, rgba(255,194,28,.045), transparent 75%) !important;
+}
+
+.faqList summary {
+  min-height: 86px !important;
+  display: grid !important;
+  grid-template-columns: 48px minmax(0, 1fr) 32px !important;
+  gap: 16px !important;
+  align-items: center !important;
+  padding: 0 6px !important;
+  list-style: none !important;
+  cursor: pointer !important;
+  color: #f3eee6 !important;
+  font-size: clamp(18px, 1.35vw, 23px) !important;
+  font-weight: 800 !important;
+  line-height: 1.25 !important;
+}
+
+.faqList summary::-webkit-details-marker { display: none !important; }
+
+.faqList summary > span {
+  color: #71695d !important;
+  font-size: 9px !important;
+  font-weight: 900 !important;
+  letter-spacing: .13em !important;
+}
+
+.faqList summary > b {
+  justify-self: end !important;
+  color: #ffc21c !important;
+  font-size: 25px !important;
+  font-weight: 500 !important;
+  transition: transform .2s ease !important;
+}
+
+.faqList details[open] summary > b {
+  transform: rotate(45deg) !important;
+}
+
+.faqList details > p {
+  margin: -4px 38px 24px 64px !important;
+  max-width: 760px !important;
+  color: #aaa194 !important;
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+}
+
+@media (max-width: 960px) {
+  .faqSection {
+    grid-template-columns: 1fr !important;
+    gap: 38px !important;
+    padding: 70px 24px 84px !important;
+  }
+
+  .faqIntro {
+    position: static !important;
+    max-width: 720px !important;
+  }
+
+  .faqIntro h2 {
+    max-width: 720px !important;
+    font-size: clamp(48px, 9vw, 72px) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .faqSection { padding: 58px 18px 74px !important; }
+  .faqList summary {
+    min-height: 74px !important;
+    grid-template-columns: 34px minmax(0,1fr) 26px !important;
+    gap: 10px !important;
+    font-size: 16px !important;
+  }
+  .faqList details > p {
+    margin: -2px 24px 20px 44px !important;
+    font-size: 13px !important;
+  }
+}
