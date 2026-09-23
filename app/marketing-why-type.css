@@ -31,9 +31,47 @@
 .marketingWhyRefined .whyCompareRefined { margin-top: 76px; gap: 28px; }
 .marketingWhyRefined .whyCompareRefined .whyOld,
 .marketingWhyRefined .whyCompareRefined .whyAspireCard { padding: clamp(28px, 3vw, 46px); }
+.marketingWhyRefined .whyCompareRefined .whyOld,
+.marketingWhyRefined .whyCompareRefined .whyAspireCard { position: relative; isolation: isolate; overflow: hidden; }
+.marketingWhyRefined .whyPhoto {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+.marketingWhyRefined .whyPhotoOld { opacity: .46; filter: saturate(.52) brightness(.72); object-position: center 42%; }
+.marketingWhyRefined .whyOld::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(12,10,8,.78), rgba(12,10,8,.27) 42%, rgba(12,10,8,.83));
+  pointer-events: none;
+}
+.marketingWhyRefined .whyPhotoAspire {
+  left: auto;
+  width: 54%;
+  opacity: .25;
+  filter: sepia(.34) saturate(.72) brightness(.64);
+  mask-image: linear-gradient(90deg, transparent, #000 46%);
+  object-position: center;
+}
+.marketingWhyRefined .whyAspireCard::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(18,15,10,.96) 0%, rgba(18,15,10,.86) 60%, rgba(18,15,10,.44) 100%);
+  pointer-events: none;
+}
+.marketingWhyRefined .whyOld > strong { text-shadow: 0 2px 18px rgba(0,0,0,.55); }
 .marketingWhyRefined .whyOld > strong { margin-top: 42px; }
 .marketingWhyRefined .whyCompareRefined .whyMess { margin-top: 64px; min-height: 150px; }
 .marketingWhyRefined .whyCompareRefined .whyMess span { font-size: 13px !important; padding: 12px 16px !important; }
+.marketingWhyRefined .whyCompareRefined .whyMess span { background: rgba(23,21,17,.72) !important; backdrop-filter: blur(12px); box-shadow: 0 16px 36px rgba(0,0,0,.32) !important; }
 .marketingWhyRefined .whyCompareRefined .whyMess span:nth-child(2) { top: 60%; right: 8%; }
 .marketingWhyRefined .whyAspireCard .whyRow { min-height: 87px; }
 .marketingWhyRefined .whyAspireCard .whyRow > span {
