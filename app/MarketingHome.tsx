@@ -63,6 +63,8 @@ export default function MarketingHome() {
   const [authReady, setAuthReady] = useState(false);
   const campusJourneyRef = useRef<HTMLElement | null>(null);
   const [campusRevealIndex, setCampusRevealIndex] = useState(-1);
+  const howJourneyRef = useRef<HTMLElement | null>(null);
+  const [howJourneyStep, setHowJourneyStep] = useState(-1);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -173,6 +175,49 @@ export default function MarketingHome() {
     };
   }, [featuredCampuses.length]);
 
+  useEffect(() => {
+    let frame = 0;
+
+    const updateHowJourney = () => {
+      frame = 0;
+      const section = howJourneyRef.current;
+      if (!section) return;
+
+      const rect = section.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      const startLine = viewportH * 0.82;
+      const endLine = viewportH * 0.28;
+
+      if (rect.top > startLine) {
+        setHowJourneyStep(-1);
+        return;
+      }
+
+      if (rect.bottom < endLine) {
+        setHowJourneyStep(howItWorks.length - 1);
+        return;
+      }
+
+      const travel = Math.max(1, rect.height + startLine - endLine);
+      const progress = Math.max(0, Math.min(0.999, (startLine - rect.top) / travel));
+      const eased = Math.max(0, Math.min(0.999, (progress - 0.06) / 0.88));
+      setHowJourneyStep(Math.min(howItWorks.length - 1, Math.floor(eased * howItWorks.length)));
+    };
+
+    const onHowScroll = () => {
+      if (!frame) frame = requestAnimationFrame(updateHowJourney);
+    };
+
+    updateHowJourney();
+    window.addEventListener('scroll', onHowScroll, { passive: true });
+    window.addEventListener('resize', onHowScroll);
+    return () => {
+      window.removeEventListener('scroll', onHowScroll);
+      window.removeEventListener('resize', onHowScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
     if (event.currentTarget.src !== imageFallback) event.currentTarget.src = imageFallback;
   };
@@ -259,21 +304,24 @@ export default function MarketingHome() {
         </section>
       </section>
 
-      <section id="features" className="marketingHow">
+      <section ref={howJourneyRef} id="features" className="marketingHow howJourneySection">
         <div className="marketingExpandHead" data-reveal="left">
           <p>HOW ASPIRE WORKS</p>
           <h2>Ask. Choose. Connect.<br /><em>Get it done.</em></h2>
           <span>One clear flow from campus request to real life.</span>
         </div>
         <div className="marketingHowGrid marketingHowFlow">
-          {howItWorks.map((item, index) => (
-            <article data-reveal={index % 2 === 0 ? 'left' : 'right'} className={`revealDelay${index}`} key={item.step}>
-              <b>{item.step}</b>
-              <h3>{item.title}</h3>
-              <p>{item.text}</p>
-              <div className="marketingHowVisual">{item.visual}</div>
-            </article>
-          ))}
+          {howItWorks.map((item, index) => {
+            const state = index === howJourneyStep ? 'active' : index < howJourneyStep ? 'shown' : 'hidden';
+            return (
+              <article className={`howJourneyCard howJourney-${state}`} data-step={item.step} key={item.step}>
+                <b>{item.step}</b>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+                <div className="marketingHowVisual">{item.visual}</div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
