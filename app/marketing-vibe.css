@@ -247,3 +247,25 @@
     animation: none !important;
   }
 }
+
+/* Make the campus sequence unmistakable: unreached cards are truly hidden. */
+.campusJourneyReveal .marketingCampusCard.campusJourneyHidden {
+  opacity: 0 !important;
+  visibility: hidden;
+  filter: blur(4px) saturate(.15) brightness(.45) !important;
+  transform: translateY(24px) scale(.94) !important;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyShown {
+  visibility: visible;
+  opacity: .48 !important;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyActive {
+  visibility: visible;
+  opacity: 1 !important;
+}
+
+.campusJourneyReveal .marketingCampusCard.campusJourneyShown:not(.campusJourneyActive) {
+  transform: translateY(0) scale(.99) !important;
+}
