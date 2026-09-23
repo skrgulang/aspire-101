@@ -38,6 +38,8 @@ export default function MarketingExtras() {
   const whyRowRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [activeWhyRow, setActiveWhyRow] = useState(-1);
   const [guideTop, setGuideTop] = useState(92);
+  const safetyRef = useRef<HTMLElement | null>(null);
+  const [safetyStep, setSafetyStep] = useState(-1);
 
   useEffect(() => {
     let frame = 0;
@@ -86,6 +88,49 @@ export default function MarketingExtras() {
     };
   }, []);
 
+  useEffect(() => {
+    let frame = 0;
+
+    const updateSafetyJourney = () => {
+      frame = 0;
+      const section = safetyRef.current;
+      if (!section) return;
+
+      const rect = section.getBoundingClientRect();
+      const viewportH = window.innerHeight;
+      const startLine = viewportH * 0.82;
+      const endLine = viewportH * 0.24;
+
+      if (rect.top > startLine) {
+        setSafetyStep(-1);
+        return;
+      }
+
+      if (rect.bottom < endLine) {
+        setSafetyStep(3);
+        return;
+      }
+
+      const travel = Math.max(1, rect.height + startLine - endLine);
+      const progress = Math.max(0, Math.min(0.999, (startLine - rect.top) / travel));
+      const eased = Math.max(0, Math.min(0.999, (progress - 0.05) / 0.9));
+      setSafetyStep(Math.min(3, Math.floor(eased * 4)));
+    };
+
+    const onSafetyScroll = () => {
+      if (!frame) frame = requestAnimationFrame(updateSafetyJourney);
+    };
+
+    updateSafetyJourney();
+    window.addEventListener('scroll', onSafetyScroll, { passive: true });
+    window.addEventListener('resize', onSafetyScroll);
+    return () => {
+      window.removeEventListener('scroll', onSafetyScroll);
+      window.removeEventListener('resize', onSafetyScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   return (
     <>
       <section ref={whyRef} className="marketingWhy marketingWhyRefined" id="why-aspire">
@@ -127,7 +172,7 @@ export default function MarketingExtras() {
 
       <CampusWalkerBand />
 
-      <section className="marketingSafetyStage" id="safety">
+      <section ref={safetyRef} className="marketingSafetyStage safetyJourneyStage" id="safety">
         <div className="safetyBackdrop" aria-hidden="true" />
         <div className="safetyHeadline" data-reveal="up">
           <p>BUILT FOR REAL-WORLD CONNECTIONS</p>
@@ -135,18 +180,19 @@ export default function MarketingExtras() {
         </div>
 
         <div className="safetyObjects safetyObjectsEcosystem">
-          <a href="/profile" className="safetyObject safetyVerified" data-reveal="left">
-            <div className="safetySeal">✓</div><small>01</small><strong>Campus Verified</strong><span>Your school email establishes your home-campus identity.</span>
-          </a>
-          <a href="/profile" className="safetyObject safetyIdentity" data-reveal="pop">
-            <div className="safetyShield">ID</div><small>02</small><strong>ID Verified</strong><span>Optional government-ID verification for higher-trust situations.</span>
-          </a>
-          <a href="/safety" className="safetyObject safetyMutual" data-reveal="pop">
-            <div className="safetyPolaroid safetyMutualIcon" aria-hidden="true">⇄</div><small>03</small><strong>Mutual connect</strong><span>A response is not a deal. Both sides choose.</span>
-          </a>
-          <a href="/profile" className="safetyObject safetyControl" data-reveal="right">
-            <div className="safetyShield">04</div><small>04</small><strong>Two-step security</strong><span>Optional MFA adds a second factor after your password.</span>
-          </a>
+          {[
+            { href: '/profile', className: 'safetyVerified', icon: <div className="safetySeal">✓</div>, step: '01', title: 'Campus Verified', copy: 'Your school email establishes your home-campus identity.' },
+            { href: '/profile', className: 'safetyIdentity', icon: <div className="safetyShield">ID</div>, step: '02', title: 'ID Verified', copy: 'Optional government-ID verification for higher-trust situations.' },
+            { href: '/safety', className: 'safetyMutual', icon: <div className="safetyPolaroid safetyMutualIcon" aria-hidden="true">⇄</div>, step: '03', title: 'Mutual connect', copy: 'A response is not a deal. Both sides choose.' },
+            { href: '/profile', className: 'safetyControl', icon: <div className="safetyShield">04</div>, step: '04', title: 'Two-step security', copy: 'Optional MFA adds a second factor after your password.' }
+          ].map((item, index) => {
+            const state = index === safetyStep ? 'active' : index < safetyStep ? 'shown' : 'hidden';
+            return (
+              <a href={item.href} className={`safetyObject ${item.className} safetyJourney-${state}`} data-step={item.step} key={item.step}>
+                {item.icon}<small>{item.step}</small><strong>{item.title}</strong><span>{item.copy}</span>
+              </a>
+            );
+          })}
         </div>
 
         <a className="safetyMore" href="/safety" data-reveal="up">Open Safety Center →</a>
