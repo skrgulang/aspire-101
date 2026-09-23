@@ -370,3 +370,159 @@
 @media (max-width:700px) {
   .marketingWhyRefined .whyGuideWalker { right: 6px; }
 }
+
+/* -------------------------------------------------------------------------- */
+/* JOURNEY CARD SEQUENCING — the route drives the story                       */
+/* -------------------------------------------------------------------------- */
+
+/* Keep the gold route continuous through WHY ASPIRE and TRUST.
+   WHY keeps its local sentence guide, so only the global person hides there. */
+.journeyWorld .globalJourney.isWhyChapter .globalJourneyRoad,
+.journeyWorld .globalJourney.isTrustChapter .globalJourneyRoad {
+  opacity: .68 !important;
+}
+
+.journeyWorld .globalJourney.isWhyChapter .globalWalker {
+  opacity: 0 !important;
+}
+
+.journeyWorld .globalJourney.isTrustChapter .globalWalker {
+  opacity: .72 !important;
+}
+
+/* HOW ASPIRE WORKS: line arrives -> card appears -> passed cards stay quieter. */
+.howJourneySection {
+  overflow: visible !important;
+}
+
+.howJourneySection .marketingHowFlow article.howJourneyCard {
+  background:
+    linear-gradient(180deg, rgba(255,194,28,.035), transparent 55%),
+    rgba(255,255,255,.02) !important;
+  transition:
+    opacity .38s ease,
+    filter .42s ease,
+    transform .52s cubic-bezier(.22,.8,.22,1),
+    border-color .32s ease,
+    box-shadow .32s ease !important;
+  will-change: opacity, transform, filter;
+}
+
+.howJourneySection .marketingHowFlow article.howJourney-hidden {
+  opacity: 0 !important;
+  visibility: hidden;
+  filter: blur(3px) saturate(.35) brightness(.62);
+  transform: translateY(24px) scale(.955) !important;
+  pointer-events: none;
+}
+
+.howJourneySection .marketingHowFlow article.howJourney-shown {
+  opacity: .56 !important;
+  visibility: visible;
+  filter: saturate(.72) brightness(.86);
+  transform: translateY(0) scale(.99) !important;
+}
+
+.howJourneySection .marketingHowFlow article.howJourney-active {
+  opacity: 1 !important;
+  visibility: visible;
+  filter: none;
+  transform: translateY(-7px) scale(1.012) !important;
+  border-color: rgba(255,194,28,.68) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,194,28,.14),
+    0 20px 48px rgba(0,0,0,.30),
+    0 0 28px rgba(255,194,28,.10);
+}
+
+.howJourneySection .marketingHowFlow article.howJourney-active > b {
+  box-shadow: 0 0 0 7px rgba(255,194,28,.08), 0 0 22px rgba(255,194,28,.30);
+}
+
+.howJourneySection .marketingHowFlow article.howJourney-active .marketingHowVisual {
+  box-shadow: 0 18px 34px rgba(0,0,0,.30), 0 0 0 1px rgba(255,194,28,.16);
+}
+
+/* TRUST: all four panels use the exact same base surface.
+   Mutual connect no longer gets a darker panel. */
+.safetyJourneyStage {
+  overflow: visible !important;
+}
+
+.safetyJourneyStage .safetyObjectsEcosystem .safetyObject {
+  background: rgba(10,9,7,.72) !important;
+  border-color: rgba(255,255,255,.09) !important;
+  transition:
+    opacity .38s ease,
+    filter .42s ease,
+    transform .52s cubic-bezier(.22,.8,.22,1),
+    border-color .32s ease,
+    box-shadow .32s ease !important;
+  will-change: opacity, transform, filter;
+}
+
+.safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyJourney-hidden {
+  opacity: 0 !important;
+  visibility: hidden;
+  filter: blur(3px) saturate(.35) brightness(.62);
+  transform: translateY(22px) scale(.96) !important;
+  pointer-events: none;
+}
+
+.safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyJourney-shown {
+  opacity: .58 !important;
+  visibility: visible;
+  filter: saturate(.72) brightness(.86);
+  transform: translateY(0) scale(.99) !important;
+}
+
+.safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyJourney-active {
+  opacity: 1 !important;
+  visibility: visible;
+  filter: none;
+  transform: translateY(-6px) scale(1.012) !important;
+  background: rgba(10,9,7,.72) !important;
+  border-color: rgba(255,194,28,.62) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,194,28,.13),
+    0 20px 48px rgba(0,0,0,.30),
+    0 0 28px rgba(255,194,28,.10) !important;
+}
+
+.safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyMutual,
+.safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyVerified,
+.safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyIdentity,
+.safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyControl {
+  background: rgba(10,9,7,.72) !important;
+}
+
+/* Keep the Mutual icon special, but not the whole card background. */
+.safetyJourneyStage .safetyObjectsEcosystem .safetyMutual .safetyPolaroid {
+  background: rgba(255,194,28,.07) !important;
+}
+
+/* The progressive dotted route should read as one continuous path. */
+.journeyWorld .globalRoadBase {
+  stroke: rgba(255,255,255,.11) !important;
+  stroke-width: 2.2 !important;
+  stroke-dasharray: 7 15 !important;
+}
+
+@media (max-width: 900px) {
+  .howJourneySection .marketingHowFlow article.howJourney-hidden,
+  .safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyJourney-hidden {
+    transform: translateY(16px) scale(.98) !important;
+  }
+
+  .howJourneySection .marketingHowFlow article.howJourney-active,
+  .safetyJourneyStage .safetyObjectsEcosystem .safetyObject.safetyJourney-active {
+    transform: translateY(-3px) scale(1.005) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .howJourneySection .marketingHowFlow article.howJourneyCard,
+  .safetyJourneyStage .safetyObjectsEcosystem .safetyObject {
+    transition: none !important;
+  }
+}
