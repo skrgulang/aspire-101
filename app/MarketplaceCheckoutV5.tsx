@@ -417,7 +417,7 @@ export default function MarketplaceCheckoutV5() {
           <div className="marketV4HeroLead">
             <div className="marketV4HeroCopy">
               <div className="marketV4Kicker"><span>FRESH ON CAMPUS</span><b>{campus?.short_name || 'CAMPUS'}</b></div>
-              <h1>Good finds,<br /><em>right around {campus?.short_name || 'campus'}.</em></h1>
+              <h1><span>Good finds,</span><em>right around {campus?.short_name || 'campus'}.</em></h1>
               <span>Student-to-student listings with pickup, shipping, and delivery options shown upfront.</span>
             </div>
             <div className="marketV4HeroActions">
