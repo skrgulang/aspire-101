@@ -824,3 +824,85 @@ html[data-aspire-theme='dark'] .postSaveDraft:hover:not(:disabled){color:#ffc72c
   .postSubmitActions{display:grid;grid-template-columns:1fr 1fr;width:100%}
   .postSubmitActions button{width:100%;min-width:0;padding-inline:9px}
 }
+
+/* 2026-09-23 concept pass: small-phone Post follows a compact app grid. */
+@media (max-width: 560px) {
+  .postWorkspace {
+    padding: 13px 10px calc(100px + env(safe-area-inset-bottom, 0px));
+  }
+  .postWorkspaceHeader {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+  }
+  .postWorkspaceHeader h1 { font-size: 28px; }
+  .postWorkspaceHeader p {
+    max-width: 300px;
+    font-size: 10.5px;
+  }
+  .postFlowHint span { font-size: 7.5px; }
+  .postFlowHint b {
+    width: 19px;
+    height: 19px;
+  }
+
+  .postPageRefreshed .postFormHeading { margin-bottom: 12px; }
+  .postPageRefreshed .postModeSwitch a {
+    min-height: 36px;
+    font-size: 9.5px;
+  }
+
+  .postPageRefreshed .postCategoryPicker {
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 7px;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+  .postPageRefreshed .postCategoryPicker button {
+    min-width: 0;
+    min-height: 82px;
+    padding: 9px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-radius: 13px;
+  }
+  .postPageRefreshed .postCategoryPicker button i {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+  }
+  .postPageRefreshed .postCategoryPicker button strong {
+    max-width: 100%;
+    margin-top: 7px;
+    overflow: hidden;
+    font-size: 9.5px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+  }
+  .postPageRefreshed .postQuickStarts {
+    margin: 8px -10px 0;
+    padding-inline: 10px;
+  }
+
+  .postPageRefreshed .postComposerField {
+    margin-top: 13px;
+  }
+  .postPageRefreshed .postComposerField,
+  .postPageRefreshed .postEssentials,
+  .postPageRefreshed .postDetailsField,
+  .postPageRefreshed .requestMediaComposer {
+    padding: 12px;
+    border-radius: 13px;
+  }
+  .postPageRefreshed .postSubmitRow {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    margin-inline: 0;
+    border-radius: 14px;
+  }
+}
