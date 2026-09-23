@@ -83,14 +83,8 @@ export default function GlobalJourney() {
   const dottedReveal = Math.min(1, progress + 0.085);
 
   return (
-    <div className={`${visible ? 'globalJourney isVisible' : 'globalJourney'} ${chapter === 1 ? 'isWhyChapter' : ''} ${chapter === 2 ? 'isTrustChapter' : ''}`.trim()} style={style} aria-hidden={!visible}>
+    <div className={`${visible ? 'globalJourney isVisible' : 'globalJourney'} ${chapter === 1 ? 'isWhyChapter' : ''} ${chapter === 2 ? 'isTrustChapter' : ''} ${chapter === 4 ? 'isFaqChapter' : ''}`.trim()} style={style} aria-hidden={!visible}>
       <div className="globalJourneyGlow" />
-      <div className="globalJourneyAtmosphere" aria-hidden="true">
-        <span>study together</span>
-        <span>build something</span>
-        <span>ride together</span>
-      </div>
-
       <svg className="globalJourneyRoad" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
         <defs>
           <mask id="global-road-dotted-reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
