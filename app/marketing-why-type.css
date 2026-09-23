@@ -79,8 +79,18 @@
   min-width: 0;
 }
 .marketingWhyRefined .whyAspireCard .whyRow b { display: block; }
+.marketingWhyRefined .whyCompareRefined .whyAspireCard { padding-right: 76px; }
+.marketingWhyRefined .whyGuideWalker,
+.marketingWhyRefined .whyGuideWalker.show {
+  left: auto;
+  right: 20px;
+}
+.marketingWhyRefined .whyAspireCard .whyRow { margin-right: 0; }
 
 @media (max-width: 700px) {
+  .marketingWhyRefined .whyCompareRefined .whyAspireCard { padding-right: 60px; }
+  .marketingWhyRefined .whyGuideWalker,
+  .marketingWhyRefined .whyGuideWalker.show { right: 13px; }
   .marketingWhyRefined .whyCompareRefined { margin-top: 42px; }
   .marketingWhyRefined .whyOld > strong { margin-top: 26px; }
   .marketingWhyRefined .whyCompareRefined .whyMess { margin-top: 36px; }
