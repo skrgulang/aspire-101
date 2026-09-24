@@ -31,6 +31,12 @@ test('seller transfer reconciliation rejects a wrong payment, amount, mode, or g
   assert.equal(matchesSellerTransfer(expected, { ...transfer, livemode: true }), false);
   assert.equal(matchesSellerTransfer(expected, { ...transfer, transfer_group: 'another' }), false);
   assert.equal(matchesSellerTransfer(expected, { ...transfer, metadata: { aspire_payment_id: 'other' } }), false);
+  // A partial refund can change the remaining seller balance after Stripe has
+  // already created the original transfer. Reconcile against the frozen amount.
+  assert.equal(matchesSellerTransfer({ ...expected, provider_net_cents: 1300,
+    stripe_transfer_attempted_amount_cents: 2300 }, transfer), true);
+  assert.equal(matchesSellerTransfer({ ...expected, provider_net_cents: 1300,
+    stripe_transfer_attempted_amount_cents: 2300 }, { ...transfer, amount: 1300 }), false);
 });
 
 test('paid checkout with succeeded intent is secured', () => {
