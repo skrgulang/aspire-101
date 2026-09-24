@@ -54,6 +54,7 @@ import './ecosystem-polish.css';
 import './market-discover.css';
 import './walker-fix.css';
 import './marketing-why-type.css';
+import './marketing-type-harmony.css';
 import './updates.css';
 import './aspire-ai.css';
 import './aspire-ai-launcher.css';
