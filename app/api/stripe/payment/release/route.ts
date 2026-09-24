@@ -68,11 +68,12 @@ export async function POST(request: Request) {
     const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
     const customerTotal = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
     const bookedPlatformFee = Number(payment.platform_fee_cents ?? 0);
+    const refundedTotal = Number(payment.refunded_total_cents ?? 0);
     const feeSnapshot = payment.fee_snapshot && typeof payment.fee_snapshot === 'object'
       ? payment.fee_snapshot as Record<string, unknown>
       : {};
     const shippingRateCents = Number(feeSnapshot.shipping_rate_cents ?? 0);
-    const expectedPlatformFee = customerTotal - providerNet - shippingRateCents;
+    const expectedPlatformFee = customerTotal - refundedTotal - providerNet - shippingRateCents;
 
     // The seller transfer may contain seller proceeds only. The platform fee belongs
     // to Cloudora Labs / Aspire and remains on the platform Stripe balance; carrier
@@ -81,6 +82,8 @@ export async function POST(request: Request) {
       !Number.isInteger(customerTotal) ||
       !Number.isInteger(providerNet) ||
       !Number.isInteger(bookedPlatformFee) ||
+      !Number.isInteger(refundedTotal) ||
+      refundedTotal < 0 ||
       !Number.isInteger(shippingRateCents) ||
       shippingRateCents < 0 ||
       expectedPlatformFee < 0 ||
@@ -254,9 +257,14 @@ export async function POST(request: Request) {
     }
 
     const { data: attempted, error: attemptError } = await supabase.from('connection_payments')
-      .update({ stripe_transfer_attempted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({
+        stripe_transfer_attempted_at: new Date().toISOString(),
+        stripe_transfer_attempted_amount_cents: providerNet,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', payment.id).eq('status', 'secured')
       .eq('release_claimed_at', claimedAtValue)
+      .or(`stripe_transfer_attempted_amount_cents.is.null,stripe_transfer_attempted_amount_cents.eq.${providerNet}`)
       .select('id').maybeSingle();
     if (attemptError) throw attemptError;
     if (!attempted) throw new Error('PAYOUT_RELEASE_CLAIM_CHANGED');
