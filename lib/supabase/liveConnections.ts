@@ -42,6 +42,16 @@ export type ConnectionLocationShare = {
   updated_at: string;
 };
 
+export async function fetchActiveConnectionLocations(connectionIds: string[]) {
+  if (!connectionIds.length) return [] as ConnectionLocationShare[];
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('get_my_active_connection_locations', {
+    p_connection_ids: connectionIds
+  });
+  if (error) throw error;
+  return (data ?? []) as ConnectionLocationShare[];
+}
+
 export type ConnectionScheduleProposal = {
   id: string;
   connection_id: string;
@@ -152,15 +162,13 @@ export async function fetchLiveConnections() {
   }
 
   if (connectionIds.length) {
-    const [{ data: locationRows }, { data: proposalRows, error: proposalError }] = await Promise.all([
-      supabase.rpc('get_my_active_connection_locations', {
-        p_connection_ids: connectionIds
-      }),
+    const [locationRows, { data: proposalRows, error: proposalError }] = await Promise.all([
+      fetchActiveConnectionLocations(connectionIds),
       supabase.rpc('get_pending_schedule_proposals_for_my_connections', {
         p_connection_ids: connectionIds
       })
     ]);
-    locations = (locationRows ?? []) as ConnectionLocationShare[];
+    locations = locationRows;
     if (proposalError && !missingPreviewRelation(proposalError)) throw proposalError;
     if (!proposalError) scheduleProposals = (proposalRows ?? []) as ConnectionScheduleProposal[];
   }
