@@ -160,14 +160,26 @@ export default function MarketplaceCheckoutV5() {
       if (nextCampus) {
         const [{ data: policyRows }, rows] = await Promise.all([
           supabase.rpc('get_active_fee_policy', { p_campus_id: nextCampus.id }),
-          fetchCampusFeedRequests({ campusId: nextCampus.id, category: 'Buy & sell', limit: 80 })
+          user
+            ? fetchCampusFeedRequests({ campusId: nextCampus.id, category: 'Buy & sell', limit: 80 })
+            : fetch(`/api/marketplace/catalog?campusId=${encodeURIComponent(nextCampus.id)}`, { cache: 'no-store' })
+                .then(async (response) => {
+                  const payload = await response.json().catch(() => ({}));
+                  if (!response.ok) throw new Error(payload.error || 'Could not load the market.');
+                  return (payload.items || []).map((item: MarketplaceItem) => ({
+                    ...item,
+                    latitude: null,
+                    longitude: null,
+                    media: item.cover_image_url ? [{ public_url: item.cover_image_url }] : []
+                  })) as MarketplaceItem[];
+                })
         ]);
 
         setFeePolicy(((policyRows || [])[0] || null) as FeePolicy | null);
 
         const ids = rows.map((item) => item.id);
         let listingMeta = new Map<string, Partial<MarketplaceItem>>();
-        if (ids.length) {
+        if (user && ids.length) {
           const { data: metaRows } = await supabase.from('requests')
             .select('id,seller_area,fulfillment_method,fulfillment_methods,shipping_paid_by_default,shipping_paid_by_preference,seller_delivery_mode,seller_delivery_price_cents')
             .in('id', ids);
