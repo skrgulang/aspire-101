@@ -121,15 +121,16 @@ export async function POST(request: Request) {
   try {
     const { user } = await getAuthenticatedUser(request);
     await enforceAiRateLimit(supabase, user.id, 'moderation', 8);
-    const body = await request.json().catch(() => ({})) as { storagePath?: string; mimeType?: string };
+    const body = await request.json().catch(() => ({})) as { storagePath?: string; mimeType?: string; kind?: 'avatar' | 'banner' };
     pendingPath = String(body.storagePath || '').trim();
     const mimeType = String(body.mimeType || '').toLowerCase();
+    const kind = body.kind === 'banner' ? 'banner' : 'avatar';
 
     if (!pendingPath || !pendingPath.startsWith(`${user.id}/`)) {
-      return NextResponse.json({ error: 'Invalid profile photo upload.' }, { status: 400 });
+      return NextResponse.json({ error: kind === 'banner' ? 'Invalid profile banner upload.' : 'Invalid profile photo upload.' }, { status: 400 });
     }
     if (!allowedMimeTypes.has(mimeType)) {
-      return NextResponse.json({ error: 'Profile photos must be JPG, PNG, or WebP so Aspire can review them safely.' }, { status: 400 });
+      return NextResponse.json({ error: `${kind === 'banner' ? 'Profile banners' : 'Profile photos'} must be JPG, PNG, or WebP so Aspire can review them safely.` }, { status: 400 });
     }
 
     const { data: objectRow } = await supabase
@@ -140,17 +141,19 @@ export async function POST(request: Request) {
       .eq('name', pendingPath)
       .maybeSingle();
     if (!objectRow || objectRow.owner_id !== user.id) {
-      return NextResponse.json({ error: 'Profile photo upload was not found.' }, { status: 404 });
+      return NextResponse.json({ error: kind === 'banner' ? 'Profile banner upload was not found.' : 'Profile photo upload was not found.' }, { status: 404 });
     }
 
     const { data: signed, error: signedError } = await supabase.storage.from('avatar-pending').createSignedUrl(pendingPath, signedSeconds);
     if (signedError || !signed?.signedUrl) throw signedError || new Error('Could not prepare the image for review.');
 
-    await supabase.from('profiles').update({
-      avatar_moderation_status: 'scanning',
-      avatar_pending_path: pendingPath,
-      avatar_moderation_summary: 'Aspire is checking this profile photo before it can appear publicly.'
-    }).eq('id', user.id);
+    if (kind === 'avatar') {
+      await supabase.from('profiles').update({
+        avatar_moderation_status: 'scanning',
+        avatar_pending_path: pendingPath,
+        avatar_moderation_summary: 'Aspire is checking this profile photo before it can appear publicly.'
+      }).eq('id', user.id);
+    }
 
     const harmful = await scanHarmful(signed.signedUrl);
     const policy = await scanAspirePolicy(signed.signedUrl);
@@ -207,7 +210,7 @@ export async function POST(request: Request) {
 
     const { data: bytes, error: downloadError } = await supabase.storage.from('avatar-pending').download(pendingPath);
     if (downloadError || !bytes) throw downloadError || new Error('Could not finalize the approved photo.');
-    const finalPath = `${user.id}/avatar-${Date.now()}.${extensionFor(mimeType)}`;
+    const finalPath = `${user.id}/${kind}-${Date.now()}.${extensionFor(mimeType)}`;
     const { error: publicUploadError } = await supabase.storage.from('avatars').upload(finalPath, bytes, {
       contentType: mimeType,
       cacheControl: '3600',
@@ -216,8 +219,8 @@ export async function POST(request: Request) {
     if (publicUploadError) throw publicUploadError;
     const { data: publicData } = supabase.storage.from('avatars').getPublicUrl(finalPath);
 
-    const { data: profile } = await supabase.from('profiles').select('avatar_url').eq('id', user.id).maybeSingle();
-    const oldUrl = String(profile?.avatar_url || '');
+    const { data: profile } = await supabase.from('profiles').select('avatar_url,banner_url').eq('id', user.id).maybeSingle();
+    const oldUrl = String(kind === 'banner' ? profile?.banner_url || '' : profile?.avatar_url || '');
     const prefix = 'https://ikxjemnugoodfuxjaqoe.supabase.co/storage/v1/object/public/avatars/';
     const oldPath = oldUrl.startsWith(prefix) ? decodeURIComponent(oldUrl.slice(prefix.length)) : null;
 
@@ -231,31 +234,41 @@ export async function POST(request: Request) {
       reviewed_at: new Date().toISOString()
     }).select('id').single();
 
-    await supabase.from('profiles').update({
-      avatar_url: publicData.publicUrl,
-      image_url: publicData.publicUrl,
-      avatar_moderation_status: 'approved',
-      avatar_pending_path: null,
-      avatar_moderation_review_id: review?.id || null,
-      avatar_moderation_summary: 'Profile photo approved.',
-      updated_at: new Date().toISOString()
-    }).eq('id', user.id);
+    if (kind === 'banner') {
+      await supabase.from('profiles').update({
+        banner_url: publicData.publicUrl,
+        updated_at: new Date().toISOString()
+      }).eq('id', user.id);
+    } else {
+      await supabase.from('profiles').update({
+        avatar_url: publicData.publicUrl,
+        image_url: publicData.publicUrl,
+        avatar_moderation_status: 'approved',
+        avatar_pending_path: null,
+        avatar_moderation_review_id: review?.id || null,
+        avatar_moderation_summary: 'Profile photo approved.',
+        updated_at: new Date().toISOString()
+      }).eq('id', user.id);
+    }
 
     await supabase.storage.from('avatar-pending').remove([pendingPath]);
     if (oldPath && oldPath !== finalPath && oldPath.startsWith(`${user.id}/`)) {
       await supabase.storage.from('avatars').remove([oldPath]).catch(() => undefined);
     }
-    return NextResponse.json({ ok: true, status: 'approved', avatarUrl: publicData.publicUrl, message: 'Profile photo updated.' });
+    return NextResponse.json(kind === 'banner' ? { ok: true, status: 'approved', bannerUrl: publicData.publicUrl, message: 'Profile banner updated.' } : { ok: true, status: 'approved', avatarUrl: publicData.publicUrl, message: 'Profile photo updated.' });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'UNKNOWN';
     if (pendingPath) {
       try {
         const auth = await getAuthenticatedUser(request);
-        await supabase.from('profiles').update({
-          avatar_moderation_status: 'pending',
-          avatar_pending_path: pendingPath,
-          avatar_moderation_summary: 'Automated review could not finish. The photo remains private for moderator review.'
-        }).eq('id', auth.user.id);
+        const body = await request.clone().json().catch(() => ({})) as { kind?: string };
+        if (body.kind !== 'banner') {
+          await supabase.from('profiles').update({
+            avatar_moderation_status: 'pending',
+            avatar_pending_path: pendingPath,
+            avatar_moderation_summary: 'Automated review could not finish. The photo remains private for moderator review.'
+          }).eq('id', auth.user.id);
+        }
       } catch { /* keep fail-closed */ }
     }
     if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again before changing your photo.' }, { status: 401 });
