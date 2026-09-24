@@ -43,6 +43,7 @@ type RecoverablePayment = {
   stripe_transfer_reversal_id?: string | null;
   provider_net_cents: number | null;
   provider_amount_cents: number | null;
+  stripe_transfer_attempted_amount_cents?: number | null;
 };
 
 type StripeTransferReversal = { id: string; amount?: number | null };
@@ -259,7 +260,7 @@ async function recordRefundFailure(
   const chargeId = objectId(object.charge);
   let query = supabase
     .from('connection_payments')
-    .select('id,connection_id,status,stripe_transfer_id,stripe_refund_id,customer_total_cents,gross_amount_cents,platform_fee_cents,fee_snapshot,refunded_total_cents,refund_records,provider_net_cents,provider_amount_cents')
+    .select('id,connection_id,status,stripe_transfer_id,stripe_refund_id,customer_total_cents,gross_amount_cents,platform_fee_cents,fee_snapshot,refunded_total_cents,refund_records,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents')
     .eq('stripe_livemode', eventLivemode);
   query = chargeId ? query.or(`stripe_refund_id.eq.${refundId},stripe_charge_id.eq.${chargeId}`) : query.eq('stripe_refund_id', refundId);
   const { data: payment, error } = await query.maybeSingle();
@@ -386,7 +387,8 @@ async function recoverReleasedTransfer(
 ) {
   if (!payment.stripe_transfer_id) return { status: 'not_required' as const };
 
-  const recoveredCents = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+  const recoveredCents = Number(payment.stripe_transfer_attempted_amount_cents
+    ?? payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
   if (recoveredCents <= 0) throw new Error('STRIPE:Seller transfer recovery amount was invalid.');
 
   const { data: claim, error: claimError } = await supabase.rpc('claim_connection_payment_transfer_recovery', {
@@ -472,7 +474,7 @@ async function reconcileCreatedTransfer(
   const paymentId = String(object.metadata?.aspire_payment_id || '');
   if (!/^[0-9a-f-]{36}$/i.test(paymentId)) return;
   const { data: payment, error } = await supabase.from('connection_payments')
-    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents,transfer_group,connection_id')
+    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents,transfer_group,connection_id')
     .eq('id', paymentId).eq('stripe_livemode', eventLivemode).maybeSingle();
   requireDatabaseWrite(error);
   if (!payment) return;
@@ -487,7 +489,7 @@ async function reconcileCreatedTransfer(
     requireDatabaseWrite(updateError);
   }
   const { data: current, error: currentError } = await supabase.from('connection_payments')
-    .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+    .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents')
     .eq('id', payment.id).maybeSingle();
   requireDatabaseWrite(currentError);
   if (!current || current.stripe_transfer_id !== object.id) throw new Error('STRIPE:Transfer reference mismatch.');
@@ -681,7 +683,7 @@ export async function POST(request: Request) {
       if (chargeId) {
         const { data: payment, error: paymentError } = await supabase
           .from('connection_payments')
-          .select('id,connection_id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+          .select('id,connection_id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents')
           .eq('stripe_charge_id', chargeId)
           .eq('stripe_livemode', eventLivemode)
           .maybeSingle();
@@ -712,7 +714,7 @@ export async function POST(request: Request) {
           // A real dispute after release immediately attempts to recover the seller transfer.
           if (event.type === 'charge.dispute.created') {
             const { data: currentPayment, error: currentPaymentError } = await supabase.from('connection_payments')
-              .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+              .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents')
               .eq('id', payment.id).maybeSingle();
             requireDatabaseWrite(currentPaymentError);
             if (currentPayment?.stripe_transfer_id) {
@@ -738,7 +740,7 @@ export async function POST(request: Request) {
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {
       const { data: payment, error: paymentError } = await supabase
         .from('connection_payments')
-        .select('id,status,stripe_refund_id,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+        .select('id,status,stripe_refund_id,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents')
         .eq('stripe_charge_id', object.id)
         .eq('stripe_livemode', eventLivemode)
         .maybeSingle();
