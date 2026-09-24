@@ -107,7 +107,13 @@ export default function LiveConnectionStrip() {
       setData({ ...next, completions });
       setNotice('');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not load active connections.');
+      const message = error instanceof Error ? error.message : 'Could not load active connections.';
+      if (/auth session missing|must be signed in/i.test(message)) {
+        setData(emptyData);
+        setNotice('');
+      } else {
+        setNotice(message);
+      }
     } finally {
       if (!quiet) setLoading(false);
     }
