@@ -55,17 +55,12 @@
 .footerColumn h4 { font-weight: 730; letter-spacing: .075em; }
 .footerLead > p { max-width: 460px; line-height: 1.7; }
 
-/* Editorial headings belong to page openings and section titles. Cards,
-   forms, filters and transaction details keep the readable UI family. */
+/* The display family belongs to storytelling pages. Product workspaces
+   keep the UI family, with a calmer scale and weight. */
 .updatesPage .updatesIntro h1,
 .safetyPage .safetyHero h1,
 .safetyPage .safetySectionHead h2,
-.discoverPage .discoverV2Header h1::before,
-.legalPage .legalHero h1,
-.postPage .postWorkspaceHeader h1,
-.profilePagePolished .profilePageHeading h1,
-.settingsPage .settingsHero h1,
-.connectionsPage .connectionsShell > header h1 {
+.legalPage .legalHero h1 {
   font-family: var(--font-display), Georgia, serif !important;
   font-style: normal !important;
   font-weight: 600 !important;
@@ -88,23 +83,40 @@
 .safetyPage .safetySectionHead h2 {
   font-size: clamp(40px, 4.2vw, 56px) !important;
 }
-.discoverPage .discoverV2Header h1::before {
-  font-size: clamp(43px, 4.1vw, 59px);
-}
+.discoverPage .discoverV2Header h1::before,
 .settingsPage .settingsHero h1,
 .connectionsPage .connectionsShell > header h1,
+.connectionsPage .connectionsHero h1,
 .postPage .postWorkspaceHeader h1,
 .profilePagePolished .profilePageHeading h1 {
-  font-size: clamp(36px, 4vw, 52px) !important;
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+  font-style: normal !important;
+  font-size: clamp(36px, 3.6vw, 48px) !important;
+  font-weight: 670 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -.035em !important;
+}
+.discoverPage .discoverV2Header h1::before { font-size: clamp(38px, 3.6vw, 48px) !important; }
+.transactionsPage .connectionsShell > header h1 { font-weight: 670 !important; }
+.connectionsPage .inboxRequestHeader h2,
+.connectionsPage .connectionCard h2,
+.marketOrderTop h3 {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-weight: 670;
+  letter-spacing: -.025em;
 }
 
-.campusHome h1,
-.campusHome h2 {
+.campusHome h1 {
   font-family: var(--font-display), Georgia, serif;
   font-weight: 600;
   letter-spacing: -.025em;
 }
-.campusHome h2 { font-size: clamp(25px, 2.8vw, 34px); }
+.campusHome h2 {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: clamp(22px, 2.4vw, 28px);
+  font-weight: 680;
+  letter-spacing: -.03em;
+}
 .campusHome .sectionHead p { font-weight: 700; letter-spacing: .12em; }
 
 /* CSS module pages use a page-local class, so constrain the heading rule
@@ -124,5 +136,8 @@ main[class*="ambassadors_page"] [class*="ambassadors_processHead"] h2 {
   .updatesPage .updatesIntro h1 { font-size: clamp(44px, 11vw, 58px) !important; }
   .safetyPage .safetyHero h1 { font-size: clamp(48px, 11vw, 68px) !important; }
   .safetyPage .safetySectionHead h2 { font-size: clamp(37px, 9vw, 48px) !important; }
-  .campusHome h2 { font-size: 27px; }
+  .campusHome h2 { font-size: 23px; }
+  .connectionsPage .connectionsHero h1,
+  .connectionsPage .connectionsShell > header h1,
+  .postPage .postWorkspaceHeader h1 { font-size: 38px !important; }
 }
