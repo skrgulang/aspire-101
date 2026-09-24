@@ -318,3 +318,317 @@ html[data-aspire-theme='dark'] .profilePagePolished .profileAddIntro { color: #e
   .profilePagePolished .profileAvatar { width: 62px; height: 62px; border-radius: 20px; }
   .profilePagePolished .profileHeroPolished h2 { font-size: 26px; }
 }
+
+
+/* Sep 23 profile refinement: denser, more solid, with expressive type only where it helps. */
+.profilePagePolished .profileTopPolished {
+  margin-bottom: 16px;
+}
+
+.profilePagePolished .profilePageHeading > span {
+  font-size: 9px;
+  letter-spacing: .14em;
+}
+
+.profilePagePolished .profilePageHeading h1 {
+  margin-top: 4px;
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+  font-size: clamp(31px, 3.2vw, 40px);
+  font-weight: 760;
+  letter-spacing: -.04em;
+}
+
+.profilePagePolished .profilePageHeading p,
+.profilePagePolished .profileBack,
+.profilePagePolished .profileSectionHeading,
+.profilePagePolished .profilePayoutCard,
+.profilePagePolished .profileQuickLinks {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.profilePagePolished .profileHeroPolished {
+  padding: clamp(24px, 3vw, 34px);
+  border-radius: 20px;
+  border-color: #deded9;
+  box-shadow: 0 10px 26px rgba(18, 17, 14, .045);
+}
+
+.profilePagePolished .profileIdentity {
+  max-width: none;
+  grid-template-columns: 106px minmax(0, 1fr);
+  gap: clamp(20px, 2.6vw, 32px);
+  align-items: center;
+}
+
+.profilePagePolished .profileAvatarWrap {
+  padding-top: 0;
+}
+
+.profilePagePolished .profileAvatar {
+  width: 106px;
+  height: 106px;
+  border-radius: 50%;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px rgba(179, 129, 15, .28), 0 12px 28px rgba(35, 29, 14, .12);
+}
+
+.profilePagePolished .profileAvatar:hover,
+.profilePagePolished .profileAvatar:focus-visible {
+  transform: translateY(-2px);
+}
+
+.profilePagePolished .profileHeroMeta {
+  margin-bottom: 2px;
+}
+
+.profilePagePolished .profileHeroMeta > span {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: .13em;
+}
+
+.profilePagePolished .profileHeroPolished h2 {
+  margin: 4px 0 7px;
+  font-family: var(--font-display), Georgia, serif !important;
+  font-size: clamp(42px, 4.4vw, 58px);
+  font-weight: 700;
+  line-height: .96;
+  letter-spacing: -.025em;
+}
+
+.profilePagePolished .profileCampusLine {
+  margin-top: 2px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px !important;
+  font-weight: 590;
+}
+
+.profilePagePolished .studentProfileMetaLine,
+.profilePagePolished .studentProfileBio,
+.profilePagePolished .studentProfileInterests,
+.profilePagePolished .profileActivityLine,
+.profilePagePolished .profileHeroActions {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.profilePagePolished .studentProfileMetaLine {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.profilePagePolished .studentProfileBio {
+  max-width: 720px;
+  margin-top: 13px !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+}
+
+.profilePagePolished .studentProfileInterests {
+  margin-top: 12px;
+}
+
+.profilePagePolished .studentProfileInterests span,
+.profilePagePolished .studentProfileInterests button {
+  padding: 6px 10px;
+  background: rgba(255, 199, 44, .055);
+  font-size: 10px;
+  font-weight: 640;
+}
+
+.profilePagePolished .profileAddIntro {
+  margin-top: 14px;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.profilePagePolished .profileActivityLine {
+  margin-top: 16px;
+  padding-top: 13px;
+  font-size: 11px;
+}
+
+.profilePagePolished .profileActivityLine strong {
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.profilePagePolished .profileHeroActions {
+  margin-top: 15px;
+}
+
+.profilePagePolished .profileHeroActions button,
+.profilePagePolished .profileHeroActions a {
+  min-height: 40px;
+  padding-inline: 15px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.profilePagePolished .profileOverview {
+  margin-top: 14px;
+  grid-template-columns: minmax(0, 1.42fr) minmax(300px, .68fr);
+  gap: 14px;
+}
+
+.profilePagePolished .profileTrustPanel,
+.profilePagePolished .studentIdentityAsideCard {
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.profilePagePolished .profileTrustPanel {
+  padding: 20px;
+}
+
+.profilePagePolished .profileSectionHeading {
+  margin-bottom: 13px;
+}
+
+.profilePagePolished .profileSectionHeading > div > span,
+.profilePagePolished .studentIdentityAsideCard > span {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 780;
+  letter-spacing: .11em;
+}
+
+.profilePagePolished .profileSectionHeading h2,
+.profilePagePolished .profilePayoutCard h3 {
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+  letter-spacing: -.025em;
+}
+
+.profilePagePolished .profileSectionHeading h2 {
+  margin-top: 4px;
+  font-size: clamp(24px, 2.4vw, 29px);
+  font-weight: 760;
+}
+
+.profilePagePolished .profileSectionHeading > p {
+  max-width: 330px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.profilePagePolished .profileTrustCardsExpanded {
+  gap: 9px;
+}
+
+.profilePagePolished .profileTrustCards > .profileCard,
+.profilePagePolished .profileTrustCards > .trustPassportCard {
+  padding: 15px;
+  border-radius: 14px;
+}
+
+.profilePagePolished .studentIdentityAside {
+  gap: 12px;
+}
+
+.profilePagePolished .studentIdentityAsideCard {
+  padding: 18px;
+}
+
+.profilePagePolished .profilePayoutCard h3 {
+  margin: 6px 0 11px;
+  font-size: 19px;
+  font-weight: 740;
+}
+
+.profilePagePolished .profilePayoutCard .paymentConnectRow strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profilePagePolished .profilePayoutCard .paymentConnectRow span,
+.profilePagePolished .profilePayoutCard .paymentConnectRow small,
+.profilePagePolished .profilePayoutCard .paymentConnectRow .paymentMoneyLink {
+  font-size: 10px !important;
+}
+
+.profilePagePolished .profileQuickLinks > span {
+  margin-bottom: 5px;
+}
+
+.profilePagePolished .profileQuickLinks > a {
+  min-height: 56px;
+  padding: 9px 0;
+}
+
+.profilePagePolished .profileQuickLinks strong {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 690;
+}
+
+.profilePagePolished .profileQuickLinks small {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+html[data-aspire-theme='dark'] .profilePagePolished .profileHeroPolished,
+html[data-aspire-theme='dark'] .profilePagePolished .profileTrustPanel,
+html[data-aspire-theme='dark'] .profilePagePolished .studentIdentityAsideCard {
+  background: #171715;
+  border-color: #2f2f2b;
+}
+
+html[data-aspire-theme='dark'] .profilePagePolished .profileHeroPolished {
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .22);
+}
+
+html[data-aspire-theme='dark'] .profilePagePolished .profileTrustCards > .profileCard,
+html[data-aspire-theme='dark'] .profilePagePolished .profileTrustCards > .trustPassportCard {
+  background: #1c1c19;
+  border-color: #33332e;
+}
+
+html[data-aspire-theme='dark'] .profilePagePolished .studentProfileInterests span,
+html[data-aspire-theme='dark'] .profilePagePolished .studentProfileInterests button {
+  background: #201d14;
+  border-color: rgba(255, 199, 44, .22);
+}
+
+html[data-aspire-theme='dark'] .profilePagePolished .profileQuickLinks > a {
+  border-color: #30302c;
+}
+
+@media (max-width: 900px) {
+  .profilePagePolished .profileOverview {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .profilePagePolished .profileHeroPolished {
+    padding: 18px 15px;
+  }
+
+  .profilePagePolished .profileIdentity {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 13px;
+    align-items: start;
+  }
+
+  .profilePagePolished .profileAvatar {
+    width: 72px;
+    height: 72px;
+  }
+
+  .profilePagePolished .profileHeroPolished h2 {
+    margin-top: 2px;
+    font-size: clamp(30px, 9vw, 39px);
+  }
+
+  .profilePagePolished .studentProfileBio {
+    font-size: 13px !important;
+  }
+
+  .profilePagePolished .profileTrustPanel,
+  .profilePagePolished .studentIdentityAsideCard {
+    padding: 16px;
+  }
+}
