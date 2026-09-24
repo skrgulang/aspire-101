@@ -6,6 +6,7 @@ import {
   type LocalPaymentSnapshot
 } from '../lib/server/stripePaymentReconciliation.ts';
 import { calculateDisputeSplit, evidenceSignatureMatches, safeEvidenceFile } from '../lib/server/marketDisputeProtection.ts';
+import { matchesSellerTransfer } from '../lib/server/stripeTransferReconciliation.ts';
 
 const payment: LocalPaymentSnapshot = {
   id: 'payment-1',
@@ -15,6 +16,22 @@ const payment: LocalPaymentSnapshot = {
   currency: 'USD',
   stripe_livemode: false
 };
+
+test('seller transfer reconciliation rejects a wrong payment, amount, mode, or group', () => {
+  const expected = {
+    id: '7f539a96-38c8-49a9-a51a-785a2db03ab9', transfer_group: 'aspire_order1',
+    provider_net_cents: 2300, provider_amount_cents: 2300, stripe_livemode: false
+  };
+  const transfer = {
+    id: 'tr_abc123', transfer_group: 'aspire_order1', amount: 2300,
+    livemode: false, metadata: { aspire_payment_id: expected.id }
+  };
+  assert.equal(matchesSellerTransfer(expected, transfer), true);
+  assert.equal(matchesSellerTransfer(expected, { ...transfer, amount: 2301 }), false);
+  assert.equal(matchesSellerTransfer(expected, { ...transfer, livemode: true }), false);
+  assert.equal(matchesSellerTransfer(expected, { ...transfer, transfer_group: 'another' }), false);
+  assert.equal(matchesSellerTransfer(expected, { ...transfer, metadata: { aspire_payment_id: 'other' } }), false);
+});
 
 test('paid checkout with succeeded intent is secured', () => {
   assert.equal(
