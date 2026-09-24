@@ -12,6 +12,7 @@ import {
 import type { AspireFeeQuote, ConnectionPayment } from '../lib/supabase/payments';
 import {
   cancelMarketReservation,
+  cancelUnpaidMarketReservation,
   confirmMarketReceipt,
   fetchMarketDisputes,
   fetchMarketOrders,
@@ -313,13 +314,14 @@ export default function MarketOrdersPanel() {
     } finally { setBusy(''); }
   }
 
-  async function cancelReservation(connectionId: string) {
+  async function cancelReservation(connectionId: string, isBuyer: boolean) {
     if (!window.confirm('Cancel this unpaid reservation? The listing will immediately reopen for other buyers.')) return;
     setBusy(`cancel-reservation-${connectionId}`);
     setNotice('');
     try {
-      await cancelMarketReservation(connectionId);
-      setNotice('Reservation cancelled. The listing is available to other buyers again.');
+      if (isBuyer) await cancelMarketReservation(connectionId);
+      else await cancelUnpaidMarketReservation(connectionId);
+      setNotice('Reservation cancelled. Both sides have been updated and the listing is available again.');
       await reload(true);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not cancel this reservation.');
@@ -472,11 +474,24 @@ export default function MarketOrdersPanel() {
                 />
               )}
 
+              {payWithAspire && <div className="marketCancellationPolicy">
+                <strong>Cancellation protection</strong>
+                <span>{order.status === 'awaiting_payment'
+                  ? 'Before payment, either person can cancel and the listing becomes available again.'
+                  : order.status === 'payment_processing'
+                    ? 'Stripe is confirming payment. Cancellation is paused so a paid order cannot be closed as unpaid.'
+                    : secured && !order.seller_handed_off_at
+                      ? 'Payment is secured. Before handoff, either person can use the protected refund flow.'
+                      : ['handoff_confirmed', 'release_ready'].includes(order.status)
+                        ? 'Handoff has started. Use Report a problem so seller payout stays paused during review.'
+                        : 'This order is closed; its transaction history remains available to both people.'}</span>
+              </div>}
+
               <div className="marketOrderActions">
                 {priceIsUnlocked && !priceProposal && priceFor !== order.id && <button className="marketSecondary" type="button" onClick={() => beginPriceProposal(order.id, order.agreed_amount_cents)}>Propose different price</button>}
                 {shippingOrder && !shippingReady && ['awaiting_payment','payment_processing'].includes(order.status) && <a className="button buttonGold" href={shippingSetupHref}>{isSeller ? 'Prepare live shipping rates →' : 'Choose carrier rate →'}</a>}
                 {payWithAspire && isBuyer && shippingReady && typeof buyerTotal === 'number' && ['awaiting_payment','payment_processing'].includes(order.status) && (!payment || ['not_started','failed','checkout_created'].includes(payment.status)) && <button className="button buttonGold" type="button" onClick={() => pay(order.connection_id)} disabled={busy === `pay-${order.connection_id}`}>{busy === `pay-${order.connection_id}` ? 'Opening Stripe…' : `Secure ${money(buyerTotal, order.currency)} →`}</button>}
-                {payWithAspire && isBuyer && order.status === 'awaiting_payment' && (!payment || ['not_started','failed','checkout_created','cancelled'].includes(payment.status)) && <button className="marketSecondary" type="button" onClick={() => cancelReservation(order.connection_id)} disabled={busy === `cancel-reservation-${order.connection_id}`}>{busy === `cancel-reservation-${order.connection_id}` ? 'Cancelling…' : 'Cancel reservation'}</button>}
+                {payWithAspire && order.status === 'awaiting_payment' && (!payment || (isBuyer ? ['not_started','failed','checkout_created','cancelled'] : ['not_started','failed','cancelled']).includes(payment.status)) && <button className="marketSecondary" type="button" onClick={() => cancelReservation(order.connection_id, isBuyer)} disabled={busy === `cancel-reservation-${order.connection_id}`}>{busy === `cancel-reservation-${order.connection_id}` ? 'Cancelling…' : 'Cancel reservation'}</button>}
                 {shippingOrder && shippingReady && !secured && <a className="marketSecondary" href={shippingSetupHref}>Review carrier selection</a>}
                 {payWithAspire && isSeller && !secured && <span className="marketWaiting">Waiting for buyer payment. Make sure payouts are ready in <a href="/profile">Profile</a>.</span>}
                 {payWithAspire && isSeller && order.status === 'paid' && !order.seller_handed_off_at && <button className="button buttonGold" type="button" onClick={() => handoff(order.connection_id)} disabled={busy === `handoff-${order.connection_id}`}>I handed over the item ✓</button>}
