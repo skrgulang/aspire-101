@@ -569,27 +569,30 @@
 }
 
 .faqIntro .eyebrow {
-  margin: 0 0 16px !important;
+  margin: 0 0 14px !important;
   color: #8f877a !important;
-  font-size: 9px !important;
-  font-weight: 900 !important;
-  letter-spacing: .18em !important;
+  font-size: 8px !important;
+  font-weight: 760 !important;
+  letter-spacing: .16em !important;
 }
 
 .faqIntro h2 {
   margin: 0 !important;
-  max-width: 500px !important;
-  font-size: clamp(52px, 5vw, 82px) !important;
-  line-height: .92 !important;
-  letter-spacing: -.055em !important;
-  color: #f4efe7 !important;
+  max-width: 540px !important;
+  font-family: var(--font-product-display), var(--font-inter), system-ui, sans-serif !important;
+  font-size: clamp(46px, 4.15vw, 68px) !important;
+  font-weight: 600 !important;
+  line-height: .98 !important;
+  letter-spacing: -.045em !important;
+  color: #eee9df !important;
+  text-wrap: balance;
 }
 
 .faqIntro > p:last-child {
-  margin: 24px 0 0 !important;
-  max-width: 440px !important;
-  color: #9b9388 !important;
-  font-size: 15px !important;
+  margin: 21px 0 0 !important;
+  max-width: 455px !important;
+  color: #999187 !important;
+  font-size: 14px !important;
   line-height: 1.65 !important;
 }
 
@@ -668,13 +671,18 @@
   }
 
   .faqIntro h2 {
-    max-width: 720px !important;
-    font-size: clamp(48px, 9vw, 72px) !important;
+    max-width: 680px !important;
+    font-size: clamp(44px, 8vw, 62px) !important;
   }
 }
 
 @media (max-width: 640px) {
   .faqSection { padding: 58px 18px 74px !important; }
+  .faqIntro h2 {
+    max-width: 12ch !important;
+    font-size: clamp(38px, 11vw, 50px) !important;
+    line-height: 1 !important;
+  }
   .faqList summary {
     min-height: 74px !important;
     grid-template-columns: 34px minmax(0,1fr) 26px !important;
