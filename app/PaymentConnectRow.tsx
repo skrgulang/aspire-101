@@ -9,6 +9,14 @@ type StatusResponse = {
   status: PaymentStatus;
   transfersEnabled?: boolean;
   requirementsDue?: number;
+  lastSyncedAt?: string | null;
+  payoutAccount?: {
+    bankName: string;
+    last4: string | null;
+    country: string | null;
+    currency: string | null;
+    status: string | null;
+  } | null;
   error?: string;
   code?: string;
 };
@@ -41,6 +49,7 @@ export default function PaymentConnectRow({ phoneVerified, schoolVerified }: { p
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [details, setDetails] = useState<StatusResponse | null>(null);
 
   async function refresh() {
     setMessage('');
@@ -50,6 +59,7 @@ export default function PaymentConnectRow({ phoneVerified, schoolVerified }: { p
       const payload = await response.json() as StatusResponse;
       if (!response.ok) throw new Error(paymentError(payload, 'Could not check payout status.'));
       setStatus(payload.status);
+      setDetails(payload);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not check payout status.');
     } finally {
@@ -122,6 +132,13 @@ export default function PaymentConnectRow({ phoneVerified, schoolVerified }: { p
       <div>
         <strong>{loading ? 'Checking payments…' : state.title}</strong>
         <span>{loading ? 'Syncing Stripe status' : state.detail}</span>
+        {!loading && details?.payoutAccount && <div className="paymentPayoutFacts" aria-label="Payout account details">
+          <b>{details.payoutAccount.bankName} ·••{details.payoutAccount.last4 || '••••'}</b>
+          <small>{[details.payoutAccount.currency, details.payoutAccount.country].filter(Boolean).join(' · ')} payout account</small>
+        </div>}
+        {!loading && status !== 'NOT_STARTED' && Boolean(details?.requirementsDue) && <small className="paymentRequirementSummary">
+          {details?.requirementsDue} item{details?.requirementsDue === 1 ? '' : 's'} required by Stripe
+        </small>}
         <a className="paymentMoneyLink" href="/money">View Aspire Money →</a>
         <small>Bank account and routing details are entered and stored only with Stripe. Aspire never receives them.</small>
         {message && <small className="paymentConnectMessage" role="status">{message}</small>}
