@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run test:brain && next build",
+    "build": "npm run test:brain && npm run test:payments && next build",
     "start": "next start",
     "test:brain": "node scripts/aspire-brain-regression.mjs",
+    "test:payments": "node --experimental-strip-types --test scripts/stripe-payment-reconciliation.test.ts",
     "seo:indexnow": "node scripts/indexnow-submit.mjs --all"
   },
   "dependencies": {
