@@ -8,9 +8,6 @@ import { fetchMyRole } from '../../lib/supabase/trust';
 import type { AppRole } from '../../lib/supabase/trust';
 import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
-import SchoolVerificationCard from '../SchoolVerificationCard';
-import PhoneVerificationCard from '../PhoneVerificationCard';
-import MfaSecurityCard from '../MfaSecurityCard';
 import ProfileAvatar from '../ProfileAvatar';
 import UiIcon from '../UiIcon';
 import PaymentConnectRow from '../PaymentConnectRow';
@@ -32,6 +29,13 @@ type ProfileView = {
   joinedAt: string;
   completedCount: number;
   profileVisibility: ProfileVisibility;
+};
+
+type RecentActivity = {
+  id: string;
+  title: string;
+  category: string;
+  updatedAt: string;
 };
 
 type ProfileDraft = {
@@ -67,6 +71,12 @@ function formatJoined(value: string) {
   return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
 }
 
+function formatActivityDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<ProfileView | null>(null);
@@ -76,6 +86,8 @@ export default function ProfilePage() {
   const [saveMessage, setSaveMessage] = useState('');
   const [loadError, setLoadError] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [mfaEnabled, setMfaEnabled] = useState(false);
   const [draft, setDraft] = useState<ProfileDraft>({ name: '', major: '', graduationYear: '', bio: '', interests: [] });
 
   useEffect(() => {
@@ -130,6 +142,36 @@ export default function ProfilePage() {
           await supabase.rpc('repair_my_profile_campus');
         }
 
+        const [{ data: recentConnectionRows }, mfaResult] = await Promise.all([
+          supabase
+            .from('connections')
+            .select('id,request_id,updated_at')
+            .eq('status', 'completed')
+            .or(`requester_id.eq.${user.id},responder_id.eq.${user.id}`)
+            .order('updated_at', { ascending: false })
+            .limit(3),
+          supabase.auth.mfa.listFactors().catch(() => ({ data: null, error: null }))
+        ]);
+
+        const recentRequestIds = [...new Set((recentConnectionRows ?? []).map((item) => String(item.request_id)).filter(Boolean))];
+        let nextRecentActivity: RecentActivity[] = [];
+        if (recentRequestIds.length) {
+          const { data: recentRequestRows } = await supabase
+            .from('requests')
+            .select('id,title,category')
+            .in('id', recentRequestIds);
+          const recentRequestMap = new Map((recentRequestRows ?? []).map((item) => [String(item.id), item]));
+          nextRecentActivity = (recentConnectionRows ?? []).map((item) => {
+            const request = recentRequestMap.get(String(item.request_id));
+            return {
+              id: String(item.id),
+              title: typeof request?.title === 'string' && request.title.trim() ? request.title.trim() : 'Completed connection',
+              category: typeof request?.category === 'string' && request.category.trim() ? request.category.trim() : 'Connection',
+              updatedAt: String(item.updated_at || '')
+            };
+          });
+        }
+
         const nextProfile: ProfileView = {
           name: typeof backendName === 'string' && backendName.trim()
             ? backendName.trim()
@@ -153,6 +195,8 @@ export default function ProfilePage() {
 
         if (cancelled) return;
         setProfile(nextProfile);
+        setRecentActivity(nextRecentActivity);
+        setMfaEnabled(Boolean(mfaResult.data?.all?.some((factor) => factor.status === 'verified')));
         setDraft({ name: nextProfile.name, major: nextProfile.major, graduationYear: nextProfile.graduationYear?.toString() || '', bio: nextProfile.bio, interests: nextProfile.interests });
         setRole(nextRole);
       } catch (error) {
@@ -257,43 +301,45 @@ export default function ProfilePage() {
     <main className="profilePage profilePagePolished">
       <AppDock active="profile" />
 
-      <div className="profileShell profileShellPolished">
-        <header className="profileTop profileTopPolished">
-          <div className="profilePageHeading">
-            <span>CAMPUS IDENTITY</span>
-            <h1>Profile</h1>
-            <p>Your campus profile, activity, and trust signals in one place.</p>
-          </div>
-          <a className="profileBack" href="/settings"><UiIcon name="settings" />Settings</a>
-        </header>
+      <div className="profileShell profileShellPolished profileDashboard">
+        <section className="profileDashboardMain">
+          <section className="profileHero profileHeroPolished profileDashboardHero">
+            <ProfileAvatar initialUrl={profile.avatarUrl} initials={initials} name={profile.name} />
 
-        <section className="profileHero profileHeroPolished">
-          <ProfileAvatar initialUrl={profile.avatarUrl} initials={initials} name={profile.name} />
+            <div className="profileHeroCopy">
+              <h1>{profile.name}</h1>
+              <div className="profileDashboardSchool">
+                <UiIcon name="school" />
+                <span><strong>{profile.school}</strong>{profile.major && <small>{profile.major}{profile.graduationYear ? ` · Class of ${profile.graduationYear}` : ''}</small>}</span>
+              </div>
 
-          <div className="profileHeroCopy">
-            <div className="profileHeroMeta">
-              <span>{profile.schoolVerified ? 'VERIFIED STUDENT' : 'CAMPUS PROFILE'}</span>
-              {role !== 'member' && <b>{role.toUpperCase()}</b>}
+              <p className="profileDashboardIntro">{profile.bio || 'Add a short intro so people on campus know a little about you.'}</p>
+              {profile.interests.length > 0 && <p className="profileDashboardInterestLine">{profile.interests.join(' · ')}</p>}
+
+              <div className="profileActivityLine">
+                <span><UiIcon name="users" /><strong>{profile.completedCount}</strong> completed connection{profile.completedCount === 1 ? '' : 's'}</span>
+                <span><UiIcon name="calendar" />Joined {formatJoined(profile.joinedAt)}</span>
+              </div>
+
+              <div className="profileHeroActions">
+                <button type="button" onClick={beginEdit}>Edit profile</button>
+                <a href="/connections"><UiIcon name="message" />Messages</a>
+              </div>
+              {saveMessage && <p className="authMessage" role="status">{saveMessage}</p>}
             </div>
-            <h2>{profile.name} {profile.schoolVerified && <span aria-label="Verified">✓</span>}</h2>
-            <p>{profile.school}</p>
-            {identityLine && <div className="studentProfileMetaLine"><span>{identityLine}</span></div>}
-            <p className="studentProfileBio">{profile.bio || 'Add a short signature so your connections know a little about you.'}</p>
-            <div className="studentProfileInterests">
+          </section>
+
+          <section className="profileDashboardCard profileAboutCard">
+            <div className="profileDashboardCardHead">
+              <h2>About</h2>
+              <button type="button" onClick={beginEdit}>Edit <UiIcon name="edit" /></button>
+            </div>
+            <p>{profile.bio || 'Tell your campus what you are into, what you are working on, or what kind of people you would like to meet.'}</p>
+            <div className="profileAboutInterests">
               {profile.interests.length
                 ? profile.interests.map((interest) => <span key={interest}>{interest}</span>)
                 : <button type="button" onClick={beginEdit}>+ Add interests</button>}
             </div>
-            <div className="profileActivityLine">
-              <span><strong>{profile.completedCount}</strong> completed connection{profile.completedCount === 1 ? '' : 's'}</span>
-              <span>Joined {formatJoined(profile.joinedAt)}</span>
-              {profile.schoolVerified && <span><strong>✓</strong> campus verified</span>}
-            </div>
-            <div className="profileHeroActions">
-              <button type="button" onClick={beginEdit}>Edit profile</button>
-              <a href="/connections"><UiIcon name="message" />Messages</a>
-            </div>
-            {saveMessage && <p className="authMessage" role="status">{saveMessage}</p>}
 
             {editing && (
               <div className="studentEditPanel">
@@ -307,43 +353,59 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
-          </div>
+          </section>
 
+          <section className="profileDashboardCard profileRecentCard">
+            <div className="profileDashboardCardHead">
+              <h2>Recent activity</h2>
+              <a href="/activity">View all <UiIcon name="chevron" /></a>
+            </div>
+            {recentActivity.length ? (
+              <div className="profileRecentList">
+                {recentActivity.map((item) => (
+                  <a key={item.id} href="/connections" className="profileRecentRow">
+                    <i><UiIcon name="activity" /></i>
+                    <span><strong>{item.title}</strong><small>{item.category}</small></span>
+                    <time>{formatActivityDate(item.updatedAt)}</time>
+                    <b>Completed</b>
+                    <UiIcon name="chevron" />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <div className="profileRecentEmpty">
+                <strong>No completed activity yet</strong>
+                <span>Your completed connections will show up here.</span>
+              </div>
+            )}
+          </section>
         </section>
 
-        <section className="profileOverview">
-          <div className="profileTrustPanel" id="trust-passport">
-            <div className="profileSectionHeading">
-              <div><span>TRUST & VERIFICATION</span><h2>Verification</h2></div>
-              <p>{verifiedSignals} of 3 trust signals complete. Private details stay private.</p>
+        <aside className="profileDashboardAside">
+          <section className="profileDashboardCard profileTrustSummary">
+            <div className="profileDashboardAsideTitle"><UiIcon name="shield" /><h2>Trust & verification</h2><a href="/settings#security"><UiIcon name="chevron" /></a></div>
+            <div className="profileTrustSummaryRows">
+              <a href="/settings#security"><i className={profile.schoolVerified ? 'verified' : ''}><UiIcon name={profile.schoolVerified ? 'check' : 'school'} /></i><span><strong>{profile.school} email</strong><small>{profile.schoolVerified ? 'Verified student' : 'Verification available'}</small></span><UiIcon name="chevron" /></a>
+              <a href="/settings#security"><i className={profile.phoneVerified ? 'verified' : ''}><UiIcon name={profile.phoneVerified ? 'check' : 'phone'} /></i><span><strong>Phone number</strong><small>{profile.phoneVerified ? `Verified · •••• ${profile.phone.slice(-4)}` : 'Not verified'}</small></span><UiIcon name="chevron" /></a>
+              <a href="/settings#security"><i className={mfaEnabled ? 'verified' : ''}><UiIcon name={mfaEnabled ? 'check' : 'shield'} /></i><span><strong>Two-step verification</strong><small>{mfaEnabled ? 'Enabled' : 'Not enabled'}</small></span><UiIcon name="chevron" /></a>
             </div>
+          </section>
 
-            <div className="profileTrustCards profileTrustCardsExpanded">
-              <SchoolVerificationCard school={profile.school} />
-              <MfaSecurityCard />
-              <PhoneVerificationCard initialPhone={profile.phone} initiallyVerified={profile.phoneVerified} />
-            </div>
-          </div>
+          <section className="profileDashboardCard profilePayoutCard">
+            <div className="profileDashboardAsideTitle"><UiIcon name="wallet" /><h2>Seller tools</h2><a href="/money"><UiIcon name="chevron" /></a></div>
+            <h3>Set up payouts</h3>
+            <p>Add a bank account securely in Stripe to receive earnings.</p>
+            <PaymentConnectRow phoneVerified={profile.phoneVerified} schoolVerified={profile.schoolVerified} />
+          </section>
 
-          <aside className="studentIdentityAside">
-            <div className="studentIdentityAsideCard profilePayoutCard">
-              <span>SELLER TOOLS</span>
-              <h3>Seller payouts</h3>
-              <p>Connect Stripe when you are ready to receive protected Aspire payments.</p>
-              <PaymentConnectRow phoneVerified={profile.phoneVerified} schoolVerified={profile.schoolVerified} />
-            </div>
-
-            <div className="studentIdentityAsideCard profileQuickLinks">
-              <span>ACCOUNT</span>
-              <a href="/settings#privacy"><span><strong>Profile audience</strong><small>{audienceLabel}</small></span><UiIcon name="chevron" /></a>
-              <a href="/activity"><span><strong>My activity</strong><small>Connections and requests</small></span><UiIcon name="chevron" /></a>
-              <a href="/settings#privacy"><span><strong>Privacy & security</strong><small>Visibility, security and account controls</small></span><UiIcon name="chevron" /></a>
-              <a href="/settings"><span><strong>Settings</strong><small>Notifications, appearance and preferences</small></span><UiIcon name="chevron" /></a>
-            </div>
-          </aside>
-        </section>
-
-        <footer className="profileOperator">Aspire 101 is a product operated by Cloudora Labs, Inc.</footer>
+          <section className="profileDashboardCard profileQuickLinks">
+            <div className="profileDashboardAsideTitle"><UiIcon name="settings" /><h2>Account</h2></div>
+            <a href="/settings#privacy"><span><strong>Profile audience</strong><small>{audienceLabel}</small></span><UiIcon name="chevron" /></a>
+            <a href="/activity"><span><strong>My activity</strong><small>Connections and requests</small></span><UiIcon name="chevron" /></a>
+            <a href="/settings#privacy"><span><strong>Privacy & security</strong><small>Account security and preferences</small></span><UiIcon name="chevron" /></a>
+            <a href="/settings"><span><strong>Settings</strong><small>Notifications, appearance and more</small></span><UiIcon name="chevron" /></a>
+          </section>
+        </aside>
       </div>
     </main>
   );
