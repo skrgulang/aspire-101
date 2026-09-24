@@ -100,7 +100,7 @@ export default function ProfilePage() {
     void (async () => {
       try {
         const { data, error: authError } = await supabase.auth.getUser();
-        if (authError) throw authError;
+        if (authError && authError.name !== 'AuthSessionMissingError') throw authError;
         const user = data.user;
         if (!user) {
           router.replace('/login?next=%2Fprofile');
