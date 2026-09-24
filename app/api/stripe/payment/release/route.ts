@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    const [paymentResult, completionsResult, marketOrderResult, resolutionCaseResult] = await Promise.all([
+    const [paymentResult, completionsResult, marketOrderResult, resolutionCaseResult, requestResult] = await Promise.all([
       supabase.from('connection_payments').select('*').eq('connection_id', connectionId).maybeSingle(),
       supabase.from('connection_completion_confirmations').select('user_id').eq('connection_id', connectionId),
       supabase.from('market_orders').select('*').eq('connection_id', connectionId).maybeSingle(),
@@ -49,8 +49,20 @@ export async function POST(request: Request) {
         .eq('connection_id', connectionId)
         .in('status', ['submitted', 'under_review'])
         .limit(1)
-        .maybeSingle()
+        .maybeSingle(),
+      supabase.from('requests').select('kind').eq('id', connection.request_id).maybeSingle()
     ]);
+
+    if (paymentResult.error) throw paymentResult.error;
+    if (completionsResult.error) throw completionsResult.error;
+    if (marketOrderResult.error) throw marketOrderResult.error;
+    if (requestResult.error) throw requestResult.error;
+    if (requestResult.data?.kind === 'buy_sell' && !marketOrderResult.data) {
+      return NextResponse.json({
+        error: 'The marketplace order is unavailable, so seller payout is paused for review.',
+        code: 'MARKET_ORDER_MISSING'
+      }, { status: 409 });
+    }
 
     const payment = paymentResult.data;
     const completions = completionsResult.data;
@@ -68,11 +80,12 @@ export async function POST(request: Request) {
     const providerNet = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
     const customerTotal = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
     const bookedPlatformFee = Number(payment.platform_fee_cents ?? 0);
+    const refundedTotal = Number(payment.refunded_total_cents ?? 0);
     const feeSnapshot = payment.fee_snapshot && typeof payment.fee_snapshot === 'object'
       ? payment.fee_snapshot as Record<string, unknown>
       : {};
     const shippingRateCents = Number(feeSnapshot.shipping_rate_cents ?? 0);
-    const expectedPlatformFee = customerTotal - providerNet - shippingRateCents;
+    const expectedPlatformFee = customerTotal - refundedTotal - providerNet - shippingRateCents;
 
     // The seller transfer may contain seller proceeds only. The platform fee belongs
     // to Cloudora Labs / Aspire and remains on the platform Stripe balance; carrier
@@ -81,6 +94,8 @@ export async function POST(request: Request) {
       !Number.isInteger(customerTotal) ||
       !Number.isInteger(providerNet) ||
       !Number.isInteger(bookedPlatformFee) ||
+      !Number.isInteger(refundedTotal) ||
+      refundedTotal < 0 ||
       !Number.isInteger(shippingRateCents) ||
       shippingRateCents < 0 ||
       expectedPlatformFee < 0 ||
@@ -253,7 +268,19 @@ export async function POST(request: Request) {
       throw claimError;
     }
 
-    const claimedAt = typeof claimedAtValue === 'string' ? claimedAtValue : String(claimedAtValue || '');
+    const { data: attempted, error: attemptError } = await supabase.from('connection_payments')
+      .update({
+        stripe_transfer_attempted_at: payment.stripe_transfer_attempted_at || new Date().toISOString(),
+        stripe_transfer_attempted_amount_cents: providerNet,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', payment.id).eq('status', 'secured')
+      .eq('release_claimed_at', claimedAtValue)
+      .or(`stripe_transfer_attempted_amount_cents.is.null,stripe_transfer_attempted_amount_cents.eq.${providerNet}`)
+      .select('id').maybeSingle();
+    if (attemptError) throw attemptError;
+    if (!attempted) throw new Error('PAYOUT_RELEASE_CLAIM_CHANGED');
+
     let transfer: StripeTransfer;
     try {
       transfer = await stripeFormRequest<StripeTransfer>('/v1/transfers', {
@@ -272,13 +299,13 @@ export async function POST(request: Request) {
         'metadata[admin_release_authorized]': marketOrder?.admin_release_authorized_at ? 'true' : 'false'
       }, { idempotencyKey: `aspire_release_${payment.id}` });
     } catch (error) {
-      if (claimedAt) {
-        const { error: clearClaimError } = await supabase.rpc('clear_connection_payment_release_claim', {
-          p_payment_id: payment.id,
-          p_claimed_at: claimedAt
-        });
-        if (clearClaimError) console.error('Could not clear failed payout release claim', clearClaimError);
-      }
+      // A network error can arrive after Stripe created the transfer. Preserve
+      // the claim so the reconciler checks Stripe before anyone retries payout.
+      console.error('Seller transfer result uncertain; awaiting Stripe reconciliation', {
+        paymentId: payment.id,
+        claimedAt: claimedAtValue,
+        error
+      });
       throw error;
     }
 
