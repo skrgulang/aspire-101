@@ -74,6 +74,7 @@ import './legal.css';
 import './production-typography.css';
 import './mobile-web-parity.css';
 import './editorial-type.css';
+import './marketing-solid.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond, Space_Grotesk } from 'next/font/google';
 import SiteFooter from './SiteFooter';
