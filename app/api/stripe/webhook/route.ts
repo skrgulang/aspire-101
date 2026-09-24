@@ -71,6 +71,10 @@ async function syncStripeMarketplaceRiskCase(
   const evidenceDueBy = eventType === 'charge.dispute.created'
     ? stripeTimestamp(object.evidence_details?.due_by)
     : null;
+  const firstActionDueBy = new Date(Math.min(
+    Date.now() + 60 * 60 * 1000,
+    evidenceDueBy ? new Date(evidenceDueBy).getTime() : Number.POSITIVE_INFINITY
+  )).toISOString();
 
   const { error: orderUpdateError } = await supabase
     .from('market_orders')
@@ -85,23 +89,27 @@ async function syncStripeMarketplaceRiskCase(
 
   const { data: existing, error: existingError } = await supabase
     .from('market_disputes')
-    .select('id')
+    .select('id,status,evidence')
     .eq('stripe_case_id', stripeCaseId)
     .maybeSingle();
   requireDatabaseWrite(existingError);
 
   if (existing) {
+    const alreadySubmitted = Array.isArray(existing.evidence) && existing.evidence.some(
+      (item: unknown) => item && typeof item === 'object' && (item as { action?: string }).action === 'submitted_to_stripe'
+    );
     const { error } = await supabase
       .from('market_disputes')
       .update({
-        status: 'under_review',
         details,
         stripe_status: String(object.status || 'open'),
         stripe_status_updated_at: now,
         evidence_due_by: evidenceDueBy,
+        ...(!alreadySubmitted ? { next_action_due_at: firstActionDueBy } : {}),
         updated_at: now
       })
-      .eq('id', existing.id);
+      .eq('id', existing.id)
+      .in('status', ['open', 'under_review']);
     requireDatabaseWrite(error);
   } else {
     const { error } = await supabase
@@ -122,7 +130,8 @@ async function syncStripeMarketplaceRiskCase(
         stripe_case_id: stripeCaseId,
         stripe_status: String(object.status || 'open'),
         stripe_status_updated_at: now,
-        evidence_due_by: evidenceDueBy
+        evidence_due_by: evidenceDueBy,
+        next_action_due_at: firstActionDueBy
       });
     requireDatabaseWrite(error);
   }
@@ -173,6 +182,29 @@ async function syncStripeMarketplaceRiskCase(
     p_message_id: null
   });
   requireDatabaseWrite(sellerNoticeError);
+
+  // Card disputes have an external deadline. Notify staff on receipt instead of
+  // waiting for the periodic queue escalation; notification keys dedupe retries.
+  const { data: staff, error: staffError } = await supabase
+    .from('user_roles').select('user_id').in('role', ['admin', 'moderator']);
+  requireDatabaseWrite(staffError);
+  for (const staffId of new Set((staff ?? []).map((row) => String(row.user_id)))) {
+    const { error: staffNoticeError } = await supabase.rpc('push_notification', {
+      p_user_id: staffId,
+      p_kind: 'market_order',
+      p_event_key: `market-stripe-risk-staff:${stripeCaseId}:${staffId}`,
+      p_title: eventType === 'charge.dispute.created' ? 'Stripe card dispute: action needed' : 'Stripe fraud warning: action needed',
+      p_body: evidenceDueBy
+        ? `Review order ${order.id.slice(0, 8).toUpperCase()} and submit evidence before ${evidenceDueBy}.`
+        : `Review order ${order.id.slice(0, 8).toUpperCase()} and pause seller release.`,
+      p_actor_id: null,
+      p_request_id: order.request_id,
+      p_response_id: null,
+      p_connection_id: order.connection_id,
+      p_message_id: null
+    });
+    requireDatabaseWrite(staffNoticeError);
+  }
 }
 
 async function recordStripeDisputeUpdate(
