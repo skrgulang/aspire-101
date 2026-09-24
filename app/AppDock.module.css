@@ -390,11 +390,11 @@
     height: 64px;
     padding: 6px 7px;
     gap: 3px;
-    border-radius: 21px;
+    border-radius: 20px;
   }
   .navItem {
     min-height: 50px;
-    border-radius: 15px;
+    border-radius: 14px;
   }
 }
 
@@ -406,11 +406,11 @@
     height: 62px;
     padding: 5px;
     gap: 2px;
-    border-radius: 19px;
+    border-radius: 18px;
   }
   .navItem {
     min-height: 50px;
-    border-radius: 13px;
+    border-radius: 12px;
   }
 }
 
@@ -469,7 +469,7 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     border: 1px solid rgba(255,255,255,.10);
-    border-radius: 24px;
+    border-radius: 20px;
     background: #111210;
     color: #f6f2e9;
     box-shadow: 0 26px 80px rgba(0,0,0,.48);
@@ -516,7 +516,7 @@
     display: grid;
     place-items: center;
     border: 1px solid rgba(255,255,255,.10);
-    border-radius: 50%;
+    border-radius: 11px;
     background: rgba(255,255,255,.035);
     color: #e6e1d8;
     font: inherit;
@@ -541,7 +541,7 @@
     gap: 8px;
     align-items: center;
     border: 1px solid rgba(255,255,255,.075);
-    border-radius: 14px;
+    border-radius: 12px;
     background: #171817;
     color: #efebe3;
   }
