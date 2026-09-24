@@ -318,7 +318,7 @@ export async function GET(request: Request) {
         });
         if (finalizeError) {
           const message = String(finalizeError.message || '');
-          if (!/PAYOUT_HOLD_OPEN|CONNECTION_CANCELLED|MARKET_RELEASE_NOT_READY|TRANSFER_AMOUNT_CHANGED/.test(message)) throw finalizeError;
+          if (!/PAYOUT_HOLD_OPEN|CONNECTION_CANCELLED|MARKET_RELEASE_NOT_READY|MARKET_ORDER_MISSING|COMPLETION_NOT_READY|TRANSFER_AMOUNT_CHANGED/.test(message)) throw finalizeError;
           heldReason = 'dispute';
         }
       } else if (current.status === 'disputed' || current.status === 'refunded') {

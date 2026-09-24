@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    const [paymentResult, completionsResult, marketOrderResult, resolutionCaseResult] = await Promise.all([
+    const [paymentResult, completionsResult, marketOrderResult, resolutionCaseResult, requestResult] = await Promise.all([
       supabase.from('connection_payments').select('*').eq('connection_id', connectionId).maybeSingle(),
       supabase.from('connection_completion_confirmations').select('user_id').eq('connection_id', connectionId),
       supabase.from('market_orders').select('*').eq('connection_id', connectionId).maybeSingle(),
@@ -49,8 +49,20 @@ export async function POST(request: Request) {
         .eq('connection_id', connectionId)
         .in('status', ['submitted', 'under_review'])
         .limit(1)
-        .maybeSingle()
+        .maybeSingle(),
+      supabase.from('requests').select('kind').eq('id', connection.request_id).maybeSingle()
     ]);
+
+    if (paymentResult.error) throw paymentResult.error;
+    if (completionsResult.error) throw completionsResult.error;
+    if (marketOrderResult.error) throw marketOrderResult.error;
+    if (requestResult.error) throw requestResult.error;
+    if (requestResult.data?.kind === 'buy_sell' && !marketOrderResult.data) {
+      return NextResponse.json({
+        error: 'The marketplace order is unavailable, so seller payout is paused for review.',
+        code: 'MARKET_ORDER_MISSING'
+      }, { status: 409 });
+    }
 
     const payment = paymentResult.data;
     const completions = completionsResult.data;

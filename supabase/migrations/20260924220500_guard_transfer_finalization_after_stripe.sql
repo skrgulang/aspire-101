@@ -32,6 +32,7 @@ declare
   v_payment public.connection_payments;
   v_connection public.connections;
   v_order public.market_orders;
+  v_request_kind text;
   v_now timestamptz := now();
   v_duplicate boolean := false;
 begin
@@ -57,11 +58,21 @@ begin
     select * into v_connection from public.connections where id=v_payment.connection_id for update;
     if not found or v_connection.status='cancelled' then raise exception 'CONNECTION_CANCELLED'; end if;
     select * into v_order from public.market_orders where connection_id=v_payment.connection_id for update;
-    if found and (v_order.status <> 'release_ready'
+    select kind into v_request_kind from public.requests where id=v_payment.request_id;
+    if v_request_kind = 'buy_sell' and v_order.id is null then
+      raise exception 'MARKET_ORDER_MISSING';
+    end if;
+    if v_order.id is not null and (v_order.status <> 'release_ready'
        or (not (v_order.seller_handed_off_at is not null and v_order.buyer_received_at is not null)
            and (v_order.admin_release_authorized_at is null or v_order.admin_release_authorized_by is null))) then
       raise exception 'MARKET_RELEASE_NOT_READY';
     end if;
+    if v_order.id is null and not (
+      exists (select 1 from public.connection_completion_confirmations
+        where connection_id=v_payment.connection_id and user_id=v_connection.requester_id)
+      and exists (select 1 from public.connection_completion_confirmations
+        where connection_id=v_payment.connection_id and user_id=v_connection.responder_id)
+    ) then raise exception 'COMPLETION_NOT_READY'; end if;
     if v_payment.refund_claimed_at is not null or exists (
       select 1 from public.payment_refund_requests where payment_id=v_payment.id
         and status in ('open','under_review','approved')
