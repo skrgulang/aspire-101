@@ -49,6 +49,7 @@ type RecoverableTransferPayment = {
   stripe_transfer_reversal_id: string | null;
   provider_net_cents: number | null;
   provider_amount_cents: number | null;
+  stripe_transfer_attempted_amount_cents: number | null;
 };
 
 async function alertManualRecovery(
@@ -85,7 +86,8 @@ async function reverseHeldTransfer(
   reason: 'refund' | 'dispute'
 ) {
   if (payment.stripe_transfer_reversal_id) return false;
-  const amount = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+  const amount = Number(payment.stripe_transfer_attempted_amount_cents
+    ?? payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
   if (!Number.isInteger(amount) || amount <= 0) throw new Error('Invalid seller transfer reversal amount.');
   const { data: claim, error: claimError } = await supabase.rpc('claim_connection_payment_transfer_recovery', {
     p_payment_id: payment.id, p_reason: reason
@@ -247,7 +249,7 @@ export async function GET(request: Request) {
   // leave the transfer at Stripe without a local transfer ID. Reconcile against
   // Stripe after the request has had time to finish, even if the webhook was missed.
   const { data: stalled, error: stalledError } = await supabase.from('connection_payments')
-    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at,stripe_transfer_attempted_at')
+    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents,release_claimed_at,stripe_transfer_attempted_at')
     .eq('stripe_livemode', currentMode)
     .eq('status', 'secured')
     .in('transfer_recovery_status', ['not_required', 'pending'])
@@ -260,7 +262,7 @@ export async function GET(request: Request) {
   const terminal: NonNullable<typeof stalled> = [];
   for (let offset = 0; offset < 1000; offset += 100) {
     const { data: page, error: pageError } = await supabase.from('connection_payments')
-      .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at,stripe_transfer_attempted_at')
+      .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents,release_claimed_at,stripe_transfer_attempted_at')
       .eq('stripe_livemode', currentMode)
       .in('status', ['disputed', 'refunded'])
       .in('transfer_recovery_status', ['not_required', 'pending'])
@@ -303,7 +305,7 @@ export async function GET(request: Request) {
         if (attachError) throw attachError;
       }
       const { data: current, error: currentError } = await supabase.from('connection_payments')
-        .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+        .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents,stripe_transfer_attempted_amount_cents')
         .eq('id', pending.id).maybeSingle();
       if (currentError) throw currentError;
       if (!current || current.stripe_transfer_id !== transfer.id) throw new Error('Transfer reference mismatch.');
