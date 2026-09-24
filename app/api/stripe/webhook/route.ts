@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { apiError, getSupabaseServiceClient, stripeFormRequest, verifyStripeWebhookSignature } from '../../../../lib/server/aspireServer';
+import { apiError, getSupabaseServiceClient, stripeFormRequest, stripeGet, stripeLivemode, verifyStripeWebhookSignature } from '../../../../lib/server/aspireServer';
+import { secureConnectionPayment } from '../../../../lib/server/stripePaymentReconciliation';
 
 type StripeEvent = {
   id: string;
@@ -378,16 +379,44 @@ export async function POST(request: Request) {
       }
     }
 
-    if (event.type === 'checkout.session.completed') {
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
-        const { error } = await supabase.from('connection_payments').update({
-          status: 'processing',
-          stripe_checkout_session_id: object.id || null,
-          stripe_payment_intent_id: objectId(object.payment_intent),
-          updated_at: new Date().toISOString()
-        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
-        requireDatabaseWrite(error);
+        const paymentIntentId = objectId(object.payment_intent);
+        if (object.payment_status === 'paid' && eventLivemode === stripeLivemode()) {
+          if (!paymentIntentId) throw new Error('STRIPE:Paid Stripe Checkout Session did not include a PaymentIntent.');
+          const intent = await stripeGet<Record<string, any>>(
+            `/v1/payment_intents/${encodeURIComponent(paymentIntentId)}`
+          );
+          if (intent.status !== 'succeeded') {
+            throw new Error('STRIPE:Stripe Checkout reported paid before its PaymentIntent succeeded.');
+          }
+          const result = await secureConnectionPayment(supabase, paymentId, {
+            paymentIntentId: String(intent.id || paymentIntentId),
+            chargeId: objectId(intent.latest_charge),
+            amountReceived: Number(intent.amount_received ?? intent.amount ?? 0),
+            currency: String(intent.currency || ''),
+            livemode: Boolean(intent.livemode),
+            aspirePaymentId: intent.metadata?.aspire_payment_id || paymentId
+          });
+          if (result.status === 'mode_mismatch') {
+            const { error: ignoredError } = await supabase.from('stripe_webhook_events').update({
+              status: 'processed',
+              processed_at: new Date().toISOString(),
+              processing_error: 'Ignored because Stripe mode did not match the Aspire payment record.'
+            }).eq('event_id', event.id).eq('status', 'received');
+            requireDatabaseWrite(ignoredError);
+            return NextResponse.json({ received: true, ignored: true, reason: 'stripe_mode_mismatch' });
+          }
+        } else {
+          const { error } = await supabase.from('connection_payments').update({
+            status: 'processing',
+            stripe_checkout_session_id: object.id || null,
+            stripe_payment_intent_id: paymentIntentId,
+            updated_at: new Date().toISOString()
+          }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['not_started', 'checkout_created', 'failed', 'processing']);
+          requireDatabaseWrite(error);
+        }
       }
     }
 
@@ -406,15 +435,15 @@ export async function POST(request: Request) {
     if (event.type === 'payment_intent.succeeded') {
       const paymentId = object.metadata?.aspire_payment_id;
       if (paymentId) {
-        const { data: payment, error: paymentError } = await supabase
-          .from('connection_payments')
-          .select('id,status,customer_total_cents,gross_amount_cents,currency,stripe_livemode')
-          .eq('id', paymentId)
-          .maybeSingle();
-        requireDatabaseWrite(paymentError);
-
-        if (!payment) throw new Error('STRIPE:Aspire payment record was not found for the completed PaymentIntent.');
-        if (payment.stripe_livemode !== eventLivemode) {
+        const result = await secureConnectionPayment(supabase, paymentId, {
+          paymentIntentId: String(object.id || ''),
+          chargeId: objectId(object.latest_charge),
+          amountReceived: Number(object.amount_received ?? object.amount ?? 0),
+          currency: String(object.currency || ''),
+          livemode: eventLivemode,
+          aspirePaymentId: paymentId
+        });
+        if (result.status === 'mode_mismatch') {
           // Valid event from the other Stripe environment. Keep the current-mode payment untouched,
           // but still close the webhook claim so Stripe does not retry it forever.
           const { error: ignoredError } = await supabase.from('stripe_webhook_events').update({
@@ -425,23 +454,6 @@ export async function POST(request: Request) {
           requireDatabaseWrite(ignoredError);
           return NextResponse.json({ received: true, ignored: true, reason: 'stripe_mode_mismatch' });
         }
-        const expectedAmount = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
-        const receivedAmount = Number(object.amount_received ?? object.amount ?? 0);
-        const expectedCurrency = String(payment.currency || 'USD').toLowerCase();
-        const receivedCurrency = String(object.currency || '').toLowerCase();
-        if (expectedAmount <= 0 || receivedAmount !== expectedAmount || receivedCurrency !== expectedCurrency) {
-          throw new Error('STRIPE:Stripe payment amount or currency did not match the Aspire fee snapshot.');
-        }
-
-        const { error } = await supabase.from('connection_payments').update({
-          status: 'secured',
-          stripe_payment_intent_id: object.id || null,
-          stripe_charge_id: objectId(object.latest_charge),
-          failure_reason: null,
-          paid_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }).eq('id', paymentId).eq('stripe_livemode', eventLivemode).in('status', ['not_started', 'checkout_created', 'processing', 'failed', 'secured']);
-        requireDatabaseWrite(error);
       }
     }
 
