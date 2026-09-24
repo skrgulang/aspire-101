@@ -9,6 +9,7 @@ import type { AppRole } from '../../lib/supabase/trust';
 import AppDock from '../AppDock';
 import AppLoader from '../AppLoader';
 import ProfileAvatar from '../ProfileAvatar';
+import ProfileBanner from '../ProfileBanner';
 import UiIcon from '../UiIcon';
 import PaymentConnectRow from '../PaymentConnectRow';
 
@@ -22,6 +23,7 @@ type ProfileView = {
   phone: string;
   phoneVerified: boolean;
   avatarUrl: string;
+  bannerUrl: string;
   major: string;
   graduationYear: number | null;
   bio: string;
@@ -142,7 +144,7 @@ export default function ProfilePage() {
           await supabase.rpc('repair_my_profile_campus');
         }
 
-        const [{ data: recentConnectionRows }, mfaResult] = await Promise.all([
+        const [{ data: recentConnectionRows }, mfaResult, { data: bannerUrl }] = await Promise.all([
           supabase
             .from('connections')
             .select('id,request_id,updated_at')
@@ -150,7 +152,8 @@ export default function ProfilePage() {
             .or(`requester_id.eq.${user.id},responder_id.eq.${user.id}`)
             .order('updated_at', { ascending: false })
             .limit(3),
-          supabase.auth.mfa.listFactors().catch(() => ({ data: null, error: null }))
+          supabase.auth.mfa.listFactors().catch(() => ({ data: null, error: null })),
+          supabase.rpc('get_my_profile_banner')
         ]);
 
         const recentRequestIds = [...new Set((recentConnectionRows ?? []).map((item) => String(item.request_id)).filter(Boolean))];
@@ -184,6 +187,7 @@ export default function ProfilePage() {
           phone: user.phone || '',
           phoneVerified: Boolean(user.phone_confirmed_at),
           avatarUrl: profileRow?.avatar_url || profileRow?.image_url || '',
+          bannerUrl: typeof bannerUrl === 'string' ? bannerUrl : '',
           major: typeof profileRow?.major === 'string' ? profileRow.major : '',
           graduationYear: typeof profileRow?.graduation_year === 'number' ? profileRow.graduation_year : null,
           bio: typeof profileRow?.bio === 'string' ? profileRow.bio : '',
@@ -294,9 +298,6 @@ export default function ProfilePage() {
   if (!profile) return <AppLoader label="Opening your profile…" detail="Campus identity" />;
 
   const initials = profile.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'A';
-  const verifiedSignals = [profile.schoolVerified, profile.phoneVerified, profile.emailVerified].filter(Boolean).length;
-  const identityLine = [profile.major || null, profile.graduationYear ? `Class of ${profile.graduationYear}` : null].filter(Boolean).join(' · ');
-
   return (
     <main className="profilePage profilePagePolished">
       <AppDock active="profile" />
@@ -304,6 +305,7 @@ export default function ProfilePage() {
       <div className="profileShell profileShellPolished profileDashboard">
         <section className="profileDashboardMain">
           <section className="profileHero profileHeroPolished profileDashboardHero">
+            <ProfileBanner initialUrl={profile.bannerUrl} />
             <ProfileAvatar initialUrl={profile.avatarUrl} initials={initials} name={profile.name} />
 
             <div className="profileHeroCopy">
