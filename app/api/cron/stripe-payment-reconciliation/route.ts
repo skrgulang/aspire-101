@@ -249,14 +249,35 @@ export async function GET(request: Request) {
   const { data: stalled, error: stalledError } = await supabase.from('connection_payments')
     .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at')
     .eq('stripe_livemode', currentMode)
-    .in('status', ['secured', 'disputed', 'refunded'])
+    .eq('status', 'secured')
     .in('transfer_recovery_status', ['not_required', 'pending'])
     .not('release_claimed_at', 'is', null)
     .lte('release_claimed_at', staleBefore)
     .order('release_claimed_at', { ascending: true }).limit(20);
   if (stalledError) errors.push(`transfer reconciliation: ${stalledError.message}`);
 
-  for (const pending of stalled ?? []) {
+  // A refund or dispute may clear release_claimed_at after the Stripe transfer
+  // request started. Sweep terminal payments independently, including records
+  // whose transfer ID never made it into our database.
+  const terminal: NonNullable<typeof stalled> = [];
+  for (let offset = 0; offset < 1000; offset += 100) {
+    const { data: page, error: pageError } = await supabase.from('connection_payments')
+      .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at')
+      .eq('stripe_livemode', currentMode)
+      .in('status', ['disputed', 'refunded'])
+      .in('transfer_recovery_status', ['not_required', 'pending'])
+      .not('transfer_group', 'is', null)
+      .order('id', { ascending: true }).range(offset, offset + 99);
+    if (pageError) {
+      errors.push(`terminal transfer reconciliation: ${pageError.message}`);
+      break;
+    }
+    terminal.push(...(page ?? []));
+    if ((page ?? []).length < 100) break;
+    if (offset === 900) errors.push('Terminal transfer reconciliation exceeded 1000 records; manual review required.');
+  }
+
+  for (const pending of [...(stalled ?? []), ...terminal]) {
     try {
       if (!pending.transfer_group) throw new Error('Transfer group missing; manual reconciliation required.');
       let transfer: ObservedTransfer;
