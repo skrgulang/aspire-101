@@ -102,12 +102,13 @@ body:has(.profileDashboard) {
 
 .profileDashboardHero h1 {
   margin: 0 0 13px;
-  font-family: var(--font-inter), system-ui, sans-serif !important;
-  font-size: clamp(40px,4.2vw,58px);
-  font-weight: 820;
-  line-height: .96;
-  letter-spacing: -.045em;
-  color: #f5f2eb;
+  font-family: var(--font-product-display), var(--font-inter), system-ui, sans-serif !important;
+  font-size: clamp(42px,4.35vw,60px);
+  font-weight: 650;
+  line-height: .94;
+  letter-spacing: -.052em;
+  color: #f6f2ea;
+  text-wrap: balance;
 }
 
 .profileDashboardSchool {
@@ -238,14 +239,15 @@ body:has(.profileDashboard) {
 .profileDashboardCardHead h2,
 .profileDashboardAsideTitle h2 {
   margin: 0;
-  font-family: var(--font-inter), system-ui, sans-serif !important;
-  font-weight: 790;
-  letter-spacing: -.035em;
+  font-family: var(--font-product-display), var(--font-inter), system-ui, sans-serif !important;
+  font-weight: 620;
+  letter-spacing: -.04em;
   color: #f2eee6;
 }
 
 .profileDashboardCardHead h2 {
-  font-size: 28px;
+  font-size: 29px;
+  line-height: 1;
 }
 
 .profileDashboardCardHead > button,
@@ -489,7 +491,8 @@ body:has(.profileDashboard) {
 
 .profileDashboardAsideTitle h2 {
   flex: 1;
-  font-size: 21px;
+  font-size: 22px;
+  line-height: 1;
 }
 
 .profileDashboardAsideTitle > a {
@@ -668,6 +671,39 @@ body:has(.profileDashboard) {
   width: 15px;
   height: 15px;
   color: #aaa49a;
+}
+
+
+/* Typography split: expressive for identity/section headlines, neutral for product controls. */
+.profileDashboardSchool,
+.profileDashboardIntro,
+.profileDashboardInterestLine,
+.profileDashboardHero .profileActivityLine,
+.profileDashboardHero .profileHeroActions,
+.profileTrustSummaryRows,
+.profilePayoutCard,
+.profileQuickLinks,
+.profileAboutCard > p,
+.profileAboutInterests,
+.profileRecentRow,
+.profileRecentEmpty,
+.profileBannerEditor > button,
+.profileBannerEditor > small {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.profileDashboardCardHead > button,
+.profileDashboardCardHead > a,
+.profileDashboardAsideTitle > a {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  letter-spacing: -.01em;
+}
+
+.profileDashboardHero h1::selection,
+.profileDashboardCardHead h2::selection,
+.profileDashboardAsideTitle h2::selection {
+  background: #ffc72c;
+  color: #171109;
 }
 
 /* Editing stays functional but visually secondary. */
