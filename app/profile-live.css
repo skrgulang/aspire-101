@@ -6,7 +6,7 @@ body:has(.profileDashboard) {
 
 .profilePagePolished {
   min-height: 100vh;
-  padding: 16px 18px 22px 168px !important;
+  padding: 16px 18px 22px 106px !important;
   background: #090909 !important;
   color: #f4f1e9 !important;
 }
@@ -33,69 +33,7 @@ body:has(.profileDashboard) {
   top: 16px;
 }
 
-/* Keep the desktop rail open on Profile so it matches the reference. */
-body:has(.profileDashboard) .signedInDock,
-body:has(.profileDashboard) .signedInDock:hover,
-body:has(.profileDashboard) .signedInDock:focus-within {
-  inset: 0 auto 0 0;
-  width: 150px;
-  padding: 18px 12px;
-  gap: 6px;
-  overflow: hidden;
-  border: 0;
-  border-right: 1px solid rgba(255,255,255,.055);
-  border-radius: 0;
-  background: #0c0c0c;
-  box-shadow: none;
-}
-
-body:has(.profileDashboard) .signedInDock > div {
-  display: none;
-}
-
-body:has(.profileDashboard) .signedInDock > a:first-child {
-  width: 56px;
-  height: 56px;
-  margin: 4px 0 22px 12px;
-  padding: 0;
-}
-
-body:has(.profileDashboard) .signedInDock > a:first-child img {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-}
-
-body:has(.profileDashboard) .signedInDock > a:first-child span {
-  display: none;
-}
-
-body:has(.profileDashboard) .signedInDock > a:not(:first-child),
-body:has(.profileDashboard) .signedInDock > button {
-  min-height: 52px;
-  padding: 0 14px;
-  gap: 12px;
-  border-radius: 12px;
-}
-
-body:has(.profileDashboard) .signedInDock a span,
-body:has(.profileDashboard) .signedInDock button span,
-body:has(.profileDashboard) .signedInDock:hover a span,
-body:has(.profileDashboard) .signedInDock:hover button span,
-body:has(.profileDashboard) .signedInDock:focus-within a span,
-body:has(.profileDashboard) .signedInDock:focus-within button span {
-  max-width: 110px;
-  overflow: visible;
-  opacity: 1;
-  transform: none;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-body:has(.profileDashboard) .signedInDock svg {
-  width: 20px;
-  height: 20px;
-}
+/* Profile uses the shared collapsible AppDock. */
 
 /* Cards */
 .profileDashboardHero,
@@ -781,43 +719,6 @@ body:has(.profileDashboard) .signedInDock svg {
 }
 
 @media (max-width: 1180px) {
-  .profilePagePolished {
-    padding-left: 104px !important;
-  }
-
-  body:has(.profileDashboard) .signedInDock,
-  body:has(.profileDashboard) .signedInDock:hover,
-  body:has(.profileDashboard) .signedInDock:focus-within {
-    inset: 12px auto 12px 12px;
-    width: 76px;
-    padding: 12px 9px;
-    border: 1px solid rgba(255,255,255,.10);
-    border-radius: 22px;
-  }
-
-  body:has(.profileDashboard) .signedInDock > div {
-    display: block;
-  }
-
-  body:has(.profileDashboard) .signedInDock > a:first-child {
-    width: auto;
-    height: 54px;
-    margin: 0 0 7px;
-    padding: 0 9px;
-  }
-
-  body:has(.profileDashboard) .signedInDock > a:first-child img {
-    width: 40px;
-    height: 40px;
-  }
-
-  body:has(.profileDashboard) .signedInDock a span,
-  body:has(.profileDashboard) .signedInDock button span {
-    max-width: 0;
-    overflow: hidden;
-    opacity: 0;
-  }
-
   .profileShellPolished.profileDashboard {
     grid-template-columns: 1fr;
   }
