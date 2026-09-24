@@ -1,5 +1,12 @@
 -- A Stripe transfer can succeed after a dispute/cancellation starts. Recheck the
 -- payment, connection and marketplace order under row locks before finalizing.
+alter table public.connection_payments
+  add column if not exists stripe_transfer_attempted_at timestamptz;
+
+create index if not exists connection_payments_transfer_attempt_reconcile_idx
+  on public.connection_payments(stripe_livemode, stripe_transfer_attempted_at)
+  where stripe_transfer_attempted_at is not null and status in ('secured','disputed','refunded');
+
 create or replace function public.finalize_connection_payment_release(
   p_payment_id uuid,
   p_transfer_id text
