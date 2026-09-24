@@ -247,26 +247,25 @@ export async function GET(request: Request) {
   // leave the transfer at Stripe without a local transfer ID. Reconcile against
   // Stripe after the request has had time to finish, even if the webhook was missed.
   const { data: stalled, error: stalledError } = await supabase.from('connection_payments')
-    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at')
+    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at,stripe_transfer_attempted_at')
     .eq('stripe_livemode', currentMode)
     .eq('status', 'secured')
     .in('transfer_recovery_status', ['not_required', 'pending'])
-    .not('release_claimed_at', 'is', null)
-    .lte('release_claimed_at', staleBefore)
-    .order('release_claimed_at', { ascending: true }).limit(20);
+    .or(`release_claimed_at.lte.${staleBefore},stripe_transfer_attempted_at.lte.${staleBefore},stripe_transfer_id.not.is.null`)
+    .order('updated_at', { ascending: false }).limit(100);
   if (stalledError) errors.push(`transfer reconciliation: ${stalledError.message}`);
 
   // A refund or dispute may clear release_claimed_at after the Stripe transfer
-  // request started. Sweep terminal payments independently, including records
-  // whose transfer ID never made it into our database.
+  // request started. The durable attempt marker retains the audit trail.
   const terminal: NonNullable<typeof stalled> = [];
   for (let offset = 0; offset < 1000; offset += 100) {
     const { data: page, error: pageError } = await supabase.from('connection_payments')
-      .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at')
+      .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at,stripe_transfer_attempted_at')
       .eq('stripe_livemode', currentMode)
       .in('status', ['disputed', 'refunded'])
       .in('transfer_recovery_status', ['not_required', 'pending'])
       .not('transfer_group', 'is', null)
+      .or('stripe_transfer_attempted_at.not.is.null,stripe_transfer_id.not.is.null')
       .order('id', { ascending: true }).range(offset, offset + 99);
     if (pageError) {
       errors.push(`terminal transfer reconciliation: ${pageError.message}`);
@@ -279,6 +278,8 @@ export async function GET(request: Request) {
 
   for (const pending of [...(stalled ?? []), ...terminal]) {
     try {
+      if (!pending.stripe_transfer_id && pending.stripe_transfer_attempted_at
+        && pending.stripe_transfer_attempted_at > staleBefore) continue;
       if (!pending.transfer_group) throw new Error('Transfer group missing; manual reconciliation required.');
       let transfer: ObservedTransfer;
       if (pending.stripe_transfer_id) {
