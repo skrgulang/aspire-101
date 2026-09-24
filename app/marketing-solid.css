@@ -1,0 +1,243 @@
+/* Aspire public-site surface system.
+   The goal is "solid": fewer floating cards, one radius/border language,
+   restrained motion, and clearer section rhythm without changing product behavior. */
+
+.marketingHome,
+.marketingHow,
+.marketingWhyRefined,
+.marketingSafetyStage,
+.marketingCommunityRules,
+.marketingCampuses,
+.marketingProducts,
+.faqSection {
+  --aspire-surface: #12110f;
+  --aspire-surface-raised: #171511;
+  --aspire-border: rgba(255,255,255,.09);
+  --aspire-border-hover: rgba(255,194,28,.28);
+  --aspire-shadow: 0 14px 38px rgba(0,0,0,.18);
+  --aspire-shadow-hover: 0 18px 46px rgba(0,0,0,.24);
+  --aspire-radius-lg: 22px;
+  --aspire-radius-md: 16px;
+}
+
+/* Primary public cards share one physical language. */
+.marketingHome .marketingFeatureCard,
+.marketingHome .marketingRecentRail > a,
+.marketingHow .howJourneyCard,
+.marketingWhyRefined .whyOld,
+.marketingWhyRefined .whyAspireCard,
+.marketingProducts .marketingProductCard,
+.marketingSafetyStage .safetyObject,
+.marketingCommunityRules .rulesLinks > a {
+  border: 1px solid var(--aspire-border) !important;
+  border-radius: var(--aspire-radius-lg) !important;
+  box-shadow: var(--aspire-shadow) !important;
+}
+
+/* Opaque surfaces feel more deliberate than layered glass. */
+.marketingHow .howJourneyCard,
+.marketingProducts .marketingProductCard,
+.marketingSafetyStage .safetyObject,
+.marketingCommunityRules .rulesLinks > a,
+.marketingHome .marketingRecentRail > a {
+  background-color: var(--aspire-surface) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Stop permanent staggering/rotation. Motion should happen only when the user interacts. */
+.marketingHome .marketingFeatureCard:nth-child(n),
+.marketingProducts .marketingProductCard:nth-child(n),
+.marketingCampuses .marketingCampusCard:nth-child(n),
+.marketingSafetyStage .safetyObject:nth-child(n) {
+  margin-top: 0 !important;
+  transform: none !important;
+}
+
+.marketingHome .marketingFeatureCard {
+  min-height: 360px !important;
+}
+
+.marketingHome .marketingFeatureCard:hover,
+.marketingProducts .marketingProductCard:hover,
+.marketingCampuses .marketingCampusCard:hover,
+.marketingCommunityRules .rulesLinks > a:hover {
+  transform: translateY(-2px) !important;
+  border-color: var(--aspire-border-hover) !important;
+  box-shadow: var(--aspire-shadow-hover) !important;
+}
+
+/* Decorative card art can stay, but it should not constantly bob/tilt. */
+.marketingProducts .marketingProductCard::before,
+.marketingProducts .marketingProductCard:nth-child(even)::before {
+  animation: none !important;
+  transform: none !important;
+}
+
+.marketingProducts .marketingProductCard:hover::before {
+  transform: translateY(-2px) scale(1.008) !important;
+}
+
+/* Campus cards stay photographic, but lose the scrapbook rotation. */
+.marketingCampuses .marketingCampusCard {
+  border-radius: var(--aspire-radius-lg) !important;
+  border-color: var(--aspire-border) !important;
+  box-shadow: var(--aspire-shadow) !important;
+}
+
+/* The process cards read like one system instead of four separate posters. */
+.marketingHow .marketingHowGrid {
+  gap: 14px !important;
+  align-items: stretch !important;
+}
+
+.marketingHow .howJourneyCard {
+  min-height: 300px !important;
+  padding: 22px !important;
+}
+
+.marketingHow .howJourneyCard > b {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 10px !important;
+}
+
+/* Why Aspire keeps its editorial personality, but both panels feel related. */
+.marketingWhyRefined .whyCompareRefined {
+  gap: 18px !important;
+}
+
+.marketingWhyRefined .whyOld,
+.marketingWhyRefined .whyAspireCard {
+  border-color: var(--aspire-border) !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow {
+  border-radius: 12px;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive {
+  box-shadow: inset 2px 0 0 rgba(255,194,28,.9) !important;
+}
+
+/* Safety and community rules use the same density as the rest of the page. */
+.marketingSafetyStage .safetyObjectsEcosystem {
+  gap: 14px !important;
+}
+
+.marketingSafetyStage .safetyObject {
+  min-height: 172px !important;
+  padding: 20px !important;
+}
+
+.marketingCommunityRules .rulesLinks {
+  gap: 12px !important;
+}
+
+.marketingCommunityRules .rulesLinks > a {
+  min-height: 132px !important;
+  padding: 20px !important;
+}
+
+/* Recent activity should feel like product UI, not another marketing poster. */
+.marketingHome .marketingRecentRail {
+  gap: 7px !important;
+}
+
+.marketingHome .marketingRecentRail > a {
+  min-height: 60px !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+
+/* Consistent section cadence. */
+.marketingHow,
+.marketingWhyRefined,
+.marketingSafetyStage,
+.marketingCommunityRules,
+.marketingCampuses {
+  scroll-margin-top: 86px;
+}
+
+.marketingHow .marketingExpandHead,
+.marketingWhyRefined .whyIntro,
+.marketingSafetyStage .safetyHeadline,
+.marketingCampuses .marketingCampusesHead {
+  margin-bottom: clamp(28px, 3.2vw, 44px) !important;
+}
+
+/* Buttons/links: less pill-heavy, still clearly interactive. */
+.marketingHome .marketingJoin,
+.marketingHome .marketingHeroCta,
+.marketingSafetyStage .safetyMore,
+.marketingCampuses .marketingShowCampuses {
+  border-radius: 12px !important;
+}
+
+/* Keep the main hero expressive, but make its sans half match the rest of the brand. */
+.marketingHeroCopy h1 {
+  font-family: var(--font-product-display), var(--font-inter), system-ui, sans-serif !important;
+  font-weight: 620 !important;
+  line-height: .96 !important;
+  letter-spacing: -.052em !important;
+}
+
+.marketingHeroCopy h1 em {
+  font-family: var(--font-display), Georgia, serif !important;
+  font-weight: 500 !important;
+  letter-spacing: -.025em !important;
+}
+
+@media (max-width: 900px) {
+  .marketingHome .marketingFeatureCard {
+    min-height: 310px !important;
+  }
+
+  .marketingHow .marketingHowGrid,
+  .marketingSafetyStage .safetyObjectsEcosystem,
+  .marketingCommunityRules .rulesLinks {
+    gap: 10px !important;
+  }
+
+  .marketingWhyRefined .whyCompareRefined {
+    gap: 12px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .marketingHome .marketingFeatureCard,
+  .marketingHow .howJourneyCard,
+  .marketingWhyRefined .whyOld,
+  .marketingWhyRefined .whyAspireCard,
+  .marketingProducts .marketingProductCard,
+  .marketingSafetyStage .safetyObject,
+  .marketingCommunityRules .rulesLinks > a {
+    border-radius: 18px !important;
+  }
+
+  .marketingHome .marketingFeatureCard {
+    min-height: 270px !important;
+  }
+
+  .marketingHow .howJourneyCard,
+  .marketingSafetyStage .safetyObject,
+  .marketingCommunityRules .rulesLinks > a {
+    padding: 17px !important;
+  }
+
+  .marketingHome .marketingFeatureCard:hover,
+  .marketingProducts .marketingProductCard:hover,
+  .marketingCampuses .marketingCampusCard:hover,
+  .marketingCommunityRules .rulesLinks > a:hover {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketingHome .marketingFeatureCard,
+  .marketingProducts .marketingProductCard,
+  .marketingCampuses .marketingCampusCard,
+  .marketingCommunityRules .rulesLinks > a {
+    transition: none !important;
+  }
+}
