@@ -4,6 +4,17 @@ alter table public.connection_payments
   add column if not exists stripe_transfer_attempted_at timestamptz,
   add column if not exists stripe_transfer_attempted_amount_cents integer;
 
+-- The original equality predates shipping and partial refunds. Seller proceeds
+-- may shrink after a refund while the original gross charge remains immutable.
+alter table public.connection_payments
+  drop constraint if exists connection_payments_check1;
+alter table public.connection_payments
+  add constraint connection_payments_seller_balance_check
+  check (provider_amount_cents = greatest(0,
+    gross_amount_cents - platform_fee_cents
+    - coalesce((fee_snapshot->>'shipping_rate_cents')::integer,0)
+    - refunded_total_cents));
+
 create index if not exists connection_payments_transfer_attempt_reconcile_idx
   on public.connection_payments(stripe_livemode, stripe_transfer_attempted_at)
   where stripe_transfer_attempted_at is not null and status in ('secured','disputed','refunded');
