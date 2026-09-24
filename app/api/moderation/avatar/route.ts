@@ -118,6 +118,7 @@ async function scanAspirePolicy(imageUrl: string): Promise<PolicyDecision> {
 export async function POST(request: Request) {
   const supabase = getSupabaseServiceClient();
   let pendingPath = '';
+  let uploadKind: 'avatar' | 'banner' = 'avatar';
   try {
     const { user } = await getAuthenticatedUser(request);
     await enforceAiRateLimit(supabase, user.id, 'moderation', 8);
@@ -125,6 +126,7 @@ export async function POST(request: Request) {
     pendingPath = String(body.storagePath || '').trim();
     const mimeType = String(body.mimeType || '').toLowerCase();
     const kind = body.kind === 'banner' ? 'banner' : 'avatar';
+    uploadKind = kind;
 
     if (!pendingPath || !pendingPath.startsWith(`${user.id}/`)) {
       return NextResponse.json({ error: kind === 'banner' ? 'Invalid profile banner upload.' : 'Invalid profile photo upload.' }, { status: 400 });
@@ -181,14 +183,16 @@ export async function POST(request: Request) {
         ai_summary: reason,
         reviewed_at: new Date().toISOString()
       }).select('id').single();
-      await supabase.from('profiles').update({
-        avatar_moderation_status: 'rejected',
-        avatar_pending_path: null,
-        avatar_moderation_review_id: review?.id || null,
-        avatar_moderation_summary: reason
-      }).eq('id', user.id);
+      if (kind === 'avatar') {
+        await supabase.from('profiles').update({
+          avatar_moderation_status: 'rejected',
+          avatar_pending_path: null,
+          avatar_moderation_review_id: review?.id || null,
+          avatar_moderation_summary: reason
+        }).eq('id', user.id);
+      }
       await supabase.storage.from('avatar-pending').remove([pendingPath]);
-      return NextResponse.json({ ok: true, status: 'rejected', message: reason });
+      return NextResponse.json({ ok: true, status: 'rejected', message: kind === 'banner' ? 'This banner cannot be published. Choose a different image.' : reason });
     }
 
     if (policy.classification === 'uncertain') {
@@ -199,6 +203,10 @@ export async function POST(request: Request) {
         risk_score: 50,
         ai_summary: 'Automated review was uncertain. The photo stays private until a moderator reviews it.'
       }).select('id').single();
+      if (kind === 'banner') {
+        await supabase.storage.from('avatar-pending').remove([pendingPath]);
+        return NextResponse.json({ ok: true, status: 'rejected', message: 'Aspire could not confidently approve this banner. Choose a different image.' });
+      }
       await supabase.from('profiles').update({
         avatar_moderation_status: 'pending',
         avatar_pending_path: pendingPath,
@@ -261,18 +269,19 @@ export async function POST(request: Request) {
     if (pendingPath) {
       try {
         const auth = await getAuthenticatedUser(request);
-        const body = await request.clone().json().catch(() => ({})) as { kind?: string };
-        if (body.kind !== 'banner') {
+        if (uploadKind === 'avatar') {
           await supabase.from('profiles').update({
             avatar_moderation_status: 'pending',
             avatar_pending_path: pendingPath,
             avatar_moderation_summary: 'Automated review could not finish. The photo remains private for moderator review.'
           }).eq('id', auth.user.id);
+        } else {
+          await supabase.storage.from('avatar-pending').remove([pendingPath]);
         }
       } catch { /* keep fail-closed */ }
     }
-    if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again before changing your photo.' }, { status: 401 });
-    if (message === 'AI_RATE_LIMIT') return NextResponse.json({ error: 'Too many profile-photo checks. Try again later.' }, { status: 429 });
-    return NextResponse.json({ error: 'Aspire could not finish reviewing this photo. It has not been published.' }, { status: 502 });
+    if (message === 'AUTH_REQUIRED') return NextResponse.json({ error: `Sign in again before changing your ${uploadKind === 'banner' ? 'banner' : 'photo'}.` }, { status: 401 });
+    if (message === 'AI_RATE_LIMIT') return NextResponse.json({ error: 'Too many image checks. Try again later.' }, { status: 429 });
+    return NextResponse.json({ error: `Aspire could not finish reviewing this ${uploadKind === 'banner' ? 'banner' : 'photo'}. It has not been published.` }, { status: 502 });
   }
 }
