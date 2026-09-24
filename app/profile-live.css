@@ -1,405 +1,848 @@
-/* Production Profile refinement — compact, solid, and selectively expressive. */
+/* Production profile dashboard — matches the approved compact reference. */
 
-.profilePagePolished .profileTopPolished {
-  margin-bottom: 16px;
+body:has(.profileDashboard) {
+  background: #090909;
 }
 
-.profilePagePolished .profilePageHeading > span {
-  font-size: 9px;
-  letter-spacing: .14em;
+.profilePagePolished {
+  min-height: 100vh;
+  padding: 16px 18px 22px 168px !important;
+  background: #090909 !important;
+  color: #f4f1e9 !important;
 }
 
-.profilePagePolished .profilePageHeading h1 {
-  margin: 4px 0 5px;
-  font-family: var(--font-inter), system-ui, sans-serif !important;
-  font-size: clamp(31px, 3vw, 40px);
-  font-weight: 780;
-  letter-spacing: -.04em;
-}
-
-.profilePagePolished .profilePageHeading p {
-  max-width: 620px;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.profilePagePolished .profileHeroPolished {
-  grid-template-columns: 108px minmax(0, 1fr) !important;
-  gap: clamp(22px, 3vw, 34px) !important;
-  min-height: 0;
-  padding: clamp(24px, 3vw, 34px) !important;
-  align-items: center;
-  border-radius: 20px;
-  border-color: #deded9;
-  box-shadow: 0 10px 28px rgba(18,17,14,.045);
-}
-
-.profilePagePolished .profileAvatarWrap {
-  padding-top: 0;
-}
-
-.profilePagePolished .profileAvatar {
-  width: 108px;
-  height: 108px;
-  border-radius: 50%;
-  border-width: 2px;
-  box-shadow: 0 0 0 1px rgba(179,129,15,.28), 0 12px 28px rgba(35,29,14,.12);
-}
-
-.profilePagePolished .profileHeroMeta > span {
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .13em;
-}
-
-.profilePagePolished .profileHeroPolished h2 {
-  margin: 5px 0 7px;
-  font-family: var(--font-display), Georgia, serif !important;
-  font-size: clamp(43px, 4.4vw, 58px);
-  font-weight: 700;
-  line-height: .96;
-  letter-spacing: -.025em;
-}
-
-.profilePagePolished .profileHeroCopy > p {
-  font-family: var(--font-inter), system-ui, sans-serif;
-}
-
-.profilePagePolished .studentProfileMetaLine {
-  margin-top: 6px;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 12px;
-}
-
-.profilePagePolished .studentProfileBio {
-  max-width: 720px;
-  margin-top: 13px !important;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 14px !important;
-  line-height: 1.55 !important;
-}
-
-.profilePagePolished .studentProfileInterests {
-  margin-top: 12px;
-  gap: 7px;
-}
-
-.profilePagePolished .studentProfileInterests span,
-.profilePagePolished .studentProfileInterests button {
-  padding: 6px 10px;
-  border: 1px solid rgba(174,137,49,.23);
-  border-radius: 999px;
-  background: rgba(255,199,44,.055);
-  color: #805c14;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 10px;
-  font-weight: 660;
-}
-
-.profilePagePolished .studentProfileInterests button {
-  cursor: pointer;
-}
-
-.profilePagePolished .profileActivityLine {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 18px;
-  margin-top: 16px;
-  padding-top: 13px;
-  border-top: 1px solid rgba(140,130,103,.18);
-  color: #77736b;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 11px;
-}
-
-.profilePagePolished .profileActivityLine strong {
-  color: #1d1b17;
-  font-size: 13px;
-  font-weight: 740;
-}
-
-.profilePagePolished .profileActivityLine span + span::before {
-  content: '·';
-  margin-right: 18px;
-  color: #b5ad9f;
-}
-
-.profilePagePolished .profileHeroActions {
-  margin-top: 15px;
-  gap: 8px;
-}
-
-.profilePagePolished .profileHeroActions button,
-.profilePagePolished .profileHeroActions a {
-  min-height: 40px;
-  padding-inline: 15px;
-  border-radius: 10px;
-  font-family: var(--font-inter), system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 720;
-}
-
-.profilePagePolished .profileOverview {
-  margin-top: 14px;
-  grid-template-columns: minmax(0,1.42fr) minmax(310px,.68fr) !important;
-  gap: 14px !important;
+.profileShellPolished.profileDashboard {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(330px, .72fr);
+  gap: 20px;
   align-items: start;
 }
 
-.profilePagePolished .profileTrustPanel,
-.profilePagePolished .studentIdentityAsideCard {
-  border-radius: 18px;
+.profileDashboardMain,
+.profileDashboardAside {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.profileDashboardAside {
+  position: sticky;
+  top: 16px;
+}
+
+/* Keep the desktop rail open on Profile so it matches the reference. */
+body:has(.profileDashboard) .signedInDock,
+body:has(.profileDashboard) .signedInDock:hover,
+body:has(.profileDashboard) .signedInDock:focus-within {
+  inset: 0 auto 0 0;
+  width: 150px;
+  padding: 18px 12px;
+  gap: 6px;
+  overflow: hidden;
+  border: 0;
+  border-right: 1px solid rgba(255,255,255,.055);
+  border-radius: 0;
+  background: #0c0c0c;
   box-shadow: none;
 }
 
-.profilePagePolished .profileTrustPanel {
-  padding: 20px;
+body:has(.profileDashboard) .signedInDock > div {
+  display: none;
 }
 
-.profilePagePolished .profileSectionHeading {
+body:has(.profileDashboard) .signedInDock > a:first-child {
+  width: 56px;
+  height: 56px;
+  margin: 4px 0 22px 12px;
+  padding: 0;
+}
+
+body:has(.profileDashboard) .signedInDock > a:first-child img {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+}
+
+body:has(.profileDashboard) .signedInDock > a:first-child span {
+  display: none;
+}
+
+body:has(.profileDashboard) .signedInDock > a:not(:first-child),
+body:has(.profileDashboard) .signedInDock > button {
+  min-height: 52px;
+  padding: 0 14px;
+  gap: 12px;
+  border-radius: 12px;
+}
+
+body:has(.profileDashboard) .signedInDock a span,
+body:has(.profileDashboard) .signedInDock button span,
+body:has(.profileDashboard) .signedInDock:hover a span,
+body:has(.profileDashboard) .signedInDock:hover button span,
+body:has(.profileDashboard) .signedInDock:focus-within a span,
+body:has(.profileDashboard) .signedInDock:focus-within button span {
+  max-width: 110px;
+  overflow: visible;
+  opacity: 1;
+  transform: none;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+body:has(.profileDashboard) .signedInDock svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Cards */
+.profileDashboardHero,
+.profileDashboardCard {
+  border: 1px solid rgba(255,255,255,.09) !important;
+  background: linear-gradient(145deg,#151515,#101010) !important;
+  color: #f4f1e9 !important;
+  box-shadow: 0 14px 40px rgba(0,0,0,.18) !important;
+}
+
+.profileDashboardHero {
+  display: grid !important;
+  grid-template-columns: 190px minmax(0,1fr) !important;
+  gap: 34px !important;
   align-items: center;
-  margin-bottom: 13px;
+  min-height: 348px;
+  padding: 34px 36px !important;
+  border-radius: 16px !important;
 }
 
-.profilePagePolished .profileSectionHeading > div > span,
-.profilePagePolished .studentIdentityAsideCard > span {
-  font-family: var(--font-inter), system-ui, sans-serif;
+.profileDashboardHero::before {
+  content: none !important;
+}
+
+.profileDashboardHero .profileAvatarWrap {
+  padding: 0;
+  gap: 8px;
+}
+
+.profileDashboardHero .profileAvatar {
+  width: 190px !important;
+  height: 190px !important;
+  border-radius: 50% !important;
+  border: 2px solid rgba(255,199,44,.26) !important;
+  background: #262113 !important;
+  box-shadow: 0 0 0 1px rgba(255,199,44,.08), 0 18px 44px rgba(0,0,0,.28) !important;
+  font-size: 46px;
+  color: #ffc72c;
+}
+
+.profileDashboardHero .profileAvatarEditable > span {
+  right: 7px;
+  bottom: 7px;
+  width: 34px;
+  height: 34px;
+  border-color: #151515;
+}
+
+.profileDashboardHero .profileAvatarWrap > small {
+  display: block;
+  max-width: none;
+  color: #7f7b74;
   font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .11em;
 }
 
-.profilePagePolished .profileSectionHeading h2,
-.profilePagePolished .studentIdentityAsideCard h3,
-.profilePagePolished .profileQuickLinks strong,
-.profilePagePolished .profileQuickLinks small {
+.profileDashboardHero .profileHeroCopy {
+  min-width: 0;
+}
+
+.profileDashboardHero h1 {
+  margin: 0 0 13px;
   font-family: var(--font-inter), system-ui, sans-serif !important;
+  font-size: clamp(40px,4.2vw,58px);
+  font-weight: 820;
+  line-height: .96;
+  letter-spacing: -.045em;
+  color: #f5f2eb;
 }
 
-.profilePagePolished .profileSectionHeading h2 {
-  margin-top: 4px;
-  font-size: clamp(24px,2.4vw,29px);
-  font-weight: 780;
-  letter-spacing: -.025em;
+.profileDashboardSchool {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 15px;
 }
 
-.profilePagePolished .profileSectionHeading > p {
-  max-width: 330px;
+.profileDashboardSchool > svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  color: #ffc72c;
+}
+
+.profileDashboardSchool > span {
+  display: grid;
+  gap: 2px;
+}
+
+.profileDashboardSchool strong {
+  font-size: 16px;
+  font-weight: 760;
+  color: #eeeae2;
+}
+
+.profileDashboardSchool small {
+  color: #9a958c;
+  font-size: 12px;
+}
+
+.profileDashboardIntro,
+.profileDashboardInterestLine {
+  margin: 0 !important;
+  max-width: 720px;
   font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+.profileDashboardIntro {
+  color: #d8d3ca !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.profileDashboardInterestLine {
+  margin-top: 3px !important;
+  color: #b9b3a8 !important;
+  font-size: 13px !important;
+}
+
+.profileDashboardHero .profileActivityLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  margin-top: 20px;
+  padding-top: 0;
+  border-top: 0;
+  color: #aaa49a;
+  font-size: 12px;
+}
+
+.profileDashboardHero .profileActivityLine span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.profileDashboardHero .profileActivityLine span + span::before {
+  content: '·';
+  margin-right: 16px;
+  color: #726d65;
+}
+
+.profileDashboardHero .profileActivityLine svg {
+  width: 17px;
+  height: 17px;
+  color: #ded9d0;
+}
+
+.profileDashboardHero .profileActivityLine strong {
+  color: #f0ece4;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.profileDashboardHero .profileHeroActions {
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.profileDashboardHero .profileHeroActions button,
+.profileDashboardHero .profileHeroActions a {
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 11px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: #161616;
+  color: #f2eee6;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.profileDashboardHero .profileHeroActions button:first-child {
+  border-color: #ffc72c;
+  background: #ffc72c;
+  color: #171109;
+}
+
+.profileDashboardCard {
+  padding: 26px 28px;
+  border-radius: 16px;
+}
+
+.profileDashboardCardHead,
+.profileDashboardAsideTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.profileDashboardCardHead {
+  margin-bottom: 17px;
+}
+
+.profileDashboardCardHead h2,
+.profileDashboardAsideTitle h2 {
+  margin: 0;
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+  font-weight: 790;
+  letter-spacing: -.035em;
+  color: #f2eee6;
+}
+
+.profileDashboardCardHead h2 {
+  font-size: 28px;
+}
+
+.profileDashboardCardHead > button,
+.profileDashboardCardHead > a {
+  border: 0;
+  background: transparent;
+  color: #bdb7ad;
+  font: inherit;
   font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.profileAboutCard > p {
+  max-width: 880px;
+  margin: 0;
+  color: #c8c2b8;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.profileAboutInterests {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.profileAboutInterests span,
+.profileAboutInterests button {
+  min-height: 38px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 999px;
+  background: #242424;
+  color: #e5e0d7;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.profileAboutInterests button {
+  cursor: pointer;
+}
+
+.profileRecentCard {
+  padding-bottom: 22px;
+}
+
+.profileRecentList {
+  display: grid;
+  gap: 7px;
+}
+
+.profileRecentRow {
+  min-height: 70px;
+  padding: 9px 13px 9px 10px;
+  display: grid;
+  grid-template-columns: 52px minmax(0,1fr) 70px 100px 18px;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  background: #171717;
+  color: inherit;
+}
+
+.profileRecentRow > i {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(145deg,#2d2a22,#1f1f1d);
+  color: #ffc72c;
+  font-style: normal;
+}
+
+.profileRecentRow > i svg {
+  width: 23px;
+  height: 23px;
+}
+
+.profileRecentRow > span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.profileRecentRow strong {
+  overflow: hidden;
+  color: #f0ece4;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileRecentRow small,
+.profileRecentRow time {
+  color: #918b82;
+  font-size: 10px;
+}
+
+.profileRecentRow > b {
+  justify-self: center;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: #15331d;
+  color: #83db91;
+  font-size: 10px;
+}
+
+.profileRecentRow > svg {
+  width: 15px;
+  height: 15px;
+  color: #8b867e;
+}
+
+.profileRecentEmpty {
+  min-height: 110px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  border: 1px dashed rgba(255,255,255,.09);
+  border-radius: 12px;
+  color: #8f8a82;
+  text-align: center;
+}
+
+.profileRecentEmpty strong {
+  color: #d8d3ca;
+  font-size: 12px;
+}
+
+.profileRecentEmpty span {
+  font-size: 10px;
+}
+
+/* Right rail */
+.profileDashboardAside .profileDashboardCard {
+  padding: 26px 28px;
+}
+
+.profileDashboardAsideTitle {
+  min-height: 34px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.profileDashboardAsideTitle > svg {
+  width: 23px;
+  height: 23px;
+  flex: 0 0 auto;
+  color: #ffc72c;
+}
+
+.profileDashboardAsideTitle h2 {
+  flex: 1;
+  font-size: 21px;
+}
+
+.profileDashboardAsideTitle > a {
+  color: #d7d1c8;
+}
+
+.profileDashboardAsideTitle > a svg {
+  width: 18px;
+  height: 18px;
+}
+
+.profileTrustSummaryRows {
+  display: grid;
+}
+
+.profileTrustSummaryRows > a {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) 16px;
+  gap: 13px;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,.075);
+  color: inherit;
+}
+
+.profileTrustSummaryRows > a:last-child {
+  border-bottom: 0;
+}
+
+.profileTrustSummaryRows i {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #2b2b2b;
+  color: #b6b0a7;
+  font-style: normal;
+}
+
+.profileTrustSummaryRows i.verified {
+  background: #74d785;
+  color: #102316;
+}
+
+.profileTrustSummaryRows i svg {
+  width: 15px;
+  height: 15px;
+}
+
+.profileTrustSummaryRows span {
+  display: grid;
+  gap: 4px;
+}
+
+.profileTrustSummaryRows strong {
+  color: #f0ece4;
+  font-size: 12px;
+}
+
+.profileTrustSummaryRows small {
+  color: #969087;
+  font-size: 10px;
+}
+
+.profileTrustSummaryRows > a > svg {
+  width: 15px;
+  height: 15px;
+  color: #a6a097;
+}
+
+.profilePayoutCard h3 {
+  margin: 15px 0 5px;
+  color: #f0ece4;
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.profilePayoutCard > p {
+  margin: 0 0 12px;
+  color: #9c968d;
+  font-size: 10px;
   line-height: 1.45;
 }
 
-.profilePagePolished .profileTrustCardsExpanded {
-  gap: 9px;
-  align-items: start;
-}
-
-.profilePagePolished .profileTrustCards > .profileCard,
-.profilePagePolished .profileTrustCards > .trustPassportCard {
-  min-height: 0;
-  padding: 15px;
-  border-radius: 14px;
-}
-
-.profilePagePolished .profileTrustCards .profileSchoolIdCard {
-  grid-column: 1 / -1;
-}
-
-.profilePagePolished .studentIdentityAside {
-  gap: 12px;
-}
-
-.profilePagePolished .studentIdentityAsideCard {
-  padding: 18px;
-}
-
-.profilePagePolished .profilePayoutCard h3 {
-  margin: 6px 0 8px;
-  font-size: 19px;
-  font-weight: 750;
-  letter-spacing: -.02em;
-}
-
-.profilePagePolished .profilePayoutCard > p {
-  margin-bottom: 13px;
-  font-size: 11px;
-}
-
-.profilePagePolished .profilePayoutCard .paymentConnectRow {
-  grid-template-columns: minmax(0,1fr);
-  gap: 10px;
+.profilePayoutCard .paymentConnectRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
   padding: 0;
   border: 0;
   background: transparent;
 }
 
-.profilePagePolished .profilePayoutCard .paymentConnectRow > i {
+.profilePayoutCard .paymentConnectRow > i {
   display: none;
 }
 
-.profilePagePolished .profilePayoutCard .paymentConnectRow > div {
+.profilePayoutCard .paymentConnectRow > div {
   display: grid;
   gap: 4px;
 }
 
-.profilePagePolished .profilePayoutCard .paymentConnectRow strong {
-  font-size: 13px;
-  font-weight: 700;
+.profilePayoutCard .paymentConnectRow strong {
+  color: #efeae2;
+  font-size: 11px;
 }
 
-.profilePagePolished .profilePayoutCard .paymentConnectRow span,
-.profilePagePolished .profilePayoutCard .paymentConnectRow small,
-.profilePagePolished .profilePayoutCard .paymentConnectRow .paymentMoneyLink {
-  font-size: 10px !important;
+.profilePayoutCard .paymentConnectRow span,
+.profilePayoutCard .paymentConnectRow small {
+  color: #8f8980;
+  font-size: 9px;
   line-height: 1.4;
 }
 
-.profilePagePolished .profilePayoutCard .paymentConnectRow > button {
-  justify-self: start;
-  min-height: 38px;
-  padding: 0 13px;
-  font-size: 10px;
+.profilePayoutCard .paymentConnectRow > button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: 0;
+  background: #242424;
+  color: #f0ece4;
+  font-size: 11px;
+  font-weight: 760;
 }
 
-.profilePagePolished .profileQuickLinks {
+.profilePayoutCard .paymentMoneyLink {
+  margin-top: 6px;
+  color: #ffc72c !important;
+  font-size: 10px !important;
+  font-weight: 760 !important;
+}
+
+.profileQuickLinks {
   display: grid;
   gap: 0;
 }
 
-.profilePagePolished .profileQuickLinks > span {
-  margin-bottom: 5px;
+.profileQuickLinks .profileDashboardAsideTitle {
+  margin-bottom: 2px;
 }
 
-.profilePagePolished .profileQuickLinks > a {
+.profileQuickLinks > a {
+  min-height: 65px;
+  margin: 0;
+  padding: 10px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  min-height: 56px;
-  margin: 0;
-  padding: 9px 0;
-  border-top: 1px solid rgba(140,130,103,.16);
+  gap: 12px;
+  border-top: 1px solid rgba(255,255,255,.075);
   color: inherit;
-  text-decoration: none;
 }
 
-.profilePagePolished .profileQuickLinks > a > span {
+.profileQuickLinks > a > span {
+  min-width: 0;
   display: grid;
   gap: 3px;
 }
 
-.profilePagePolished .profileQuickLinks strong {
-  color: #292926;
-  font-size: 12px;
+.profileQuickLinks strong {
+  color: #eeeae2;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.profilePagePolished .profileQuickLinks small {
-  color: #7f7f79;
-  font-size: 10px;
-  font-weight: 450;
+.profileQuickLinks small {
+  color: #918b82;
+  font-size: 9px;
   line-height: 1.35;
 }
 
-.profilePagePolished .profileQuickLinks > a:hover strong {
-  color: #a87807;
+.profileQuickLinks > a > svg {
+  width: 15px;
+  height: 15px;
+  color: #aaa49a;
 }
 
-html[data-aspire-theme='dark'] .profilePagePolished .profileHeroPolished,
-html[data-aspire-theme='dark'] .profilePagePolished .profileTrustPanel,
-html[data-aspire-theme='dark'] .profilePagePolished .studentIdentityAsideCard {
-  background: #171715;
-  border-color: #30302c;
+/* Editing stays functional but visually secondary. */
+.profileAboutCard .studentEditPanel {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-color: rgba(255,255,255,.08);
 }
 
-html[data-aspire-theme='dark'] .profilePagePolished .profileHeroPolished {
-  background: linear-gradient(145deg,#191918,#131312) !important;
-  box-shadow: 0 14px 34px rgba(0,0,0,.22);
+.profileAboutCard .studentEditGrid input,
+.profileAboutCard .studentEditGrid textarea {
+  border-color: rgba(255,255,255,.11);
+  background: #0f0f0f;
+  color: #eeeae2;
 }
 
-html[data-aspire-theme='dark'] .profilePagePolished .profileActivityLine {
-  color: #aaa398;
-  border-color: rgba(255,255,255,.1);
+.profileAboutCard .studentEditGrid label > span,
+.profileAboutCard .studentEditInterests > span {
+  color: #99938a;
 }
 
-html[data-aspire-theme='dark'] .profilePagePolished .profileActivityLine strong,
-html[data-aspire-theme='dark'] .profilePagePolished .profileQuickLinks strong {
-  color: #f4efe5;
+.profileAboutCard .studentInterestButton {
+  border-color: rgba(255,255,255,.10);
+  background: #1a1a1a;
+  color: #c5bfb5;
 }
 
-html[data-aspire-theme='dark'] .profilePagePolished .studentProfileInterests span,
-html[data-aspire-theme='dark'] .profilePagePolished .studentProfileInterests button {
-  border-color: rgba(255,199,44,.2);
-  background: #201d14;
-  color: #eac65f;
+.profileAboutCard .studentInterestButton.active {
+  border-color: #a98217;
+  background: #2a2414;
+  color: #ffc72c;
 }
 
-html[data-aspire-theme='dark'] .profilePagePolished .profileTrustCards > .profileCard,
-html[data-aspire-theme='dark'] .profilePagePolished .profileTrustCards > .trustPassportCard {
-  background: #1c1c19;
-  border-color: #33332e;
+.profileAboutCard .studentEditActions button {
+  border-color: rgba(255,255,255,.10);
+  background: #1b1b1b;
+  color: #e7e2d9;
 }
 
-html[data-aspire-theme='dark'] .profilePagePolished .profileQuickLinks > a {
-  border-color: #30302c;
+.profileAboutCard .studentEditActions button:last-child {
+  border-color: #ffc72c;
+  background: #ffc72c;
+  color: #171109;
 }
 
-html[data-aspire-theme='dark'] .profilePagePolished .profileQuickLinks small {
-  color: #aaa398;
+.profileOperator,
+.profileTopPolished {
+  display: none !important;
 }
 
-@media (max-width: 1120px) {
-  .profilePagePolished .profileOverview {
-    grid-template-columns: 1fr !important;
+@media (max-width: 1180px) {
+  .profilePagePolished {
+    padding-left: 104px !important;
+  }
+
+  body:has(.profileDashboard) .signedInDock,
+  body:has(.profileDashboard) .signedInDock:hover,
+  body:has(.profileDashboard) .signedInDock:focus-within {
+    inset: 12px auto 12px 12px;
+    width: 76px;
+    padding: 12px 9px;
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 22px;
+  }
+
+  body:has(.profileDashboard) .signedInDock > div {
+    display: block;
+  }
+
+  body:has(.profileDashboard) .signedInDock > a:first-child {
+    width: auto;
+    height: 54px;
+    margin: 0 0 7px;
+    padding: 0 9px;
+  }
+
+  body:has(.profileDashboard) .signedInDock > a:first-child img {
+    width: 40px;
+    height: 40px;
+  }
+
+  body:has(.profileDashboard) .signedInDock a span,
+  body:has(.profileDashboard) .signedInDock button span {
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+  }
+
+  .profileShellPolished.profileDashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .profileDashboardAside {
+    position: static;
+    grid-template-columns: repeat(3,minmax(0,1fr));
   }
 }
 
-@media (max-width: 680px) {
-  .profilePagePolished .profileHeroPolished {
-    grid-template-columns: 72px minmax(0,1fr) !important;
-    gap: 13px !important;
-    padding: 18px 15px !important;
+@media (max-width: 900px) {
+  .profilePagePolished {
+    padding: 14px 12px calc(92px + env(safe-area-inset-bottom,0px)) !important;
   }
 
-  .profilePagePolished .profileAvatar {
-    width: 72px;
-    height: 72px;
+  .profileShellPolished.profileDashboard {
+    display: block;
   }
 
-  .profilePagePolished .profileHeroPolished h2 {
-    margin-top: 2px;
-    font-size: clamp(30px,9vw,39px);
+  .profileDashboardMain,
+  .profileDashboardAside {
+    display: grid;
+    gap: 12px;
   }
 
-  .profilePagePolished .studentProfileBio {
-    font-size: 13px !important;
+  .profileDashboardAside {
+    margin-top: 12px;
+    grid-template-columns: 1fr;
   }
 
-  .profilePagePolished .profileActivityLine {
-    gap: 6px 10px;
-    margin-top: 13px;
-    padding-top: 11px;
-    font-size: 9.5px;
+  .profileDashboardHero {
+    grid-template-columns: 86px minmax(0,1fr) !important;
+    gap: 16px !important;
+    min-height: 0;
+    padding: 20px 16px !important;
   }
 
-  .profilePagePolished .profileActivityLine span + span::before {
-    margin-right: 10px;
+  .profileDashboardHero .profileAvatar {
+    width: 86px !important;
+    height: 86px !important;
   }
 
-  .profilePagePolished .profileHeroActions {
+  .profileDashboardHero .profileAvatarWrap > small {
+    display: none;
+  }
+
+  .profileDashboardHero h1 {
+    font-size: clamp(30px,9vw,42px);
+  }
+
+  .profileDashboardHero .profileActivityLine {
+    gap: 7px 11px;
+    font-size: 9px;
+  }
+
+  .profileDashboardHero .profileActivityLine span + span::before {
+    margin-right: 8px;
+  }
+
+  .profileDashboardHero .profileHeroActions {
     grid-column: 1 / -1;
   }
 
-  .profilePagePolished .profileTrustPanel,
-  .profilePagePolished .studentIdentityAsideCard {
-    padding: 16px;
+  .profileDashboardCard {
+    padding: 20px 17px;
   }
 
-  .profilePagePolished .profileSectionHeading {
-    align-items: flex-start;
+  .profileRecentRow {
+    grid-template-columns: 44px minmax(0,1fr) auto 15px;
+  }
+
+  .profileRecentRow > i {
+    width: 44px;
+    height: 44px;
+  }
+
+  .profileRecentRow > b {
+    display: none;
+  }
+
+  .profileRecentRow time {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .profileDashboardHero {
+    grid-template-columns: 70px minmax(0,1fr) !important;
+    gap: 12px !important;
+    padding: 17px 14px !important;
+  }
+
+  .profileDashboardHero .profileAvatar {
+    width: 70px !important;
+    height: 70px !important;
+  }
+
+  .profileDashboardHero h1 {
+    font-size: 30px;
+  }
+
+  .profileDashboardSchool strong {
+    font-size: 13px;
+  }
+
+  .profileDashboardIntro {
+    font-size: 12px !important;
+  }
+
+  .profileDashboardInterestLine {
+    font-size: 11px !important;
+  }
+
+  .profileDashboardCardHead h2 {
+    font-size: 23px;
   }
 }
