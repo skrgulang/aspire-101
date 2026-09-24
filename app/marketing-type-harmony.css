@@ -1,0 +1,111 @@
+/* Marketing typography harmony
+   Expressive where it helps; calm and readable everywhere else. */
+
+.marketingExpandHead h2,
+.marketingStoryHead h2,
+.homeMission h2,
+.campusStoriesTop h2,
+.safetyHeadline h2,
+.rulesCopy h2,
+.dataMiniHead h2,
+.footerLead h3 {
+  font-family: var(--font-product-display), var(--font-inter), system-ui, sans-serif !important;
+  font-weight: 600 !important;
+  line-height: .97 !important;
+  letter-spacing: -.045em !important;
+  text-wrap: balance;
+}
+
+/* Keep the editorial serif as an accent, not the default voice. */
+.marketingExpandHead h2 em,
+.marketingStoryHead h2 em,
+.homeMission h2 span,
+.campusStoriesTop h2 span,
+.safetyHeadline h2 em,
+.rulesCopy h2 em {
+  font-family: var(--font-display), Georgia, serif !important;
+  font-weight: 600 !important;
+  letter-spacing: -.025em !important;
+}
+
+/* Large section titles should feel confident, not overwhelming. */
+.marketingExpandHead h2 {
+  font-size: clamp(42px, 4.25vw, 68px) !important;
+}
+
+.marketingStoryHead h2 {
+  font-size: clamp(44px, 4.55vw, 72px) !important;
+}
+
+.homeMission h2 {
+  font-size: clamp(46px, 5.35vw, 76px) !important;
+}
+
+.campusStoriesTop h2 {
+  font-size: clamp(46px, 5.25vw, 78px) !important;
+}
+
+.safetyHeadline h2 {
+  font-size: clamp(46px, 5vw, 76px) !important;
+}
+
+.rulesCopy h2 {
+  font-size: clamp(44px, 4.7vw, 72px) !important;
+}
+
+.dataMiniHead h2 {
+  font-size: clamp(34px, 3.7vw, 54px) !important;
+}
+
+.footerLead h3 {
+  font-size: clamp(36px, 3.7vw, 54px) !important;
+}
+
+/* One quieter eyebrow system across the public site. */
+.marketingExpandHead > p,
+.marketingStoryHead > p,
+.homeMission > p,
+.campusStoriesTop > p,
+.safetyHeadline > p,
+.rulesCopy > p,
+.dataMiniHead > p,
+.marketingCampusesHead > p,
+.marketingKicker,
+.faqIntro .eyebrow {
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+  font-size: 8px !important;
+  font-weight: 760 !important;
+  letter-spacing: .145em !important;
+}
+
+/* Supporting copy should recede behind the headline instead of competing. */
+.marketingExpandHead > span,
+.marketingStoryHead > span,
+.homeMission > span,
+.campusStoriesTop > span,
+.safetyHeadline > span,
+.rulesCopy > span,
+.dataMiniHead > span,
+.footerLead > p {
+  font-family: var(--font-inter), system-ui, sans-serif !important;
+  font-weight: 450;
+  line-height: 1.62;
+}
+
+@media (max-width: 700px) {
+  .marketingExpandHead h2,
+  .marketingStoryHead h2,
+  .homeMission h2,
+  .campusStoriesTop h2,
+  .safetyHeadline h2,
+  .rulesCopy h2 {
+    font-size: clamp(38px, 10.6vw, 54px) !important;
+    line-height: .99 !important;
+    letter-spacing: -.04em !important;
+  }
+
+  .dataMiniHead h2,
+  .footerLead h3 {
+    font-size: clamp(32px, 8.8vw, 46px) !important;
+  }
+}
