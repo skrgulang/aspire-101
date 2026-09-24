@@ -158,7 +158,6 @@ export default function MarketingExtras() {
 
           <div ref={whyCardRef} className="whyAspireCard" data-reveal="right">
             <div className="whyPanelHead"><small>ON ASPIRE</small><span>ONE CLEAR FLOW</span></div>
-            <div className={`whyGuideWalker ${activeWhyRow >= 0 ? "show" : ""}`} style={{ top: guideTop }} aria-hidden="true"><span className="whyGuideHead" /><span className="whyGuideBody" /><span className="whyGuideLeg a" /><span className="whyGuideLeg b" /></div>
             {whyRows.map((row, index) => (
               <div ref={(node) => { whyRowRefs.current[index] = node; }} className={`whyRow revealDelay${index} ${activeWhyRow === index ? "whyRowActive" : ""}`} key={row.aspire}>
                 <i>{row.icon}</i>
@@ -166,6 +165,22 @@ export default function MarketingExtras() {
               </div>
             ))}
             <div className="whyIdentityStamp"><span>HOME CAMPUS</span><strong>VERIFIED ✓</strong><small>Location adds context. It never rewrites who you are.</small></div>
+          </div>
+
+          <div className="whySideGuide" aria-hidden="true">
+            <span className="whySideGuideLine" />
+            <div className="whySideGuideDots">
+              {whyRows.map((row, index) => <i key={row.aspire} className={activeWhyRow === index ? 'active' : ''} />)}
+            </div>
+            <div className={`whyGuideWalker ${activeWhyRow >= 0 ? 'show' : ''}`} style={{ top: guideTop }}>
+              <span className="whyGuideHead" />
+              <span className="whyGuideBody" />
+              <span className="whyGuideArm a" />
+              <span className="whyGuideArm b" />
+              <span className="whyGuideLeg a" />
+              <span className="whyGuideLeg b" />
+            </div>
+            <small className="whySideGuideStep">{activeWhyRow >= 0 ? `0${activeWhyRow + 1} / 04` : 'WHY ASPIRE'}</small>
           </div>
         </div>
       </section>
