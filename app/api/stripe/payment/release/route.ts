@@ -258,7 +258,7 @@ export async function POST(request: Request) {
 
     const { data: attempted, error: attemptError } = await supabase.from('connection_payments')
       .update({
-        stripe_transfer_attempted_at: new Date().toISOString(),
+        stripe_transfer_attempted_at: payment.stripe_transfer_attempted_at || new Date().toISOString(),
         stripe_transfer_attempted_amount_cents: providerNet,
         updated_at: new Date().toISOString()
       })
