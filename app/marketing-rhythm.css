@@ -1,0 +1,223 @@
+/* Public-site rhythm pass.
+   Keeps the homepage wide enough to feel cinematic, but gives every section
+   the same left edge, vertical cadence, and density. */
+
+.marketingHow,
+.marketingWhyRefined,
+.marketingSafetyStage,
+.marketingCommunityRules,
+.marketingCampuses,
+.faqSection {
+  padding-left: max(20px, calc((100vw - 1580px) / 2)) !important;
+  padding-right: max(20px, calc((100vw - 1580px) / 2)) !important;
+}
+
+/* One section cadence instead of every block inventing its own amount of air. */
+.marketingHow {
+  padding-top: clamp(72px, 5.8vw, 92px) !important;
+  padding-bottom: clamp(76px, 6.2vw, 98px) !important;
+}
+
+.marketingWhyRefined {
+  padding-top: clamp(76px, 6vw, 96px) !important;
+  padding-bottom: clamp(82px, 6.4vw, 104px) !important;
+}
+
+.marketingSafetyStage {
+  min-height: 0 !important;
+  padding-top: clamp(78px, 6vw, 96px) !important;
+  padding-bottom: clamp(80px, 6.2vw, 100px) !important;
+}
+
+.marketingCommunityRules {
+  padding-top: clamp(76px, 5.8vw, 92px) !important;
+  padding-bottom: clamp(82px, 6vw, 100px) !important;
+}
+
+.marketingCampuses {
+  padding-top: clamp(72px, 5.6vw, 90px) !important;
+  padding-bottom: clamp(76px, 5.8vw, 94px) !important;
+}
+
+.faqSection {
+  padding-top: clamp(76px, 6vw, 96px) !important;
+  padding-bottom: clamp(82px, 6.2vw, 104px) !important;
+}
+
+/* Section heads all resolve into the content below with the same visual beat. */
+.marketingHow .marketingExpandHead,
+.marketingWhyRefined .whyIntro,
+.marketingSafetyStage .safetyHeadline,
+.marketingCampuses .marketingCampusesHead {
+  margin-bottom: clamp(26px, 2.5vw, 38px) !important;
+}
+
+.marketingHow .marketingExpandHead {
+  align-items: end;
+}
+
+.marketingHow .marketingExpandHead > span {
+  max-width: 330px;
+  justify-self: end;
+  color: #938c81 !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+}
+
+.marketingWhyRefined .whyCompareRefined,
+.marketingSafetyStage .safetyObjectsEcosystem {
+  margin-top: 0 !important;
+}
+
+/* Headline widths stay deliberate instead of stretching differently by section. */
+.marketingHow .marketingExpandHead h2 {
+  max-width: 780px !important;
+}
+
+.marketingWhyRefined .whyIntro {
+  max-width: 900px !important;
+}
+
+.marketingWhyRefined .whyIntro h2 {
+  max-width: 860px !important;
+}
+
+.marketingSafetyStage .safetyHeadline {
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.marketingCommunityRules .rulesCopy {
+  max-width: 560px;
+}
+
+.marketingCampuses .marketingCampusesHead > div {
+  max-width: 900px;
+}
+
+/* Safety cards should form a stable 2x2 block rather than floating in a huge stage. */
+.marketingSafetyStage .safetyObjectsEcosystem {
+  width: min(1100px, 100%) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.marketingSafetyStage .safetyMore {
+  margin-top: 24px !important;
+}
+
+/* Rules are dense information; tighten the split and keep both halves aligned. */
+.marketingCommunityRules {
+  grid-template-columns: minmax(300px, .82fr) minmax(480px, 1.18fr) !important;
+  gap: clamp(34px, 4vw, 64px) !important;
+  align-items: start !important;
+}
+
+.marketingCommunityRules .rulesLinks {
+  align-self: start;
+}
+
+.marketingCommunityRules .rulesDiscipline {
+  margin-top: 22px !important;
+}
+
+/* Campus rail starts closer to its heading and uses the same edge rhythm. */
+.marketingCampuses .marketingCampusesHead {
+  margin-bottom: 22px !important;
+}
+
+.marketingCampuses .marketingCampusRail {
+  padding-top: 0 !important;
+}
+
+/* FAQ follows the same content width as the rest of the homepage. */
+.faqSection {
+  grid-template-columns: minmax(300px, .68fr) minmax(560px, 1.32fr) !important;
+  gap: clamp(48px, 5vw, 84px) !important;
+}
+
+.faqIntro {
+  top: 74px !important;
+}
+
+.faqList summary {
+  min-height: 78px !important;
+}
+
+/* A quiet separator is enough; avoid every section feeling like a new microsite. */
+.marketingHow,
+.marketingWhyRefined,
+.marketingSafetyStage,
+.marketingCommunityRules,
+.marketingCampuses,
+.faqSection {
+  border-top: 1px solid rgba(255,255,255,.055) !important;
+}
+
+@media (max-width: 1050px) {
+  .marketingHow,
+  .marketingWhyRefined,
+  .marketingSafetyStage,
+  .marketingCommunityRules,
+  .marketingCampuses,
+  .faqSection {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  .marketingCommunityRules {
+    grid-template-columns: 1fr !important;
+    gap: 30px !important;
+  }
+
+  .marketingCommunityRules .rulesCopy {
+    max-width: 720px;
+  }
+}
+
+@media (max-width: 760px) {
+  .marketingHow,
+  .marketingWhyRefined,
+  .marketingSafetyStage,
+  .marketingCommunityRules,
+  .marketingCampuses,
+  .faqSection {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    padding-top: 58px !important;
+    padding-bottom: 64px !important;
+  }
+
+  .marketingHow .marketingExpandHead,
+  .marketingWhyRefined .whyIntro,
+  .marketingSafetyStage .safetyHeadline,
+  .marketingCampuses .marketingCampusesHead {
+    margin-bottom: 24px !important;
+  }
+
+  .marketingHow .marketingExpandHead {
+    grid-template-columns: 1fr !important;
+    gap: 9px !important;
+  }
+
+  .marketingHow .marketingExpandHead > span {
+    max-width: 520px;
+    justify-self: start;
+    font-size: 10px !important;
+  }
+
+  .marketingSafetyStage .safetyObjectsEcosystem {
+    width: 100% !important;
+  }
+
+  .faqSection {
+    grid-template-columns: 1fr !important;
+    gap: 34px !important;
+  }
+
+  .faqIntro {
+    position: static !important;
+  }
+}
