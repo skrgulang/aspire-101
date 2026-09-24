@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser, getSupabaseServiceClient, requireAal2 } from '../../../../lib/server/aspireServer';
+import { DISPUTE_EVIDENCE_BUCKET } from '../../../../lib/server/marketDisputeProtection';
 
 export const runtime = 'nodejs';
 
-const disputeSelect = 'id,market_order_id,opened_by,source,stripe_case_id,stripe_status,stripe_outcome,stripe_status_updated_at,reason,details,evidence,status,resolution_note,assigned_to,reviewed_by,review_started_at,evidence_due_by,last_participant_response_at,last_staff_response_at,created_at,updated_at,resolved_at';
+const disputeSelect = 'id,market_order_id,opened_by,source,stripe_case_id,stripe_status,stripe_outcome,stripe_status_updated_at,reason,details,evidence,status,resolution_note,resolution_refund_cents,resolution_seller_release_cents,assigned_to,reviewed_by,review_started_at,evidence_due_by,last_participant_response_at,last_staff_response_at,next_action_due_at,escalation_level,created_at,updated_at,resolved_at';
 const messageSelect = 'id,dispute_id,author_id,audience,message_type,body,created_at';
 
 function validUuid(value: string) {
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
     const orderIds = [...new Set((disputes ?? []).map((item) => item.market_order_id))];
     const [{ data: orders, error: orderError }, { data: messages, error: messageError }] = await Promise.all([
       orderIds.length
-        ? supabase.from('market_orders').select('id,connection_id,request_id,buyer_id,seller_id,status,fulfillment_method,currency,agreed_amount_cents,seller_handed_off_at,buyer_received_at,shipping_status,created_at').in('id', orderIds)
+        ? supabase.from('market_orders').select('id,connection_id,request_id,buyer_id,seller_id,status,fulfillment_method,currency,agreed_amount_cents,seller_handed_off_at,buyer_received_at,admin_release_authorized_at,shipping_status,created_at').in('id', orderIds)
         : Promise.resolve({ data: [], error: null }),
       (disputes ?? []).length
         ? supabase.from('market_dispute_messages').select(messageSelect).in('dispute_id', (disputes ?? []).map((item) => item.id)).order('created_at', { ascending: true }).limit(1000)
@@ -53,16 +54,26 @@ export async function GET(request: Request) {
 
     const connectionIds = [...new Set((orders ?? []).map((item) => item.connection_id))];
     const userIds = [...new Set((orders ?? []).flatMap((item) => [item.buyer_id, item.seller_id]).concat((disputes ?? []).flatMap((item) => [item.opened_by, item.assigned_to, item.reviewed_by]).filter(Boolean)))];
-    const [{ data: payments, error: paymentError }, { data: profiles, error: profileError }] = await Promise.all([
+    const [{ data: payments, error: paymentError }, { data: profiles, error: profileError }, { data: attachments, error: attachmentError }] = await Promise.all([
       connectionIds.length
-        ? supabase.from('connection_payments').select('id,connection_id,status,currency,customer_total_cents,gross_amount_cents,provider_net_cents,stripe_livemode,transfer_recovery_status,transfer_recovery_error,updated_at').in('connection_id', connectionIds)
+        ? supabase.from('connection_payments').select('id,connection_id,status,currency,customer_total_cents,gross_amount_cents,provider_net_cents,platform_fee_cents,refunded_total_cents,stripe_livemode,transfer_recovery_status,transfer_recovery_error,updated_at').in('connection_id', connectionIds)
         : Promise.resolve({ data: [], error: null }),
       userIds.length
         ? supabase.from('profiles').select('id,display_name,full_name,name,username').in('id', userIds)
+        : Promise.resolve({ data: [], error: null }),
+      (disputes ?? []).length
+        ? supabase.from('market_dispute_attachments').select('id,dispute_id,uploaded_by,storage_path,file_name,mime_type,size_bytes,audience,created_at').in('dispute_id', (disputes ?? []).map((item) => item.id)).order('created_at', { ascending: true }).limit(1000)
         : Promise.resolve({ data: [], error: null })
     ]);
     if (paymentError) throw paymentError;
     if (profileError) throw profileError;
+    if (attachmentError) throw attachmentError;
+    const paths = (attachments ?? []).map((item) => item.storage_path);
+    const signed = paths.length
+      ? await supabase.storage.from(DISPUTE_EVIDENCE_BUCKET).createSignedUrls(paths, 600)
+      : { data: [], error: null };
+    if (signed.error) throw signed.error;
+    const urlMap = new Map((signed.data ?? []).map((item) => [item.path, item.signedUrl]));
 
     return NextResponse.json({
       userId: user.id,
@@ -71,6 +82,7 @@ export async function GET(request: Request) {
       orders: orders ?? [],
       payments: payments ?? [],
       messages: messages ?? [],
+      attachments: (attachments ?? []).map(({ storage_path, ...item }) => ({ ...item, url: urlMap.get(storage_path) || null })),
       profiles: profiles ?? []
     });
   } catch (error) {

@@ -130,8 +130,10 @@ export async function POST(request: Request) {
       if (openDispute || marketOrder.status === 'disputed') {
         return NextResponse.json({ error: 'Seller payout is paused while this order is under review.', code: 'MARKET_ORDER_DISPUTED' }, { status: 409 });
       }
-      if (marketOrder.status !== 'release_ready' || !marketOrder.seller_handed_off_at || !marketOrder.buyer_received_at) {
-        return NextResponse.json({ error: 'Buyer receipt confirmation is required before the seller payout can be released.', code: 'MARKET_RECEIPT_NOT_CONFIRMED' }, { status: 409 });
+      const participantConfirmed = Boolean(marketOrder.seller_handed_off_at && marketOrder.buyer_received_at);
+      const adminAuthorized = Boolean(marketOrder.admin_release_authorized_at && marketOrder.admin_release_authorized_by);
+      if (marketOrder.status !== 'release_ready' || (!participantConfirmed && !adminAuthorized)) {
+        return NextResponse.json({ error: 'Buyer receipt confirmation or a recorded Aspire evidence decision is required before seller release.', code: 'MARKET_RECEIPT_NOT_CONFIRMED' }, { status: 409 });
       }
     } else {
       const completedIds = new Set((completions ?? []).map((row) => row.user_id as string));
@@ -266,7 +268,8 @@ export async function POST(request: Request) {
         'metadata[transaction_type]': marketOrder ? 'marketplace' : 'connection',
         'metadata[fee_policy_version]': payment.fee_policy_version || 'legacy_v0',
         'metadata[platform_fee_cents]': bookedPlatformFee,
-        'metadata[shipping_liability_cents]': shippingRateCents
+        'metadata[shipping_liability_cents]': shippingRateCents,
+        'metadata[admin_release_authorized]': marketOrder?.admin_release_authorized_at ? 'true' : 'false'
       }, { idempotencyKey: `aspire_release_${payment.id}` });
     } catch (error) {
       if (claimedAt) {

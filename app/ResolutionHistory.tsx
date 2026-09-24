@@ -6,11 +6,14 @@ import { fetchMySafetyReports, type SafetyReportHistoryItem } from '../lib/supab
 import { fetchMyConnections } from '../lib/supabase/connections';
 import {
   addMarketDisputeMessage,
+  fetchMarketDisputeAttachments,
   fetchMarketDisputeMessages,
   fetchMarketDisputes,
   fetchMarketOrders,
   type MarketDispute,
-  type MarketDisputeMessage
+  type MarketDisputeAttachment,
+  type MarketDisputeMessage,
+  uploadMarketDisputeAttachment
 } from '../lib/supabase/marketplace';
 import styles from './ResolutionHistory.module.css';
 
@@ -73,6 +76,7 @@ function marketStatusCopy(item: MarketDispute) {
   if (item.status === 'under_review') return { label: 'Under review', detail: 'Aspire is reviewing the order, payment, and handoff record.' };
   if (item.status === 'resolved_buyer') return { label: 'Resolved for buyer', detail: 'Aspire completed the marketplace review with a buyer-side outcome.' };
   if (item.status === 'resolved_seller') return { label: 'Resolved for seller', detail: 'Aspire completed the marketplace review with a seller-side outcome.' };
+  if (item.status === 'resolved_split') return { label: 'Partial refund', detail: 'Aspire approved a partial refund and recorded the remaining seller release.' };
   return { label: 'Closed', detail: 'The marketplace report is closed.' };
 }
 
@@ -101,8 +105,10 @@ export default function ResolutionHistory() {
   const [safetyReports, setSafetyReports] = useState<SafetyReportHistoryItem[]>([]);
   const [marketReports, setMarketReports] = useState<MarketReportRow[]>([]);
   const [marketMessages, setMarketMessages] = useState<MarketDisputeMessage[]>([]);
+  const [marketAttachments, setMarketAttachments] = useState<MarketDisputeAttachment[]>([]);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [replyBusy, setReplyBusy] = useState('');
+  const [attachmentBusy, setAttachmentBusy] = useState('');
   const [replyNotice, setReplyNotice] = useState('');
   const [extraRequests, setExtraRequests] = useState<{ id: string; title: string; category: string; campus: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,13 +140,17 @@ export default function ResolutionHistory() {
             campus: request?.campus || null
           };
         });
-        const disputeMessages = await fetchMarketDisputeMessages(disputes.map((item) => item.id));
+        const [disputeMessages, disputeAttachments] = await Promise.all([
+          fetchMarketDisputeMessages(disputes.map((item) => item.id)),
+          fetchMarketDisputeAttachments(disputes.map((item) => item.id))
+        ]);
 
         if (!alive) return;
         setData(next);
         setSafetyReports(reports);
         setMarketReports(nextMarketReports);
         setMarketMessages(disputeMessages);
+        setMarketAttachments(disputeAttachments);
         setExtraRequests(base.requests.map((request) => ({
           id: request.id,
           title: request.title,
@@ -207,6 +217,21 @@ export default function ResolutionHistory() {
       setReplyNotice(nextError instanceof Error ? nextError.message : 'Could not send your dispute update.');
     } finally {
       setReplyBusy('');
+    }
+  }
+
+  async function addEvidence(disputeId: string, file: File | null) {
+    if (!file) return;
+    setAttachmentBusy(disputeId);
+    setReplyNotice('');
+    try {
+      const saved = await uploadMarketDisputeAttachment(disputeId, file);
+      setMarketAttachments((current) => [...current, saved]);
+      setReplyNotice('Evidence uploaded. Both participants and Aspire reviewers can see it.');
+    } catch (nextError) {
+      setReplyNotice(nextError instanceof Error ? nextError.message : 'Could not upload dispute evidence.');
+    } finally {
+      setAttachmentBusy('');
     }
   }
 
@@ -278,6 +303,7 @@ export default function ResolutionHistory() {
             const status = marketStatusCopy(dispute);
             const open = isMarketOpen(dispute);
             const thread = marketMessages.filter((message) => message.dispute_id === dispute.id);
+            const attachments = marketAttachments.filter((item) => item.dispute_id === dispute.id);
             return (
               <article className={`${styles.card} ${open ? styles.open : ''}`} key={`market-${dispute.id}`}>
                 <div className={styles.top}>
@@ -302,11 +328,26 @@ export default function ResolutionHistory() {
                       ))}
                     </div>
                   )}
+                  {!!attachments.length && (
+                    <div className={styles.evidenceGrid} aria-label="Case evidence files">
+                      {attachments.map((item) => (
+                        <a href={item.url || undefined} target="_blank" rel="noreferrer" key={item.id} aria-disabled={!item.url}>
+                          <strong>{item.mime_type === 'application/pdf' ? 'PDF' : 'PHOTO'}</strong>
+                          <span>{item.file_name}</span>
+                          <small>{Math.max(1, Math.round(item.size_bytes / 1024))} KB · {item.uploaded_by === data?.userId ? 'You' : 'Other participant'}</small>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {open && (
                     <div className={styles.replyComposer}>
                       <label htmlFor={`market-reply-${dispute.id}`}>Add evidence or reply</label>
                       <textarea id={`market-reply-${dispute.id}`} rows={3} maxLength={2000} value={replyDrafts[dispute.id] || ''} onChange={(event) => setReplyDrafts((current) => ({ ...current, [dispute.id]: event.target.value }))} placeholder="Keep the update factual. Do not include card numbers, passwords, or private financial information." />
                       <button type="button" onClick={() => void sendMarketReply(dispute.id)} disabled={replyBusy === dispute.id || !(replyDrafts[dispute.id] || '').trim()}>{replyBusy === dispute.id ? 'Sending…' : 'Send update'}</button>
+                      <label className={styles.evidenceUpload}>
+                        <span>{attachmentBusy === dispute.id ? 'Uploading evidence…' : 'Attach photo or PDF (max 8 MB)'}</span>
+                        <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={attachmentBusy === dispute.id} onChange={(event) => { const file = event.target.files?.[0] || null; event.target.value = ''; void addEvidence(dispute.id, file); }} />
+                      </label>
                     </div>
                   )}
                 </div>
