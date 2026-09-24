@@ -11,6 +11,8 @@ type DueDispute = {
   assigned_to: string | null;
   escalation_level: number;
   next_action_due_at: string;
+  source: string | null;
+  evidence_due_by: string | null;
 };
 
 type MarketOrder = {
@@ -37,13 +39,12 @@ export async function GET(request: Request) {
 
   const supabase = getSupabaseServiceClient();
   const now = new Date().toISOString();
-  const nextDue = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
   const errors: string[] = [];
   let escalated = 0;
 
   const { data, error } = await supabase
     .from('market_disputes')
-    .select('id,market_order_id,assigned_to,escalation_level,next_action_due_at')
+    .select('id,market_order_id,assigned_to,escalation_level,next_action_due_at,source,evidence_due_by')
     .in('status', ['open', 'under_review'])
     .not('next_action_due_at', 'is', null)
     .lte('next_action_due_at', now)
@@ -76,6 +77,12 @@ export async function GET(request: Request) {
   for (const dispute of due) {
     try {
       const level = Number(dispute.escalation_level || 0) + 1;
+      const nextDue = new Date(dispute.source === 'stripe_dispute'
+        ? Math.min(Date.now() + 60 * 60 * 1000,
+          dispute.evidence_due_by
+            ? Math.max(Date.now() + 60 * 60 * 1000, new Date(dispute.evidence_due_by).getTime() - 60 * 60 * 1000)
+            : Number.POSITIVE_INFINITY)
+        : Date.now() + 12 * 60 * 60 * 1000).toISOString();
       const { data: updated, error: updateError } = await supabase
         .from('market_disputes')
         .update({ escalation_level: level, next_action_due_at: nextDue, updated_at: now })
@@ -94,8 +101,10 @@ export async function GET(request: Request) {
           p_user_id: userId,
           p_kind: 'market_order',
           p_event_key: `market-dispute-escalation:${dispute.id}:${level}:${userId}`,
-          p_title: level > 1 ? 'Marketplace dispute is overdue' : 'Marketplace dispute needs review',
-          p_body: `Case #${dispute.id.slice(0, 8).toUpperCase()} has reached review escalation level ${level}.`,
+          p_title: dispute.source === 'stripe_dispute' ? 'Stripe dispute deadline: action needed' : level > 1 ? 'Marketplace dispute is overdue' : 'Marketplace dispute needs review',
+          p_body: dispute.source === 'stripe_dispute'
+            ? `Case #${dispute.id.slice(0, 8).toUpperCase()}: check Stripe evidence and submit before ${dispute.evidence_due_by || 'the Stripe deadline'}.`
+            : `Case #${dispute.id.slice(0, 8).toUpperCase()} has reached review escalation level ${level}.`,
           p_actor_id: null,
           p_request_id: order?.request_id || null,
           p_response_id: null,
