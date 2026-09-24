@@ -279,7 +279,7 @@
   line-height: 1.45;
 }
 @media (max-width: 760px) {
-  .evidence>div{grid-template-columns:1fr}.evidence>b{font-size:10px}.evidence span{font-size:12px}.evidence strong,.evidence small{font-size:10px}.decisionPanel>label{font-size:12px}
+  .evidence>div{grid-template-columns:1fr}.evidence>b,.stripeEvidence>b{font-size:10px}.evidence span,.stripeEvidence p{font-size:12px}.evidence strong,.evidence small,.stripeEvidence label span{font-size:10px}.decisionPanel>label{font-size:12px}
   .section {
     width: calc(100% - 18px);
     padding: 14px;
@@ -348,12 +348,14 @@
     gap: 3px;
   }
   .composer > div,
-  .decisions {
+  .decisions,
+  .stripeEvidence > div {
     display: grid;
     grid-template-columns: 1fr;
   }
   .composer button,
-  .decisions button {
+  .decisions button,
+  .stripeEvidence button {
     width: 100%;
     min-height: 44px;
     font-size: 13px;
