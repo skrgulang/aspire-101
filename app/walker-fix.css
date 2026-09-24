@@ -686,3 +686,100 @@
     font-size: 13px !important;
   }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* WHY ASPIRE FINAL CLEANUP — local rail only, never draw through the content  */
+/* -------------------------------------------------------------------------- */
+.journeyWorld .globalJourney.isWhyChapter .globalJourneyRoad,
+.journeyWorld .globalJourney.isWhyChapter .globalWalker,
+.journeyWorld .globalJourney.isWhyChapter .globalJourneyNav,
+.journeyWorld .globalJourney.isWhyChapter .globalJourneyGlow {
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.marketingWhyRefined .whyAspireCard {
+  overflow: hidden !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRow {
+  opacity: .76 !important;
+  transform: none !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive,
+.marketingWhyRefined .whyAspireCard .whyRow.whyRowActive {
+  opacity: 1 !important;
+  transform: none !important;
+  background: linear-gradient(90deg, rgba(255,194,28,.105), rgba(255,194,28,.035) 72%, transparent) !important;
+  box-shadow: inset 2px 0 0 rgba(255,194,28,.88) !important;
+  border-color: transparent !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive::after {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive i {
+  transform: none !important;
+  box-shadow: 0 0 0 5px rgba(255,194,28,.065) !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive b {
+  color: #f2ca54 !important;
+  text-shadow: none !important;
+  font-size: 16px !important;
+}
+
+.marketingWhyRefined .whyAspireCard .whyRowActive small {
+  color: #b8aa8a !important;
+}
+
+.marketingWhyRefined .whySideGuide {
+  right: -42px !important;
+  width: 28px !important;
+}
+
+.marketingWhyRefined .whySideGuideLine {
+  left: 13px !important;
+  opacity: .68;
+}
+
+.marketingWhyRefined .whySideGuideDots {
+  left: 9px !important;
+}
+
+.marketingWhyRefined .whyGuideWalker {
+  right: -1px !important;
+  width: 21px !important;
+  height: 35px !important;
+  filter: drop-shadow(0 0 8px rgba(255,194,28,.16)) !important;
+}
+
+.marketingWhyRefined .whySideGuideStep {
+  right: -7px !important;
+  color: rgba(255,220,124,.34) !important;
+}
+
+@media (max-width: 900px) {
+  .journeyWorld .globalJourney.isWhyChapter {
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  .marketingWhyRefined .whySideGuide {
+    display: none !important;
+  }
+
+  .marketingWhyRefined .whyAspireCard .whyRow {
+    opacity: 1 !important;
+  }
+
+  .marketingWhyRefined .whyAspireCard .whyRowActive,
+  .marketingWhyRefined .whyAspireCard .whyRow.whyRowActive {
+    background: rgba(255,194,28,.055) !important;
+    box-shadow: inset 2px 0 0 rgba(255,194,28,.72) !important;
+  }
+}
