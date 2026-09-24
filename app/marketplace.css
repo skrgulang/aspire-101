@@ -312,6 +312,9 @@ html[data-aspire-theme='dark'] .marketEmpty h2 { color:#eeeae2; }
 .marketProgress span.done { color: #171109; background: var(--gold); }
 .marketProgress span.current { color: var(--gold); outline: 1px solid rgba(255,194,28,.45); }
 .marketOrderActions { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+.marketCancellationPolicy { display: grid; gap: 4px; margin-top: 14px; padding: 12px 14px; border: 1px solid rgba(255,194,28,.12); border-radius: 12px; background: rgba(255,194,28,.025); }
+.marketCancellationPolicy strong { color: #d9c58c; font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
+.marketCancellationPolicy span { color: #8f877a; font-size: 9px; line-height: 1.5; }
 .marketOrderActions .button { min-height: 42px; padding: 0 16px; }
 .marketSecondary,
 .marketDanger {
