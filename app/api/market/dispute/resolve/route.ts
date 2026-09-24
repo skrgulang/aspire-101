@@ -5,6 +5,7 @@ import {
   requireAal2,
   stripeFormRequest
 } from '../../../../../lib/server/aspireServer';
+import { calculateDisputeSplit } from '../../../../../lib/server/marketDisputeProtection';
 
 export const runtime = 'nodejs';
 
@@ -28,7 +29,7 @@ async function requireAdmin(request: Request) {
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await requireAdmin(request);
-    const body = await request.json().catch(() => ({})) as { disputeId?: string; action?: Action; note?: string };
+    const body = await request.json().catch(() => ({})) as { disputeId?: string; action?: Action; note?: string; amountCents?: number };
     const disputeId = String(body.disputeId || '').trim();
     const action = body.action;
     const note = String(body.note || '').trim().slice(0, 2000);
@@ -67,6 +68,28 @@ export async function POST(request: Request) {
     const paymentIntentId = String(claimed.stripe_payment_intent_id || '');
     const chargeId = String(claimed.stripe_charge_id || '');
     const claimedAt = String(claimed.claimed_at || '');
+    const customerTotalCents = Number(claimed.customer_total_cents || 0);
+    const refundedBeforeCents = Number(claimed.refunded_total_cents || 0);
+    const remainingRefundableCents = customerTotalCents - refundedBeforeCents;
+    const requestedAmountCents = body.amountCents == null ? remainingRefundableCents : Number(body.amountCents);
+    let split: ReturnType<typeof calculateDisputeSplit>;
+    try {
+      split = calculateDisputeSplit({
+        customerTotalCents,
+        refundedBeforeCents,
+        requestedRefundCents: requestedAmountCents,
+        platformFeeCents: Number(claimed.platform_fee_cents || 0),
+        shippingLiabilityCents: Number(claimed.shipping_rate_cents || 0)
+      });
+    } catch (error) {
+      if (claimedAt && paymentId) {
+        await supabase.rpc('clear_connection_payment_refund_claim', {
+          p_payment_id: paymentId,
+          p_claimed_at: claimedAt
+        });
+      }
+      throw error;
+    }
     if (!paymentId || (!paymentIntentId && !chargeId)) {
       throw new Error('REFUND_PAYMENT_REFERENCE_MISSING');
     }
@@ -75,15 +98,17 @@ export async function POST(request: Request) {
       reason: 'requested_by_customer',
       'metadata[aspire_market_dispute_id]': disputeId,
       'metadata[aspire_payment_id]': paymentId,
-      'metadata[resolved_by]': user.id
+      'metadata[resolved_by]': user.id,
+      'metadata[aspire_refund_amount_cents]': String(requestedAmountCents)
     };
+    params.amount = String(requestedAmountCents);
     if (paymentIntentId) params.payment_intent = paymentIntentId;
     else params.charge = chargeId;
 
     let refund: StripeRefund;
     try {
       refund = await stripeFormRequest<StripeRefund>('/v1/refunds', params, {
-        idempotencyKey: `aspire_market_dispute_refund_${disputeId}`
+        idempotencyKey: `aspire_market_dispute_refund_${disputeId}_${refundedBeforeCents}_${requestedAmountCents}`
       });
     } catch (error) {
       if (claimedAt) {
@@ -103,7 +128,7 @@ export async function POST(request: Request) {
       p_dispute_id: disputeId,
       p_payment_id: paymentId,
       p_refund_id: refund.id,
-      p_amount_cents: Number(refund.amount ?? claimed.customer_total_cents ?? 0),
+      p_amount_cents: Number(refund.amount ?? requestedAmountCents),
       p_actor_id: user.id,
       p_note: note,
       p_stripe_status: refund.status || null
@@ -112,7 +137,7 @@ export async function POST(request: Request) {
     const { error: auditError } = await supabase.from('market_disputes').update({ reviewed_by: user.id }).eq('id', disputeId);
     if (auditError) throw auditError;
 
-    return NextResponse.json({ ok: true, action, refundId: refund.id, result: finalized });
+    return NextResponse.json({ ok: true, action, refundId: refund.id, fullRefund: split.fullRefund, result: finalized });
   } catch (error) {
     const raw = error instanceof Error ? error.message : 'UNKNOWN';
     if (raw === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in again.' }, { status: 401 });
@@ -122,6 +147,7 @@ export async function POST(request: Request) {
     if (/PAYMENT_NOT_SECURED/i.test(raw)) return NextResponse.json({ error: 'This dispute does not have a secured, unreleased Aspire payment to resolve automatically.' }, { status: 409 });
     if (/PAYOUT_ALREADY_RELEASED|PAYOUT_RELEASE_IN_PROGRESS/i.test(raw)) return NextResponse.json({ error: 'Seller payout is already releasing or released. This case requires manual Stripe reconciliation.' }, { status: 409 });
     if (/REFUND_IN_PROGRESS/i.test(raw)) return NextResponse.json({ error: 'A refund is already being processed for this payment.' }, { status: 409 });
+    if (/REFUND_AMOUNT_INVALID|REFUND_AMOUNT_EXCEEDS_REMAINING/i.test(raw)) return NextResponse.json({ error: 'Refund amount must be positive and cannot exceed the remaining charged amount.' }, { status: 409 });
     if (/RESOLUTION_CASE_OPEN/i.test(raw)) return NextResponse.json({ error: 'A Resolution Center case is also open for this payment. Resolve that hold before this marketplace dispute.' }, { status: 409 });
     if (/STRIPE:/i.test(raw)) return NextResponse.json({ error: raw.replace(/^STRIPE:/,'') }, { status: 502 });
     return NextResponse.json({ error: 'Could not safely resolve this marketplace dispute.' }, { status: 500 });

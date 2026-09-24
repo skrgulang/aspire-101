@@ -1,9 +1,39 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import AppDock from '../AppDock';
 import ResolutionQuickPanel from '../ResolutionQuickPanel';
 import ResolutionHistory from '../ResolutionHistory';
+import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 import styles from '../UtilityWorkspace.module.css';
 
 export default function ResolutionPage() {
+  const router = useRouter();
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.replace('/login?next=%2Fresolution');
+        return;
+      }
+      setAuthReady(true);
+    }).catch(() => {
+      router.replace('/login?next=%2Fresolution');
+    });
+  }, [router]);
+
+  if (!authReady) {
+    return (
+      <main className="connectionsPage">
+        <AppDock active="resolution" />
+        <div className={styles.shell}><div className={styles.content}>Checking your Aspire session…</div></div>
+      </main>
+    );
+  }
+
   return (
     <main className="connectionsPage">
       <AppDock active="resolution" />

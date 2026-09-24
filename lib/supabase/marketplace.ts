@@ -87,7 +87,9 @@ export type MarketDispute = {
   stripe_outcome?: string | null;
   reason: 'item_not_as_described' | 'item_not_received' | 'counterfeit_or_prohibited' | 'payment_issue' | 'unsafe_handoff' | 'other';
   details: string;
-  status: 'open' | 'under_review' | 'resolved_buyer' | 'resolved_seller' | 'closed';
+  status: 'open' | 'under_review' | 'resolved_buyer' | 'resolved_seller' | 'resolved_split' | 'closed';
+  resolution_refund_cents?: number | null;
+  resolution_seller_release_cents?: number | null;
   created_at: string;
   resolved_at: string | null;
 };
@@ -100,6 +102,18 @@ export type MarketDisputeMessage = {
   message_type: 'participant_reply' | 'staff_reply' | 'internal_note';
   body: string;
   created_at: string;
+};
+
+export type MarketDisputeAttachment = {
+  id: string;
+  dispute_id: string;
+  uploaded_by: string;
+  file_name: string;
+  mime_type: 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf';
+  size_bytes: number;
+  audience: 'participants' | 'staff';
+  created_at: string;
+  url: string | null;
 };
 
 async function bearerHeaders() {
@@ -271,6 +285,42 @@ export async function addMarketDisputeMessage(disputeId: string, message: string
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload?.error || 'Could not send your dispute update.');
   return payload.message as MarketDisputeMessage;
+}
+
+export async function fetchMarketDisputeAttachments(disputeIds: string[]) {
+  const ids = [...new Set(disputeIds.filter(Boolean))].slice(0, 50);
+  if (!ids.length) return [] as MarketDisputeAttachment[];
+  const response = await fetch(`/api/market/dispute/attachment?disputeIds=${encodeURIComponent(ids.join(','))}`, {
+    headers: await bearerHeaders(),
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'Could not load dispute evidence.');
+  return (payload?.attachments ?? []) as MarketDisputeAttachment[];
+}
+
+export async function uploadMarketDisputeAttachment(disputeId: string, file: File) {
+  const descriptor = { disputeId, fileName: file.name, mimeType: file.type, sizeBytes: file.size };
+  const prepare = await fetch('/api/market/dispute/attachment', {
+    method: 'POST',
+    headers: await bearerHeaders(),
+    body: JSON.stringify({ action: 'prepare', ...descriptor })
+  });
+  const prepared = await prepare.json().catch(() => ({}));
+  if (!prepare.ok) throw new Error(prepared?.error || 'Could not prepare evidence upload.');
+  const supabase = getSupabaseBrowserClient();
+  const { error: uploadError } = await supabase.storage
+    .from('market-dispute-evidence')
+    .uploadToSignedUrl(prepared.path, prepared.token, file, { contentType: file.type, cacheControl: '3600' });
+  if (uploadError) throw uploadError;
+  const finalize = await fetch('/api/market/dispute/attachment', {
+    method: 'POST',
+    headers: await bearerHeaders(),
+    body: JSON.stringify({ action: 'finalize', path: prepared.path, ...descriptor })
+  });
+  const saved = await finalize.json().catch(() => ({}));
+  if (!finalize.ok) throw new Error(saved?.error || 'Could not save dispute evidence.');
+  return saved.attachment as MarketDisputeAttachment;
 }
 
 export async function requestMarketRefund(connectionId: string) {

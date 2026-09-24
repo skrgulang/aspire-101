@@ -226,22 +226,43 @@ async function recordRefundFailure(
   const chargeId = objectId(object.charge);
   let query = supabase
     .from('connection_payments')
-    .select('id,connection_id,status,stripe_transfer_id')
+    .select('id,connection_id,status,stripe_transfer_id,stripe_refund_id,customer_total_cents,gross_amount_cents,platform_fee_cents,fee_snapshot,refunded_total_cents,refund_records,provider_net_cents,provider_amount_cents')
     .eq('stripe_livemode', eventLivemode);
   query = chargeId ? query.or(`stripe_refund_id.eq.${refundId},stripe_charge_id.eq.${chargeId}`) : query.eq('stripe_refund_id', refundId);
   const { data: payment, error } = await query.maybeSingle();
   requireDatabaseWrite(error);
   if (!payment || payment.stripe_transfer_id) return;
+  const metadataPaymentId = typeof object.metadata?.aspire_payment_id === 'string' ? object.metadata.aspire_payment_id : null;
+  if (metadataPaymentId && metadataPaymentId !== payment.id) return;
+  if (!metadataPaymentId && payment.stripe_refund_id !== refundId) return;
 
   const failure = String(object.failure_reason || 'Stripe reported that the refund failed. Manual review is required.').slice(0, 500);
   const now = new Date().toISOString();
+  const records = Array.isArray(payment.refund_records) ? payment.refund_records as Array<Record<string, unknown>> : [];
+  const failedRecord = records.find((item) => item.id === refundId);
+  const failedAmount = Number(object.amount || object.metadata?.aspire_refund_amount_cents || failedRecord?.amount_cents || 0);
+  const refundedTotal = Math.max(0, Number(payment.refunded_total_cents || 0) - Math.max(0, failedAmount));
+  const customerTotal = Number(payment.customer_total_cents ?? payment.gross_amount_cents ?? 0);
+  const platformFee = Number(payment.platform_fee_cents || 0);
+  const shippingLiability = Number(payment.fee_snapshot?.shipping_rate_cents || 0);
+  const providerNet = Math.max(0, customerTotal - refundedTotal - platformFee - shippingLiability);
+  const updatedRecords = records.map((item) => item.id === refundId
+    ? { ...item, status: 'failed', failure_reason: failure, failed_at: now }
+    : item);
+  const latestSuccessfulRefund = [...updatedRecords].reverse().find((item) => item.status !== 'failed')?.id;
   const { error: paymentError } = await supabase.from('connection_payments').update({
     status: 'secured',
     refunded_at: null,
+    partially_refunded_at: refundedTotal > 0 ? now : null,
+    refunded_total_cents: refundedTotal,
+    refund_records: updatedRecords,
+    stripe_refund_id: typeof latestSuccessfulRefund === 'string' ? latestSuccessfulRefund : null,
+    provider_net_cents: providerNet,
+    provider_amount_cents: providerNet,
     failure_reason: failure,
     refund_claimed_at: null,
     updated_at: now
-  }).eq('id', payment.id).eq('status', 'refunded');
+  }).eq('id', payment.id);
   requireDatabaseWrite(paymentError);
 
   const { data: order, error: orderError } = await supabase

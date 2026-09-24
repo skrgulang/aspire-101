@@ -165,6 +165,26 @@ export async function stripeFormRequest<T>(
   return payload as T;
 }
 
+/** Multipart helper for private Stripe file uploads such as dispute evidence. */
+export async function stripeFileUpload<T>(file: Blob, fileName: string) {
+  const secret = requireEnv('STRIPE_SECRET_KEY');
+  const body = new FormData();
+  body.set('purpose', 'dispute_evidence');
+  body.set('file', file, fileName);
+  const response = await fetch('https://files.stripe.com/v1/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${secret}` },
+    body,
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = payload?.error?.message || payload?.message || `Stripe file upload failed (${response.status}).`;
+    throw new Error(`STRIPE:${message}`);
+  }
+  return payload as T;
+}
+
 export async function stripeGet<T>(path: string) {
   const secret = requireEnv('STRIPE_SECRET_KEY');
   const response = await fetch(`${stripeApiBase}${path}`, {
