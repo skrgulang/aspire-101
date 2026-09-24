@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { ConnectionResolutionCase, fetchMyResolutionHistory } from '../lib/supabase/resolution';
 import { fetchMySafetyReports, type SafetyReportHistoryItem } from '../lib/supabase/safety';
 import { fetchMyConnections } from '../lib/supabase/connections';
-import { fetchMarketDisputes, fetchMarketOrders, type MarketDispute } from '../lib/supabase/marketplace';
+import {
+  addMarketDisputeMessage,
+  fetchMarketDisputeMessages,
+  fetchMarketDisputes,
+  fetchMarketOrders,
+  type MarketDispute,
+  type MarketDisputeMessage
+} from '../lib/supabase/marketplace';
 import styles from './ResolutionHistory.module.css';
 
 type MarketReportRow = {
@@ -93,6 +100,10 @@ export default function ResolutionHistory() {
   const [data, setData] = useState<Awaited<ReturnType<typeof fetchMyResolutionHistory>> | null>(null);
   const [safetyReports, setSafetyReports] = useState<SafetyReportHistoryItem[]>([]);
   const [marketReports, setMarketReports] = useState<MarketReportRow[]>([]);
+  const [marketMessages, setMarketMessages] = useState<MarketDisputeMessage[]>([]);
+  const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
+  const [replyBusy, setReplyBusy] = useState('');
+  const [replyNotice, setReplyNotice] = useState('');
   const [extraRequests, setExtraRequests] = useState<{ id: string; title: string; category: string; campus: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -123,11 +134,13 @@ export default function ResolutionHistory() {
             campus: request?.campus || null
           };
         });
+        const disputeMessages = await fetchMarketDisputeMessages(disputes.map((item) => item.id));
 
         if (!alive) return;
         setData(next);
         setSafetyReports(reports);
         setMarketReports(nextMarketReports);
+        setMarketMessages(disputeMessages);
         setExtraRequests(base.requests.map((request) => ({
           id: request.id,
           title: request.title,
@@ -180,6 +193,23 @@ export default function ResolutionHistory() {
 
   const visibleCount = cases.length + visibleSafety.length + visibleMarket.length;
 
+  async function sendMarketReply(disputeId: string) {
+    const draft = (replyDrafts[disputeId] || '').trim();
+    if (!draft) return;
+    setReplyBusy(disputeId);
+    setReplyNotice('');
+    try {
+      const saved = await addMarketDisputeMessage(disputeId, draft);
+      setMarketMessages((current) => [...current, saved]);
+      setReplyDrafts((current) => ({ ...current, [disputeId]: '' }));
+      setReplyNotice('Your update was added to the case.');
+    } catch (nextError) {
+      setReplyNotice(nextError instanceof Error ? nextError.message : 'Could not send your dispute update.');
+    } finally {
+      setReplyBusy('');
+    }
+  }
+
   if (loading) return <div className={styles.loading}><span /><strong>Loading Resolution Center…</strong></div>;
   if (error) return <div className={styles.error}><strong>Couldn’t load your cases.</strong><p>{error}</p></div>;
 
@@ -195,6 +225,7 @@ export default function ResolutionHistory() {
         <button className={filter === 'open' ? styles.active : ''} type="button" onClick={() => setFilter('open')}>Open</button>
         <button className={filter === 'closed' ? styles.active : ''} type="button" onClick={() => setFilter('closed')}>Closed</button>
       </nav>
+      {replyNotice && <div className={styles.replyNotice} role="status">{replyNotice}</div>}
 
       {!visibleCount ? (
         <div className={styles.empty}>
@@ -246,6 +277,7 @@ export default function ResolutionHistory() {
           {visibleMarket.map(({ dispute, requestTitle, category, campus }) => {
             const status = marketStatusCopy(dispute);
             const open = isMarketOpen(dispute);
+            const thread = marketMessages.filter((message) => message.dispute_id === dispute.id);
             return (
               <article className={`${styles.card} ${open ? styles.open : ''}`} key={`market-${dispute.id}`}>
                 <div className={styles.top}>
@@ -258,6 +290,26 @@ export default function ResolutionHistory() {
                   <span>Order report #{dispute.id.slice(0, 8).toUpperCase()}</span>
                 </div>
                 {dispute.details && <div className={styles.note}><b>Report details</b><p>{dispute.details}</p></div>}
+                <div className={styles.thread}>
+                  <b>CASE CONVERSATION</b>
+                  {!thread.length ? <p>No replies yet. Add factual details, handoff records, or tracking information while the case is open.</p> : (
+                    <div className={styles.threadList}>
+                      {thread.map((message) => (
+                        <article className={message.message_type === 'staff_reply' ? styles.staffReply : ''} key={message.id}>
+                          <div><strong>{message.message_type === 'staff_reply' ? 'Aspire reviewer' : message.author_id === data?.userId ? 'You' : 'Other participant'}</strong><time>{new Date(message.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time></div>
+                          <p>{message.body}</p>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                  {open && (
+                    <div className={styles.replyComposer}>
+                      <label htmlFor={`market-reply-${dispute.id}`}>Add evidence or reply</label>
+                      <textarea id={`market-reply-${dispute.id}`} rows={3} maxLength={2000} value={replyDrafts[dispute.id] || ''} onChange={(event) => setReplyDrafts((current) => ({ ...current, [dispute.id]: event.target.value }))} placeholder="Keep the update factual. Do not include card numbers, passwords, or private financial information." />
+                      <button type="button" onClick={() => void sendMarketReply(dispute.id)} disabled={replyBusy === dispute.id || !(replyDrafts[dispute.id] || '').trim()}>{replyBusy === dispute.id ? 'Sending…' : 'Send update'}</button>
+                    </div>
+                  )}
+                </div>
                 <div className={styles.actions}><a href="/transactions">View order →</a><a className={styles.policy} href="/resolution-policy">Policy</a></div>
               </article>
             );

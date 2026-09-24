@@ -92,6 +92,16 @@ export type MarketDispute = {
   resolved_at: string | null;
 };
 
+export type MarketDisputeMessage = {
+  id: string;
+  dispute_id: string;
+  author_id: string;
+  audience: 'participants' | 'staff';
+  message_type: 'participant_reply' | 'staff_reply' | 'internal_note';
+  body: string;
+  created_at: string;
+};
+
 async function bearerHeaders() {
   const supabase = getSupabaseBrowserClient();
   const { data, error } = await supabase.auth.getSession();
@@ -238,6 +248,29 @@ export async function openMarketDispute(connectionId: string, reason: MarketDisp
   });
   if (error) throw error;
   return String(data || '');
+}
+
+export async function fetchMarketDisputeMessages(disputeIds: string[]) {
+  const ids = [...new Set(disputeIds.filter(Boolean))].slice(0, 50);
+  if (!ids.length) return [] as MarketDisputeMessage[];
+  const response = await fetch(`/api/market/dispute/thread?disputeIds=${encodeURIComponent(ids.join(','))}`, {
+    headers: await bearerHeaders(),
+    cache: 'no-store'
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'Could not load dispute replies.');
+  return (payload?.messages ?? []) as MarketDisputeMessage[];
+}
+
+export async function addMarketDisputeMessage(disputeId: string, message: string) {
+  const response = await fetch('/api/market/dispute/thread', {
+    method: 'POST',
+    headers: await bearerHeaders(),
+    body: JSON.stringify({ disputeId, message: message.trim() })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload?.error || 'Could not send your dispute update.');
+  return payload.message as MarketDisputeMessage;
 }
 
 export async function requestMarketRefund(connectionId: string) {
