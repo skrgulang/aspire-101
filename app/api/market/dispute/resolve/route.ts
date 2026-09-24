@@ -47,6 +47,8 @@ export async function POST(request: Request) {
         p_note: note
       });
       if (error) throw error;
+      const { error: auditError } = await supabase.from('market_disputes').update({ reviewed_by: user.id }).eq('id', disputeId);
+      if (auditError) throw auditError;
       return NextResponse.json({ ok: true, action, result: data });
     }
 
@@ -107,6 +109,8 @@ export async function POST(request: Request) {
       p_stripe_status: refund.status || null
     });
     if (finalizeError) throw finalizeError;
+    const { error: auditError } = await supabase.from('market_disputes').update({ reviewed_by: user.id }).eq('id', disputeId);
+    if (auditError) throw auditError;
 
     return NextResponse.json({ ok: true, action, refundId: refund.id, result: finalized });
   } catch (error) {

@@ -26,6 +26,11 @@ function latestRefundId(value: unknown) {
   return null;
 }
 
+function stripeTimestamp(value: unknown) {
+  const seconds = Number(value || 0);
+  return Number.isFinite(seconds) && seconds > 0 ? new Date(seconds * 1000).toISOString() : null;
+}
+
 function requireDatabaseWrite(error: unknown) {
   if (error) throw error;
 }
@@ -63,6 +68,9 @@ async function syncStripeMarketplaceRiskCase(
   const details = eventType === 'charge.dispute.created'
     ? 'Stripe opened a card-network payment dispute. Aspire paused the order and seller payout for human review.'
     : 'Stripe Radar issued an early fraud warning. Aspire paused the order and seller payout for human review.';
+  const evidenceDueBy = eventType === 'charge.dispute.created'
+    ? stripeTimestamp(object.evidence_details?.due_by)
+    : null;
 
   const { error: orderUpdateError } = await supabase
     .from('market_orders')
@@ -89,6 +97,8 @@ async function syncStripeMarketplaceRiskCase(
         status: 'under_review',
         details,
         stripe_status: String(object.status || 'open'),
+        stripe_status_updated_at: now,
+        evidence_due_by: evidenceDueBy,
         updated_at: now
       })
       .eq('id', existing.id);
@@ -110,7 +120,9 @@ async function syncStripeMarketplaceRiskCase(
         status: 'under_review',
         source,
         stripe_case_id: stripeCaseId,
-        stripe_status: String(object.status || 'open')
+        stripe_status: String(object.status || 'open'),
+        stripe_status_updated_at: now,
+        evidence_due_by: evidenceDueBy
       });
     requireDatabaseWrite(error);
   }
@@ -161,6 +173,109 @@ async function syncStripeMarketplaceRiskCase(
     p_message_id: null
   });
   requireDatabaseWrite(sellerNoticeError);
+}
+
+async function recordStripeDisputeUpdate(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  object: Record<string, any>,
+  stripeEventId: string,
+  eventType: string
+) {
+  if (!object.id) return;
+  const stripeCaseId = `stripe_dispute:${String(object.id)}`;
+  const now = new Date().toISOString();
+  const { data: dispute, error } = await supabase
+    .from('market_disputes')
+    .select('id,market_order_id')
+    .eq('stripe_case_id', stripeCaseId)
+    .maybeSingle();
+  requireDatabaseWrite(error);
+  if (!dispute) return;
+
+  const stripeStatus = String(object.status || eventType.replace('charge.dispute.', ''));
+  const { error: updateError } = await supabase.from('market_disputes').update({
+    status: 'under_review',
+    stripe_status: stripeStatus,
+    stripe_status_updated_at: now,
+    evidence_due_by: stripeTimestamp(object.evidence_details?.due_by),
+    updated_at: now
+  }).eq('id', dispute.id);
+  requireDatabaseWrite(updateError);
+
+  const { error: eventError } = await supabase.from('market_order_events').insert({
+    market_order_id: dispute.market_order_id,
+    actor_id: null,
+    event_type: 'stripe_dispute_updated',
+    payload: {
+      stripe_event_id: stripeEventId,
+      stripe_case_id: stripeCaseId,
+      stripe_status: stripeStatus,
+      stripe_event_type: eventType
+    }
+  });
+  requireDatabaseWrite(eventError);
+}
+
+async function recordRefundFailure(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  object: Record<string, any>,
+  eventLivemode: boolean
+) {
+  const refundId = String(object.id || '');
+  if (!refundId) return;
+  const chargeId = objectId(object.charge);
+  let query = supabase
+    .from('connection_payments')
+    .select('id,connection_id,status,stripe_transfer_id')
+    .eq('stripe_livemode', eventLivemode);
+  query = chargeId ? query.or(`stripe_refund_id.eq.${refundId},stripe_charge_id.eq.${chargeId}`) : query.eq('stripe_refund_id', refundId);
+  const { data: payment, error } = await query.maybeSingle();
+  requireDatabaseWrite(error);
+  if (!payment || payment.stripe_transfer_id) return;
+
+  const failure = String(object.failure_reason || 'Stripe reported that the refund failed. Manual review is required.').slice(0, 500);
+  const now = new Date().toISOString();
+  const { error: paymentError } = await supabase.from('connection_payments').update({
+    status: 'secured',
+    refunded_at: null,
+    failure_reason: failure,
+    refund_claimed_at: null,
+    updated_at: now
+  }).eq('id', payment.id).eq('status', 'refunded');
+  requireDatabaseWrite(paymentError);
+
+  const { data: order, error: orderError } = await supabase
+    .from('market_orders')
+    .select('id')
+    .eq('connection_id', payment.connection_id)
+    .maybeSingle();
+  requireDatabaseWrite(orderError);
+  if (order) {
+    const { error: orderUpdateError } = await supabase.from('market_orders').update({ status: 'disputed', refunded_at: null, updated_at: now }).eq('id', order.id);
+    requireDatabaseWrite(orderUpdateError);
+    const disputeId = typeof object.metadata?.aspire_market_dispute_id === 'string' ? object.metadata.aspire_market_dispute_id : null;
+    if (disputeId) {
+      const { error: reopenError } = await supabase.from('market_disputes').update({
+        status: 'under_review',
+        resolution_note: `Stripe refund failed: ${failure}`,
+        resolved_at: null,
+        updated_at: now
+      }).eq('id', disputeId);
+      requireDatabaseWrite(reopenError);
+    }
+  }
+
+  const resolutionCaseId = typeof object.metadata?.aspire_resolution_case_id === 'string' ? object.metadata.aspire_resolution_case_id : null;
+  if (resolutionCaseId) {
+    const { error: reopenCaseError } = await supabase.from('connection_resolution_cases').update({
+      status: 'under_review',
+      resolution_note: `Stripe refund failed: ${failure}`,
+      refund_cents: null,
+      reviewed_at: null,
+      updated_at: now
+    }).eq('id', resolutionCaseId);
+    requireDatabaseWrite(reopenCaseError);
+  }
 }
 
 async function recordStripeDisputeClosure(
@@ -513,6 +628,14 @@ export async function POST(request: Request) {
 
     if (event.type === 'charge.dispute.closed') {
       await recordStripeDisputeClosure(supabase, object, event.id);
+    }
+
+    if (['charge.dispute.updated', 'charge.dispute.funds_withdrawn', 'charge.dispute.funds_reinstated'].includes(event.type)) {
+      await recordStripeDisputeUpdate(supabase, object, event.id, event.type);
+    }
+
+    if (event.type === 'refund.failed' || (event.type === 'refund.updated' && object.status === 'failed')) {
+      await recordRefundFailure(supabase, object, eventLivemode);
     }
 
     if (event.type === 'charge.refunded' && object.id && Number(object.amount_refunded || 0) >= Number(object.amount || 0)) {

@@ -3,6 +3,7 @@ export const metadata = { robots: { index: false, follow: false } };
 import ModeratorConsole from '../ModeratorConsole';
 import DisputeIntelligenceLauncher from '../DisputeIntelligenceLauncher';
 import ResolutionCaseConsole from '../ResolutionCaseConsole';
+import MarketDisputeAdminConsole from '../MarketDisputeAdminConsole';
 
 export default function ModeratorPage() {
   return <>
@@ -14,6 +15,7 @@ export default function ModeratorPage() {
     </section>
     <ModeratorConsole />
     <ResolutionCaseConsole />
+    <MarketDisputeAdminConsole />
     <DisputeIntelligenceLauncher />
   </>;
 }
