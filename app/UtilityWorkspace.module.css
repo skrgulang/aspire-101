@@ -22,7 +22,7 @@
   margin: 0 0 8px;
   color: #9a7a11;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 750;
   letter-spacing: .14em;
   text-transform: uppercase;
 }
@@ -30,8 +30,8 @@
 .title {
   margin: 0;
   color: #171717;
-  font: 850 clamp(36px, 4vw, 54px)/.98 var(--font-inter), system-ui, sans-serif;
-  letter-spacing: -.05em;
+  font: 680 clamp(36px, 3.6vw, 46px)/1.08 var(--font-inter), system-ui, sans-serif;
+  letter-spacing: -.035em;
 }
 
 .lead {
@@ -59,7 +59,7 @@
   background: #fff;
   color: #30302d;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: none;
 }
 
