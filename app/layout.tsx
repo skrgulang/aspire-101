@@ -71,6 +71,7 @@ import './campus-demo-feed-fix.css';
 import './legal.css';
 import './production-typography.css';
 import './mobile-web-parity.css';
+import './profile-live.css';
 import type { Metadata } from 'next';
 import { Inter, Cormorant_Garamond } from 'next/font/google';
 import SiteFooter from './SiteFooter';
