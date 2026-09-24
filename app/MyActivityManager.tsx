@@ -181,7 +181,24 @@ export default function MyActivityManager() {
       {notice && <div className={styles.notice} role="status">{notice}</div>}
 
       {loading ? (
-        <div className={styles.empty}>Loading your posts…</div>
+        <div className={styles.loadingList} aria-live="polite" aria-busy="true" aria-label="Loading your posts">
+          {[0, 1, 2].map((item) => (
+            <article className={styles.loadingCard} key={item} aria-hidden="true">
+              <div className={styles.loadingMedia} />
+              <div className={styles.loadingMain}>
+                <span className={styles.loadingPill} />
+                <span className={styles.loadingTitle} />
+                <span className={styles.loadingLine} />
+                <span className={`${styles.loadingLine} ${styles.loadingLineShort}`} />
+              </div>
+              <div className={styles.loadingSide}>
+                <span className={styles.loadingStatus} />
+                <span className={styles.loadingButton} />
+              </div>
+            </article>
+          ))}
+          <span className={styles.srOnly}>Loading your posts…</span>
+        </div>
       ) : !visible.length ? (
         <div className={styles.empty}>
           <strong>No posts here yet.</strong>
@@ -197,7 +214,7 @@ export default function MyActivityManager() {
               <article className={styles.card} key={request.id}>
                 <div className={styles.cardMedia}>
                   {mediaByRequest[request.id]
-                    ? <img src={mediaByRequest[request.id]} alt="" />
+                    ? <img src={mediaByRequest[request.id]} alt="" width={312} height={260} decoding="async" />
                     : <div className={styles.mediaPlaceholder}><UiIcon name="activity" /></div>}
                 </div>
                 <div className={styles.cardMain}>
