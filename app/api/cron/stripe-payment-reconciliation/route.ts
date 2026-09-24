@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import {
   getSupabaseServiceClient,
+  stripeFormRequest,
   stripeGet,
   stripeLivemode
 } from '../../../../lib/server/aspireServer';
@@ -9,6 +10,7 @@ import {
   classifyCheckoutReconciliation,
   secureConnectionPayment
 } from '../../../../lib/server/stripePaymentReconciliation';
+import { matchesSellerTransfer, type ObservedTransfer } from '../../../../lib/server/stripeTransferReconciliation';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -74,7 +76,7 @@ export async function GET(request: Request) {
   const currentMode = stripeLivemode();
   const staleBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
   const errors: string[] = [];
-  const summary = { checked: 0, secured: 0, processing: 0, failed: 0, unchanged: 0 };
+  const summary = { checked: 0, secured: 0, processing: 0, failed: 0, unchanged: 0, transfersReconciled: 0, transfersReversed: 0 };
 
   const { data, error } = await supabase
     .from('connection_payments')
@@ -163,6 +165,85 @@ export async function GET(request: Request) {
     } catch (reconciliationError) {
       const message = reconciliationError instanceof Error ? reconciliationError.message : String(reconciliationError);
       errors.push(`${payment.id}: ${message}`);
+    }
+  }
+
+  // An HTTP timeout or a dispute arriving while Stripe creates a transfer can
+  // leave the transfer at Stripe without a local transfer ID. Reconcile against
+  // Stripe after the request has had time to finish, even if the webhook was missed.
+  const { data: stalled, error: stalledError } = await supabase.from('connection_payments')
+    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at')
+    .eq('stripe_livemode', currentMode)
+    .in('status', ['secured', 'disputed', 'refunded'])
+    .is('stripe_transfer_id', null)
+    .not('release_claimed_at', 'is', null)
+    .lte('release_claimed_at', staleBefore)
+    .order('release_claimed_at', { ascending: true }).limit(20);
+  if (stalledError) errors.push(`transfer reconciliation: ${stalledError.message}`);
+
+  for (const pending of stalled ?? []) {
+    try {
+      if (!pending.transfer_group) throw new Error('Transfer group missing; manual reconciliation required.');
+      const transfers = await stripeGet<{ data: ObservedTransfer[]; has_more: boolean }>(
+        `/v1/transfers?transfer_group=${encodeURIComponent(pending.transfer_group)}&limit=100`
+      );
+      const matching = transfers.data.filter((item) => matchesSellerTransfer(pending, item));
+      if (matching.length !== 1) {
+        if (matching.length > 1 || transfers.has_more) throw new Error('Transfer group is ambiguous; manual review required.');
+        continue;
+      }
+      const transfer = matching[0];
+      const { error: attachError } = await supabase.from('connection_payments')
+        .update({ stripe_transfer_id: transfer.id, updated_at: new Date().toISOString() })
+        .eq('id', pending.id).eq('stripe_livemode', currentMode).is('stripe_transfer_id', null);
+      if (attachError) throw attachError;
+      const { data: current, error: currentError } = await supabase.from('connection_payments')
+        .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+        .eq('id', pending.id).maybeSingle();
+      if (currentError) throw currentError;
+      if (!current || current.stripe_transfer_id !== transfer.id) throw new Error('Transfer reference mismatch.');
+
+      if (current.status === 'secured') {
+        // The release RPC refuses disputed payment status; never reclassify a
+        // disputed/refunded payment as released during recovery.
+        const { error: finalizeError } = await supabase.rpc('finalize_connection_payment_release', {
+          p_payment_id: pending.id, p_transfer_id: transfer.id
+        });
+        if (finalizeError) throw finalizeError;
+      } else if (['disputed', 'refunded'].includes(current.status) && !current.stripe_transfer_reversal_id) {
+        const reason = current.status === 'refunded' ? 'refund' : 'dispute';
+        const { data: claim, error: claimError } = await supabase.rpc('claim_connection_payment_transfer_recovery', {
+          p_payment_id: pending.id, p_reason: reason
+        });
+        if (claimError) throw claimError;
+        if (claim?.status === 'claimed') {
+          const amount = Number(current.provider_net_cents ?? current.provider_amount_cents ?? 0);
+          try {
+            const reversal = await stripeFormRequest<{ id: string; amount?: number }>(
+              `/v1/transfers/${encodeURIComponent(transfer.id!)}/reversals`, { amount },
+              { idempotencyKey: `aspire_transfer_recovery_${pending.id}` }
+            );
+            const { error: recordError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
+              p_payment_id: pending.id, p_reason: reason, p_outcome: 'reversed',
+              p_reversal_id: reversal.id, p_amount_cents: reversal.amount ?? amount,
+              p_stripe_event_id: `reconcile:${transfer.id}`
+            });
+            if (recordError) throw recordError;
+            summary.transfersReversed += 1;
+          } catch (reversalError) {
+            const { error: recordError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
+              p_payment_id: pending.id, p_reason: reason, p_outcome: 'manual_required',
+              p_amount_cents: amount, p_error: reversalError instanceof Error ? reversalError.message : String(reversalError),
+              p_stripe_event_id: `reconcile:${transfer.id}`
+            });
+            if (recordError) throw recordError;
+            throw reversalError;
+          }
+        } else if (claim?.status === 'busy') throw new Error('Transfer recovery is already in progress.');
+      }
+      summary.transfersReconciled += 1;
+    } catch (transferError) {
+      errors.push(`${pending.id}: ${transferError instanceof Error ? transferError.message : String(transferError)}`);
     }
   }
 
