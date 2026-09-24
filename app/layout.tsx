@@ -73,7 +73,7 @@ import './production-typography.css';
 import './mobile-web-parity.css';
 import './profile-live.css';
 import type { Metadata } from 'next';
-import { Inter, Cormorant_Garamond } from 'next/font/google';
+import { Inter, Cormorant_Garamond, Space_Grotesk } from 'next/font/google';
 import SiteFooter from './SiteFooter';
 import CookieBanner from './CookieBanner';
 import GoogleAnalytics from './GoogleAnalytics';
@@ -82,6 +82,7 @@ import { aspireLogo } from './logo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const display = Cormorant_Garamond({ subsets: ['latin'], weight: ['500','600','700'], variable: '--font-display' });
+const productDisplay = Space_Grotesk({ subsets: ['latin'], weight: ['500','600','700'], variable: '--font-product-display' });
 
 const siteDescription = 'Aspire 101 is a campus request and connection network for college students to find study partners and rides, exchange items, coordinate help, and connect with verified campus communities.';
 
@@ -148,7 +149,7 @@ const siteStructuredData = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" data-aspire-theme="dark">
-      <body className={`${inter.variable} ${display.variable}`}>
+      <body className={`${inter.variable} ${display.variable} ${productDisplay.variable}`}>
         <DatadogAppRouter />
         <script
           type="application/ld+json"
