@@ -1,0 +1,128 @@
+/* Aspire's display voice: expressive where a page introduces itself,
+   quiet and legible in controls and dense product content. The Features
+   section is deliberately outside these selectors. */
+
+.marketingHeroCopy h1 {
+  font-weight: 680;
+  line-height: .96;
+  letter-spacing: -.055em;
+}
+.marketingHeroCopy h1 em {
+  font-weight: 500;
+  letter-spacing: -.028em;
+}
+
+.marketingStoryHead h2,
+.marketingCampusesHead h2,
+.whyIntro h2,
+.safetyHeadline h2,
+.rulesCopy h2 {
+  font-weight: 620;
+  line-height: 1.01;
+  letter-spacing: -.042em;
+}
+.marketingStoryHead h2 em,
+.marketingCampusesHead h2 em,
+.whyIntro h2 em,
+.safetyHeadline h2 em,
+.rulesCopy h2 em {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -.025em;
+}
+.rulesCopy h2 { font-size: clamp(48px, 5.2vw, 82px); }
+.marketingCommunityRules .rulesCopy > span { max-width: 37rem; line-height: 1.6; }
+
+.footerBrand {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+.footerLead h3 {
+  max-width: 600px;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(45px, 4.2vw, 68px);
+  font-weight: 600;
+  line-height: .99;
+  letter-spacing: -.036em;
+}
+.footerLead h3 span {
+  color: #efc967;
+  font-style: italic;
+  font-weight: 500;
+}
+.footerColumn h4 { font-weight: 730; letter-spacing: .075em; }
+.footerLead > p { max-width: 460px; line-height: 1.7; }
+
+/* Editorial headings belong to page openings and section titles. Cards,
+   forms, filters and transaction details keep the readable UI family. */
+.updatesPage .updatesIntro h1,
+.safetyPage .safetyHero h1,
+.safetyPage .safetySectionHead h2,
+.discoverPage .discoverV2Header h1::before,
+.legalPage .legalHero h1,
+.postPage .postWorkspaceHeader h1,
+.profilePagePolished .profilePageHeading h1,
+.settingsPage .settingsHero h1,
+.connectionsPage .connectionsShell > header h1 {
+  font-family: var(--font-display), Georgia, serif !important;
+  font-style: normal !important;
+  font-weight: 600 !important;
+  line-height: 1.02 !important;
+  letter-spacing: -.035em !important;
+}
+.safetyPage .safetyHero h1 span {
+  font-family: var(--font-display), Georgia, serif !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  letter-spacing: -.025em !important;
+}
+.updatesPage .updatesIntro h1 {
+  max-width: 600px;
+  font-size: clamp(52px, 5.3vw, 76px) !important;
+}
+.safetyPage .safetyHero h1 {
+  font-size: clamp(58px, 7vw, 94px) !important;
+}
+.safetyPage .safetySectionHead h2 {
+  font-size: clamp(40px, 4.2vw, 56px) !important;
+}
+.discoverPage .discoverV2Header h1::before {
+  font-size: clamp(43px, 4.1vw, 59px);
+}
+.settingsPage .settingsHero h1,
+.connectionsPage .connectionsShell > header h1,
+.postPage .postWorkspaceHeader h1,
+.profilePagePolished .profilePageHeading h1 {
+  font-size: clamp(36px, 4vw, 52px) !important;
+}
+
+.campusHome h1,
+.campusHome h2 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+.campusHome h2 { font-size: clamp(25px, 2.8vw, 34px); }
+.campusHome .sectionHead p { font-weight: 700; letter-spacing: .12em; }
+
+/* CSS module pages use a page-local class, so constrain the heading rule
+   to their named hero and section containers instead of a global h1 rule. */
+main[class*="ambassadors_page"] [class*="ambassadors_heroCopy"] h1,
+main[class*="ambassadors_page"] [class*="ambassadors_sectionIntro"] h2,
+main[class*="ambassadors_page"] [class*="ambassadors_processHead"] h2 {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1.02;
+}
+
+@media (max-width: 700px) {
+  .footerLead h3 { font-size: clamp(43px, 11vw, 56px); }
+  .rulesCopy h2 { font-size: clamp(43px, 10vw, 59px); }
+  .updatesPage .updatesIntro h1 { font-size: clamp(44px, 11vw, 58px) !important; }
+  .safetyPage .safetyHero h1 { font-size: clamp(48px, 11vw, 68px) !important; }
+  .safetyPage .safetySectionHead h2 { font-size: clamp(37px, 9vw, 48px) !important; }
+  .campusHome h2 { font-size: 27px; }
+}
