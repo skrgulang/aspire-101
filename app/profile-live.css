@@ -1,0 +1,214 @@
+/* Profile identity: give the person room, keep account controls quiet. */
+.profilePagePolished .profilePageHeading h1 {
+  font-size: clamp(34px, 4vw, 48px);
+  font-weight: 680;
+  letter-spacing: -.045em;
+}
+.profilePagePolished .profilePageHeading p { max-width: 580px; }
+
+.profilePagePolished .profileHeroPolished {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 290px);
+  gap: clamp(24px, 4vw, 72px);
+  min-height: 360px;
+  align-items: center;
+  overflow: hidden;
+  padding: clamp(26px, 4.5vw, 62px);
+  background: radial-gradient(circle at 78% 8%, rgba(255, 199, 44, .09), transparent 32%), #fff;
+}
+.profilePagePolished .profileHeroPolished::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -190px;
+  right: -125px;
+  width: 560px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(187, 139, 21, .15);
+  border-radius: 50%;
+  box-shadow: 0 0 0 58px rgba(187, 139, 21, .025), 0 0 0 118px rgba(187, 139, 21, .018);
+  pointer-events: none;
+}
+.profilePagePolished .profileIdentity {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: clamp(22px, 3vw, 42px);
+  align-items: start;
+  min-width: 0;
+}
+.profilePagePolished .profileAvatarWrap { padding-top: 10px; }
+.profilePagePolished .profileAvatar {
+  width: 124px;
+  height: 124px;
+  border: 3px solid #fff;
+  border-radius: 38px;
+  background: linear-gradient(145deg, #f7ce58, #bc8613);
+  color: #261b0a;
+  box-shadow: 0 0 0 1px rgba(179, 129, 15, .38), 0 20px 36px rgba(68, 48, 10, .15);
+  font-size: 45px;
+  font-weight: 650;
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.profilePagePolished .profileAvatar:hover,
+.profilePagePolished .profileAvatar:focus-visible {
+  transform: translateY(-4px) rotate(-2deg);
+  box-shadow: 0 0 0 1px rgba(179, 129, 15, .55), 0 26px 42px rgba(68, 48, 10, .23);
+}
+.profilePagePolished .profileHeroMeta > span { font-size: 10px; letter-spacing: .15em; }
+.profilePagePolished .profileHeroPolished h2 {
+  margin: 9px 0 9px;
+  overflow-wrap: anywhere;
+  font-size: clamp(38px, 4.5vw, 66px);
+  font-weight: 670;
+  line-height: 1.04;
+  letter-spacing: -.055em;
+}
+.profilePagePolished .profileNameVerified {
+  display: inline-grid;
+  width: .74em;
+  height: .74em;
+  place-items: center;
+  vertical-align: .12em;
+  border-radius: 50%;
+  background: #ffc72c;
+  color: #19150d;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: .37em;
+  font-weight: 750;
+  letter-spacing: 0;
+}
+.profilePagePolished .profileCampusLine {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15px !important;
+  font-weight: 550;
+}
+.profilePagePolished .profileCampusLine > span {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: #ffc72c;
+  box-shadow: 0 0 0 4px rgba(255, 199, 44, .15);
+}
+.profilePagePolished .studentProfileMetaLine { margin-top: 9px; font-size: 13px; font-weight: 500; }
+.profilePagePolished .studentProfileBio {
+  max-width: 600px;
+  margin-top: 18px !important;
+  font-size: clamp(15px, 1.5vw, 19px) !important;
+  font-weight: 440;
+  line-height: 1.5 !important;
+}
+.profilePagePolished .studentProfileInterests { margin-top: 17px; gap: 8px; }
+.profilePagePolished .studentProfileInterests span,
+.profilePagePolished .studentProfileInterests button {
+  padding: 7px 12px;
+  border: 1px solid rgba(174, 137, 49, .25);
+  border-radius: 999px;
+  background: rgba(255, 199, 44, .08);
+  color: #805c14;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+}
+.profilePagePolished .studentProfileInterests button { cursor: pointer; }
+.profilePagePolished .studentProfileInterests button:hover { background: rgba(255, 199, 44, .2); }
+.profilePagePolished .studentProfileStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  max-width: none;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(140, 130, 103, .2);
+}
+.profilePagePolished .studentProfileStat {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 126px;
+  margin-right: 22px;
+  padding: 0 22px 0 0;
+  border: 0;
+  border-right: 1px solid rgba(140, 130, 103, .2);
+  border-radius: 0;
+  background: transparent;
+}
+.profilePagePolished .studentProfileStat:last-child { border-right: 0; margin-right: 0; }
+.profilePagePolished .studentProfileStat strong { color: inherit; font-size: 18px; font-weight: 650; }
+.profilePagePolished .studentProfileStat span {
+  margin: 0;
+  color: #77736b;
+  font-size: 10px;
+  font-weight: 560;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.profilePagePolished .profileHeroActions { margin-top: 24px; gap: 10px; }
+.profilePagePolished .profileHeroActions button,
+.profilePagePolished .profileHeroActions a { min-height: 42px; padding-inline: 16px; font-size: 12px; font-weight: 660; transition: transform .2s ease, background .2s ease; }
+.profilePagePolished .profileHeroActions button:hover,
+.profilePagePolished .profileHeroActions a:hover { transform: translateY(-2px); }
+.profilePagePolished .profileSetupCard {
+  align-self: center;
+  padding: 18px;
+  border-color: rgba(179, 133, 27, .19);
+  background: rgba(255, 199, 44, .075);
+  box-shadow: none;
+}
+.profilePagePolished .profileSetupTop strong { font-size: 22px; }
+.profilePagePolished .profileSetupCard p { margin: 9px 0; line-height: 1.5; }
+.profilePagePolished .profileSetupMeter { height: 5px; }
+.profilePagePolished .profileOverview { grid-template-columns: minmax(0, 1.5fr) minmax(290px, .7fr); gap: 18px; }
+.profilePagePolished .profileTrustCardsExpanded { align-items: start; }
+.profilePagePolished .profileTrustCards > .profileCard,
+.profilePagePolished .profileTrustCards > .trustPassportCard { min-height: 0; }
+.profilePagePolished .profileTrustCards .profileSchoolIdCard { grid-column: 1 / -1; }
+.profilePagePolished .profileSectionHeading h2 { font-weight: 680; }
+
+html[data-aspire-theme='dark'] .profilePagePolished .profileHeroPolished {
+  background: radial-gradient(circle at 80% 12%, rgba(255, 199, 44, .14), transparent 37%), linear-gradient(130deg, #1b1a17, #121211 68%);
+}
+html[data-aspire-theme='dark'] .profilePagePolished .profileHeroPolished::before { border-color: rgba(255, 199, 44, .18); box-shadow: 0 0 0 58px rgba(255, 199, 44, .022), 0 0 0 118px rgba(255, 199, 44, .012); }
+html[data-aspire-theme='dark'] .profilePagePolished .profileAvatar { border-color: #1b1a17; }
+html[data-aspire-theme='dark'] .profilePagePolished .studentProfileStat { background: transparent; border-color: rgba(255, 255, 255, .12); }
+html[data-aspire-theme='dark'] .profilePagePolished .studentProfileStat strong { color: #f7f1e8; }
+html[data-aspire-theme='dark'] .profilePagePolished .studentProfileInterests span,
+html[data-aspire-theme='dark'] .profilePagePolished .studentProfileInterests button { border-color: rgba(255, 199, 44, .2); background: rgba(255, 199, 44, .08); color: #f0ca64; }
+html[data-aspire-theme='dark'] .profilePagePolished .profileSetupCard { border-color: rgba(255, 199, 44, .19); background: rgba(255, 199, 44, .065); }
+
+@media (max-width: 1150px) {
+  .profilePagePolished .profileHeroPolished { grid-template-columns: 1fr; min-height: 0; gap: 24px; }
+  .profilePagePolished .profileSetupCard { display: block; width: 100%; }
+  .profilePagePolished .profileOverview { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .profilePagePolished .profileHeroPolished { gap: 18px; padding: 22px 18px; }
+  .profilePagePolished .profileIdentity { grid-template-columns: 76px minmax(0, 1fr); gap: 14px; }
+  .profilePagePolished .profileAvatarWrap { padding-top: 4px; }
+  .profilePagePolished .profileAvatar { width: 76px; height: 76px; border-radius: 25px; font-size: 27px; }
+  .profilePagePolished .profileHeroPolished h2 { margin: 6px 0; font-size: clamp(26px, 7vw, 36px); }
+  .profilePagePolished .profileCampusLine { font-size: 12px !important; }
+  .profilePagePolished .studentProfileBio { font-size: 14px !important; }
+  .profilePagePolished .studentProfileStats { gap: 12px 0; }
+  .profilePagePolished .studentProfileStat { min-width: 0; width: 50%; margin: 0; padding-right: 10px; }
+  .profilePagePolished .studentProfileStat:nth-child(2) { padding-left: 12px; border-right: 0; }
+  .profilePagePolished .studentProfileStat:last-child { width: 100%; }
+  .profilePagePolished .profileTrustCardsExpanded { grid-template-columns: 1fr !important; }
+  .profilePagePolished .profileTrustCards .profileSchoolIdCard { grid-column: auto; }
+}
+@media (max-width: 430px) {
+  .profilePagePolished .profileHeroPolished { padding: 18px 14px; }
+  .profilePagePolished .profileIdentity { grid-template-columns: 62px minmax(0, 1fr); gap: 11px; }
+  .profilePagePolished .profileAvatar { width: 62px; height: 62px; border-radius: 20px; font-size: 23px; }
+  .profilePagePolished .profileHeroPolished h2 { font-size: 26px; }
+  .profilePagePolished .studentProfileStat strong { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profilePagePolished .profileAvatar,
+  .profilePagePolished .profileHeroActions button,
+  .profilePagePolished .profileHeroActions a { transition: none; }
+}
