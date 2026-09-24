@@ -14,6 +14,7 @@ import MfaSecurityCard from '../MfaSecurityCard';
 import ProfileAvatar from '../ProfileAvatar';
 import UiIcon from '../UiIcon';
 import PaymentConnectRow from '../PaymentConnectRow';
+import '../profile-live.css';
 
 type ProfileVisibility = 'private' | 'connections' | 'campus';
 
@@ -268,23 +269,23 @@ export default function ProfilePage() {
         </header>
 
         <section className="profileHero profileHeroPolished">
-          <ProfileAvatar initialUrl={profile.avatarUrl} initials={initials} name={profile.name} />
-
-          <div className="profileHeroCopy">
+          <div className="profileIdentity">
+            <ProfileAvatar initialUrl={profile.avatarUrl} initials={initials} name={profile.name} />
+            <div className="profileHeroCopy">
             <div className="profileHeroMeta">
               <span>{profile.schoolVerified ? 'VERIFIED STUDENT' : 'CAMPUS PROFILE'}</span>
               {role !== 'member' && <b>{role.toUpperCase()}</b>}
             </div>
-            <h2>{profile.name} {profile.schoolVerified && <span aria-label="Verified">✓</span>}</h2>
-            <p>{profile.school}</p>
+            <h2>{profile.name} {profile.schoolVerified && <span className="profileNameVerified" aria-label="Verified student">✓</span>}</h2>
+            <p className="profileCampusLine"><span aria-hidden="true" />{profile.school}</p>
             {identityLine && <div className="studentProfileMetaLine"><span>{identityLine}</span></div>}
             <p className="studentProfileBio">{profile.bio || 'Add a short signature so your connections know a little about you.'}</p>
             <div className="studentProfileInterests">
-              {profile.interests.length ? profile.interests.map((interest) => <span key={interest}>{interest}</span>) : <span>Add interests</span>}
+              {profile.interests.length ? profile.interests.map((interest) => <span key={interest}>{interest}</span>) : <button type="button" onClick={beginEdit}>+ Add interests</button>}
             </div>
             <div className="studentProfileStats">
-              <div className="studentProfileStat"><strong>{profile.completedCount}</strong><span>Completed</span></div>
-              <div className="studentProfileStat"><strong>{formatJoined(profile.joinedAt)}</strong><span>Joined</span></div>
+              <div className="studentProfileStat"><strong>{profile.completedCount}</strong><span>Completed connections</span></div>
+              <div className="studentProfileStat"><strong>{formatJoined(profile.joinedAt)}</strong><span>On Aspire since</span></div>
               <div className="studentProfileStat"><strong>{profile.schoolVerified ? '✓' : '—'}</strong><span>Campus verified</span></div>
             </div>
             <div className="profileHeroActions">
@@ -305,6 +306,7 @@ export default function ProfilePage() {
                 </div>
               </div>
             )}
+            </div>
           </div>
 
           <div className="profileSetupCard" aria-label={`${verifiedSignals} of 3 trust signals complete`}>
