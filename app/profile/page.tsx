@@ -309,7 +309,7 @@ export default function ProfilePage() {
             <div className="profileHeroCopy">
               <h1>{profile.name}</h1>
               <div className="profileDashboardSchool">
-                <UiIcon name="school" />
+                <UiIcon name="book" />
                 <span><strong>{profile.school}</strong>{profile.major && <small>{profile.major}{profile.graduationYear ? ` · Class of ${profile.graduationYear}` : ''}</small>}</span>
               </div>
 
@@ -332,7 +332,7 @@ export default function ProfilePage() {
           <section className="profileDashboardCard profileAboutCard">
             <div className="profileDashboardCardHead">
               <h2>About</h2>
-              <button type="button" onClick={beginEdit}>Edit <UiIcon name="edit" /></button>
+              <button type="button" onClick={beginEdit}>Edit</button>
             </div>
             <p>{profile.bio || 'Tell your campus what you are into, what you are working on, or what kind of people you would like to meet.'}</p>
             <div className="profileAboutInterests">
@@ -385,8 +385,8 @@ export default function ProfilePage() {
           <section className="profileDashboardCard profileTrustSummary">
             <div className="profileDashboardAsideTitle"><UiIcon name="shield" /><h2>Trust & verification</h2><a href="/settings#security"><UiIcon name="chevron" /></a></div>
             <div className="profileTrustSummaryRows">
-              <a href="/settings#security"><i className={profile.schoolVerified ? 'verified' : ''}><UiIcon name={profile.schoolVerified ? 'check' : 'school'} /></i><span><strong>{profile.school} email</strong><small>{profile.schoolVerified ? 'Verified student' : 'Verification available'}</small></span><UiIcon name="chevron" /></a>
-              <a href="/settings#security"><i className={profile.phoneVerified ? 'verified' : ''}><UiIcon name={profile.phoneVerified ? 'check' : 'phone'} /></i><span><strong>Phone number</strong><small>{profile.phoneVerified ? `Verified · •••• ${profile.phone.slice(-4)}` : 'Not verified'}</small></span><UiIcon name="chevron" /></a>
+              <a href="/settings#security"><i className={profile.schoolVerified ? 'verified' : ''}><UiIcon name={profile.schoolVerified ? 'check' : 'book'} /></i><span><strong>{profile.school} email</strong><small>{profile.schoolVerified ? 'Verified student' : 'Verification available'}</small></span><UiIcon name="chevron" /></a>
+              <a href="/settings#security"><i className={profile.phoneVerified ? 'verified' : ''}><UiIcon name={profile.phoneVerified ? 'check' : 'message'} /></i><span><strong>Phone number</strong><small>{profile.phoneVerified ? `Verified · •••• ${profile.phone.slice(-4)}` : 'Not verified'}</small></span><UiIcon name="chevron" /></a>
               <a href="/settings#security"><i className={mfaEnabled ? 'verified' : ''}><UiIcon name={mfaEnabled ? 'check' : 'shield'} /></i><span><strong>Two-step verification</strong><small>{mfaEnabled ? 'Enabled' : 'Not enabled'}</small></span><UiIcon name="chevron" /></a>
             </div>
           </section>
