@@ -253,7 +253,14 @@ export async function POST(request: Request) {
       throw claimError;
     }
 
-    const claimedAt = typeof claimedAtValue === 'string' ? claimedAtValue : String(claimedAtValue || '');
+    const { data: attempted, error: attemptError } = await supabase.from('connection_payments')
+      .update({ stripe_transfer_attempted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', payment.id).eq('status', 'secured')
+      .eq('release_claimed_at', claimedAtValue)
+      .select('id').maybeSingle();
+    if (attemptError) throw attemptError;
+    if (!attempted) throw new Error('PAYOUT_RELEASE_CLAIM_CHANGED');
+
     let transfer: StripeTransfer;
     try {
       transfer = await stripeFormRequest<StripeTransfer>('/v1/transfers', {
@@ -272,13 +279,13 @@ export async function POST(request: Request) {
         'metadata[admin_release_authorized]': marketOrder?.admin_release_authorized_at ? 'true' : 'false'
       }, { idempotencyKey: `aspire_release_${payment.id}` });
     } catch (error) {
-      if (claimedAt) {
-        const { error: clearClaimError } = await supabase.rpc('clear_connection_payment_release_claim', {
-          p_payment_id: payment.id,
-          p_claimed_at: claimedAt
-        });
-        if (clearClaimError) console.error('Could not clear failed payout release claim', clearClaimError);
-      }
+      // A network error can arrive after Stripe created the transfer. Preserve
+      // the claim so the reconciler checks Stripe before anyone retries payout.
+      console.error('Seller transfer result uncertain; awaiting Stripe reconciliation', {
+        paymentId: payment.id,
+        claimedAt: claimedAtValue,
+        error
+      });
       throw error;
     }
 
