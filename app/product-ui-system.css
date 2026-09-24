@@ -1,0 +1,368 @@
+/* Aspire product UI system
+   Final polish layer: consistent controls, cards, dialogs, status states,
+   empty states and mobile tap targets. Visual only — no feature behavior. */
+
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPage,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .safetyPage,
+  .updatesPage,
+  .campusHome
+) {
+  --ui-radius-card: 16px;
+  --ui-radius-control: 12px;
+  --ui-radius-modal: 22px;
+  --ui-border: rgba(255,255,255,.10);
+  --ui-border-strong: rgba(255,255,255,.16);
+  --ui-gold: #ffc72c;
+  --ui-shadow-raised: 0 18px 46px rgba(0,0,0,.22);
+  --ui-shadow-modal: 0 30px 90px rgba(0,0,0,.52);
+}
+
+/* Buttons: one height/radius/interaction language for primary product actions. */
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPage,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .safetyPage,
+  .updatesPage
+) .button {
+  min-height: 42px;
+  border-radius: var(--ui-radius-control) !important;
+  font-weight: 780;
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    background .16s ease,
+    box-shadow .16s ease,
+    opacity .16s ease;
+}
+
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPage,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .safetyPage,
+  .updatesPage
+) .button:hover {
+  transform: translateY(-1px);
+}
+
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPage,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .safetyPage,
+  .updatesPage
+) .buttonGold {
+  border-color: #ffc72c !important;
+  background: #ffc72c !important;
+  color: #18130a !important;
+  box-shadow: none !important;
+}
+
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPage,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .safetyPage,
+  .updatesPage
+) .buttonGold:hover {
+  background: #ffd24d !important;
+  border-color: #ffd24d !important;
+  box-shadow: 0 8px 24px rgba(255,199,44,.14) !important;
+}
+
+/* Accessible, predictable keyboard focus everywhere in the signed-in product. */
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPage,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .safetyPage,
+  .updatesPage,
+  .campusHome
+) :is(button,a,input,textarea,select):focus-visible {
+  outline: 2px solid rgba(255,199,44,.82) !important;
+  outline-offset: 2px !important;
+}
+
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPage,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .safetyPage,
+  .updatesPage,
+  .campusHome
+) :is(button,input,textarea,select):disabled {
+  opacity: .5;
+  cursor: not-allowed !important;
+  transform: none !important;
+}
+
+/* Form controls: same edge treatment and focus state, without overriding page colors. */
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPageRefreshed,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .updatesPage
+) :is(input:not([type='checkbox']):not([type='radio']),textarea,select) {
+  border-radius: var(--ui-radius-control) !important;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+:where(
+  .discoverPage,
+  .connectionsPage,
+  .postPageRefreshed,
+  .profilePagePolished,
+  .settingsPage,
+  .aspireMoneyPage,
+  .updatesPage
+) :is(input:not([type='checkbox']):not([type='radio']),textarea,select):focus {
+  border-color: rgba(255,199,44,.70) !important;
+  box-shadow: 0 0 0 3px rgba(255,199,44,.09) !important;
+  outline: 0;
+}
+
+/* Core cards: stop tiny radius changes from making each workspace feel unrelated. */
+.discoverPage .discoverV2Card,
+.connectionsPage :is(.inboxRequest,.connectionCard,.circleCard,.connectionsEmpty),
+.profilePagePolished .profileDashboardCard,
+.postPageRefreshed :is(.postComposerField,.postEssentials,.postDetailsField,.requestMediaComposer,.postContextCard,.postRailCard,.postPreviewPanel,.postVerifiedCard),
+.safetyPage :is(.safetyScenario,.safetyControlCard,.safetyLegalStrip) {
+  border-radius: var(--ui-radius-card) !important;
+}
+
+/* Keep hover motion quiet and purposeful. */
+.discoverPage .discoverV2Card:hover,
+.connectionsPage :is(.inboxRequest,.connectionCard,.circleCard):hover,
+.profilePagePolished .profileRecentRow:hover {
+  transform: translateY(-1px) !important;
+}
+
+/* Status chips are allowed to stay pill-shaped, but share one density. */
+.connectionsPage :is(.requestStatus,.responseState),
+.campusIdentityTag,
+.unreadPill {
+  min-height: 24px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .035em;
+  line-height: 1;
+}
+
+/* Empty states should look intentional rather than like missing content. */
+.connectionsPage .connectionsEmpty,
+.discoverPage .discoverV2State,
+.profilePagePolished .profileRecentEmpty,
+.disputeAiEmpty {
+  border-style: solid !important;
+  border-radius: var(--ui-radius-card) !important;
+}
+
+.connectionsPage .connectionsEmpty,
+.profilePagePolished .profileRecentEmpty {
+  min-height: 150px;
+}
+
+.connectionsPage .connectionsEmpty strong,
+.profilePagePolished .profileRecentEmpty strong,
+.disputeAiEmpty strong {
+  font-family: var(--font-product-display), var(--font-inter), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+
+/* Alerts/errors: one restrained red treatment. */
+.postPage .postError,
+.disputeAiError,
+.connectionsPage [role='alert'],
+.profilePagePolished [role='alert'] {
+  border: 1px solid rgba(236,102,102,.22) !important;
+  border-radius: 12px !important;
+  background: rgba(236,102,102,.065) !important;
+  color: #e9aaa6 !important;
+}
+
+/* Dialog backdrops use one darkness/blur level. */
+.publishOverlay,
+.discoverSafetyOverlay,
+.connectionChatOverlay,
+.campusSwitchOverlay,
+.notificationOverlay,
+.aspireAgentOverlay,
+.disputeAiOverlay {
+  background: rgba(4,4,3,.68) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+/* Dialog surfaces share radius, border and shadow while keeping their own layout. */
+.publishModal,
+.discoverSafetySheet,
+.connectionChat,
+.campusSwitchModal,
+.aspireAgentModal,
+.disputeAiModal {
+  border: 1px solid rgba(255,255,255,.105) !important;
+  border-radius: var(--ui-radius-modal, 22px) !important;
+  box-shadow: var(--ui-shadow-modal, 0 30px 90px rgba(0,0,0,.52)) !important;
+}
+
+/* Notification drawer is a drawer, not a separate visual system. */
+.notificationPanel {
+  border-color: rgba(255,255,255,.09) !important;
+  background: #11110f !important;
+  box-shadow: -22px 0 70px rgba(0,0,0,.40) !important;
+}
+
+.notificationHeaderActions button,
+.connectionChat header button,
+.discoverSafetyClose,
+.disputeAiClose,
+.aspireAgentModalClose {
+  border-radius: 11px !important;
+}
+
+/* Drawer rows use product-sized copy and a quieter unread treatment. */
+.notificationItem {
+  min-height: 64px;
+  border-radius: 12px;
+  border-bottom: 0 !important;
+  margin-bottom: 3px;
+}
+
+.notificationItem.unread {
+  background: rgba(255,199,44,.055) !important;
+}
+
+.notificationItem:hover {
+  background: rgba(255,255,255,.035) !important;
+}
+
+/* Chat composer aligns with the rest of the form language. */
+.connectionsPage .chatComposer {
+  gap: 9px;
+}
+
+.connectionsPage .chatComposer input {
+  min-height: 44px;
+  border-radius: 12px !important;
+}
+
+.connectionsPage .chatComposer button {
+  min-height: 44px;
+  border-radius: 12px !important;
+  padding-inline: 16px;
+}
+
+/* Profile utility chips no longer feel like a separate pill-heavy system. */
+.profilePagePolished .profileAboutInterests :is(span,button) {
+  min-height: 36px;
+  border-radius: 11px !important;
+}
+
+/* Post composer helper panels use exactly the same vertical rhythm. */
+.postPageRefreshed :is(.postComposerField,.postEssentials,.postDetailsField,.requestMediaComposer,.postContextCard) {
+  margin-top: 12px !important;
+}
+
+/* Mobile: preserve the bottom navigation and make form actions thumb-friendly. */
+@media (max-width: 900px) {
+  :where(
+    .discoverPage,
+    .connectionsPage,
+    .postPage,
+    .profilePagePolished,
+    .settingsPage,
+    .aspireMoneyPage,
+    .updatesPage
+  ) .button {
+    min-height: 44px;
+  }
+
+  .notificationPanel {
+    width: 100%;
+  }
+
+  .discoverSafetySheet,
+  .publishModal,
+  .campusSwitchModal,
+  .aspireAgentModal,
+  .disputeAiModal {
+    border-radius: 20px 20px 0 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Prevent iOS input zoom in the form-heavy parts of the product. */
+  .postPageRefreshed :is(input,textarea,select),
+  .settingsPage :is(input,textarea,select),
+  .profilePagePolished .studentEditPanel :is(input,textarea,select),
+  .publishModal :is(input,textarea,select),
+  .discoverSafetySheet :is(input,textarea,select) {
+    font-size: 16px !important;
+  }
+
+  .publishOverlay,
+  .discoverSafetyOverlay,
+  .campusSwitchOverlay,
+  .aspireAgentOverlay,
+  .disputeAiOverlay {
+    align-items: end !important;
+    padding: 8px 8px 0 !important;
+  }
+
+  .notificationItem {
+    min-height: 62px;
+    padding: 13px 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(
+    .discoverPage,
+    .connectionsPage,
+    .postPage,
+    .profilePagePolished,
+    .settingsPage,
+    .aspireMoneyPage,
+    .safetyPage,
+    .updatesPage
+  ) *,
+  .notificationPanel *,
+  .aspireAgentModal *,
+  .disputeAiModal * {
+    scroll-behavior: auto !important;
+  }
+}
