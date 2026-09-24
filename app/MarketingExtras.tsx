@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 const whyRows = [
-  { old: 'Scattered group chats', aspire: 'One campus network', icon: '◎', note: 'Requests + people + context' },
-  { old: 'Anyone on the internet', aspire: 'Verified campus identity', icon: '✓', note: 'Home campus stays attached' },
-  { old: 'First reply wins', aspire: 'Both sides choose', icon: '⇄', note: 'Mutual before chat opens' },
-  { old: 'Context disappears', aspire: 'History builds trust', icon: '↗', note: 'Connections become your Circle' }
+  { aspire: 'One campus network', icon: '◎' },
+  { aspire: 'Verified students', icon: '✓' },
+  { aspire: 'A mutual choice', icon: '⇄' },
+  { aspire: 'Connections that last', icon: '↗' }
 ];
 
 function CampusWalkerBand() {
@@ -135,52 +135,32 @@ export default function MarketingExtras() {
     <>
       <section ref={whyRef} className="marketingWhy marketingWhyRefined" id="why-aspire">
         <div className="whyIntro" data-reveal="left">
-          <div className="whyIntroTop"><p>LESS ASKING AROUND</p><span className="whySticker">WHY ASPIRE? ↗</span></div>
+          <div className="whyIntroTop"><p>WHY ASPIRE?</p></div>
           <h2>Campus already helps itself.<br /><em>Aspire gives it one place.</em></h2>
-          <span>Requests, people, identity, and context stay together — even when campus life moves.</span>
         </div>
 
         <div className="whyCompare whyCompareRefined">
           <div className="whyOld" data-reveal="left">
-            <div className="whyPanelHead"><small>THE USUAL WAY</small><span>CHAOS, EVERYWHERE</span></div>
-            <strong>DMs. Group chats. Random posts.</strong>
-            <p>Useful people are already around you. Finding the right one is the messy part.</p>
+            <img className="whyPhoto whyPhotoOld" src="https://images.pexels.com/photos/6147369/pexels-photo-6147369.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" loading="lazy" />
+            <div className="whyPanelHead"><small>THE USUAL WAY</small></div>
+            <strong>Too many places to ask.</strong>
             <div className="whyMess" aria-hidden="true">
               <span>“anyone driving?”</span>
-              <span>“who can help?”</span>
-              <span>“is this still available?”</span>
               <span>“wait who are you?”</span>
-              <span>“which group chat?”</span>
-              <span>“did you see my DM?”</span>
             </div>
-            <div className="whyScribble" aria-hidden="true">ASK → WAIT → ASK AGAIN</div>
           </div>
 
           <div ref={whyCardRef} className="whyAspireCard" data-reveal="right">
-            <div className="whyPanelHead"><small>ON ASPIRE</small><span>ONE CLEAR FLOW</span></div>
+            <img className="whyPhoto whyPhotoAspire" src="https://images.pexels.com/photos/7683692/pexels-photo-7683692.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="" loading="lazy" />
+            <div className="whyPanelHead"><small>ON ASPIRE</small></div>
+            <span className="whySideTrack" aria-hidden="true" />
+            <div className={`whyGuideWalker ${activeWhyRow >= 0 ? "show" : ""}`} style={{ top: guideTop }} aria-hidden="true"><span className="whyGuideHead" /><span className="whyGuideBody" /><span className="whyGuideLeg a" /><span className="whyGuideLeg b" /></div>
             {whyRows.map((row, index) => (
               <div ref={(node) => { whyRowRefs.current[index] = node; }} className={`whyRow revealDelay${index} ${activeWhyRow === index ? "whyRowActive" : ""}`} key={row.aspire}>
                 <i>{row.icon}</i>
-                <span><del>{row.old}</del><b>{row.aspire}</b><small>{row.note}</small></span>
+                <span><b>{row.aspire}</b></span>
               </div>
             ))}
-            <div className="whyIdentityStamp"><span>HOME CAMPUS</span><strong>VERIFIED ✓</strong><small>Location adds context. It never rewrites who you are.</small></div>
-          </div>
-
-          <div className="whySideGuide" aria-hidden="true">
-            <span className="whySideGuideLine" />
-            <div className="whySideGuideDots">
-              {whyRows.map((row, index) => <i key={row.aspire} className={activeWhyRow === index ? 'active' : ''} />)}
-            </div>
-            <div className={`whyGuideWalker ${activeWhyRow >= 0 ? 'show' : ''}`} style={{ top: guideTop }}>
-              <span className="whyGuideHead" />
-              <span className="whyGuideBody" />
-              <span className="whyGuideArm a" />
-              <span className="whyGuideArm b" />
-              <span className="whyGuideLeg a" />
-              <span className="whyGuideLeg b" />
-            </div>
-            <small className="whySideGuideStep">{activeWhyRow >= 0 ? `0${activeWhyRow + 1} / 04` : 'WHY ASPIRE'}</small>
           </div>
         </div>
       </section>
