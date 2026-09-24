@@ -122,6 +122,28 @@ export async function cancelMarketReservation(connectionId: string) {
   if (!response.ok) throw new Error(payload?.error || 'Could not cancel this reservation.');
 }
 
+/** Seller-side cancellation for an unpaid reservation with no Checkout in flight. */
+export async function cancelUnpaidMarketReservation(connectionId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('cancel_unpaid_marketplace_reservation', {
+    p_connection_id: connectionId
+  });
+  if (error) {
+    const detail = `${error.message || ''} ${error.details || ''}`;
+    if (/PAYMENT_PROCESSING/i.test(detail)) {
+      throw new Error('Payment is still being confirmed. Refresh shortly before trying to cancel.');
+    }
+    if (/UNPAID_CANCELLATION_NOT_AVAILABLE/i.test(detail)) {
+      throw new Error('This order can no longer use unpaid cancellation. Use the protected refund or problem-report flow.');
+    }
+    if (/FULFILLMENT_ALREADY_STARTED/i.test(detail)) {
+      throw new Error('Delivery or handoff has already started. Use Report a problem so the order stays protected.');
+    }
+    throw error;
+  }
+  return data as MarketOrder;
+}
+
 export async function fetchMarketPriceProposals(orderIds: string[]) {
   if (!orderIds.length) return [] as MarketPriceProposal[];
   const supabase = getSupabaseBrowserClient();
