@@ -226,7 +226,7 @@
 .returnButton { border: 0; background: transparent; color: #7a6500; font: inherit; font-size: 10px; font-weight: 800; cursor: pointer; }
 
 .overlay { position: fixed; inset: 0; z-index: 200; padding: 20px; display: grid; place-items: center; background: rgba(8,8,8,.54); backdrop-filter: blur(8px); }
-.modal { width: min(480px,100%); padding: 26px; border-radius: 24px; background: #fff; color: #171717; box-shadow: 0 28px 90px rgba(0,0,0,.22); }
+.modal { width: min(480px,100%); padding: 24px; border: 1px solid #e4e5e1; border-radius: 20px; background: #fff; color: #171717; box-shadow: 0 24px 70px rgba(0,0,0,.20); }
 .modal > span { color: #927000; font-size: 9px; font-weight: 900; letter-spacing: .12em; }
 .modal h2 { margin: 7px 0 10px; font-size: 26px; letter-spacing: -.035em; }
 .modal p { margin: 0; color: #777772; font-size: 12px; line-height: 1.55; }
@@ -419,7 +419,7 @@
   .searchBox { display: none; }
   .mainGrid { margin-top: 12px; }
   .mainColumn { gap: 24px; }
-  .hero { min-height: 306px; padding: 26px 20px; border: 1px solid #5a4523; border-radius: 24px; align-items: flex-start; background: #16130e; box-shadow: 0 18px 55px rgba(0,0,0,.28); }
+  .hero { min-height: 306px; padding: 26px 20px; border: 1px solid #4a3b25; border-radius: 20px; align-items: flex-start; background: #16130e; box-shadow: 0 18px 55px rgba(0,0,0,.28); }
   .heroImage { left: 28%; width: 72%; opacity: .54; object-position: center; filter: saturate(.77) sepia(.21) brightness(.72); }
   .heroOverlay { background: linear-gradient(90deg, #15120e 1%, rgba(17,14,10,.91) 44%, rgba(17,14,10,.32) 100%), linear-gradient(0deg, #15120e 2%, transparent 64%); }
   .heroContent { width: 100%; }
@@ -427,8 +427,8 @@
   .desktopHeroTitle, .heroText { display: none; }
   .mobileHeroIntro { display: block; }
   .mobileHeroIntro > span { color: #e0d6c4; font-size: 12px; }
-  .mobileHeroIntro h1 { max-width: 290px; margin: 8px 0 0; font-family: var(--font-display), Georgia, serif; font-size: clamp(39px, 11.4vw, 54px); font-weight: 600; line-height: .93; letter-spacing: -.045em; text-wrap: balance; }
-  .mobileHeroIntro em { color: #ffd268; font-weight: 600; }
+  .mobileHeroIntro h1 { max-width: 310px; margin: 8px 0 0; font-family: var(--font-product-display), var(--font-inter), system-ui, sans-serif; font-size: clamp(36px, 10.2vw, 48px); font-weight: 600; line-height: .98; letter-spacing: -.045em; text-wrap: balance; }
+  .mobileHeroIntro em { color: #ffd268; font-family: var(--font-display), Georgia, serif; font-style: italic; font-weight: 500; letter-spacing: -.025em; }
   .mobileHeroSearch { min-height: 46px; margin-top: 25px; padding: 0 14px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,.2); border-radius: 14px; background: rgba(42,39,36,.88); color: #d4cec2; font-size: 11px; backdrop-filter: blur(12px); }
   .mobileHeroSearch svg { width: 17px; height: 17px; flex: 0 0 auto; }
   .heroActions { margin-top: 12px; }
