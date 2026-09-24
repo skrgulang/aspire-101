@@ -3,6 +3,7 @@ export type ExpectedTransfer = {
   transfer_group: string | null;
   provider_net_cents: number | null;
   provider_amount_cents: number | null;
+  stripe_transfer_attempted_amount_cents?: number | null;
   stripe_livemode: boolean;
 };
 
@@ -15,7 +16,8 @@ export type ObservedTransfer = {
 };
 
 export function matchesSellerTransfer(payment: ExpectedTransfer, transfer: ObservedTransfer): boolean {
-  const amount = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+  const amount = Number(payment.stripe_transfer_attempted_amount_cents
+    ?? payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
   return /^tr_[A-Za-z0-9]+$/.test(String(transfer.id || ''))
     && amount > 0 && Number.isInteger(amount)
     && transfer.amount === amount
