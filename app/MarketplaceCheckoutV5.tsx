@@ -139,16 +139,16 @@ export default function MarketplaceCheckoutV5() {
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
     void supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) {
-        router.replace('/login?next=%2Fmarketplace');
-        return;
-      }
-      setViewerId(data.user.id);
+      const user = data.user;
+      setViewerId(user?.id || '');
 
-      const [{ data: profile }, universities] = await Promise.all([
-        supabase.from('profiles').select('current_campus_id,home_campus_id').eq('id', data.user.id).maybeSingle(),
+      const [profileResult, universities] = await Promise.all([
+        user
+          ? supabase.from('profiles').select('current_campus_id,home_campus_id').eq('id', user.id).maybeSingle()
+          : Promise.resolve({ data: null }),
         fetchActiveUniversities()
       ]);
+      const profile = profileResult.data;
       const validIds = new Set(universities.map((entry) => entry.id));
       const storedCampusId = window.sessionStorage.getItem('aspire-active-campus-id');
       const campusId = storedCampusId && validIds.has(storedCampusId)
@@ -180,14 +180,14 @@ export default function MarketplaceCheckoutV5() {
             item.kind === 'buy_sell' &&
             item.market_intent === 'sell' &&
             item.payment_method === 'aspire' &&
-            (item.poster_id !== data.user!.id || item.moderation_status === 'approved')
+            (!user || item.poster_id !== user.id || item.moderation_status === 'approved')
           );
         setItems(visible);
 
         const directId = new URLSearchParams(window.location.search).get('item') || '';
         setDirectItemId(directId);
         const directItem = directId ? visible.find((item) => item.id === directId) : undefined;
-        if (directItem?.poster_id === data.user.id) {
+        if (user && directItem?.poster_id === user.id) {
           setNotice('This is your listing. Use My Activity to manage or close it.');
         } else if (directItem) {
           openDelivery(directItem);
@@ -234,6 +234,10 @@ export default function MarketplaceCheckoutV5() {
   }, [items, query, filter, sort]);
 
   function openItem(item: MarketplaceItem) {
+    if (!viewerId) {
+      router.push(`/login?next=${encodeURIComponent(`/marketplace?item=${item.id}`)}`);
+      return;
+    }
     if (item.poster_id === viewerId) {
       router.push('/activity');
       return;
@@ -303,6 +307,10 @@ export default function MarketplaceCheckoutV5() {
   }
 
   async function reserve(item: MarketplaceItem) {
+    if (!viewerId) {
+      router.push(`/login?next=${encodeURIComponent(`/marketplace?item=${item.id}`)}`);
+      return;
+    }
     if (!supports(item, deliveryChoice)) {
       setModalError('That delivery method is not offered by this seller.');
       return;
