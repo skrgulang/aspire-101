@@ -6,7 +6,7 @@ const contentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://r.stripe.com https://q.stripe.com https://www.google-analytics.com https://*.google-analytics.com https://api2.amplitude.com https://browser-intake-datadoghq.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://r.stripe.com https://q.stripe.com https://www.google-analytics.com https://*.google-analytics.com https://api2.amplitude.com https://sr-client-cfg.amplitude.com https://browser-intake-datadoghq.com",
   "frame-src https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
