@@ -263,7 +263,7 @@ export default function ProfilePage() {
           <div className="profilePageHeading">
             <span>CAMPUS IDENTITY</span>
             <h1>Profile</h1>
-            <p>This is the student identity people you connect with can see. Private account controls live in Settings.</p>
+            <p>How your campus sees you.</p>
           </div>
           <a className="profileBack" href="/settings"><UiIcon name="settings" />Settings</a>
         </header>
@@ -279,15 +279,9 @@ export default function ProfilePage() {
             <h2>{profile.name} {profile.schoolVerified && <span className="profileNameVerified" aria-label="Verified student">✓</span>}</h2>
             <p className="profileCampusLine"><span aria-hidden="true" />{profile.school}</p>
             {identityLine && <div className="studentProfileMetaLine"><span>{identityLine}</span></div>}
-            <p className="studentProfileBio">{profile.bio || 'Add a short signature so your connections know a little about you.'}</p>
-            <div className="studentProfileInterests">
-              {profile.interests.length ? profile.interests.map((interest) => <span key={interest}>{interest}</span>) : <button type="button" onClick={beginEdit}>+ Add interests</button>}
-            </div>
-            <div className="studentProfileStats">
-              <div className="studentProfileStat"><strong>{profile.completedCount}</strong><span>Completed connections</span></div>
-              <div className="studentProfileStat"><strong>{formatJoined(profile.joinedAt)}</strong><span>On Aspire since</span></div>
-              <div className="studentProfileStat"><strong>{profile.schoolVerified ? '✓' : '—'}</strong><span>Campus verified</span></div>
-            </div>
+            {profile.bio ? <p className="studentProfileBio">{profile.bio}</p> : <button className="profileAddIntro" type="button" onClick={beginEdit}>+ Add a short intro and interests</button>}
+            {profile.interests.length > 0 && <div className="studentProfileInterests">{profile.interests.map((interest) => <span key={interest}>{interest}</span>)}</div>}
+            <div className="profileActivityLine"><span><strong>{profile.completedCount}</strong> completed connections</span><span>Joined {formatJoined(profile.joinedAt)}</span></div>
             <div className="profileHeroActions">
               <button type="button" onClick={beginEdit}>Edit profile</button>
               <a href="/connections"><UiIcon name="message" />Messages</a>
@@ -309,22 +303,13 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="profileSetupCard" aria-label={`${verifiedSignals} of 3 trust signals complete`}>
-            <div className="profileSetupTop">
-              <div><span>TRUST SETUP</span><strong>{verifiedSignals} of 3</strong></div>
-              <div className="profileSetupBadge"><UiIcon name={verifiedSignals === 3 ? 'check' : 'shield'} /></div>
-            </div>
-            <p>Verification supports safer campus connections without turning students into a public score.</p>
-            <div className={`profileSetupMeter level${verifiedSignals}`}><i /></div>
-            <a href="#trust-passport">Review trust signals <UiIcon name="chevron" /></a>
-          </div>
         </section>
 
         <section className="profileOverview">
           <div className="profileTrustPanel" id="trust-passport">
             <div className="profileSectionHeading">
-              <div><span>TRUST & VERIFICATION</span><h2>Real student, not a student rating.</h2></div>
-              <p>Aspire uses verification and completed connections as trust signals. Sensitive details stay private.</p>
+              <div><span>TRUST & VERIFICATION</span><h2>Verification</h2></div>
+              <p>{verifiedSignals} of 3 trust signals complete. Your private details stay private.</p>
             </div>
 
             <div className="profileTrustCards profileTrustCardsExpanded">
@@ -335,29 +320,16 @@ export default function ProfilePage() {
           </div>
 
           <aside className="studentIdentityAside">
-            <div className="studentIdentityAsideCard">
+            <div className="studentIdentityAsideCard profilePayoutCard">
               <span>SELLER PAYOUTS</span>
-              <h3>Stripe payout verification</h3>
-              <p>Required before you can publish an item for sale or receive protected Aspire payments. Stripe handles the payout identity and bank-account verification.</p>
+              <h3>Set up payouts</h3>
               <PaymentConnectRow phoneVerified={profile.phoneVerified} schoolVerified={profile.schoolVerified} />
             </div>
-            <div className="studentIdentityAsideCard">
-              <span>PROFILE AUDIENCE</span>
-              <h3>{audienceLabel}</h3>
-              <p>Choose who can open your full student profile. Precise location, email, phone, and private account information are never included.</p>
-              <a href="/settings#privacy">Privacy settings <UiIcon name="chevron" /></a>
-            </div>
-            <div className="studentIdentityAsideCard">
-              <span>COMPLETED</span>
-              <h3>{profile.completedCount} completed connection{profile.completedCount === 1 ? '' : 's'}</h3>
-              <p>Completed is an objective activity signal — no public student-wide star rating required.</p>
-              <a href="/activity">My activity <UiIcon name="chevron" /></a>
-            </div>
-            <div className="studentIdentityAsideCard">
-              <span>PRIVATE CONTROLS</span>
-              <h3>Settings are separate now.</h3>
-              <p>Location consent, notifications, payments, security, appearance, and AI personalization belong in Settings.</p>
-              <a href="/settings">Open Settings <UiIcon name="chevron" /></a>
+            <div className="studentIdentityAsideCard profileQuickLinks">
+              <span>YOUR ACCOUNT</span>
+              <a href="/settings#privacy"><span><strong>Profile audience</strong><small>{audienceLabel}</small></span><UiIcon name="chevron" /></a>
+              <a href="/activity"><span><strong>My activity</strong><small>Connections and requests</small></span><UiIcon name="chevron" /></a>
+              <a href="/settings"><span><strong>Settings</strong><small>Privacy, security and preferences</small></span><UiIcon name="chevron" /></a>
             </div>
           </aside>
         </section>
