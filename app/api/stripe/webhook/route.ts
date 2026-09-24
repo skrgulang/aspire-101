@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiError, getSupabaseServiceClient, stripeFormRequest, stripeGet, stripeLivemode, verifyStripeWebhookSignature } from '../../../../lib/server/aspireServer';
 import { secureConnectionPayment } from '../../../../lib/server/stripePaymentReconciliation';
+import { matchesSellerTransfer } from '../../../../lib/server/stripeTransferReconciliation';
 
 type StripeEvent = {
   id: string;
@@ -462,6 +463,39 @@ async function recoverReleasedTransfer(
   }
 }
 
+async function reconcileCreatedTransfer(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  object: Record<string, any>,
+  eventLivemode: boolean,
+  stripeEventId: string
+) {
+  const paymentId = String(object.metadata?.aspire_payment_id || '');
+  if (!/^[0-9a-f-]{36}$/i.test(paymentId)) return;
+  const { data: payment, error } = await supabase.from('connection_payments')
+    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents,transfer_group,connection_id')
+    .eq('id', paymentId).eq('stripe_livemode', eventLivemode).maybeSingle();
+  requireDatabaseWrite(error);
+  if (!payment) return;
+  if (!matchesSellerTransfer(payment, object) ||
+    payment.stripe_transfer_id && payment.stripe_transfer_id !== object.id) {
+    throw new Error('STRIPE:Seller transfer does not match Aspire payment. Manual review required.');
+  }
+  if (!payment.stripe_transfer_id) {
+    const { error: updateError } = await supabase.from('connection_payments')
+      .update({ stripe_transfer_id: object.id, updated_at: new Date().toISOString() })
+      .eq('id', payment.id).eq('stripe_livemode', eventLivemode).is('stripe_transfer_id', null);
+    requireDatabaseWrite(updateError);
+  }
+  const { data: current, error: currentError } = await supabase.from('connection_payments')
+    .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+    .eq('id', payment.id).maybeSingle();
+  requireDatabaseWrite(currentError);
+  if (!current || current.stripe_transfer_id !== object.id) throw new Error('STRIPE:Transfer reference mismatch.');
+  if (['disputed', 'refunded'].includes(current.status)) {
+    await recoverReleasedTransfer(supabase, current, current.status === 'refunded' ? 'refund' : 'dispute', stripeEventId);
+  }
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   let verified = false;
@@ -497,6 +531,10 @@ export async function POST(request: Request) {
 
     const object = event.data.object;
     const eventLivemode = Boolean(event.livemode);
+
+    if (event.type === 'transfer.created') {
+      await reconcileCreatedTransfer(supabase, object, eventLivemode, event.id);
+    }
 
     if (event.type.startsWith('identity.verification_session.')) {
       const aspireUserId = typeof object.metadata?.aspire_user_id === 'string' ? object.metadata.aspire_user_id : null;
@@ -672,8 +710,14 @@ export async function POST(request: Request) {
 
           // An early warning pauses an unreleased payout but does not itself remove funds.
           // A real dispute after release immediately attempts to recover the seller transfer.
-          if (event.type === 'charge.dispute.created' && payment.stripe_transfer_id) {
-            await recoverReleasedTransfer(supabase, payment, 'dispute', event.id);
+          if (event.type === 'charge.dispute.created') {
+            const { data: currentPayment, error: currentPaymentError } = await supabase.from('connection_payments')
+              .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
+              .eq('id', payment.id).maybeSingle();
+            requireDatabaseWrite(currentPaymentError);
+            if (currentPayment?.stripe_transfer_id) {
+              await recoverReleasedTransfer(supabase, currentPayment, 'dispute', event.id);
+            }
           }
         }
       }
