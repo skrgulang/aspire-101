@@ -25,6 +25,7 @@ import {
   respondMarketPrice,
   subscribeToMarketplaceOrderChanges
 } from '../lib/supabase/marketplace';
+import ConnectionLocationControl from './ConnectionLocationControl';
 
 function money(cents: number | null | undefined, currency = 'USD') {
   if (cents == null) return '—';
@@ -424,6 +425,8 @@ export default function MarketOrdersPanel() {
           const releasedStage = order.status === 'released';
           const shippingSetupHref = `/transactions?connection=${encodeURIComponent(order.connection_id)}&delivery=ship`;
           const carrierName = [order.shipping_carrier, order.shipping_service].filter(Boolean).join(' · ');
+          const locationEligible = order.fulfillment_method === 'campus_pickup'
+            && ['paid', 'handoff_confirmed', 'release_ready'].includes(order.status);
 
           return (
             <article className={`marketOrderCard status-${order.status}`} key={order.id}>
@@ -458,6 +461,16 @@ export default function MarketOrdersPanel() {
               </div>}
 
               <div className="marketProgress" aria-label="Marketplace order progress"><span className="done"><i>1</i><b>Matched</b></span><span className={paidStage ? 'done' : order.status === 'payment_processing' ? 'current' : ''}><i>2</i><b>Paid</b></span><span className={handoffStage ? 'done' : paidStage ? 'current' : ''}><i>3</i><b>Handoff</b></span><span className={receiptStage ? 'done' : handoffStage ? 'current' : ''}><i>4</i><b>Received</b></span><span className={releasedStage ? 'done' : receiptStage ? 'current' : ''}><i>5</i><b>Released</b></span></div>
+
+              {locationEligible && (
+                <ConnectionLocationControl
+                  compact
+                  connectionId={order.connection_id}
+                  userId={base.userId}
+                  otherUserId={otherId}
+                  otherName={profileName(other)}
+                />
+              )}
 
               <div className="marketOrderActions">
                 {priceIsUnlocked && !priceProposal && priceFor !== order.id && <button className="marketSecondary" type="button" onClick={() => beginPriceProposal(order.id, order.agreed_amount_cents)}>Propose different price</button>}

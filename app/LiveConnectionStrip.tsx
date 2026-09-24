@@ -107,7 +107,13 @@ export default function LiveConnectionStrip() {
       setData({ ...next, completions });
       setNotice('');
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not load active connections.');
+      const message = error instanceof Error ? error.message : 'Could not load active connections.';
+      if (/auth session missing|must be signed in/i.test(message)) {
+        setData(emptyData);
+        setNotice('');
+      } else {
+        setNotice(message);
+      }
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -245,7 +251,7 @@ export default function LiveConnectionStrip() {
           30
         );
         await reload(true);
-        setNotice('Live location shared for 30 minutes. You can stop sharing at any time.');
+        setNotice('Current location shared for 30 minutes. This is one pin, not continuous tracking, and you can stop sharing at any time.');
       } catch (error) {
         setNotice(error instanceof Error ? error.message : 'Could not share your location.');
       } finally {
@@ -366,8 +372,8 @@ export default function LiveConnectionStrip() {
 
               {otherShare && (
                 <div className={styles.locationNotice}>
-                  <span>{otherName} shared location temporarily.</span>
-                  <a href={mapHref} target="_blank" rel="noreferrer">Open map ↗</a>
+                  <span>{otherName} shared a current location pin temporarily.</span>
+                  <a href={mapHref} target="_blank" rel="noreferrer">Open shared pin ↗</a>
                 </div>
               )}
 
@@ -387,7 +393,7 @@ export default function LiveConnectionStrip() {
                   <span className={styles.waiting}>{otherCompletion ? 'Both marked complete' : 'You completed · waiting on them'}</span>
                 )}
                 {!myShare ? (
-                  <button type="button" disabled={busy === `location-${connection.id}`} onClick={() => void shareLocation(connection.id)}>Share location · 30m</button>
+                  <button type="button" disabled={busy === `location-${connection.id}`} onClick={() => void shareLocation(connection.id)}>Share current location · 30m</button>
                 ) : (
                   <button className={styles.danger} type="button" disabled={busy === `stop-location-${connection.id}`} onClick={() => void stopLocation(connection.id)}>Stop sharing</button>
                 )}
@@ -403,7 +409,7 @@ export default function LiveConnectionStrip() {
                 </div>
               </div>
 
-              <div className={styles.privacy}><strong>Location is always optional.</strong> It is shared only after browser permission, only with the other person in this connection, and expires automatically.</div>
+              <div className={styles.privacy}><strong>Location is always optional.</strong> Aspire shares one current pin—not continuous tracking—only after browser permission, only with the other person in this connection, and it expires automatically.</div>
             </article>
           );
         })}
