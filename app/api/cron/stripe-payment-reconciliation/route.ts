@@ -42,6 +42,81 @@ type PaymentIntent = {
   last_payment_error?: { message?: string | null } | null;
 };
 
+type RecoverableTransferPayment = {
+  id: string;
+  status: string;
+  stripe_transfer_id: string;
+  stripe_transfer_reversal_id: string | null;
+  provider_net_cents: number | null;
+  provider_amount_cents: number | null;
+};
+
+async function alertManualRecovery(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  paymentId: string,
+  transferId: string
+) {
+  const { data: payment, error: paymentError } = await supabase.from('connection_payments')
+    .select('connection_id,request_id').eq('id', paymentId).maybeSingle();
+  if (paymentError) throw paymentError;
+  const { data: staff, error: staffError } = await supabase.from('user_roles')
+    .select('user_id').in('role', ['admin', 'moderator']);
+  if (staffError) throw staffError;
+  for (const staffId of new Set((staff ?? []).map((row) => String(row.user_id)))) {
+    const { error: noticeError } = await supabase.rpc('push_notification', {
+      p_user_id: staffId,
+      p_kind: 'market_order',
+      p_event_key: `manual-transfer-recovery:${paymentId}:${staffId}`,
+      p_title: 'Seller transfer recovery needs manual review',
+      p_body: `Stripe transfer ${transferId} could not be reversed automatically. Review payment ${paymentId}.`,
+      p_actor_id: null,
+      p_request_id: payment?.request_id || null,
+      p_response_id: null,
+      p_connection_id: payment?.connection_id || null,
+      p_message_id: null
+    });
+    if (noticeError) throw noticeError;
+  }
+}
+
+async function reverseHeldTransfer(
+  supabase: ReturnType<typeof getSupabaseServiceClient>,
+  payment: RecoverableTransferPayment,
+  reason: 'refund' | 'dispute'
+) {
+  if (payment.stripe_transfer_reversal_id) return false;
+  const amount = Number(payment.provider_net_cents ?? payment.provider_amount_cents ?? 0);
+  if (!Number.isInteger(amount) || amount <= 0) throw new Error('Invalid seller transfer reversal amount.');
+  const { data: claim, error: claimError } = await supabase.rpc('claim_connection_payment_transfer_recovery', {
+    p_payment_id: payment.id, p_reason: reason
+  });
+  if (claimError) throw claimError;
+  if (claim?.status === 'reversed') return false;
+  if (claim?.status !== 'claimed') throw new Error(`Transfer recovery claim: ${claim?.status || 'unknown'}`);
+  try {
+    const reversal = await stripeFormRequest<{ id: string; amount?: number }>(
+      `/v1/transfers/${encodeURIComponent(payment.stripe_transfer_id)}/reversals`, { amount },
+      { idempotencyKey: `aspire_transfer_recovery_${payment.id}` }
+    );
+    const { error: recordError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
+      p_payment_id: payment.id, p_reason: reason, p_outcome: 'reversed',
+      p_reversal_id: reversal.id, p_amount_cents: reversal.amount ?? amount,
+      p_stripe_event_id: `reconcile:${payment.stripe_transfer_id}`
+    });
+    if (recordError) throw recordError;
+    return true;
+  } catch (reversalError) {
+    const { error: recordError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
+      p_payment_id: payment.id, p_reason: reason, p_outcome: 'manual_required',
+      p_amount_cents: amount, p_error: reversalError instanceof Error ? reversalError.message : String(reversalError),
+      p_stripe_event_id: `reconcile:${payment.stripe_transfer_id}`
+    });
+    if (recordError) throw recordError;
+    await alertManualRecovery(supabase, payment.id, payment.stripe_transfer_id);
+    throw reversalError;
+  }
+}
+
 function objectId(value: unknown) {
   if (typeof value === 'string') return value;
   if (value && typeof value === 'object' && typeof (value as { id?: unknown }).id === 'string') {
@@ -172,10 +247,10 @@ export async function GET(request: Request) {
   // leave the transfer at Stripe without a local transfer ID. Reconcile against
   // Stripe after the request has had time to finish, even if the webhook was missed.
   const { data: stalled, error: stalledError } = await supabase.from('connection_payments')
-    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at')
+    .select('id,status,stripe_livemode,stripe_transfer_id,stripe_transfer_reversal_id,transfer_recovery_status,transfer_group,provider_net_cents,provider_amount_cents,release_claimed_at')
     .eq('stripe_livemode', currentMode)
     .in('status', ['secured', 'disputed', 'refunded'])
-    .is('stripe_transfer_id', null)
+    .in('transfer_recovery_status', ['not_required', 'pending'])
     .not('release_claimed_at', 'is', null)
     .lte('release_claimed_at', staleBefore)
     .order('release_claimed_at', { ascending: true }).limit(20);
@@ -184,66 +259,70 @@ export async function GET(request: Request) {
   for (const pending of stalled ?? []) {
     try {
       if (!pending.transfer_group) throw new Error('Transfer group missing; manual reconciliation required.');
-      const transfers = await stripeGet<{ data: ObservedTransfer[]; has_more: boolean }>(
-        `/v1/transfers?transfer_group=${encodeURIComponent(pending.transfer_group)}&limit=100`
-      );
-      const matching = transfers.data.filter((item) => matchesSellerTransfer(pending, item));
-      if (matching.length !== 1) {
-        if (matching.length > 1 || transfers.has_more) throw new Error('Transfer group is ambiguous; manual review required.');
-        continue;
+      let transfer: ObservedTransfer;
+      if (pending.stripe_transfer_id) {
+        transfer = await stripeGet<ObservedTransfer>(`/v1/transfers/${encodeURIComponent(pending.stripe_transfer_id)}`);
+        if (!matchesSellerTransfer(pending, transfer) || transfer.id !== pending.stripe_transfer_id) {
+          throw new Error('Existing transfer reference failed Stripe reconciliation.');
+        }
+      } else {
+        const transfers = await stripeGet<{ data: ObservedTransfer[]; has_more: boolean }>(
+          `/v1/transfers?transfer_group=${encodeURIComponent(pending.transfer_group)}&limit=100`
+        );
+        const matching = transfers.data.filter((item) => matchesSellerTransfer(pending, item));
+        if (matching.length !== 1) {
+          if (matching.length > 1 || transfers.has_more) throw new Error('Transfer group is ambiguous; manual review required.');
+          continue;
+        }
+        transfer = matching[0];
+        const { error: attachError } = await supabase.from('connection_payments')
+          .update({ stripe_transfer_id: transfer.id, updated_at: new Date().toISOString() })
+          .eq('id', pending.id).eq('stripe_livemode', currentMode).is('stripe_transfer_id', null);
+        if (attachError) throw attachError;
       }
-      const transfer = matching[0];
-      const { error: attachError } = await supabase.from('connection_payments')
-        .update({ stripe_transfer_id: transfer.id, updated_at: new Date().toISOString() })
-        .eq('id', pending.id).eq('stripe_livemode', currentMode).is('stripe_transfer_id', null);
-      if (attachError) throw attachError;
       const { data: current, error: currentError } = await supabase.from('connection_payments')
         .select('id,status,stripe_transfer_id,stripe_transfer_reversal_id,provider_net_cents,provider_amount_cents')
         .eq('id', pending.id).maybeSingle();
       if (currentError) throw currentError;
       if (!current || current.stripe_transfer_id !== transfer.id) throw new Error('Transfer reference mismatch.');
 
+      let heldReason: 'refund' | 'dispute' | null = null;
       if (current.status === 'secured') {
-        // The release RPC refuses disputed payment status; never reclassify a
-        // disputed/refunded payment as released during recovery.
+        // The guarded SQL RPC checks the order, connection and open cases again.
         const { error: finalizeError } = await supabase.rpc('finalize_connection_payment_release', {
           p_payment_id: pending.id, p_transfer_id: transfer.id
         });
-        if (finalizeError) throw finalizeError;
-      } else if (['disputed', 'refunded'].includes(current.status) && !current.stripe_transfer_reversal_id) {
-        const reason = current.status === 'refunded' ? 'refund' : 'dispute';
-        const { data: claim, error: claimError } = await supabase.rpc('claim_connection_payment_transfer_recovery', {
-          p_payment_id: pending.id, p_reason: reason
-        });
-        if (claimError) throw claimError;
-        if (claim?.status === 'claimed') {
-          const amount = Number(current.provider_net_cents ?? current.provider_amount_cents ?? 0);
-          try {
-            const reversal = await stripeFormRequest<{ id: string; amount?: number }>(
-              `/v1/transfers/${encodeURIComponent(transfer.id!)}/reversals`, { amount },
-              { idempotencyKey: `aspire_transfer_recovery_${pending.id}` }
-            );
-            const { error: recordError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
-              p_payment_id: pending.id, p_reason: reason, p_outcome: 'reversed',
-              p_reversal_id: reversal.id, p_amount_cents: reversal.amount ?? amount,
-              p_stripe_event_id: `reconcile:${transfer.id}`
-            });
-            if (recordError) throw recordError;
-            summary.transfersReversed += 1;
-          } catch (reversalError) {
-            const { error: recordError } = await supabase.rpc('record_connection_payment_transfer_recovery', {
-              p_payment_id: pending.id, p_reason: reason, p_outcome: 'manual_required',
-              p_amount_cents: amount, p_error: reversalError instanceof Error ? reversalError.message : String(reversalError),
-              p_stripe_event_id: `reconcile:${transfer.id}`
-            });
-            if (recordError) throw recordError;
-            throw reversalError;
-          }
-        } else if (claim?.status === 'busy') throw new Error('Transfer recovery is already in progress.');
+        if (finalizeError) {
+          const message = String(finalizeError.message || '');
+          if (!/PAYOUT_HOLD_OPEN|CONNECTION_CANCELLED|MARKET_RELEASE_NOT_READY/.test(message)) throw finalizeError;
+          heldReason = 'dispute';
+        }
+      } else if (current.status === 'disputed' || current.status === 'refunded') {
+        heldReason = current.status === 'refunded' ? 'refund' : 'dispute';
+      }
+      if (heldReason && await reverseHeldTransfer(supabase, current as RecoverableTransferPayment, heldReason)) {
+        summary.transfersReversed += 1;
       }
       summary.transfersReconciled += 1;
     } catch (transferError) {
       errors.push(`${pending.id}: ${transferError instanceof Error ? transferError.message : String(transferError)}`);
+    }
+  }
+
+  // A failed reversal must remain visible even if the first notification call
+  // failed. The notification key makes this safe to repeat on every cron run.
+  const { data: manualCases, error: manualError } = await supabase.from('connection_payments')
+    .select('id,stripe_transfer_id')
+    .eq('stripe_livemode', currentMode)
+    .eq('transfer_recovery_status', 'manual_required')
+    .not('stripe_transfer_id', 'is', null)
+    .order('updated_at', { ascending: false }).limit(50);
+  if (manualError) errors.push(`manual transfer recovery queue: ${manualError.message}`);
+  for (const manualCase of manualCases ?? []) {
+    try {
+      await alertManualRecovery(supabase, manualCase.id, manualCase.stripe_transfer_id);
+    } catch (noticeError) {
+      errors.push(`${manualCase.id}: staff alert failed: ${noticeError instanceof Error ? noticeError.message : String(noticeError)}`);
     }
   }
 
