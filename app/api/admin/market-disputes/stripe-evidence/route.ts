@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (disputeError) throw disputeError;
     const stripeDisputeId = String(dispute?.stripe_case_id || '').replace(/^stripe_dispute:/, '');
-    if (!dispute || dispute.source !== 'stripe_dispute' || !/^dp_[A-Za-z0-9]+$/.test(stripeDisputeId)) {
+    if (!dispute || dispute.source !== 'stripe_dispute' || !/^du_[A-Za-z0-9]+$/.test(stripeDisputeId)) {
       return NextResponse.json({ error: 'This case is not an actionable Stripe card dispute.' }, { status: 409 });
     }
     if (!['open', 'under_review'].includes(dispute.status)) {
