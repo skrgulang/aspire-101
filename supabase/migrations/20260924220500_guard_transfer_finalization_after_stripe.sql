@@ -39,6 +39,10 @@ begin
     end if;
     v_duplicate := true;
   elsif v_payment.status = 'secured' then
+    if v_payment.stripe_transfer_attempted_amount_cents is not null
+       and v_payment.stripe_transfer_attempted_amount_cents <> coalesce(v_payment.provider_net_cents,v_payment.provider_amount_cents) then
+      raise exception 'TRANSFER_AMOUNT_CHANGED';
+    end if;
     select * into v_connection from public.connections where id=v_payment.connection_id for update;
     if not found or v_connection.status='cancelled' then raise exception 'CONNECTION_CANCELLED'; end if;
     select * into v_order from public.market_orders where connection_id=v_payment.connection_id for update;
