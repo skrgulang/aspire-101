@@ -65,6 +65,28 @@ export default function AuthForm({ mode }: { mode: Mode }) {
   }, [mode]);
 
   useEffect(() => {
+    if (mode !== 'login') return;
+    let active = true;
+    void (async () => {
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user || !active) return;
+        const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (assuranceError || !active) return;
+        // An existing first-factor session still needs its enrolled second factor.
+        if (assurance?.currentLevel === 'aal1' && assurance?.nextLevel === 'aal2') return;
+        setEntering(true);
+        router.replace(readSafeNextPath());
+        router.refresh();
+      } catch {
+        // Keep the sign-in form available if the stored session cannot be checked.
+      }
+    })();
+    return () => { active = false; };
+  }, [mode, router]);
+
+  useEffect(() => {
     if (!signup) return;
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail.includes('@') || emailDomain(cleanEmail).length < 4) {
