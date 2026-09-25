@@ -340,6 +340,13 @@ html[data-aspire-theme='dark'] .marketEmpty h2 { color:#eeeae2; }
   background: rgba(255,60,45,.035);
 }
 .marketDisputeComposer > div:first-child strong { display: block; margin-top: 4px; }
+.marketDisputeComposer > label { display: block; margin-top: 14px; color: #d8cebd; font-size: 12px; font-weight: 700; }
+.marketDisputeComposer .marketEvidencePicker { padding: 12px; border: 1px dashed rgba(255,193,7,.35); border-radius: 12px; background: rgba(255,193,7,.045); }
+.marketEvidencePicker strong, .marketEvidencePicker span { display: block; }
+.marketEvidencePicker span { margin-top: 4px; color: #a9a092; font-size: 11px; font-weight: 400; }
+.marketEvidenceInput { display: block; width: 100%; margin-top: 8px; color: #d8cebd; font-size: 12px; }
+.marketEvidenceInput::file-selector-button { padding: 8px 10px; margin-right: 10px; border: 1px solid rgba(255,193,7,.35); border-radius: 8px; color: #f7d578; background: #17140f; cursor: pointer; }
+.marketEvidenceFiles { padding-left: 20px; margin: 10px 0 0; color: #d8cebd; font-size: 11px; overflow-wrap: anywhere; }
 .marketDisputeComposer select,
 .marketDisputeComposer textarea {
   width: 100%;
@@ -363,6 +370,8 @@ html[data-aspire-theme='dark'] .marketEmpty h2 { color:#eeeae2; }
   .marketOrderPrice { text-align: left; }
   .marketProgress { grid-template-columns: repeat(5, 82px); overflow-x: auto; }
   .marketOrders { padding: 16px; }
+  .marketDisputeComposer .marketDisputeActions { flex-direction: column; align-items: stretch; }
+  .marketDisputeComposer .marketDisputeActions button { width: 100%; min-height: 44px; }
 }
 
 

@@ -23,6 +23,7 @@ type MarketReportRow = {
   requestTitle: string;
   category: string;
   campus: string | null;
+  payoutReleased: boolean;
 };
 
 function reasonLabel(reason: ConnectionResolutionCase['reason']) {
@@ -71,7 +72,10 @@ function safetyStatusCopy(item: SafetyReportHistoryItem) {
   return { label: 'Closed', detail: 'The report was reviewed and closed.' };
 }
 
-function marketStatusCopy(item: MarketDispute) {
+function marketStatusCopy(item: MarketDispute, payoutReleased: boolean) {
+  if (payoutReleased && ['open', 'under_review'].includes(item.status)) {
+    return { label: item.status === 'open' ? 'After-sales case submitted' : 'After-sales review', detail: 'The seller payout was already released. Both sides can share evidence; a refund is not automatic.' };
+  }
   if (item.status === 'open') return { label: 'Submitted', detail: 'The marketplace report is open and seller payout remains paused when applicable.' };
   if (item.status === 'under_review') return { label: 'Under review', detail: 'Aspire is reviewing the order, payment, and handoff record.' };
   if (item.status === 'resolved_buyer') return { label: 'Resolved for buyer', detail: 'Aspire completed the marketplace review with a buyer-side outcome.' };
@@ -137,7 +141,8 @@ export default function ResolutionHistory() {
             requestId: order?.request_id || '',
             requestTitle: request?.title || 'Marketplace order',
             category: request?.category || 'Buy & sell',
-            campus: request?.campus || null
+            campus: request?.campus || null,
+            payoutReleased: order?.status === 'released'
           };
         });
         const [disputeMessages, disputeAttachments] = await Promise.all([
@@ -299,13 +304,13 @@ export default function ResolutionHistory() {
             );
           })}
 
-          {visibleMarket.map(({ dispute, requestTitle, category, campus }) => {
-            const status = marketStatusCopy(dispute);
+          {visibleMarket.map(({ dispute, requestTitle, category, campus, payoutReleased }) => {
+            const status = marketStatusCopy(dispute, payoutReleased);
             const open = isMarketOpen(dispute);
             const thread = marketMessages.filter((message) => message.dispute_id === dispute.id);
             const attachments = marketAttachments.filter((item) => item.dispute_id === dispute.id);
             return (
-              <article className={`${styles.card} ${open ? styles.open : ''}`} key={`market-${dispute.id}`}>
+              <article id={`market-case-${dispute.id}`} className={`${styles.card} ${open ? styles.open : ''}`} key={`market-${dispute.id}`}>
                 <div className={styles.top}>
                   <div><span>MARKETPLACE REPORT · {marketReasonLabel(dispute.reason).toUpperCase()}</span><h3>{requestTitle}</h3><small>{[category, campus].filter(Boolean).join(' · ') || 'Marketplace order'}</small></div>
                 </div>
