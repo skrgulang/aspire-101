@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     const orderIds = [...new Set((disputes ?? []).map((item) => item.market_order_id))];
     const [{ data: orders, error: orderError }, { data: messages, error: messageError }] = await Promise.all([
       orderIds.length
-        ? supabase.from('market_orders').select('id,connection_id,request_id,buyer_id,seller_id,status,fulfillment_method,currency,agreed_amount_cents,seller_handed_off_at,buyer_received_at,admin_release_authorized_at,shipping_status,created_at').in('id', orderIds)
+        ? supabase.from('market_orders').select('id,connection_id,request_id,buyer_id,seller_id,status,released_at,fulfillment_method,currency,agreed_amount_cents,seller_handed_off_at,buyer_received_at,admin_release_authorized_at,shipping_status,created_at').in('id', orderIds)
         : Promise.resolve({ data: [], error: null }),
       (disputes ?? []).length
         ? supabase.from('market_dispute_messages').select(messageSelect).in('dispute_id', (disputes ?? []).map((item) => item.id)).order('created_at', { ascending: true }).limit(1000)
@@ -104,7 +104,7 @@ export async function PATCH(request: Request) {
 
     const { data: dispute, error: disputeError } = await supabase
       .from('market_disputes')
-      .select('id,status,market_order_id,assigned_to')
+      .select('id,status,market_order_id,assigned_to,source,created_at')
       .eq('id', disputeId)
       .maybeSingle();
     if (disputeError) throw disputeError;
@@ -116,6 +116,13 @@ export async function PATCH(request: Request) {
     if (action === 'close_after_sales') {
       if (role !== 'admin') return NextResponse.json({ error: 'Admin review required.' }, { status: 403 });
       if (message.length < 10 || message.length > 2000) return NextResponse.json({ error: 'Provide a decision note between 10 and 2,000 characters.' }, { status: 400 });
+      const { data: order, error: orderError } = await supabase.from('market_orders')
+        .select('status,released_at').eq('id', dispute.market_order_id).maybeSingle();
+      if (orderError) throw orderError;
+      if (dispute.source !== 'user' || order?.status !== 'released' || !order.released_at ||
+          new Date(dispute.created_at).getTime() < new Date(order.released_at).getTime()) {
+        return NextResponse.json({ error: 'Only post-payout buyer help cases can be closed this way.' }, { status: 409 });
+      }
       const { data, error } = await supabase.rpc('market_close_after_sales', {
         p_dispute_id: disputeId, p_actor_id: user.id, p_note: message
       });
