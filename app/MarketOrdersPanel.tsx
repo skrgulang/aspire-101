@@ -21,6 +21,7 @@ import {
   MarketDispute,
   MarketPriceProposal,
   openMarketDispute,
+  openMarketAfterSales,
   proposeMarketPrice,
   requestMarketRefund,
   respondMarketPrice,
@@ -61,7 +62,7 @@ const statusCopy: Record<string, { label: string; note: string }> = {
 };
 
 const disputeReasons: { value: MarketDispute['reason']; label: string }[] = [
-  { value: 'item_not_as_described', label: 'Item not as described' },
+  { value: 'item_not_as_described', label: 'Arrived damaged / missing parts / wrong item' },
   { value: 'item_not_received', label: 'Item not received' },
   { value: 'counterfeit_or_prohibited', label: 'Counterfeit or prohibited item' },
   { value: 'payment_issue', label: 'Payment issue' },
@@ -330,7 +331,7 @@ export default function MarketOrdersPanel() {
     }
   }
 
-  async function submitDispute(connectionId: string) {
+  async function submitDispute(connectionId: string, afterSales = false) {
     if (disputeDetails.trim().length < 10) {
       setNotice('Add a little more detail so the issue can be reviewed.');
       return;
@@ -338,10 +339,13 @@ export default function MarketOrdersPanel() {
     setBusy(`dispute-${connectionId}`);
     setNotice('');
     try {
-      await openMarketDispute(connectionId, disputeReason, disputeDetails.trim());
+      if (afterSales) await openMarketAfterSales(connectionId, disputeReason, disputeDetails.trim());
+      else await openMarketDispute(connectionId, disputeReason, disputeDetails.trim());
       setDisputeFor(null);
       setDisputeDetails('');
-      setNotice('Problem reported. Seller payout is paused while this order is reviewed.');
+      setNotice(afterSales
+        ? 'After-sales case opened. The seller payout was already released; add photos or documents in the Resolution Center so the team can review your request.'
+        : 'Problem reported. Seller payout is paused while this order is reviewed.');
       await reload(true);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not open the dispute.');
@@ -420,7 +424,9 @@ export default function MarketOrdersPanel() {
           })();
           const priceIsUnlocked = ['awaiting_payment','off_platform'].includes(order.status)
             && (!payment || payment.status === 'not_started');
-          const canDispute = ['paid','handoff_confirmed','release_ready'].includes(order.status) && !dispute;
+          const afterSales = order.status === 'released' && isBuyer && payment?.released_at
+            && new Date(payment.released_at).getTime() >= Date.now() - 14 * 24 * 60 * 60 * 1000;
+          const canDispute = (['paid','handoff_confirmed','release_ready'].includes(order.status) || afterSales) && !dispute;
           const paidStage = ['paid','handoff_confirmed','release_ready','released','disputed'].includes(order.status);
           const handoffStage = Boolean(order.seller_handed_off_at);
           const receiptStage = Boolean(order.buyer_received_at);
@@ -495,17 +501,18 @@ export default function MarketOrdersPanel() {
                 {shippingOrder && shippingReady && !secured && <a className="marketSecondary" href={shippingSetupHref}>Review carrier selection</a>}
                 {payWithAspire && isSeller && !secured && <span className="marketWaiting">Waiting for buyer payment. Make sure payouts are ready in <a href="/profile">Profile</a>.</span>}
                 {payWithAspire && isSeller && order.status === 'paid' && !order.seller_handed_off_at && <button className="button buttonGold" type="button" onClick={() => handoff(order.connection_id)} disabled={busy === `handoff-${order.connection_id}`}>I handed over the item ✓</button>}
+                {payWithAspire && isBuyer && order.status === 'handoff_confirmed' && !order.buyer_received_at && <span className="marketWaiting">Inspect the item and check for damage, missing parts, or a wrong item before confirming. Report a problem below if anything is wrong.</span>}
                 {payWithAspire && isBuyer && order.status === 'handoff_confirmed' && !order.buyer_received_at && <button className="button buttonGold" type="button" onClick={() => confirmReceipt(order.connection_id)} disabled={busy === `receipt-${order.connection_id}`}>Item received — release seller payout ✓</button>}
                 {payWithAspire && order.status === 'release_ready' && <button className="button buttonGold" type="button" onClick={() => retryRelease(order.connection_id)} disabled={busy === `release-${order.connection_id}`}>Release seller payout →</button>}
                 {payWithAspire && secured && !order.seller_handed_off_at && !['disputed','released','refunded'].includes(order.status) && <button className="marketSecondary" type="button" onClick={() => refund(order.connection_id)} disabled={busy === `refund-${order.connection_id}`}>Cancel + refund</button>}
-                {canDispute && <button className="marketDanger" type="button" onClick={() => setDisputeFor(disputeFor === order.connection_id ? null : order.connection_id)}>Report a problem</button>}
+                {canDispute && <button className="marketDanger" type="button" onClick={() => setDisputeFor(disputeFor === order.connection_id ? null : order.connection_id)}>{afterSales ? 'Item arrived with a problem' : 'Report a problem'}</button>}
                 {order.status === 'released' && <span className="marketComplete">Transaction complete · payout released ✓</span>}
                 {order.status === 'refunded' && <span className="marketComplete">Buyer refunded ✓</span>}
               </div>
 
               {shippingOrder && order.shipping_rate_id && <div className="shippingTrackingBox"><span>SELECTED SHIPPING</span><strong>{carrierName || 'Carrier'} · {money(shippingRate, order.shipping_currency || order.currency)}</strong><small>{shippingPaidBy === 'seller' ? 'Seller covers this carrier rate.' : 'Buyer pays this carrier rate at Stripe checkout.'}</small>{order.shipping_tracking_number && <span>Tracking {order.shipping_tracking_number}</span>}{order.shipping_label_url && isSeller && <a href={order.shipping_label_url} target="_blank" rel="noreferrer">Open label ↗</a>}{order.shipping_tracking_url && <a href={order.shipping_tracking_url} target="_blank" rel="noreferrer">Track package ↗</a>}</div>}
 
-              {disputeFor === order.connection_id && canDispute && <div className="marketDisputeComposer"><div><span>PAUSE PAYOUT + REPORT</span><strong>What went wrong?</strong></div><select value={disputeReason} onChange={(event) => setDisputeReason(event.target.value as MarketDispute['reason'])}>{disputeReasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><textarea rows={3} value={disputeDetails} onChange={(event) => setDisputeDetails(event.target.value)} placeholder="Describe the item, handoff, payment, or safety issue. Keep the details factual." maxLength={2000} /><div><button type="button" className="marketSecondary" onClick={() => setDisputeFor(null)}>Never mind</button><button type="button" className="marketDanger solid" onClick={() => submitDispute(order.connection_id)} disabled={busy === `dispute-${order.connection_id}`}>Submit report + pause payout</button></div></div>}
+              {disputeFor === order.connection_id && canDispute && <div className="marketDisputeComposer"><div><span>{afterSales ? 'AFTER-SALES HELP' : 'PAUSE PAYOUT + REPORT'}</span><strong>What went wrong?</strong></div>{afterSales && <p>The seller has already been paid. Opening a case starts a review; a refund is not automatic. You can add photos or PDFs in the Resolution Center after submitting.</p>}<select value={disputeReason} onChange={(event) => setDisputeReason(event.target.value as MarketDispute['reason'])}>{disputeReasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><textarea rows={3} value={disputeDetails} onChange={(event) => setDisputeDetails(event.target.value)} placeholder="Describe the damage, missing parts, wrong item, delivery, or payment issue. Keep the details factual." maxLength={2000} /><div><button type="button" className="marketSecondary" onClick={() => setDisputeFor(null)}>Never mind</button><button type="button" className="marketDanger solid" onClick={() => submitDispute(order.connection_id, Boolean(afterSales))} disabled={busy === `dispute-${order.connection_id}`}>{afterSales ? 'Open after-sales case' : 'Submit report + pause payout'}</button></div></div>}
 
               <footer className="marketOrderFinePrint"><span>{shippingOrder ? `${order.shipping_carrier || 'Carrier'} shipping · ${String(order.shipping_status || 'not started').replaceAll('_', ' ')}` : 'Campus pickup'} · {request.item_condition ? request.item_condition.replace('_', ' ') : 'condition not listed'}{request.price_negotiable ? ' · price was negotiable' : ''}</span><span>Order #{order.id.slice(0, 8)}</span></footer>
                 </div>

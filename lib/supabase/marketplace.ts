@@ -264,6 +264,17 @@ export async function openMarketDispute(connectionId: string, reason: MarketDisp
   return String(data || '');
 }
 
+export async function openMarketAfterSales(connectionId: string, reason: MarketDispute['reason'], details: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data, error } = await supabase.rpc('market_open_after_sales', {
+    p_connection_id: connectionId,
+    p_reason: reason,
+    p_details: details
+  });
+  if (error) throw error;
+  return String(data || '');
+}
+
 export async function fetchMarketDisputeMessages(disputeIds: string[]) {
   const ids = [...new Set(disputeIds.filter(Boolean))].slice(0, 50);
   if (!ids.length) return [] as MarketDisputeMessage[];

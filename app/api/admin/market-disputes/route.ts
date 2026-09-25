@@ -92,13 +92,13 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const { user, supabase } = await requireStaff(request);
+    const { user, role, supabase } = await requireStaff(request);
     const body = await request.json().catch(() => ({})) as { disputeId?: string; action?: string; message?: string };
     const disputeId = String(body.disputeId || '').trim();
     const action = String(body.action || '').trim();
     const message = String(body.message || '').trim();
     if (!validUuid(disputeId)) return NextResponse.json({ error: 'Valid dispute id required.' }, { status: 400 });
-    if (!['assign_self', 'staff_reply', 'internal_note'].includes(action)) {
+    if (!['assign_self', 'staff_reply', 'internal_note', 'close_after_sales'].includes(action)) {
       return NextResponse.json({ error: 'Choose a valid queue action.' }, { status: 400 });
     }
 
@@ -111,6 +111,16 @@ export async function PATCH(request: Request) {
     if (!dispute) return NextResponse.json({ error: 'Dispute not found.' }, { status: 404 });
     if (!['open', 'under_review'].includes(dispute.status)) {
       return NextResponse.json({ error: 'This dispute is already closed.' }, { status: 409 });
+    }
+
+    if (action === 'close_after_sales') {
+      if (role !== 'admin') return NextResponse.json({ error: 'Admin review required.' }, { status: 403 });
+      if (message.length < 10 || message.length > 2000) return NextResponse.json({ error: 'Provide a decision note between 10 and 2,000 characters.' }, { status: 400 });
+      const { data, error } = await supabase.rpc('market_close_after_sales', {
+        p_dispute_id: disputeId, p_actor_id: user.id, p_note: message
+      });
+      if (error) throw error;
+      return NextResponse.json({ disputeId: data });
     }
 
     const now = new Date().toISOString();
