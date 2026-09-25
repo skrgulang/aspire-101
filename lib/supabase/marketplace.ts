@@ -88,6 +88,7 @@ export type MarketDispute = {
   reason: 'item_not_as_described' | 'item_not_received' | 'counterfeit_or_prohibited' | 'payment_issue' | 'unsafe_handoff' | 'other';
   details: string;
   status: 'open' | 'under_review' | 'resolved_buyer' | 'resolved_seller' | 'resolved_split' | 'closed';
+  resolution_note?: string | null;
   resolution_refund_cents?: number | null;
   resolution_seller_release_cents?: number | null;
   created_at: string;
@@ -218,7 +219,7 @@ export async function respondMarketPrice(proposalId: string, accept: boolean) {
 export async function fetchMarketDisputes(orderIds: string[]) {
   if (!orderIds.length) return [] as MarketDispute[];
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.rpc('get_my_market_disputes', {
+  const { data, error } = await supabase.rpc('get_my_market_disputes_with_resolution', {
     p_order_ids: orderIds
   });
   if (error) throw error;

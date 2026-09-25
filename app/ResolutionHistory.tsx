@@ -321,6 +321,7 @@ export default function ResolutionHistory() {
                   <span>Order report #{dispute.id.slice(0, 8).toUpperCase()}</span>
                 </div>
                 {dispute.details && <div className={styles.note}><b>Report details</b><p>{dispute.details}</p></div>}
+                {dispute.resolution_note && <div className={styles.note}><b>Aspire resolution</b><p>{dispute.resolution_note}</p></div>}
                 <div className={styles.thread}>
                   <b>CASE CONVERSATION</b>
                   {!thread.length ? <p>No replies yet. Add factual details, handoff records, or tracking information while the case is open.</p> : (
