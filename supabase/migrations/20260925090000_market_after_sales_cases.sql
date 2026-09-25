@@ -41,7 +41,9 @@ begin
   select * into d from public.market_disputes where id=p_dispute_id for update;
   if not found or d.status not in ('open','under_review') then raise exception 'CASE_NOT_OPEN'; end if;
   select * into o from public.market_orders where id=d.market_order_id for update;
-  if o.status <> 'released' then raise exception 'NOT_AFTER_SALES_CASE'; end if;
+  if o.status <> 'released' or o.released_at is null or d.source <> 'user' or d.created_at < o.released_at then
+    raise exception 'NOT_AFTER_SALES_CASE';
+  end if;
   update public.market_disputes set status='closed',resolution_note=v_note,reviewed_by=p_actor_id,resolved_at=now(),next_action_due_at=null,updated_at=now() where id=d.id;
   insert into public.market_order_events(market_order_id,actor_id,event_type,payload)
   values(o.id,p_actor_id,'after_sales_closed',jsonb_build_object('dispute_id',d.id,'no_financial_action',true));
