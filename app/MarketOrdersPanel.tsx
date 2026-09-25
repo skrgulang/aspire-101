@@ -468,7 +468,8 @@ export default function MarketOrdersPanel() {
             && (!payment || payment.status === 'not_started');
           const afterSales = order.status === 'released' && isBuyer && payment?.released_at
             && new Date(payment.released_at).getTime() >= Date.now() - 14 * 24 * 60 * 60 * 1000;
-          const canDispute = (['paid','handoff_confirmed','release_ready'].includes(order.status) || afterSales) && !dispute;
+          const canDispute = (['paid','handoff_confirmed','release_ready'].includes(order.status) && !dispute)
+            || (Boolean(afterSales) && (!dispute || !['open','under_review'].includes(dispute.status)));
           const paidStage = ['paid','handoff_confirmed','release_ready','released','disputed'].includes(order.status);
           const handoffStage = Boolean(order.seller_handed_off_at);
           const receiptStage = Boolean(order.buyer_received_at);
