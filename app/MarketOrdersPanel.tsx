@@ -548,6 +548,8 @@ export default function MarketOrdersPanel() {
                 {payWithAspire && order.status === 'release_ready' && <button className="button buttonGold" type="button" onClick={() => retryRelease(order.connection_id)} disabled={busy === `release-${order.connection_id}`}>Release seller payout →</button>}
                 {payWithAspire && secured && !order.seller_handed_off_at && !['disputed','released','refunded'].includes(order.status) && <button className="marketSecondary" type="button" onClick={() => refund(order.connection_id)} disabled={busy === `refund-${order.connection_id}`}>Cancel + refund</button>}
                 {canDispute && <button className="marketDanger" type="button" onClick={() => { setDisputeFor(disputeFor === order.connection_id ? null : order.connection_id); setDisputeFiles([]); setDisputeDetails(''); setNotice(''); }}>{afterSales ? 'Item arrived with a problem' : 'Report a problem'}</button>}
+                {dispute && <a className="marketSecondary" href={`/resolution#market-case-${encodeURIComponent(dispute.id)}`}>View Help case and attachments →</a>}
+                {order.status === 'released' && isBuyer && !afterSales && !dispute && <a className="marketSecondary" href={`mailto:team@aspires101.com?subject=${encodeURIComponent(`Help with Aspire order ${order.id}`)}`}>Contact support about this order</a>}
                 {order.status === 'released' && <span className="marketComplete">Transaction complete · payout released ✓</span>}
                 {order.status === 'refunded' && <span className="marketComplete">Buyer refunded ✓</span>}
               </div>
