@@ -450,3 +450,78 @@
   .draftActions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}
   .draftActions a,.draftActions button{width:100%}
 }
+
+
+/* 2026-09-26: quieter consumer workspace. All activity states/actions remain intact. */
+.page{width:min(1120px,calc(100vw - 124px));padding-top:38px}
+.header{padding-bottom:20px;margin-bottom:16px;border-bottom:1px solid #e6e6e0}
+.header span{font-size:9px;letter-spacing:.11em}
+.header h1{font-size:clamp(34px,3.5vw,46px);letter-spacing:-.045em}
+.header p{margin-top:9px;font-size:12px;line-height:1.5}
+.stats{
+  gap:0;
+  margin-bottom:14px;
+  overflow:hidden;
+  border:1px solid #e5e5df;
+  border-radius:14px;
+  background:#fff;
+}
+.stats article{
+  min-height:70px;
+  padding:12px 15px;
+  border:0;
+  border-right:1px solid #ecece6;
+  border-radius:0;
+  background:transparent;
+}
+.stats article:last-child{border-right:0}
+.stats strong{font-size:22px}
+.stats span{font-size:10px}
+.draftStat,.attentionStat{background:transparent!important}
+.toolbar{min-height:50px;margin-bottom:12px;border-radius:13px}
+.tabs button{min-height:36px;font-size:11px}
+.toolbarLinks a,.toolbarLinks button{font-size:10px}
+.card{
+  min-height:150px;
+  padding:16px;
+  grid-template-columns:132px minmax(0,1fr) 160px;
+  gap:18px;
+  border-radius:15px;
+  box-shadow:0 3px 12px rgba(17,17,17,.025);
+}
+.cardMedia{width:132px;height:116px;border-radius:11px}
+.category{padding:5px 8px;font-size:8px}
+.card h2{margin-top:8px;font-size:17px}
+.cardMain>p{margin-top:6px;font-size:11px}
+.meta{margin-top:11px;font-size:9px}
+.reviewPanel{margin-top:13px;border-radius:12px}
+.reviewHead{padding:11px 12px}
+.reviewHead strong{font-size:13px}
+.reviewHead p{font-size:9px}
+.reviewLane{min-height:74px;padding:10px 11px}
+.cardSide{min-width:150px}
+.status{font-size:8px}
+.actions button{min-height:34px;font-size:9px}
+.draftCard{border-radius:14px}
+:global(html[data-aspire-theme='dark']) .header{border-bottom-color:rgba(255,255,255,.08)}
+:global(html[data-aspire-theme='dark']) .stats{
+  border-color:rgba(255,255,255,.09);
+  background:#151514;
+}
+:global(html[data-aspire-theme='dark']) .stats article{border-right-color:rgba(255,255,255,.07)}
+:global(html[data-aspire-theme='dark']) .draftStat,
+:global(html[data-aspire-theme='dark']) .attentionStat{background:transparent!important}
+@media(max-width:900px){
+  .page{width:min(100% - 28px,720px);padding-top:28px}
+  .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .stats article:nth-child(3){border-right:0}
+  .stats article:nth-child(-n+3){border-bottom:1px solid #ecece6}
+  :global(html[data-aspire-theme='dark']) .stats article:nth-child(-n+3){border-bottom-color:rgba(255,255,255,.07)}
+}
+@media(max-width:620px){
+  .header h1{font-size:36px}
+  .card{grid-template-columns:90px minmax(0,1fr);gap:12px;padding:13px}
+  .cardMedia{width:90px;height:90px}
+  .cardSide{grid-column:1/-1;padding-top:10px;border-top:1px solid #ecece6;flex-direction:row;align-items:center}
+  :global(html[data-aspire-theme='dark']) .cardSide{border-top-color:rgba(255,255,255,.08)}
+}

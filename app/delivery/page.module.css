@@ -414,3 +414,70 @@
     font-size: 10px;
   }
 }
+
+
+/* 2026-09-26: delivery stays a tool page, not a marketing landing page. */
+.shell{width:min(1120px,calc(100% - 40px));padding-top:38px}
+.hero{grid-template-columns:minmax(0,1fr) 290px;gap:32px;padding-bottom:24px}
+.heroCopy>span,.flowHeading span,.sectionHeading span,.ordersNote span{font-size:8px;letter-spacing:.11em}
+.hero h1{font-size:clamp(38px,4.2vw,50px);line-height:.98;letter-spacing:-.05em}
+.hero p{margin-top:10px;font-size:13px}
+.heroActions{margin-top:18px}
+.heroActions a,.ordersNote>a{min-height:44px;border-radius:11px;font-size:10px}
+.heroNote{
+  min-height:0;
+  padding:17px;
+  border-color:rgba(255,255,255,.09);
+  border-radius:14px;
+  background:#151514;
+}
+.heroNote strong{font-size:15px}
+.heroNote p{font-size:10px}
+.flow{padding-top:24px}
+.flowHeading h2,.sectionHeading h2{font-size:24px;letter-spacing:-.035em}
+.steps{
+  gap:0;
+  margin-top:15px;
+  border-top:1px solid rgba(255,255,255,.09);
+  border-bottom:1px solid rgba(255,255,255,.09);
+}
+.steps article{
+  min-height:112px;
+  padding:16px 18px;
+  border:0;
+  border-right:1px solid rgba(255,255,255,.09);
+  border-radius:0;
+  background:transparent;
+}
+.steps article:first-child{padding-left:0}
+.steps article:last-child{border-right:0;padding-right:0}
+.steps i{width:28px;height:28px;font-size:10px}
+.steps strong{font-size:12px}
+.steps p{font-size:10px}
+.requestSection{margin-top:28px;padding-top:22px}
+.requestList{gap:0;border-top:1px solid rgba(255,255,255,.08)}
+.requestList article{
+  min-height:72px;
+  padding:11px 0;
+  border:0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  border-radius:0;
+  background:transparent;
+}
+.requestList article:hover{background:transparent;transform:none;border-color:rgba(255,255,255,.12)}
+.requestIcon{width:36px;height:36px;border-radius:10px}
+.ordersNote{margin-top:24px;border-radius:14px;background:#151514}
+@media(max-width:980px){
+  .shell{width:min(100% - 28px,760px);padding-top:28px}
+  .steps{grid-template-columns:1fr;border-bottom:0}
+  .steps article,.steps article:first-child,.steps article:last-child{
+    padding:13px 0;
+    border-right:0;
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+}
+@media(max-width:620px){
+  .hero h1{font-size:38px}
+  .heroActions{grid-template-columns:1fr 1fr}
+  .flowHeading h2,.sectionHeading h2{font-size:20px}
+}

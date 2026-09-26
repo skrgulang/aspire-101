@@ -138,3 +138,21 @@
   .textOnly .copy { padding:9px 13px 6px; }
   .textOnly .footer { min-height:38px; padding:0 10px 9px; border-top:1px solid #2a2a27; }
 }
+
+
+/* 2026-09-26 feed polish: same information, calmer hierarchy. */
+.card{border-radius:15px;box-shadow:0 3px 12px rgba(17,17,17,.025)}
+.media{height:146px}
+.copy{padding:13px 13px 10px;gap:5px}
+.copy h3{font-size:15px;line-height:1.22;letter-spacing:-.015em}
+.price{font-size:11px}
+.author{font-size:9px}
+.avatar{width:22px;height:22px}
+.meta{font-size:9px}
+.footer{min-height:44px;padding:8px 10px 9px}
+.primaryAction,.secondaryAction{min-height:31px;border-radius:9px;font-size:9px}
+:global(html[data-aspire-theme='dark']) .card{box-shadow:none}
+@media(max-width:640px){
+  .media{height:122px}
+  .copy h3{font-size:13px}
+}

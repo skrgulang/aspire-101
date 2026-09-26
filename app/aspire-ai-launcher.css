@@ -184,3 +184,33 @@
     overscroll-behavior: contain;
   }
 }
+
+
+/* Desktop: available but never permanently covers feed/card actions. */
+@media(min-width:761px){
+  .aspireAgentLauncher{
+    width:50px;
+    min-width:50px;
+    height:50px;
+    min-height:50px;
+    padding:7px;
+    gap:8px;
+    justify-content:flex-start;
+    overflow:hidden;
+    border-radius:15px;
+    transition:width .18s ease,transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+  }
+  .aspireAgentLauncher>i{flex:0 0 34px}
+  .aspireAgentLauncher>span{
+    width:0;
+    max-width:0;
+    overflow:hidden;
+    opacity:0;
+    white-space:nowrap;
+    transition:width .18s ease,max-width .18s ease,opacity .12s ease;
+  }
+  .aspireAgentLauncher:hover,.aspireAgentLauncher:focus-visible{width:142px}
+  .aspireAgentLauncher:hover>span,.aspireAgentLauncher:focus-visible>span{
+    width:84px;max-width:84px;opacity:1
+  }
+}
