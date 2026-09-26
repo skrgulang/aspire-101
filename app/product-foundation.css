@@ -68,3 +68,57 @@ body:has(.settingsPage) {
     font-size: 38px !important;
   }
 }
+
+
+/* Orders and money surfaces use the same restrained panel language. */
+.marketOrders,
+.connectionPayments {
+  max-width: var(--aspire-app-page) !important;
+  padding: 20px !important;
+  border: 1px solid var(--aspire-app-border) !important;
+  border-radius: var(--aspire-app-radius) !important;
+  background: var(--aspire-app-surface) !important;
+  box-shadow: none !important;
+}
+.marketOrdersHead,
+.connectionPaymentsHead {
+  padding-bottom: 18px !important;
+  border-bottom: 1px solid var(--aspire-app-border) !important;
+}
+.marketOrdersHead h2,
+.connectionPaymentsHead h2 {
+  font-size: clamp(24px, 3vw, 30px) !important;
+  line-height: 1.04 !important;
+  letter-spacing: -.035em !important;
+  font-weight: 780 !important;
+}
+.marketOrderCard,
+.connectionPaymentCard {
+  border-color: var(--aspire-app-border) !important;
+  border-radius: var(--aspire-app-radius) !important;
+  background: #111110 !important;
+}
+.marketOrderTop h3,
+.connectionPaymentTop h3 {
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+}
+.marketProgress span,
+.paymentProgress span,
+.marketMoneySummary > div,
+.paymentFeeBreakdown {
+  border-radius: 10px !important;
+}
+.marketOrderActions .button,
+.connectionPaymentActions .button,
+.marketSecondary,
+.marketDanger {
+  border-radius: var(--aspire-app-control-radius) !important;
+}
+
+@media (max-width: 760px) {
+  .marketOrders,
+  .connectionPayments {
+    padding: 14px !important;
+  }
+}
