@@ -21,10 +21,12 @@ import {
   MarketDispute,
   MarketPriceProposal,
   openMarketDispute,
+  openMarketAfterSales,
   proposeMarketPrice,
   requestMarketRefund,
   respondMarketPrice,
-  subscribeToMarketplaceOrderChanges
+  subscribeToMarketplaceOrderChanges,
+  uploadMarketDisputeAttachment
 } from '../lib/supabase/marketplace';
 import ConnectionLocationControl from './ConnectionLocationControl';
 
@@ -61,13 +63,17 @@ const statusCopy: Record<string, { label: string; note: string }> = {
 };
 
 const disputeReasons: { value: MarketDispute['reason']; label: string }[] = [
-  { value: 'item_not_as_described', label: 'Item not as described' },
+  { value: 'item_not_as_described', label: 'Arrived damaged / missing parts / wrong item' },
   { value: 'item_not_received', label: 'Item not received' },
   { value: 'counterfeit_or_prohibited', label: 'Counterfeit or prohibited item' },
   { value: 'payment_issue', label: 'Payment issue' },
   { value: 'unsafe_handoff', label: 'Unsafe handoff / meetup' },
   { value: 'other', label: 'Something else' }
 ];
+
+const evidenceMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);
+const evidenceMaxBytes = 8 * 1024 * 1024;
+const evidenceMaxFiles = 3;
 
 export default function MarketOrdersPanel() {
   const [base, setBase] = useState<Awaited<ReturnType<typeof fetchMyConnections>> | null>(null);
@@ -83,6 +89,8 @@ export default function MarketOrdersPanel() {
   const [disputeFor, setDisputeFor] = useState<string | null>(null);
   const [disputeReason, setDisputeReason] = useState<MarketDispute['reason']>('item_not_as_described');
   const [disputeDetails, setDisputeDetails] = useState('');
+  const [disputeFiles, setDisputeFiles] = useState<File[]>([]);
+  const [recentCaseId, setRecentCaseId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState<number | null>(null);
 
@@ -330,19 +338,57 @@ export default function MarketOrdersPanel() {
     }
   }
 
-  async function submitDispute(connectionId: string) {
+  function selectDisputeFiles(selected: FileList | null) {
+    if (!selected) return;
+    const next = [...selected];
+    if (next.length > evidenceMaxFiles) {
+      setDisputeFiles([]);
+      setNotice(`Choose up to ${evidenceMaxFiles} files per report. You can add more in the Resolution Center.`);
+      return;
+    }
+    const invalid = next.find((file) => !evidenceMimeTypes.has(file.type) || file.size < 1 || file.size > evidenceMaxBytes || file.name.length > 180);
+    if (invalid) {
+      setDisputeFiles([]);
+      setNotice('Use JPG, PNG, WebP, or PDF files under 8 MB each with a file name under 180 characters.');
+      return;
+    }
+    setDisputeFiles(next);
+    setNotice('');
+  }
+
+  async function submitDispute(connectionId: string, afterSales = false) {
     if (disputeDetails.trim().length < 10) {
       setNotice('Add a little more detail so the issue can be reviewed.');
       return;
     }
     setBusy(`dispute-${connectionId}`);
     setNotice('');
+    setRecentCaseId(null);
     try {
-      await openMarketDispute(connectionId, disputeReason, disputeDetails.trim());
+      const caseId = afterSales
+        ? await openMarketAfterSales(connectionId, disputeReason, disputeDetails.trim())
+        : await openMarketDispute(connectionId, disputeReason, disputeDetails.trim());
       setDisputeFor(null);
       setDisputeDetails('');
-      setNotice('Problem reported. Seller payout is paused while this order is reviewed.');
+      setDisputeFiles([]);
+      setRecentCaseId(caseId);
+      const uploaded: string[] = [];
+      const failed: string[] = [];
+      for (const file of disputeFiles) {
+        try {
+          await uploadMarketDisputeAttachment(caseId, file);
+          uploaded.push(file.name);
+        } catch {
+          failed.push(file.name);
+        }
+      }
       await reload(true);
+      const reportCopy = afterSales
+        ? 'After-sales case opened. The seller has already been paid, so a refund is subject to review.'
+        : 'Problem reported. Seller payout is paused while this order is reviewed.';
+      setNotice(failed.length
+        ? `${reportCopy} ${uploaded.length} file(s) uploaded; ${failed.length} failed. Add the missing evidence in the Resolution Center.`
+        : `${reportCopy} ${uploaded.length ? `${uploaded.length} file(s) attached.` : 'Add evidence or contact the other participant in the Resolution Center.'}`);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not open the dispute.');
     } finally { setBusy(''); }
@@ -363,7 +409,7 @@ export default function MarketOrdersPanel() {
         <p>Payment, delivery, receipt confirmation, refunds, disputes, and seller payout stay attached to the same order.</p>
       </header>
 
-      {notice && <div className="marketNotice" role="status">{notice}</div>}
+      {notice && <div className="marketNotice" role="status">{notice} {recentCaseId && (notice.startsWith('After-sales case opened') || notice.startsWith('Problem reported')) && <a href={`/resolution#market-case-${encodeURIComponent(recentCaseId)}`}>Open case and evidence →</a>}</div>}
 
       {legacyConnections.length > 0 && <div className="marketLegacy">Some older Buy &amp; Sell connections were created before protected orders existed. New marketplace listings use the full order flow.</div>}
 
@@ -420,7 +466,10 @@ export default function MarketOrdersPanel() {
           })();
           const priceIsUnlocked = ['awaiting_payment','off_platform'].includes(order.status)
             && (!payment || payment.status === 'not_started');
-          const canDispute = ['paid','handoff_confirmed','release_ready'].includes(order.status) && !dispute;
+          const afterSales = order.status === 'released' && isBuyer && payment?.released_at
+            && new Date(payment.released_at).getTime() >= Date.now() - 14 * 24 * 60 * 60 * 1000;
+          const canDispute = (['paid','handoff_confirmed','release_ready'].includes(order.status) && !dispute)
+            || (Boolean(afterSales) && (!dispute || !['open','under_review'].includes(dispute.status)));
           const paidStage = ['paid','handoff_confirmed','release_ready','released','disputed'].includes(order.status);
           const handoffStage = Boolean(order.seller_handed_off_at);
           const receiptStage = Boolean(order.buyer_received_at);
@@ -495,17 +544,41 @@ export default function MarketOrdersPanel() {
                 {shippingOrder && shippingReady && !secured && <a className="marketSecondary" href={shippingSetupHref}>Review carrier selection</a>}
                 {payWithAspire && isSeller && !secured && <span className="marketWaiting">Waiting for buyer payment. Make sure payouts are ready in <a href="/profile">Profile</a>.</span>}
                 {payWithAspire && isSeller && order.status === 'paid' && !order.seller_handed_off_at && <button className="button buttonGold" type="button" onClick={() => handoff(order.connection_id)} disabled={busy === `handoff-${order.connection_id}`}>I handed over the item ✓</button>}
+                {payWithAspire && isBuyer && order.status === 'handoff_confirmed' && !order.buyer_received_at && <span className="marketWaiting">Inspect the item and check for damage, missing parts, or a wrong item before confirming. Report a problem below if anything is wrong.</span>}
                 {payWithAspire && isBuyer && order.status === 'handoff_confirmed' && !order.buyer_received_at && <button className="button buttonGold" type="button" onClick={() => confirmReceipt(order.connection_id)} disabled={busy === `receipt-${order.connection_id}`}>Item received — release seller payout ✓</button>}
                 {payWithAspire && order.status === 'release_ready' && <button className="button buttonGold" type="button" onClick={() => retryRelease(order.connection_id)} disabled={busy === `release-${order.connection_id}`}>Release seller payout →</button>}
                 {payWithAspire && secured && !order.seller_handed_off_at && !['disputed','released','refunded'].includes(order.status) && <button className="marketSecondary" type="button" onClick={() => refund(order.connection_id)} disabled={busy === `refund-${order.connection_id}`}>Cancel + refund</button>}
-                {canDispute && <button className="marketDanger" type="button" onClick={() => setDisputeFor(disputeFor === order.connection_id ? null : order.connection_id)}>Report a problem</button>}
+                {canDispute && <button className="marketDanger" type="button" onClick={() => { setDisputeFor(disputeFor === order.connection_id ? null : order.connection_id); setDisputeFiles([]); setDisputeDetails(''); setNotice(''); }}>{afterSales ? 'Item arrived with a problem' : 'Report a problem'}</button>}
+                {dispute && <a className="marketSecondary" href={`/resolution#market-case-${encodeURIComponent(dispute.id)}`}>View Help case and attachments →</a>}
+                {order.status === 'released' && isBuyer && !afterSales && !dispute && <a className="marketSecondary" href={`mailto:team@aspires101.com?subject=${encodeURIComponent(`Help with Aspire order ${order.id}`)}`}>Contact support about this order</a>}
                 {order.status === 'released' && <span className="marketComplete">Transaction complete · payout released ✓</span>}
                 {order.status === 'refunded' && <span className="marketComplete">Buyer refunded ✓</span>}
               </div>
 
               {shippingOrder && order.shipping_rate_id && <div className="shippingTrackingBox"><span>SELECTED SHIPPING</span><strong>{carrierName || 'Carrier'} · {money(shippingRate, order.shipping_currency || order.currency)}</strong><small>{shippingPaidBy === 'seller' ? 'Seller covers this carrier rate.' : 'Buyer pays this carrier rate at Stripe checkout.'}</small>{order.shipping_tracking_number && <span>Tracking {order.shipping_tracking_number}</span>}{order.shipping_label_url && isSeller && <a href={order.shipping_label_url} target="_blank" rel="noreferrer">Open label ↗</a>}{order.shipping_tracking_url && <a href={order.shipping_tracking_url} target="_blank" rel="noreferrer">Track package ↗</a>}</div>}
 
-              {disputeFor === order.connection_id && canDispute && <div className="marketDisputeComposer"><div><span>PAUSE PAYOUT + REPORT</span><strong>What went wrong?</strong></div><select value={disputeReason} onChange={(event) => setDisputeReason(event.target.value as MarketDispute['reason'])}>{disputeReasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select><textarea rows={3} value={disputeDetails} onChange={(event) => setDisputeDetails(event.target.value)} placeholder="Describe the item, handoff, payment, or safety issue. Keep the details factual." maxLength={2000} /><div><button type="button" className="marketSecondary" onClick={() => setDisputeFor(null)}>Never mind</button><button type="button" className="marketDanger solid" onClick={() => submitDispute(order.connection_id)} disabled={busy === `dispute-${order.connection_id}`}>Submit report + pause payout</button></div></div>}
+              {disputeFor === order.connection_id && canDispute && (
+                <div className="marketDisputeComposer">
+                  <div><span>{afterSales ? 'AFTER-SALES HELP' : 'PAUSE PAYOUT + REPORT'}</span><strong>What went wrong?</strong></div>
+                  {afterSales && <p>The seller has already been paid. Opening a case starts a review; a refund is not automatic.</p>}
+                  <label htmlFor={`market-issue-${order.id}`}>Problem with this order</label>
+                  <select id={`market-issue-${order.id}`} value={disputeReason} onChange={(event) => setDisputeReason(event.target.value as MarketDispute['reason'])} disabled={busy === `dispute-${order.connection_id}`}>
+                    {disputeReasons.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                  <label htmlFor={`market-details-${order.id}`}>Describe what happened</label>
+                  <textarea id={`market-details-${order.id}`} rows={3} value={disputeDetails} onChange={(event) => setDisputeDetails(event.target.value)} placeholder="Describe the damage, missing parts, wrong item, delivery, or payment issue. Keep the details factual." maxLength={2000} disabled={busy === `dispute-${order.connection_id}`} />
+                  <label className="marketEvidencePicker" htmlFor={`market-evidence-${order.id}`}>
+                    <strong>Attach photos or PDF</strong>
+                    <span>Up to 3 files, 8 MB each. Both participants and Aspire reviewers can see them.</span>
+                  </label>
+                  <input id={`market-evidence-${order.id}`} className="marketEvidenceInput" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple disabled={busy === `dispute-${order.connection_id}`} onChange={(event) => { selectDisputeFiles(event.target.files); event.target.value = ''; }} />
+                  {disputeFiles.length > 0 && <ul className="marketEvidenceFiles" aria-label="Selected evidence">{disputeFiles.map((file, index) => <li key={`${file.name}-${index}`}>{file.name} · {Math.max(1, Math.ceil(file.size / 1024))} KB</li>)}</ul>}
+                  <div className="marketDisputeActions">
+                    <button type="button" className="marketSecondary" onClick={() => { setDisputeFor(null); setDisputeFiles([]); }} disabled={busy === `dispute-${order.connection_id}`}>Never mind</button>
+                    <button type="button" className="marketDanger solid" onClick={() => submitDispute(order.connection_id, Boolean(afterSales))} disabled={busy === `dispute-${order.connection_id}`}>{busy === `dispute-${order.connection_id}` ? 'Opening case and uploading…' : afterSales ? 'Open after-sales case' : 'Submit report + pause payout'}</button>
+                  </div>
+                </div>
+              )}
 
               <footer className="marketOrderFinePrint"><span>{shippingOrder ? `${order.shipping_carrier || 'Carrier'} shipping · ${String(order.shipping_status || 'not started').replaceAll('_', ' ')}` : 'Campus pickup'} · {request.item_condition ? request.item_condition.replace('_', ' ') : 'condition not listed'}{request.price_negotiable ? ' · price was negotiable' : ''}</span><span>Order #{order.id.slice(0, 8)}</span></footer>
                 </div>
