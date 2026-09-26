@@ -156,16 +156,16 @@ export default function MyActivityManager() {
     <section className={styles.page}>
       <header className={styles.header}>
         <div>
-          <span>YOUR STUFF</span>
-          <h1>My Activity</h1>
-          <p>Manage the posts you created. Close a post when it is no longer needed, or permanently delete it when there is no active connection.</p>
+          <span>POSTS</span>
+          <h1>Your posts</h1>
+          <p>See what is live, close what is finished, and keep the history that matters.</p>
         </div>
         <a href="/post"><UiIcon name="plus" /> New post</a>
       </header>
 
       <div className={styles.stats}>
-        <article><strong>{counts.all}</strong><span>Total posts</span></article>
-        <article><strong>{counts.open}</strong><span>Open</span></article>
+        <article><strong>{counts.all}</strong><span>All posts</span></article>
+        <article><strong>{counts.open}</strong><span>Live</span></article>
         <article><strong>{counts.closed}</strong><span>Closed</span></article>
       </div>
 

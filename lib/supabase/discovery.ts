@@ -18,6 +18,7 @@ export type DiscoverRequest = Omit<AspireRequest, 'latitude' | 'longitude'> & {
   latitude: null;
   longitude: null;
   media: RequestMedia[];
+  author_avatar_url?: string | null;
 };
 
 const discoverLanguageKey = 'aspire:discover-language';

@@ -71,6 +71,7 @@ export default function CampusFeedCard({
   const image = curatedSeedImages[item.id] || item.media?.[0]?.public_url || fallbackImage || '';
   const mine = Boolean(currentUserId && item.poster_id === currentUserId);
   const displayAuthor = mine ? (authorName || 'You') : 'Campus student';
+  const avatarUrl = item.author_avatar_url || '';
   const price = campusFeedPrice(item);
   const paid = item.amount_cents != null;
   const pending = mine && item.moderation_status && item.moderation_status !== 'approved';
@@ -132,7 +133,12 @@ export default function CampusFeedCard({
       <div className={styles.copy}>
         <h3>{item.title}</h3>
         <span className={styles.price} data-paid={paid ? 'true' : 'false'}>{price}</span>
-        <span className={styles.author}><b className={styles.avatar}>{initialFor(displayAuthor)}</b>{mine ? 'Posted by you' : displayAuthor}</span>
+        <span className={styles.author}>
+          <b className={styles.avatar}>
+            {avatarUrl ? <img src={avatarUrl} alt="" /> : initialFor(displayAuthor)}
+          </b>
+          {mine ? 'Posted by you' : displayAuthor}
+        </span>
         <span className={styles.meta}>{campusLabel} · {language} · {campusFeedRelativeTime(item.created_at)}</span>
         {pending && <span className={styles.pending}>Pending review · visible to you</span>}
       </div>
