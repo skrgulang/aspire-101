@@ -26,3 +26,14 @@
 :global(html[data-aspire-theme='light']) .empty{
   border-color:#dddcd4;
 }
+
+
+/* Compact support workspace; no case behavior changes. */
+.panel{gap:13px;padding:16px;border-radius:15px;background:#151514;border-color:rgba(255,255,255,.09)}
+.panel header{padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.08)}
+.panel h2{font-size:22px}
+.row{padding:11px 0;border:0;border-bottom:1px solid rgba(255,255,255,.07);border-radius:0;background:transparent}
+.row:last-child{border-bottom:0}
+:global(html[data-aspire-theme='light']) .panel{border-color:#e5e5df;background:#fff}
+:global(html[data-aspire-theme='light']) .panel header{border-bottom-color:#ecece6}
+:global(html[data-aspire-theme='light']) .row{border-bottom-color:#ecece6;background:transparent}

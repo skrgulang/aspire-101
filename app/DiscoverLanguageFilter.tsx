@@ -22,7 +22,7 @@ export default function DiscoverLanguageFilter() {
 
   return (
     <label className="discoverLanguageFilter">
-      <span>POST LANGUAGE</span>
+      <span>Language</span>
       <select
         value={language}
         onChange={(event) => choose(event.target.value)}

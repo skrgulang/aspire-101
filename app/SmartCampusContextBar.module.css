@@ -62,3 +62,51 @@
   .market .picker,.market .status{grid-column:1}
   .market .status{justify-self:stretch}
 }
+
+
+/* 2026-09-26 production-baseline visual polish. Behavior is unchanged. */
+.root{
+  grid-template-columns:minmax(220px,1fr) minmax(180px,230px);
+  gap:8px 14px;
+  margin-bottom:16px;
+  padding:10px 12px;
+  border-radius:13px;
+  box-shadow:none;
+}
+.identity>span{font-size:8px;letter-spacing:.11em}
+.identity strong{font-size:14px}
+.identity small,.privacy,.status>span,.suggestion small{font-size:9px}
+.accountSchool{font-size:8px}
+.privacy{padding-top:2px;max-width:880px}
+.root :global(.campusPickerTrigger){
+  min-height:42px;
+  border-radius:11px;
+}
+:global(html[data-aspire-theme='light']) .root{
+  border-color:#e4e4de;
+  background:#fff;
+  color:#1b1b18;
+}
+:global(html[data-aspire-theme='light']) .identity>span{color:#8a6900}
+:global(html[data-aspire-theme='light']) .identity small,
+:global(html[data-aspire-theme='light']) .privacy,
+:global(html[data-aspire-theme='light']) .status>span,
+:global(html[data-aspire-theme='light']) .suggestion small,
+:global(html[data-aspire-theme='light']) .accountSchool{color:#73736d}
+:global(html[data-aspire-theme='light']) .root :global(.campusPickerTrigger){
+  border-color:#e3e3dd;
+  background:#fafaf7;
+  color:#1b1b18;
+}
+:global(html[data-aspire-theme='light']) .suggestion{
+  border-color:#ead27f;
+  background:#fff9e7;
+}
+:global(html[data-aspire-theme='light']) .suggestion .keep{
+  border-color:#dfdfd8;
+  color:#4d4d48;
+}
+@media(max-width:720px){
+  .root{padding:10px 11px;border-radius:12px}
+  .privacy{font-size:8px}
+}

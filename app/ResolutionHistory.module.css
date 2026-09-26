@@ -523,3 +523,15 @@
 :global(html[data-aspire-theme="light"]) .loading {
   border-color: #dddcd4;
 }
+
+
+/* Compact case history; all evidence/thread/reply controls remain unchanged. */
+.head{padding-bottom:13px;border-bottom:1px solid rgba(255,255,255,.08)}
+.head h2{font-size:26px;line-height:1.04;letter-spacing:-.035em}
+.summary{min-width:100px;padding:10px 12px;border-radius:12px}
+.summary strong{font-size:22px}
+.card{padding:15px;border-radius:15px}
+.status{border-radius:11px}
+.receipt{border-radius:12px}
+.empty,.error,.loading{min-height:150px;border-radius:14px}
+:global(html[data-aspire-theme='light']) .head{border-bottom-color:#e7e7e1}

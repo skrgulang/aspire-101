@@ -247,7 +247,7 @@ export default function DiscoverRequestsV2() {
 
   return <section className="discoverV2Experience">
     <header className="discoverV2Header">
-      <div><p className="eyebrow">DISCOVER</p><h1>Search {activeCampus.short_name}.</h1><p>Find requests around the campus you’re browsing without changing your verified school identity.</p></div>
+      <div><p className="eyebrow">DISCOVER</p><h1>Browse {activeCampus.short_name}</h1><p>Find requests around the campus you’re browsing without changing your verified school identity.</p></div>
       <DiscoverLanguageFilter />
     </header>
 
@@ -261,7 +261,6 @@ export default function DiscoverRequestsV2() {
       : !dataLoading && !items.length ? <div className="discoverV2State empty"><span>NOTHING MATCHED</span><h2>{debouncedQuery ? `No results for “${debouncedQuery}” at ${activeCampus.short_name}.` : `Your ${category === 'Anything' ? 'campus feed' : category} is quiet right now.`}</h2><p>Try another keyword, clear your filters, or start the request yourself.</p><div className="discoverV2EmptyActions">{(query || category !== 'Anything') && <button type="button" onClick={() => { setQuery(''); setCategory('Anything'); }}>Clear filters</button>}<a className="button buttonGold" href="/post">Post what you need →</a></div></div>
       : <div className={`discoverV2List campusUnifiedFeed ${dataLoading ? 'isRefreshing' : ''}`}>{items.map((item) => {
           const mine = Boolean(currentUserId && item.poster_id === currentUserId);
-          const demo = item.id.startsWith('demo-preview-');
           const pending = mine && item.moderation_status && item.moderation_status !== 'approved';
           return <CampusFeedCard
             key={item.id}
@@ -279,7 +278,7 @@ export default function DiscoverRequestsV2() {
                   </span>
                 : <button className={campusFeedCardStyles.secondaryAction} type="button" onClick={() => setSafetyItem(item)}>Safety</button>}
             footerRight={mine
-              ? <a className={campusFeedCardStyles.primaryAction} href="/activity">{demo ? 'Manage preview →' : 'Manage post →'}</a>
+              ? <a className={campusFeedCardStyles.primaryAction} href="/activity">Manage post →</a>
               : <button className={campusFeedCardStyles.primaryAction} type="button" onClick={() => respond(item)} disabled={busyId === item.id}>{busyId === item.id ? 'Sending…' : marketActionLabel(item)}</button>}
           />;
         })}</div>}
