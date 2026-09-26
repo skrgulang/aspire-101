@@ -17,6 +17,7 @@ type LocationMode = 'off' | 'approximate' | 'precise_on_request';
 type Preferences = {
   location_mode: LocationMode;
   profile_visibility: ProfileVisibility;
+  show_profile_photo: boolean;
   show_major: boolean;
   show_graduation_year: boolean;
   show_interests: boolean;
@@ -44,6 +45,7 @@ type AccountView = {
 const DEFAULT_PREFERENCES: Preferences = {
   location_mode: 'off',
   profile_visibility: 'connections',
+  show_profile_photo: false,
   show_major: true,
   show_graduation_year: true,
   show_interests: true,
@@ -59,6 +61,7 @@ const DEFAULT_PREFERENCES: Preferences = {
 };
 
 const privacyToggles: Array<{ key: BooleanPreferenceKey; label: string; detail: string }> = [
+  { key: 'show_profile_photo', label: 'Show profile photo', detail: 'Show your uploaded photo on campus posts and visible profiles. When off, Aspire uses initials instead.' },
   { key: 'show_major', label: 'Show major', detail: 'Display your major on your student profile.' },
   { key: 'show_graduation_year', label: 'Show graduation year', detail: 'Display your class year on your profile.' },
   { key: 'show_interests', label: 'Show interests', detail: 'Let people see the interests you add to your profile.' },
@@ -102,7 +105,7 @@ export default function SettingsPage() {
         supabase.from('profiles').select('school').eq('id', user.id).maybeSingle(),
         supabase
           .from('user_preferences')
-          .select('location_mode,profile_visibility,show_major,show_graduation_year,show_interests,show_completed,show_joined,ai_personalization,notify_messages,notify_connections,notify_post_updates,notify_payments,notify_safety,notify_marketing')
+          .select('location_mode,profile_visibility,show_profile_photo,show_major,show_graduation_year,show_interests,show_completed,show_joined,ai_personalization,notify_messages,notify_connections,notify_post_updates,notify_payments,notify_safety,notify_marketing')
           .eq('user_id', user.id)
           .maybeSingle()
       ]);
@@ -120,6 +123,7 @@ export default function SettingsPage() {
         setPreferences({
           location_mode: preferenceRow.location_mode === 'approximate' || preferenceRow.location_mode === 'precise_on_request' ? preferenceRow.location_mode : 'off',
           profile_visibility: preferenceRow.profile_visibility === 'private' || preferenceRow.profile_visibility === 'campus' ? preferenceRow.profile_visibility : 'connections',
+          show_profile_photo: preferenceRow.show_profile_photo === true,
           show_major: preferenceRow.show_major !== false,
           show_graduation_year: preferenceRow.show_graduation_year !== false,
           show_interests: preferenceRow.show_interests !== false,
